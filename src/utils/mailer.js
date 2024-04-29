@@ -1,5 +1,4 @@
 const Mails = require('../utils/mails');
-const sendgrid = require('../utils/sendgrid');
 require('dotenv').config();
 
 const sendEmail = (user, passwordGenerated, action) => {
@@ -8,7 +7,7 @@ const sendEmail = (user, passwordGenerated, action) => {
     const htmlContentForgotPassword = Mails.htmlForgotPassword(user, passwordGenerated)
     const htmlContentEvaluationCaptain = Mails.htmlContentEvaluationCaptain(user.dataValues, passwordGenerated)
     const htmlContentEvaluationCrew = Mails.htmlContentEvaluationCrew(user.dataValues, passwordGenerated)
-    sgMail.setApiKey(sendgrid.sendgrid_api_key)
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY)
     const msg = {
         to: user.email, // Change to your recipient
         from: 'edison@tiptoptravel.ec', // Change to your verified sender
