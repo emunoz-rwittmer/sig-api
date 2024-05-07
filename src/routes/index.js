@@ -9,7 +9,7 @@ const formsRoutes = require("./operations/surveys/forms.routes");
 const HouseRulesRoutes = require("./catalogs/houseRules.routes");
 //Operations
 const questiondRoutes = require("./operations/surveys/questions.routes");
-const evaluationRoutes = require("./operations/evaluations/evaluation.routes");
+const evaluationRoutes = require("./operations/surveys/evaluation.routes");
 
 const routerApi = (app) => {
 

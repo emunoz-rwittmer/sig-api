@@ -9,6 +9,7 @@ const CaptainYacht = require('../../../models/catalogs/captainYacht.models');
 const CrewYacht = require('../../../models/catalogs/crewYacht.models');
 const Crew = require('../../../models/catalogs/crews.models');
 const Yacht = require('../../../models/catalogs/yacht.models');
+const { where } = require('sequelize');
 
 
 class EvaluationService {
@@ -39,7 +40,7 @@ class EvaluationService {
                 include: [{
                     model: Form,
                     as: "header_form",
-                    attributes: ['id','title'],
+                    attributes: ['id', 'title'],
                 }, {
                     model: Yacht,
                     as: "header_yacht",
@@ -96,11 +97,56 @@ class EvaluationService {
 
     static async updateStatusHeaderAnswers(evaluationId) {
         try {
-            console.log("entre aqui")
-            const result = HeaderAnswer.update({isComplete: true}, {where: { id: evaluationId}});
+            const result = await HeaderAnswer.update({ isComplete: true }, { where: { id: evaluationId } });
             return result
         } catch (error) {
-            console.log(error)
+            throw error;
+        }
+    }
+
+    //REPORTING EVALUATIONS
+
+    static async getReportingByYacht(yachtId) {
+        try {
+            const captains = await CaptainYacht.findAll({
+                where: { yachtId },
+                attributes: ['id'],
+                include: [{
+                    model: Captain,
+                    as: "captain_yacht",
+                    attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
+                }]
+            });
+
+            const crew = await CrewYacht.findAll({
+                where: { yachtId },
+                attributes: ['id'],
+                include: [{
+                    model: Crew,
+                    as: "crew_yacht",
+                    attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
+                }]
+            });
+
+            return { captains, crew };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async getEvaluationsByYacht(yachtId) {
+        try {
+            const result = await HeaderAnswer.findAll({
+                where: { yachtId },
+                include: [
+                    {
+                        model: FormAnswer,
+                        as: 'answer_header'
+                    }
+                ]
+            })
+            return result;
+        } catch (error) {
             throw error;
         }
     }

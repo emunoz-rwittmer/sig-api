@@ -2,7 +2,7 @@ const AuthService = require('../../services/catalogs/auth.services');
 const UserService = require('../../services/catalogs/users.services');
 const Utils = require('../../utils/Utils');
 const tokenModel = require('../../models/mongoModels/Token.models');
-const EvaluationService = require('../../services/operations/evaluations/evaluations.services')
+const EvaluationService = require('../../services/operations/surveys/evaluations.services')
 const bcrypt = require('bcrypt');
 const sendEmail = require('../../utils/mailer');
 

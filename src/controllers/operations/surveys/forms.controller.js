@@ -111,9 +111,11 @@ const sendEvaluation = async (req, res) => {
         if (form.people === "Tripulación") {
             data.evaluator = captains
             data.evaluated = crews;
+            data.evaluatedJob = 'tripulante';
         } else if (form.people === "Capitanes") {
             data.evaluator = crews
             data.evaluated = captains;
+            data.evaluatedJob = 'capitan';
         }
         const result = await FormService.createHeaderAnswer(data);
         const passwordGenerate = Utils.getPasswordRandom();
