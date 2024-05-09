@@ -56,12 +56,60 @@ const respondEvaluation = async (req, res) => {
 const getReportingByYacht = async (req, res) => {
     try {
         const yachtId = Utils.decode(req.params.yacht_id);
+        const startDate = req.query.startDate;
+        const endDate = req.query.endDate;
         const yacht = await YachtService.getYachtById(yachtId)
+        const evaluations = await EvaluationService.getEvaluationsByYacht(yachtId, startDate, endDate)
         const result = await EvaluationService.getReportingByYacht(yachtId);
-        const evaluations = await EvaluationService.getEvaluationsByYacht(yachtId)
+        if (result.captains instanceof Array) {
+            result.captains.map((x) => {
+                x.captain_yacht.dataValues.id = Utils.encode(x.captain_yacht.dataValues.id);
+
+            });
+        }
         result.yacht = yacht.dataValues
         result.evaluations = evaluations
         res.status(200).json(result);
+    } catch (error) {
+        console.log(error)
+        res.status(400).json(error.message)
+    }
+}
+
+const getReportingEvaluationsByCrew = async (req, res) => {
+    try {
+        const crewId = Utils.decode(req.params.crew_id);
+        const type = req.query.type;
+        let result = {}
+        if (type === 'captain') {
+            const captain = await CaptainService.getCaptainById(crewId);
+            const names = captain.dataValues.first_name + " " + captain.dataValues.last_name
+            const evaluations = await EvaluationService.getEvaluationByEvaluated(names)
+            result.captain = captain
+            result.evaluations = evaluations
+            res.status(200).json(result);
+            //console.log(evaluations)
+        }
+        // const startDate = req.query.startDate;
+        // const endDate = req.query.endDate;
+        // const yacht = await YachtService.getYachtById(yachtId)
+        // const evaluations = await EvaluationService.getEvaluationsByYacht(yachtId, startDate, endDate)
+        // const result = await EvaluationService.getReportingByYacht(yachtId);
+        // if (result.captains instanceof Array) {
+        //     result.captains.map((x) => {
+        //         x.captain_yacht.dataValues.id = Utils.encode(x.captain_yacht.dataValues.id);
+
+        //     });
+        // }
+        // if (result.crews instanceof Array) {
+        //     result.crews.map((x) => {
+        //         x.crew_yacht.dataValues.id = Utils.encode(x.crew_yacht.dataValues.id);
+
+        //     });
+        // }
+        // result.yacht = yacht.dataValues
+        // result.evaluations = evaluations
+        //res.status(200).json(result);
     } catch (error) {
         console.log(error)
         res.status(400).json(error.message)
@@ -74,6 +122,7 @@ const EvaluationController = {
     getAllEvaluations,
     getEvaluation,
     respondEvaluation,
-    getReportingByYacht
+    getReportingByYacht,
+    getReportingEvaluationsByCrew
 }
 module.exports = EvaluationController

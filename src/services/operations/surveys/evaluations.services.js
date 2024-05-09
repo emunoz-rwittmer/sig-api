@@ -9,7 +9,8 @@ const CaptainYacht = require('../../../models/catalogs/captainYacht.models');
 const CrewYacht = require('../../../models/catalogs/crewYacht.models');
 const Crew = require('../../../models/catalogs/crews.models');
 const Yacht = require('../../../models/catalogs/yacht.models');
-const { where } = require('sequelize');
+const { Op } = require('sequelize');
+
 
 
 class EvaluationService {
@@ -33,7 +34,7 @@ class EvaluationService {
         }
     }
 
-    static async getEvaluationByCrew(names) {
+    static async getEvaluationByEvaluator(names) {
         try {
             const result = await HeaderAnswer.findOne({
                 where: { evaluator: names, isComplete: false },
@@ -118,7 +119,7 @@ class EvaluationService {
                 }]
             });
 
-            const crew = await CrewYacht.findAll({
+            const crews = await CrewYacht.findAll({
                 where: { yachtId },
                 attributes: ['id'],
                 include: [{
@@ -128,16 +129,20 @@ class EvaluationService {
                 }]
             });
 
-            return { captains, crew };
+            return { captains, crews };
         } catch (error) {
             throw error;
         }
     }
 
-    static async getEvaluationsByYacht(yachtId) {
+    static async getEvaluationsByYacht(yachtId, startDate, endDate) {
         try {
             const result = await HeaderAnswer.findAll({
-                where: { yachtId },
+                where: { yachtId,
+                    createdAt: {
+                        [Op.between]: [startDate, endDate]
+                    }
+                 },
                 include: [
                     {
                         model: FormAnswer,
@@ -145,6 +150,29 @@ class EvaluationService {
                     }
                 ]
             })
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async getEvaluationByEvaluated(names) {
+        try {
+            const result = await HeaderAnswer.findAll({
+                where: { evaluated: names },
+                include: [{
+                    model: Form,
+                    as: "header_form",
+                    attributes: ['id', 'title'],
+                }, {
+                    model: Yacht,
+                    as: "header_yacht",
+                    attributes: ['name'],
+                }, {
+                    model: FormAnswer,
+                    as: 'answer_header'
+                }]
+            });
             return result;
         } catch (error) {
             throw error;

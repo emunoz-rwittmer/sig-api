@@ -101,7 +101,7 @@ const loginCrews = async (req, res) => {
                 const refreshToken = await Utils.generateRefreshToken(userData);
                 userData.token = token;
                 userData.rol = "crew";
-                const getEvaluation = await EvaluationService.getEvaluationByCrew(firstName + " " + lastName)
+                const getEvaluation = await EvaluationService.getEvaluationByEvaluator(firstName + " " + lastName)
                 if (getEvaluation) {
                     userData.formId = Utils.encode(getEvaluation.formId)
                     userData.evaluationId = Utils.encode(getEvaluation.id)
