@@ -156,10 +156,13 @@ class EvaluationService {
         }
     }
 
-    static async getEvaluationByEvaluated(names) {
+    static async getEvaluationByEvaluated(names, startDate, endDate) {
         try {
             const result = await HeaderAnswer.findAll({
-                where: { evaluated: names },
+                where: { evaluated: names,
+                    createdAt: {
+                        [Op.between]: [startDate, endDate]
+                    } },
                 include: [{
                     model: Form,
                     as: "header_form",
