@@ -10,7 +10,7 @@ const sendEmail = (user, passwordGenerated, action) => {
     sgMail.setApiKey(process.env.SENDGRID_API_KEY)
     const msg = {
         to: user.email, // Change to your recipient
-        from: 'edison@tiptoptravel.ec', // Change to your verified sender
+        from: 'notify-sig@rwittmer.com', // Change to your verified sender
         subject: action === "new user" ? 'Acceso sistema interno' :
                  action === 'forgot passowrd' ? 'Restablecimiento de contraseña' : 'Evaluación de desempeño',
         html: action === "new user" ? htmlContentNewUser : 
