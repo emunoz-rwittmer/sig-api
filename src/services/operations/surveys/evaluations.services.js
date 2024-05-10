@@ -10,6 +10,7 @@ const CrewYacht = require('../../../models/catalogs/crewYacht.models');
 const Crew = require('../../../models/catalogs/crews.models');
 const Yacht = require('../../../models/catalogs/yacht.models');
 const { Op } = require('sequelize');
+const { model } = require('mongoose');
 
 
 
@@ -173,7 +174,13 @@ class EvaluationService {
                     attributes: ['name'],
                 }, {
                     model: FormAnswer,
-                    as: 'answer_header'
+                    as: 'answer_header',
+                    include: [{
+                        model: EstructureQuestion,
+                        as: 'aswer_question',
+                        attributes: ['pregunta'],
+                    }]
+
                 }]
             });
             return result;
