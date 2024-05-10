@@ -172,7 +172,6 @@ class FormService {
                         evaluator: evaluador.dataValues.first_name + " " + evaluador.dataValues.last_name,
                         evaluated: evaluado.dataValues.first_name + " " + evaluado.dataValues.last_name,
                     });
-                    //console.log(`Evaluación creada para evaluado ${evaluado.dataValues.first_name} y evaluador ${evaluador.dataValues.first_name}`);
                 }
             }
             return "Is Ok"

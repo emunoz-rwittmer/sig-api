@@ -118,11 +118,11 @@ const sendEvaluation = async (req, res) => {
             data.evaluatedJob = 'capitan';
         }
         const result = await FormService.createHeaderAnswer(data);
-        const passwordGenerate = Utils.getPasswordRandom();
-        const passwordGenerated = bcrypt.hashSync(passwordGenerate, 10);
         if (result && form.people === "Tripulación") {
             const action = "tripulacion"
             for (const evaluador of captains) {
+                const passwordGenerate = Utils.getPasswordRandom();
+                const passwordGenerated = bcrypt.hashSync(passwordGenerate, 10);
                 sendEmail(evaluador, passwordGenerate, action);
                 const result = await CaptainService.updateCaptain({
                     password: passwordGenerated
@@ -133,6 +133,8 @@ const sendEvaluation = async (req, res) => {
         } else if (result && form.people === "Capitanes") {
             const action = "capitanes"
             for (const evaluador of crews) {
+                const passwordGenerate = Utils.getPasswordRandom();
+                const passwordGenerated = bcrypt.hashSync(passwordGenerate, 10);
                 sendEmail(evaluador, passwordGenerate, action);
                 const result = await CrewService.updateCrew({
                     password: passwordGenerate
