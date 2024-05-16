@@ -22,8 +22,7 @@ const FormAnswer = db.define('formAnswer', {
     allowNull: true,
   },
   description: {
-    type: DataTypes.STRING(300),
-    allowNull: true,
+    type: DataTypes.JSON
   }
 });
 
