@@ -62,20 +62,21 @@ const getReportingByYacht = async (req, res) => {
         const yacht = await YachtService.getYachtById(yachtId)
         const evaluations = await EvaluationService.getEvaluationsByYacht(yachtId, startDate, endDate)
         const result = await EvaluationService.getReportingByYacht(yachtId);
+        
         if (result.captains instanceof Array) {
             result.captains.map((x) => {
-                x.captain_yacht.dataValues.id = Utils.encode(x.captain_yacht.dataValues.id);
+                x.captain_yacht.id = Utils.encode(x.captain_yacht.id);
 
             });
         }
         if (result.crews instanceof Array) {
             result.crews.map((x) => {
-                x.crew_yacht.dataValues.id = Utils.encode(x.crew_yacht.dataValues.id);
-
+                x.crew_yacht.id = Utils.encode(x.crew_yacht.id);
             });
         }
         result.yacht = yacht.dataValues
         result.evaluations = evaluations
+        console.log(result)
         res.status(200).json(result);
     } catch (error) {
         console.log(error)
