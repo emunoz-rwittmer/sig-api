@@ -59,10 +59,8 @@ const updateCrew = async (req, res) => {
 const deleteCrew = async (req, res) => {
     try {
         const crewId = Utils.decode(req.params.crew_id);
-        const result = await CrewService.delete({
-            where: { id: crewId }
-        });
-        res.status(200).json({ data: 'resource deleted successfully' })
+        const result = await CrewService.delete(crewId);
+        res.status(200).json({ data: result })
     } catch (error) {
         res.status(400).json(error.message);
     }
