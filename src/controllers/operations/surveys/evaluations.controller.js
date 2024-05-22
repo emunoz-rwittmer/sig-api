@@ -65,6 +65,7 @@ const getReportingByYacht = async (req, res) => {
         
         if (result.captains instanceof Array) {
             result.captains.map((x) => {
+                console.log(x.captain_yacht.id)
                 x.captain_yacht.id = Utils.encode(x.captain_yacht.id);
 
             });
@@ -76,7 +77,7 @@ const getReportingByYacht = async (req, res) => {
         }
         result.yacht = yacht.dataValues
         result.evaluations = evaluations
-        console.log(result)
+       // console.log(result)
         res.status(200).json(result);
     } catch (error) {
         console.log(error)
