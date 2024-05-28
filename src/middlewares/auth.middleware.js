@@ -51,9 +51,9 @@ const isAdmin = async (req, res, next) => {
 }
 
 const isAdminOfSurveys = async(req, res, next) => {
-    const id = Utils.decode(req.user_id);
-    const response = await UserService.getRoleById(id);
-    if (role.name === 'admin' || role.name === 'surveys') {
+    const id = req.user_id;
+    const response = await UserService.getUserById(id);
+    if (response.user_rol.name === 'admin' || response.user_rol.name === 'surveys') {
         next();
     } else {
         res.status(403).json({data: "Require Admin or Surveys Role!"});

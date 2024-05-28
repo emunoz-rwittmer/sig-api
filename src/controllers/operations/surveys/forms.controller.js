@@ -134,7 +134,6 @@ const sendEvaluation = async (req, res) => {
             const action = "capitanes"
             for (const evaluador of crews) {
                 const passwordGenerate = Utils.getPasswordRandom();
-                const passwordGenerated = bcrypt.hashSync(passwordGenerate, 10);
                 sendEmail(evaluador, passwordGenerate, action);
                 const result = await CrewService.updateCrew({
                     password: passwordGenerate
