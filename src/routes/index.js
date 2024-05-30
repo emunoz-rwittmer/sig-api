@@ -17,14 +17,14 @@ const routerApi = (app) => {
     app.use("/api/auth", authRoutes);
     app.use("/api/users", authJwt.verifyToken, authJwt.isAdmin, usersRoutes)
     app.use("/api/roles", authJwt.verifyToken, authJwt.isAdmin, rolesRoutes);
-    app.use("/api/yachts", authJwt.verifyToken, authJwt.isAdminOfSurveys, yachtRoutes); 
-    app.use("/api/captains", authJwt.verifyToken, authJwt.isAdminOfSurveys, captainsRoutes);
-    app.use("/api/crews", authJwt.verifyToken, authJwt.isAdminOfSurveys, crewsRoutes);
-    app.use("/api/houseRules", authJwt.verifyToken, authJwt.isAdminOfSurveys, HouseRulesRoutes);
-    app.use("/api/administratives", authJwt.verifyToken, authJwt.isAdminOfSurveys, AdministrativeRoutes);
+    app.use("/api/yachts", authJwt.verifyToken, yachtRoutes); 
+    app.use("/api/captains", authJwt.verifyToken, captainsRoutes);
+    app.use("/api/crews", authJwt.verifyToken, crewsRoutes);
+    app.use("/api/houseRules", authJwt.verifyToken, HouseRulesRoutes);
+    app.use("/api/administratives", authJwt.verifyToken, AdministrativeRoutes);
     //OPERATIONS
-    app.use("/api/questions", authJwt.verifyToken, authJwt.isAdminOfSurveys, questiondRoutes);
-    app.use("/api/forms", authJwt.verifyToken, authJwt.isAdminOfSurveys, formsRoutes);
+    app.use("/api/questions", authJwt.verifyToken, questiondRoutes);
+    app.use("/api/forms", authJwt.verifyToken, formsRoutes);
     app.use("/api/evaluations", authJwt.verifyToken, evaluationRoutes)
   };
   
