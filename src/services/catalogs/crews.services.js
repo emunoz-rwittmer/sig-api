@@ -71,10 +71,17 @@ class CrewService {
         }
     }
 
-    static async delete(id) {
+    static async delete(crewId) {
         try {
-            const result = await Crews.destroy(id);
-            return result;
+            const relations = await CrewYacht.destroy({
+                where: { crewId }
+            });
+            const result = await Crews.destroy({
+                where: { id: crewId }
+            });
+            if(relations && result){
+                return 'resource deleted successfully'
+            }
         } catch (error) {
             throw error;
         }

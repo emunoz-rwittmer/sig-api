@@ -1,9 +1,7 @@
 const Captains = require('../../models/catalogs/captains.models');
 const Yachts = require('../../models/catalogs/yacht.models');
 const CaptainYacht = require('../../models/catalogs/captainYacht.models');
-const { Op, where } = require("sequelize");
-
-
+const { Op } = require("sequelize");
 
 class CaptainService {
     static async getAll() {
@@ -71,10 +69,17 @@ class CaptainService {
         }
     }
 
-    static async delete(id) {
+    static async delete(captainId) {
         try {
-            const result = await Captains.destroy(id);
-            return result;
+            const relations = await CaptainYacht.destroy({
+                where: { captainId }
+            });
+            const result = await Captains.destroy({
+                where: { id: captainId }
+            });
+            if(relations && result){
+                return 'resource deleted successfully'
+            }
         } catch (error) {
             throw error;
         }

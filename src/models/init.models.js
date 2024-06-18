@@ -6,7 +6,8 @@ const CaptainYacht = require('./catalogs/captainYacht.models');
 const Crew = require('./catalogs/crews.models');
 const CrewYacht = require('./catalogs/crewYacht.models');
 const Question = require('./operations/surveys/question.models');
-const HouseRule = require('./catalogs/houseRule.models')
+const HouseRule = require('./catalogs/houseRule.models');
+const Administrative = require('./catalogs/administratives.models');
 const Form = require('./operations/surveys/form.models');
 const FormEstructure = require('./operations/surveys/formEstructure.models');
 const EstructureQuestion = require('./operations/surveys/estructureQuestion.models');
@@ -38,7 +39,8 @@ const initModels = () => {
     FormAnswer.belongsTo(EstructureQuestion, { as: 'aswer_question', foreignKey: 'estructure_question_id' });
 
     Question,
-    HouseRule
+    HouseRule,
+    Administrative
 
 }
 
