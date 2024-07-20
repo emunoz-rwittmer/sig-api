@@ -103,16 +103,23 @@ const loginCrews = async (req, res) => {
                 userData.rol = "crew";
                 const getEvaluation = await EvaluationService.getEvaluationByEvaluator(firstName + " " + lastName)
                 if (getEvaluation) {
-                    userData.formId = Utils.encode(getEvaluation.formId)
-                    userData.evaluationId = Utils.encode(getEvaluation.id)
-                    const newToken = new tokenModel({
-                        user: firstName + " " + lastName,
-                        userId: Utils.encode(id),
-                        accessToken: token,
-                        refreshtoken: refreshToken
-                    });
-                    newToken.save();
-                    res.status(200).json(userData);
+                    const now = new Date();
+                    const createdAt = new Date(getEvaluation.createdAt);
+                    const diffInHours = Math.abs(now - createdAt) / 36e5; // Diferencia en horas
+                    if (diffInHours > 48) {
+                        res.status(400).send({data:'Esta evaluación ha caducado y no puede ser respondida'});
+                    } else {
+                        userData.formId = Utils.encode(getEvaluation.formId)
+                        userData.evaluationId = Utils.encode(getEvaluation.id)
+                        const newToken = new tokenModel({
+                            user: firstName + " " + lastName,
+                            userId: Utils.encode(id),
+                            accessToken: token,
+                            refreshtoken: refreshToken
+                        });
+                        newToken.save();
+                        res.status(200).json(userData);
+                    }  
                 } else {
                     res.status(400).json({ data: 'no reviews available' })
                 }

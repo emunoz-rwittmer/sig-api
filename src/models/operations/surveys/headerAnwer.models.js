@@ -17,6 +17,11 @@ const HeaderAnswer = db.define('headerAnswer', {
     allowNull: false,
     field: 'yacht_id'
   },
+  stateId: {
+    type: DataTypes.INTEGER,
+    defaultValue: false,
+    ield: 'state_id'
+  },
   evaluator: {
     type: DataTypes.STRING,
     allowNull: true,
@@ -25,11 +30,10 @@ const HeaderAnswer = db.define('headerAnswer', {
     type: DataTypes.STRING,
     allowNull: true,
   },
-  isComplete: {
-    type: DataTypes.BOOLEAN,
+  expirationDate: {
+    type: DataTypes.DATE,
     defaultValue: false,
   },
-
 });
 
 module.exports = HeaderAnswer;
