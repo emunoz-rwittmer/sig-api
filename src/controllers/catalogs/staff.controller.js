@@ -53,7 +53,8 @@ const updateStaff = async (req, res) => {
     try {
         const staffId = Utils.decode(req.params.staff_id);
         const staff = req.body;
-        Staff.yachtId = Utils.decode(req.body.yachtId)
+        staff.departamentId = Utils.decode(req.body.departamentId);
+        staff.positionId = Utils.decode(req.body.positionId);
         const result = await StaffService.updateStaff(staff, {
             where: { id: staffId },
         });
