@@ -79,7 +79,7 @@ class Staffervice {
             const result = await Staff.destroy({
                 where: { id: staffId }
             });
-            if(relations && result){
+            if(relations || result){
                 return 'resource deleted successfully'
             }
         } catch (error) {
