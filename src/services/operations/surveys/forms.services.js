@@ -51,6 +51,7 @@ class FormService {
                     model: Captain,
                     as: "captain_yacht",
                     attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
+                    where: { active : true}
                 }]
             });
             const crew = await CrewYacht.findAll({
@@ -60,6 +61,7 @@ class FormService {
                     model: Crew,
                     as: "crew_yacht",
                     attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
+                    where: { active : true}
                 }]
             });
             return { captains, crew };
