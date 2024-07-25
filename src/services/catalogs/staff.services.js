@@ -1,5 +1,7 @@
 const Staff = require('../../models/catalogs/staff.models');
 const Yachts = require('../../models/catalogs/yacht.models');
+const Positions = require('../../models/catalogs/positions.models');
+const Departaments = require('../../models/catalogs/departament.models')
 const StaffYacht = require('../../models/catalogs/staffYacht.models');
 const { Op } = require("sequelize");
 
@@ -16,6 +18,14 @@ class Staffervice {
                         model: Yachts,
                         as: 'yacht_staff'
                     }]
+                }, {
+                    model: Departaments,
+                    as: 'staff_departament',
+                    attributes: ['name'],
+                }, {
+                    model: Positions,
+                    as: 'staff_position',
+                    attributes: ['name'],
                 }]
             });
             return result;
