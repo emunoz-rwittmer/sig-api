@@ -10,6 +10,9 @@ class Staffervice {
         try {
             const result = await Staff.findAll({
                 attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'company', 'active'],
+                order: [
+                    ['first_name', 'ASC']
+                ],
                 include: [{
                     model: StaffYacht,
                     as: 'yachts',
@@ -21,12 +24,62 @@ class Staffervice {
                 }, {
                     model: Departaments,
                     as: 'staff_departament',
-                    attributes: ['name'],
+                    attributes: ['id', 'name'],
                 }, {
                     model: Positions,
                     as: 'staff_position',
-                    attributes: ['name'],
-                }]
+                    attributes: ['id', 'name'],
+                }],
+            });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async getStaffsByFilters(company, departamentId, positionId, yachtId) {
+        try {
+
+            const where = {};
+
+            if (company) {
+                where.company = company;
+            }
+            if (departamentId) {
+                where.departamentId = departamentId;
+            }
+            if (positionId) {
+                where.positionId = positionId;
+            }
+
+            const yachtWhere = {};
+            if (yachtId) {
+                yachtWhere.yachtId = yachtId;
+            }
+            const result = await Staff.findAll({
+                where,
+                attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'company', 'active'],
+                order: [
+                    ['first_name', 'ASC']
+                ],
+                include: [{
+                    model: StaffYacht,
+                    as: 'yachts',
+                    attributes: ['id'],
+                    where: yachtWhere, // Filtro de yate específico
+                    include: [{
+                        model: Yachts,
+                        as: 'yacht_staff'
+                    }]
+                }, {
+                    model: Departaments,
+                    as: 'staff_departament',
+                    attributes: ['id', 'name'],
+                }, {
+                    model: Positions,
+                    as: 'staff_position',
+                    attributes: ['id', 'name'],
+                }],
             });
             return result;
         } catch (error) {
@@ -41,20 +94,6 @@ class Staffervice {
                 attributes: ['first_name', 'last_name', 'email', 'cell_phone', 'departamentId', 'positionId', 'company', 'active']
             });
 
-            return result;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    static async getStaffsById(arrayIds) {
-        try {
-            const result = await Staff.findAll({
-                where: { id: {
-                    [Op.in]: arrayIds
-                } },
-                attributes: ['id','first_name','last_name','email','cell_phone','active']
-            });
             return result;
         } catch (error) {
             throw error;
@@ -89,7 +128,7 @@ class Staffervice {
             const result = await Staff.destroy({
                 where: { id: staffId }
             });
-            if(relations || result){
+            if (relations || result) {
                 return 'resource deleted successfully'
             }
         } catch (error) {

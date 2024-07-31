@@ -9,6 +9,31 @@ const getAllStaffs = async (req, res) => {
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
+                x.dataValues.staff_departament.dataValues.id = Utils.encode(x.dataValues.staff_departament.dataValues.id);
+                x.dataValues.staff_position.dataValues.id = Utils.encode(x.dataValues.staff_position.dataValues.id);
+            });
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        console.log(error)
+        res.status(400).json(error.message)
+    }
+}
+
+const getStaffsByFilters = async (req, res) => {
+    try {
+        const company = req.query.company
+        const departamentId = Utils.decode(req.query.departamentId)
+        const positionId = Utils.decode(req.query.positionId)
+        const yachtId = Utils.decode(req.query.yachtId)
+
+        const result = await StaffService.getStaffsByFilters(company, departamentId, positionId, yachtId);
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+                x.dataValues.staff_departament.dataValues.id = Utils.encode(x.dataValues.staff_departament.dataValues.id);
+                x.dataValues.staff_position.dataValues.id = Utils.encode(x.dataValues.staff_position.dataValues.id);
+
             });
         }
         res.status(200).json(result);
@@ -119,6 +144,7 @@ const deleteYacht = async (req, res) => {
 
 const StaffController = {
     getAllStaffs,
+    getStaffsByFilters,
     getStaff,
     createStaff,
     updateStaff,

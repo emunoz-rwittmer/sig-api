@@ -7,13 +7,19 @@ const Captain = require('../../../models/catalogs/captains.models');
 const CaptainYacht = require('../../../models/catalogs/captainYacht.models');
 const CrewYacht = require('../../../models/catalogs/crewYacht.models');
 const Crew = require('../../../models/catalogs/crews.models');
+const Positions = require('../../../models/catalogs/positions.models');
 
 
 class FormService {
     static async getAll() {
         try {
             const result = await Form.findAll({
-                attributes: ['id', 'title', 'active', 'people', 'createdAt']
+                attributes: ['id', 'title', 'active', 'createdAt'],
+                include : [{
+                    model: Positions,
+                    as: 'position_form',
+                    attributes: ['name']
+                }]
             });
             return result;
         } catch (error) {
@@ -25,8 +31,12 @@ class FormService {
         try {
             const result = await Form.findOne({
                 where: { id },
-                attributes: ['id', 'title', 'active', 'people', 'createdAt'],
+                attributes: ['id', 'title', 'active', 'createdAt'],
                 include: [{
+                    model: Positions,
+                    as: 'position_form',
+                    attributes: ['id','name']
+                },{
                     model: FormEstructure,
                     as: "form_estructure",
                     attributes: ['id'],

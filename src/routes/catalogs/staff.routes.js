@@ -4,6 +4,7 @@ const StaffController  = require ('../../controllers/catalogs/staff.controller')
 const router = Router();
 
 router.get('/',StaffController.getAllStaffs);
+router.get('/staffsByFilters',StaffController.getStaffsByFilters);
 router.get('/:staff_id',StaffController.getStaff);
 router.post('/createStaff',StaffController.createStaff);
 router.put('/updateStaff/:staff_id',StaffController.updateStaff);

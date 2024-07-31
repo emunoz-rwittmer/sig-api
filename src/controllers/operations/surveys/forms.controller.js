@@ -25,6 +25,7 @@ const getForm = async (req, res) => {
         const result = await FormService.getFormById(formId);
         if (result instanceof Object) {
             result.dataValues.id = Utils.encode(result.dataValues.id);
+            result.dataValues.position_form.dataValues.id = Utils.encode(result.dataValues.position_form.dataValues.id);
         }
         res.status(200).json(result);
     } catch (error) {
@@ -44,8 +45,10 @@ const serchCrew = async (req, res) => {
 }
 
 const createForm = async (req, res) => {
-    try {
+    try { 
+        const positionId = Utils.decode(req.body.positionId)
         const form = req.body;
+        form.positionId = positionId
         const newForm = await FormService.createForm(form.data);
         if (newForm) {
             const newEstructure = await FormService.createEstructureQuestion(newForm.id, form.preguntas)
