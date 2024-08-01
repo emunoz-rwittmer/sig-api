@@ -25,15 +25,81 @@ const getStaffsByFilters = async (req, res) => {
         const company = req.query.company
         const departamentId = Utils.decode(req.query.departamentId)
         const positionId = Utils.decode(req.query.positionId)
-        const yachtId = Utils.decode(req.query.yachtId)
-
-        const result = await StaffService.getStaffsByFilters(company, departamentId, positionId, yachtId);
+        const result = await StaffService.getStaffsByFilters(company, departamentId, positionId);
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
                 x.dataValues.staff_departament.dataValues.id = Utils.encode(x.dataValues.staff_departament.dataValues.id);
                 x.dataValues.staff_position.dataValues.id = Utils.encode(x.dataValues.staff_position.dataValues.id);
 
+            });
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        console.log(error)
+        res.status(400).json(error.message)
+    }
+}
+
+const getEvaluators = async (req, res) => {
+    try {
+        const search = Utils.decode(req.query.search)
+        const result = await StaffService.getEvaluators(search);
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+            });
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        console.log(error)
+        res.status(400).json(error.message)
+    }
+}
+
+const getEvaluatorsByFilters = async (req, res) => {
+    try {
+       
+        const yachtId = req.query.yachtId
+        const departamentId = req.query.departamentId
+        const positionId = req.query.positionId
+        const result = await StaffService.getEvaluatorsByFilters(yachtId, departamentId, positionId);
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+            });
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        console.log(error)
+        res.status(400).json(error.message)
+    }
+}
+
+const getEvaluateds = async (req, res) => {
+    try {
+        const search = Utils.decode(req.query.search)
+        const result = await StaffService.getEvaluateds(search);
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+            });
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        console.log(error)
+        res.status(400).json(error.message)
+    }
+}
+
+const getEvaluatedsByFilters = async (req, res) => {
+    try {
+        const search = Utils.decode(req.query.search)
+        const yachtId = req.query.yachtId
+        const result = await StaffService.getEvaluatedsByFilters(search, yachtId);
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
             });
         }
         res.status(200).json(result);
@@ -146,6 +212,10 @@ const StaffController = {
     getAllStaffs,
     getStaffsByFilters,
     getStaff,
+    getEvaluators,
+    getEvaluatorsByFilters,
+    getEvaluateds,
+    getEvaluatedsByFilters,
     createStaff,
     updateStaff,
     deleteStaff,

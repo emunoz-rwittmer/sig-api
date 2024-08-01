@@ -31,12 +31,8 @@ class FormService {
         try {
             const result = await Form.findOne({
                 where: { id },
-                attributes: ['id', 'title', 'active', 'createdAt'],
+                attributes: ['id', 'title', 'positionId', 'active', 'createdAt'],
                 include: [{
-                    model: Positions,
-                    as: 'position_form',
-                    attributes: ['id','name']
-                },{
                     model: FormEstructure,
                     as: "form_estructure",
                     attributes: ['id'],

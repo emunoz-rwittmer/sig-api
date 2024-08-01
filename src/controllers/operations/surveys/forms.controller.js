@@ -4,6 +4,10 @@ const CaptainService = require('../../../services/catalogs/captains.services');
 const Utils = require('../../../utils/Utils');
 const bcrypt = require('bcrypt');
 const sendEmail = require('../../../utils/mailer');
+const PositionService = require('../../../services/catalogs/positions.services');
+const DepartamentService = require('../../../services/catalogs/departaments.services');
+const YachtService = require('../../../services/catalogs/yachts.services');
+const YachtController = require('../../catalogs/yachts.controller');
 
 const getAllForms = async (req, res) => {
     try {
@@ -25,8 +29,48 @@ const getForm = async (req, res) => {
         const result = await FormService.getFormById(formId);
         if (result instanceof Object) {
             result.dataValues.id = Utils.encode(result.dataValues.id);
-            result.dataValues.position_form.dataValues.id = Utils.encode(result.dataValues.position_form.dataValues.id);
+            result.dataValues.positionId = Utils.encode(result.dataValues.positionId);
+
         }
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(400).json(error.message)
+    }
+}
+
+const getFormAllNecesary = async (req, res) => {
+    try {
+        const formId = Utils.decode(req.params.form_id);
+        const result = {}
+        const form = await FormService.getFormById(formId);
+        if (form instanceof Object) {
+            form.dataValues.id = Utils.encode(form.dataValues.id);
+            form.dataValues.positionId = Utils.encode(form.dataValues.positionId);
+
+        }
+        const yachts = await YachtService.getAll();
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+            });
+        }
+        const positions = await PositionService.getAll();
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+            });
+        }
+        const departaments = await DepartamentService.getAll();
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+            });
+        }
+        result.form = form
+        result.yachts = yachts
+        result.positions = positions
+        result.departaments = departaments
+
         res.status(200).json(result);
     } catch (error) {
         res.status(400).json(error.message)
@@ -63,8 +107,10 @@ const createForm = async (req, res) => {
 
 const updateForm = async (req, res) => {
     try {
+        const positionId = Utils.decode(req.body.data.positionId)
         const formId = Utils.decode(req.params.form_id);
         const form = req.body;
+        form.data.positionId = positionId
         const result = await FormService.updateForm(form.data, {
             where: { id: formId },
         });
@@ -159,6 +205,7 @@ const FormController = {
     deleteForm,
     deleteQuestionForm,
     serchCrew,
+    getFormAllNecesary,
     sendEvaluation
 }
 module.exports = FormController

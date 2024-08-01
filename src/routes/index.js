@@ -30,7 +30,7 @@ const routerApi = (app) => {
     app.use("/api/administratives", authJwt.verifyToken, AdministrativeRoutes);
     //OPERATIONS
     app.use("/api/questions", authJwt.verifyToken, questiondRoutes);
-    app.use("/api/forms", authJwt.verifyToken, formsRoutes);
+    app.use("/api/forms", formsRoutes);
     app.use("/api/evaluations", authJwt.verifyToken, evaluationRoutes)
   };
   

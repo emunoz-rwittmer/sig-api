@@ -37,7 +37,7 @@ class Staffervice {
         }
     }
 
-    static async getStaffsByFilters(company, departamentId, positionId, yachtId) {
+    static async getStaffsByFilters(company, departamentId, positionId) {
         try {
 
             const where = {};
@@ -45,6 +45,66 @@ class Staffervice {
             if (company) {
                 where.company = company;
             }
+            if (departamentId) {
+                where.departamentId = departamentId;
+            }
+            if (positionId) {
+                where.positionId = positionId;
+            }
+
+            const result = await Staff.findAll({
+                where,
+                attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'company', 'active'],
+                order: [
+                    ['first_name', 'ASC']
+                ],
+                include: [{
+                    model: StaffYacht,
+                    as: 'yachts',
+                    attributes: ['id'],
+                    include: [{
+                        model: Yachts,
+                        as: 'yacht_staff'
+                    }]
+                }, {
+                    model: Departaments,
+                    as: 'staff_departament',
+                    attributes: ['id', 'name'],
+                }, {
+                    model: Positions,
+                    as: 'staff_position',
+                    attributes: ['id', 'name'],
+                }],
+            });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async getEvaluators(search) {
+        try {
+            const result = await Staff.findAll({
+                where : {
+                    positionId: { [ Op.ne]: search},
+                    active: true
+                },
+                attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'company', 'active'],
+                order: [
+                    ['first_name', 'ASC']
+                ],
+            });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async getEvaluatorsByFilters(yachtId, departamentId, positionId ) {
+        try {
+
+            const where = {};
+
             if (departamentId) {
                 where.departamentId = departamentId;
             }
@@ -71,15 +131,62 @@ class Staffervice {
                         model: Yachts,
                         as: 'yacht_staff'
                     }]
-                }, {
-                    model: Departaments,
-                    as: 'staff_departament',
-                    attributes: ['id', 'name'],
-                }, {
-                    model: Positions,
-                    as: 'staff_position',
-                    attributes: ['id', 'name'],
-                }],
+                }]
+            });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async getEvaluateds(search) {
+        try {
+
+            const result = await Staff.findAll({
+                where : {
+                    positionId: search,
+                    active: true
+                },
+                attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'company', 'active'],
+                order: [
+                    ['first_name', 'ASC']
+                ],
+            });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async getEvaluatedsByFilters(positionId, yachtId ) {
+        try {
+
+            const where = {};
+
+            if (positionId) {
+                where.positionId = positionId;
+            }
+
+            const yachtWhere = {};
+            if (yachtId) {
+                yachtWhere.yachtId = yachtId;
+            }
+            const result = await Staff.findAll({
+                where,
+                attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'company', 'active'],
+                order: [
+                    ['first_name', 'ASC']
+                ],
+                include: [{
+                    model: StaffYacht,
+                    as: 'yachts',
+                    attributes: ['id'],
+                    where: yachtWhere, // Filtro de yate específico
+                    include: [{
+                        model: Yachts,
+                        as: 'yacht_staff'
+                    }]
+                }]
             });
             return result;
         } catch (error) {
