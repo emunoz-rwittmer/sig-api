@@ -1,5 +1,5 @@
 const Users = require('../../models/catalogs/user.models');
-const Captain = require('../../models/catalogs/captains.models');
+const Staff = require('../../models/catalogs/staff.models');
 const Crew = require('../../models/catalogs/crews.models'); 
 const Roles = require('../../models/catalogs/roles.models');
 const bcrypt = require('bcrypt');
@@ -30,10 +30,10 @@ class AuthService {
         }
     }
 
-    static async loginCaptains(credentials) {
+    static async loginUsers(credentials) {
         try {
             const { email, password } = credentials;
-            const user = await Captain.findOne({
+            const user = await Staff.findOne({
                 where: { email },
             });
             if (user) {
@@ -41,17 +41,6 @@ class AuthService {
                 return isValid ? { isValid, user } : { isValid }
             }
             return { isValid: false }
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    static async loginCrews(password) {
-        try {
-            const user = await Crew.findOne({
-                where: { password },
-            });
-            return user
         } catch (error) {
             throw error;
         }

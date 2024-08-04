@@ -44,10 +44,10 @@ const initModels = () => {
     HeaderAnswer.hasMany(FormAnswer, { as: 'answer_header', foreignKey: 'header_answer_id' });
     FormAnswer.belongsTo(EstructureQuestion, { as: 'aswer_question', foreignKey: 'estructure_question_id' });
     
-    HeaderAnswer.hasMany(Staff, { as: 'header_evalutor', foreignKey: 'evaluator_id' });
-    Staff.belongsTo(HeaderAnswer, { as: 'evaluator_header', foreignKey: 'evaluator_id' });
-    HeaderAnswer.hasMany(Staff, { as: 'header_evaluted', foreignKey: 'evaluated_id' });
-    Staff.belongsTo(HeaderAnswer, { as: 'evaluated_header', foreignKey: 'evaluator_id' });
+    HeaderAnswer.belongsTo(Staff, { as: 'header_evalutor', foreignKey: 'evaluator_id' });
+    Staff.hasMany(HeaderAnswer, { as: 'evaluator_header', foreignKey: 'evaluator_id' });
+    HeaderAnswer.belongsTo(Staff, { as: 'header_evaluted', foreignKey: 'evaluated_id' });
+    Staff.hasMany(HeaderAnswer, { as: 'evaluated_header', foreignKey: 'evaluator_id' });
     
     //state
     StatusEvaluation.belongsTo(HeaderAnswer, { as: "header_state", foreignKey: "state_id" });
