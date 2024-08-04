@@ -8,6 +8,8 @@ const PositionService = require('../../../services/catalogs/positions.services')
 const DepartamentService = require('../../../services/catalogs/departaments.services');
 const YachtService = require('../../../services/catalogs/yachts.services');
 const YachtController = require('../../catalogs/yachts.controller');
+const Staffervice = require('../../../services/catalogs/staff.services');
+const moment = require('moment');
 
 const getAllForms = async (req, res) => {
     try {
@@ -89,7 +91,7 @@ const serchCrew = async (req, res) => {
 }
 
 const createForm = async (req, res) => {
-    try { 
+    try {
         const positionId = Utils.decode(req.body.positionId)
         const form = req.body;
         form.positionId = positionId
@@ -152,45 +154,24 @@ const deleteQuestionForm = async (req, res) => {
 const sendEvaluation = async (req, res) => {
     try {
         const data = req.body
+        const expirationDate = moment().add(2, 'days').toDate();
         data.formId = Utils.decode(req.body.formId);
         data.yachtId = Utils.decode(req.body.yachtId);
-        const form = await FormService.getFormById(data.formId);
-        const crews = await CrewService.getCrewsById(form.people !== "Tripulación" ? data.evaluator : data.evaluated)
-        const captains = await CaptainService.getCaptainsById(form.people !== "Capitanes" ? data.evaluator : data.evaluated)
-        if (form.people === "Tripulación") {
-            data.evaluator = captains
-            data.evaluated = crews;
-            data.evaluatedJob = 'tripulante';
-        } else if (form.people === "Capitanes") {
-            data.evaluator = crews
-            data.evaluated = captains;
-            data.evaluatedJob = 'capitan';
-        }
+        data.evaluator = data.evaluator.map(id => Utils.decode(id))
+        data.evaluated = data.evaluated.map(id => Utils.decode(id))
+        data.expirationDate = expirationDate;
+
+        const evaluator = await Staffervice.getEvaluatorsById(data.evaluator)
         const result = await FormService.createHeaderAnswer(data);
-        if (result && form.people === "Tripulación") {
-            const action = "tripulacion"
-            for (const evaluador of captains) {
-                const passwordGenerate = Utils.getPasswordRandom();
-                const passwordGenerated = bcrypt.hashSync(passwordGenerate, 10);
-                sendEmail(evaluador, passwordGenerate, action);
-                const result = await CaptainService.updateCaptain({
-                    password: passwordGenerated
-                },
-                    { where: { id: evaluador.id } });
-            }
-            res.status(200).json({ data: 'evaluation send successfully' })
-        } else if (result && form.people === "Capitanes") {
-            const action = "capitanes"
-            for (const evaluador of crews) {
-                const passwordGenerate = Utils.getPasswordRandom();
-                sendEmail(evaluador, passwordGenerate, action);
-                const result = await CrewService.updateCrew({
-                    password: passwordGenerate
-                },
-                    { where: { id: evaluador.id } });
+        if (result) {
+            console.log("estoy dentro")
+            for (const evaluador of evaluator) {
+                const action = "new evaluation"
+                sendEmail(evaluador, " ", action);
             }
             res.status(200).json({ data: 'evaluation send successfully' })
         }
+
     } catch (error) {
         console.log(error)
         res.status(400).json(error.message);

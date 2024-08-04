@@ -5,10 +5,6 @@ const Departaments = require('./catalogs/departament.models');
 const Yacht = require('./catalogs/yacht.models');
 const Staff = require('./catalogs/staff.models');
 const StaffYacht = require('./catalogs/staffYacht.models')
-const Captain = require('./catalogs/captains.models');
-const CaptainYacht = require('./catalogs/captainYacht.models');
-const Crew = require('./catalogs/crews.models');
-const CrewYacht = require('./catalogs/crewYacht.models');
 const Question = require('./operations/surveys/question.models');
 const HouseRule = require('./catalogs/houseRule.models');
 const Administrative = require('./catalogs/administratives.models');
@@ -37,14 +33,6 @@ const initModels = () => {
 
     Form.belongsTo(Positions, { as: "position_form", foreignKey: "position_id" });
     Positions.hasMany(Form, { as: 'positions', foreignKey: 'position_id' });
-
-    // CaptainYacht.belongsTo(Captain, { as: "captain_yacht", foreignKey: "captain_id" });
-    // CaptainYacht.belongsTo(Yacht, { as: "yacht_captain", foreignKey: "yacht_id" });
-    // Captain.hasMany(CaptainYacht, { as: 'yachts', foreignKey: 'captain_id' });
-    
-    // CrewYacht.belongsTo(Crew, { as: "crew_yacht", foreignKey: "crew_id" });
-    // CrewYacht.belongsTo(Yacht, { as: "yacht_crew", foreignKey: "yacht_id" });
-    // Crew.hasMany(CrewYacht, { as: 'yachts', foreignKey: 'crew_id' });
     //operations
     FormEstructure.belongsTo(Form, { as: "form_questions", foreignKey: "form_id" });
     FormEstructure.belongsTo(EstructureQuestion, { as: "questions_estucture", foreignKey: "estructure_question_id" });
@@ -52,11 +40,15 @@ const initModels = () => {
     //Anwers
     HeaderAnswer.belongsTo(Form, { as: "header_form", foreignKey: "form_id" });
     Form.hasMany(HeaderAnswer, { as: 'form_header', foreignKey: 'form_id' });
-    HeaderAnswer.belongsTo(Yacht, { as: 'header_yacht', foreignKey: 'yacht_id' });
-    Yacht.hasMany(HeaderAnswer, { as: 'yacht_header', foreignKey: 'yacht_id' });
     FormAnswer.belongsTo(HeaderAnswer, { as: 'header_aswer', foreignKey: 'header_answer_id' });
     HeaderAnswer.hasMany(FormAnswer, { as: 'answer_header', foreignKey: 'header_answer_id' });
     FormAnswer.belongsTo(EstructureQuestion, { as: 'aswer_question', foreignKey: 'estructure_question_id' });
+    
+    HeaderAnswer.hasMany(Staff, { as: 'header_evalutor', foreignKey: 'evaluator_id' });
+    Staff.belongsTo(HeaderAnswer, { as: 'evaluator_header', foreignKey: 'evaluator_id' });
+    HeaderAnswer.hasMany(Staff, { as: 'header_evaluted', foreignKey: 'evaluated_id' });
+    Staff.belongsTo(HeaderAnswer, { as: 'evaluated_header', foreignKey: 'evaluator_id' });
+    
     //state
     StatusEvaluation.belongsTo(HeaderAnswer, { as: "header_state", foreignKey: "state_id" });
     HeaderAnswer.hasMany(StatusEvaluation, { as: 'state', foreignKey: 'state_id' });

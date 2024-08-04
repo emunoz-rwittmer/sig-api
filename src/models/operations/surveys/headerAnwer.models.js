@@ -12,27 +12,24 @@ const HeaderAnswer = db.define('headerAnswer', {
     allowNull: false,
     field: 'form_id'
   },
-  yachtId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    field: 'yacht_id'
-  },
   stateId: {
     type: DataTypes.INTEGER,
-    defaultValue: false,
-    ield: 'state_id'
+    defaultValue: 1,
+    field: 'state_id'
   },
-  evaluator: {
+  evaluatorId: {
     type: DataTypes.STRING,
     allowNull: true,
+    field: 'evaluator_id'
   },
-  evaluated: {
+  evaluatedId: {
     type: DataTypes.STRING,
     allowNull: true,
+    field: 'evaluated_id'
   },
   expirationDate: {
     type: DataTypes.DATE,
-    defaultValue: false,
+    allowNull: false,
   },
 });
 

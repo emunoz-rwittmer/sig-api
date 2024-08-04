@@ -85,8 +85,8 @@ class Staffervice {
     static async getEvaluators(search) {
         try {
             const result = await Staff.findAll({
-                where : {
-                    positionId: { [ Op.ne]: search},
+                where: {
+                    positionId: { [Op.ne]: search },
                     active: true
                 },
                 attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'company', 'active'],
@@ -100,9 +100,8 @@ class Staffervice {
         }
     }
 
-    static async getEvaluatorsByFilters(yachtId, departamentId, positionId ) {
+    static async getEvaluatorsByFilters(yachtId, departamentId, positionId) {
         try {
-
             const where = {};
 
             if (departamentId) {
@@ -112,26 +111,42 @@ class Staffervice {
                 where.positionId = positionId;
             }
 
-            const yachtWhere = {};
+            const yachtInclude = {
+                model: StaffYacht,
+                as: 'yachts',
+                attributes: ['id'],
+                include: [{
+                    model: Yachts,
+                    as: 'yacht_staff'
+                }]
+            };
+
             if (yachtId) {
-                yachtWhere.yachtId = yachtId;
+                yachtInclude.where = { yachtId: yachtId };
             }
+
             const result = await Staff.findAll({
                 where,
                 attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'company', 'active'],
-                order: [
-                    ['first_name', 'ASC']
-                ],
-                include: [{
-                    model: StaffYacht,
-                    as: 'yachts',
-                    attributes: ['id'],
-                    where: yachtWhere, // Filtro de yate específico
-                    include: [{
-                        model: Yachts,
-                        as: 'yacht_staff'
-                    }]
-                }]
+                order: [['first_name', 'ASC']],
+                include: [yachtInclude]
+            });
+
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async getEvaluatorsById(arrayIds) {
+        try {
+            const result = await Staff.findAll({
+                where: {
+                    id: {
+                        [Op.in]: arrayIds
+                    }
+                },
+                attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active']
             });
             return result;
         } catch (error) {
@@ -139,11 +154,12 @@ class Staffervice {
         }
     }
 
+
     static async getEvaluateds(search) {
         try {
 
             const result = await Staff.findAll({
-                where : {
+                where: {
                     positionId: search,
                     active: true
                 },
@@ -158,7 +174,7 @@ class Staffervice {
         }
     }
 
-    static async getEvaluatedsByFilters(positionId, yachtId ) {
+    static async getEvaluatedsByFilters(positionId, yachtId) {
         try {
 
             const where = {};
@@ -187,6 +203,22 @@ class Staffervice {
                         as: 'yacht_staff'
                     }]
                 }]
+            });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async getEvaluatedsById(arrayIds) {
+        try {
+            const result = await Staff.findAll({
+                where: {
+                    id: {
+                        [Op.in]: arrayIds
+                    }
+                },
+                attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active']
             });
             return result;
         } catch (error) {

@@ -15,7 +15,7 @@ class FormService {
         try {
             const result = await Form.findAll({
                 attributes: ['id', 'title', 'active', 'createdAt'],
-                include : [{
+                include: [{
                     model: Positions,
                     as: 'position_form',
                     attributes: ['name']
@@ -174,14 +174,16 @@ class FormService {
                 for (const evaluador of data.evaluator) {
                     const result = await HeaderAnswer.create({
                         formId: data.formId,
-                        yachtId: data.yachtId,
-                        evaluator: evaluador.dataValues.first_name + " " + evaluador.dataValues.last_name,
-                        evaluated: evaluado.dataValues.first_name + " " + evaluado.dataValues.last_name,
+                        stateId: 1,
+                        evaluatorId: evaluador,
+                        evaluatedId: evaluado,
+                        expirationDate: data.expirationDate
                     });
                 }
             }
             return "Is Ok"
         } catch (error) {
+            console.log(error)
             throw error;
         }
     }
