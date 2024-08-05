@@ -4,6 +4,7 @@ const CaptainService = require('../../../services/catalogs/captains.services');
 const YachtService = require('../../../services/catalogs/yachts.services');
 const CrewService = require('../../../services/catalogs/crews.services');
 const moment = require('moment');
+const Staffervice = require('../../../services/catalogs/staff.services');
 
 const getAllEvaluations = async (req, res) => {
     try {
@@ -71,20 +72,19 @@ const getReportingByYacht = async (req, res) => {
         const endDate = req.query.endDate;
         const yacht = await YachtService.getYachtById(yachtId)
         const evaluations = await EvaluationService.getEvaluationsByYacht(yachtId, startDate, endDate)
+        if (evaluations instanceof Array) {
+            evaluations.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+                x.dataValues.evaluatedId = Utils.encode(x.dataValues.evaluatedId);
+            });
+        }
         const result = await EvaluationService.getReportingByYacht(yachtId);
-        if (result.captains instanceof Array) {
-            result.captains.map((x) => {
-                x.captain_yacht.dataValues.id = Utils.encode(x.captain_yacht.dataValues.id);
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.staff_yacht.dataValues.id = Utils.encode(x.staff_yacht.dataValues.id);
             });
         }
-        if (result.crews instanceof Array) {
-            result.crews.map((x) => {
-                x.crew_yacht.dataValues.id = Utils.encode(x.crew_yacht.dataValues.id);
-            });
-        }
-        result.yacht = yacht.dataValues
-        result.evaluations = evaluations
-        res.status(200).json(result);
+        res.status(200).json({ yacht, result, evaluations });
     } catch (error) {
         console.log(error)
         res.status(400).json(error.message)
@@ -96,23 +96,10 @@ const getReportingEvaluationsByCrew = async (req, res) => {
         const crewId = Utils.decode(req.params.crew_id);
         const startDate = req.query.startDate;
         const endDate = req.query.endDate;
-        const type = req.query.type;
-        let result = {}
-        if (type === 'captain') {
-            const captain = await CaptainService.getCaptainById(crewId);
-            const names = captain.dataValues.first_name + " " + captain.dataValues.last_name
-            const evaluations = await EvaluationService.getEvaluationByEvaluated(names, startDate, endDate)
-            result.crew = captain
-            result.evaluations = evaluations
-            res.status(200).json(result);
-        } else {
-            const crew = await CrewService.getCrewById(crewId);
-            const names = crew.dataValues.first_name + " " + crew.dataValues.last_name;
-            const evaluations = await EvaluationService.getEvaluationByEvaluated(names, startDate, endDate);
-            result.crew = crew
-            result.evaluations = evaluations
-            res.status(200).json(result);
-        }
+        const staff = await Staffervice.getStaffById(crewId)
+        const evaluations = await EvaluationService.getEvaluationByEvaluated(crewId, startDate, endDate)
+        res.status(200).json({staff, evaluations});
+
     } catch (error) {
         console.log(error)
         res.status(400).json(error.message)

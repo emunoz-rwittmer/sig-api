@@ -3,16 +3,12 @@ const EstructureQuestion = require("../../../models/operations/surveys/estructur
 const FormEstructure = require("../../../models/operations/surveys/formEstructure.models");
 const HeaderAnswer = require('../../../models/operations/surveys/headerAnwer.models')
 const FormAnswer = require('../../../models/operations/surveys/formAnswer.models');
-//CATALOGS MODELS
-const Captain = require('../../../models/catalogs/captains.models');
-const CaptainYacht = require('../../../models/catalogs/captainYacht.models');
-const CrewYacht = require('../../../models/catalogs/crewYacht.models');
-const Crew = require('../../../models/catalogs/crews.models');
 const Yacht = require('../../../models/catalogs/yacht.models');
 const { Op } = require('sequelize');
 const Staff = require('../../../models/catalogs/staff.models');
 const Departaments = require('../../../models/catalogs/departament.models');
 const Positions = require('../../../models/catalogs/positions.models');
+const StaffYacht = require('../../../models/catalogs/staffYacht.models');
 
 class EvaluationService {
     static async getEvaluationsByUser(evaluatorId) {
@@ -24,7 +20,7 @@ class EvaluationService {
                     model: Yacht,
                     as: 'header_yacht',
                     attributes: ['name'],
-                },{
+                }, {
                     model: Form,
                     as: "header_form",
                     attributes: ['title'],
@@ -137,27 +133,23 @@ class EvaluationService {
 
     static async getReportingByYacht(yachtId) {
         try {
-            const captains = await CaptainYacht.findAll({
+            const result = await StaffYacht.findAll({
                 where: { yachtId },
                 attributes: ['id'],
                 include: [{
-                    model: Captain,
-                    as: "captain_yacht",
+                    model: Staff,
+                    as: "staff_yacht",
                     attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
+                    include: [
+                        {
+                            model: Positions,
+                            as: 'staff_position',
+                            attributes: ['id', 'name'],
+                        }
+                    ]
                 }]
             });
-
-            const crews = await CrewYacht.findAll({
-                where: { yachtId },
-                attributes: ['id'],
-                include: [{
-                    model: Crew,
-                    as: "crew_yacht",
-                    attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
-                }]
-            });
-
-            return { captains, crews };
+            return result;
         } catch (error) {
             throw error;
         }
@@ -172,6 +164,7 @@ class EvaluationService {
                         [Op.between]: [startDate, endDate]
                     }
                 },
+                attributes: ['id', 'evaluatedId'],
                 include: [
                     {
                         model: FormAnswer,
@@ -185,16 +178,28 @@ class EvaluationService {
         }
     }
 
-    static async getEvaluationByEvaluated(names, startDate, endDate) {
+    static async getEvaluationByEvaluated(evaluatedId, startDate, endDate) {
         try {
             const result = await HeaderAnswer.findAll({
                 where: {
-                    evaluated: names,
+                    evaluatedId,
                     createdAt: {
                         [Op.between]: [startDate, endDate]
                     }
                 },
+                attributes: ['id', 'stateId', 'createdAt' ],
                 include: [{
+                    model: Staff,
+                    as: "header_evalutor",
+                    attributes: ['firstName', 'lastName'],
+                    include: [
+                        {
+                            model: Positions,
+                            as: 'staff_position',
+                            attributes: ['id', 'name'],
+                        }
+                    ]
+                }, {
                     model: Form,
                     as: "header_form",
                     attributes: ['id', 'title'],
