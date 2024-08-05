@@ -5,6 +5,7 @@ const tokenModel = require('../../models/mongoModels/Token.models');
 const EvaluationService = require('../../services/operations/surveys/evaluations.services')
 const bcrypt = require('bcrypt');
 const sendEmail = require('../../utils/mailer');
+const Staffervice = require('../../services/catalogs/staff.services');
 
 const login = async (req, res) => {
     try {
@@ -103,22 +104,33 @@ const forgotPassword = async (req, res) => {
         const useEmail = req.body.email;
         const passwordGenerate = Utils.getPasswordRandom();
         const result = await UserService.getUserByEmail(useEmail);
+        const staff = await Staffervice.getStaffByEmail(useEmail);
+        const passwordGenerated = bcrypt.hashSync(passwordGenerate, 10);
+        const action = "forgot passowrd"
         if (result) {
-            const passwordGenerated = bcrypt.hashSync(passwordGenerate, 10);
-            const action = "forgot passowrd"
             sendEmail(result, passwordGenerate, action);
             const userResponse = await UserService.updateUser({
                 password: passwordGenerated, changePassword: true
             },
                 { where: { id: result.id } });
             if (userResponse instanceof Object) {
-                res.status(200).json({ data: "password updated successfully" });
+                return res.status(200).json({ data: "password updated successfully" });
             } else {
-                res.status(500).json({ data: userResponse });
+                return res.status(500).json({ data: userResponse });
             }
+        }
+        if (staff) {
+            sendEmail(staff, passwordGenerate, action);
+            const respose = await Staffervice.updateStaff(
+                {
+                    password: passwordGenerated, changePassword: true
+                }, { where: { id: staff.id } });
 
-        } else {
-            res.status(400).json({ message: 'something wrong' });
+            if (respose instanceof Object) {
+                return res.status(200).json({ data: "password updated successfully" });
+            } else {
+                return res.status(500).json({ data: respose });
+            }
         }
     } catch (error) {
         res.status(400).json(error.message);

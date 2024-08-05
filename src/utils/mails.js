@@ -167,7 +167,7 @@ class Mails {
                     <h3 class="credential-tittle">Password:</h3> <p>${passwordGenerate} </p>
                   </div>
                   <div class="buttom-container">
-                      <a href=${process.env.URL} class="button">Iniciar sesión</a>
+                      <a href=${result.positionId ? process.env.URL_CAPTAINS : process.env.URL} class="button">Iniciar sesión</a>
                   </div>
                   <div class="footer">
                     <p>Atentamente</p>

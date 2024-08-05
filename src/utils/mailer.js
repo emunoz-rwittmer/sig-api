@@ -2,7 +2,6 @@ const Mails = require('../utils/mails');
 require('dotenv').config();
 
 const sendEmail = (user, passwordGenerated, action) => {
-    console.log(user)
     const sgMail = require('@sendgrid/mail')
     const htmlContentNewUser = Mails.htmlNewUser(user, passwordGenerated)
     const htmlContentForgotPassword = Mails.htmlForgotPassword(user, passwordGenerated)

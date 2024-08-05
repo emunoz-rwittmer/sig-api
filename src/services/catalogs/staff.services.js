@@ -37,6 +37,15 @@ class Staffervice {
         }
     }
 
+    static async getStaffByEmail(email) {
+        try {
+            const result = await Staff.findOne({ where: { email } });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     static async getStaffsByFilters(company, departamentId, positionId) {
         try {
 
@@ -252,6 +261,7 @@ class Staffervice {
 
     static async updateStaff(staff, id) {
         try {
+            console.log(" entre aqui")
             const result = await Staff.update(staff, id);
             return result;
         } catch (error) {
