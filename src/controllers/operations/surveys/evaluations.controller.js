@@ -3,22 +3,36 @@ const Utils = require('../../../utils/Utils');
 const CaptainService = require('../../../services/catalogs/captains.services');
 const YachtService = require('../../../services/catalogs/yachts.services');
 const CrewService = require('../../../services/catalogs/crews.services');
+const moment = require('moment');
 
 const getAllEvaluations = async (req, res) => {
     try {
-        const userId = Utils.decode(req.query.user_id)
-        const result = await EvaluationService.getEvaluationsByUser(userId);
-        if (result instanceof Array) {
-            result.map((x) => {
+        const userId = Utils.decode(req.query.user_id);
+        let evaluations = await EvaluationService.getEvaluationsByUser(userId);
+
+        await Promise.all(
+            evaluations.map(async (evaluation) => {
+                if (isTempPasswordExpired(evaluation.expirationDate)) {
+                    await EvaluationService.updateEvaluation(evaluation.id);
+                }
+            })
+        );
+
+        evaluations = await EvaluationService.getEvaluationsByUser(userId);
+
+        if (evaluations instanceof Array) {
+            evaluations = evaluations.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
                 x.dataValues.formId = Utils.encode(x.dataValues.formId);
+                return x;
             });
         }
-        res.status(200).json(result);
+
+        res.status(200).json(evaluations);
     } catch (error) {
-        res.status(400).json(error.message)
+        res.status(400).json(error.message);
     }
-}
+};
 
 const getEvaluation = async (req, res) => {
     try {
@@ -105,7 +119,9 @@ const getReportingEvaluationsByCrew = async (req, res) => {
     }
 }
 
-
+isTempPasswordExpired = (expirationDate) => {
+    return moment().isAfter(moment(expirationDate));
+};
 
 const EvaluationController = {
     getAllEvaluations,

@@ -19,7 +19,7 @@ class EvaluationService {
         try {
             const result = await HeaderAnswer.findAll({
                 where: { evaluatorId, stateId: 1 },
-                attributes: ['id', 'formId', 'createdAt'],
+                attributes: ['id', 'formId', 'expirationDate', 'createdAt'],
                 include: [{
                     model: Yacht,
                     as: 'header_yacht',
@@ -115,6 +115,17 @@ class EvaluationService {
         try {
             const result = await HeaderAnswer.update(
                 { stateId: 2 },
+                { where: { id } });
+            return result
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async updateEvaluation(id) {
+        try {
+            const result = await HeaderAnswer.update(
+                { stateId: 3 },
                 { where: { id } });
             return result
         } catch (error) {
