@@ -21,6 +21,10 @@ class EvaluationService {
                 where: { evaluatorId, stateId: 1 },
                 attributes: ['id', 'formId', 'createdAt'],
                 include: [{
+                    model: Yacht,
+                    as: 'header_yacht',
+                    attributes: ['name'],
+                },{
                     model: Form,
                     as: "header_form",
                     attributes: ['title'],

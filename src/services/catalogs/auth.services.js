@@ -46,9 +46,23 @@ class AuthService {
         }
     }
 
-    static async upgradePassword(user) {
+    static async userUpgradePassword(user) {
         try {
             const result = await Users.update(
+                { password: user.password, changePassword: user.changePassword },
+                {
+                    where: { id: user.id }
+                }
+            );
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async staffUpgradePassword(user) {
+        try {
+            const result = await Staff.update(
                 { password: user.password, changePassword: user.changePassword },
                 {
                     where: { id: user.id }

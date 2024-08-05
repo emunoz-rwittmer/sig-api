@@ -64,6 +64,7 @@ const loginUsers = async (req, res) => {
                 const token = await Utils.generateAccessToken(userData);
                 const refreshToken = await Utils.generateRefreshToken(userData);
                 userData.token = token;
+                userData.changePassword = result.user.changePassword
                 const newToken = new tokenModel({
                     user: firstName + " " + lastName,
                     userId: Utils.encode(id),
@@ -86,13 +87,22 @@ const loginUsers = async (req, res) => {
 const upgradePassword = async (req, res) => {
     try {
         const userId = Utils.decode(req.params.user_id);
-        const user = {
+        const data = {
             id: userId,
             password: bcrypt.hashSync(req.body.password, 10),
             changePassword: false
         };
-        const result = await AuthService.upgradePassword(user);
-        res.status(200).json({ data: 'password updated successfully' });
+        const user = await UserService.getUserById(userId);
+        const staff = await Staffervice.getStaffById(userId);
+        if(user){
+            const result = await AuthService.userUpgradePassword(data);
+            return res.status(200).json({ data: 'password updated successfully' });
+        }
+        if(staff){
+            const result = await AuthService.staffUpgradePassword(data);
+            return res.status(200).json({ data: 'password updated successfully' });
+        }
+
     } catch (error) {
         console.log(error)
         res.status(400).json(error.message);
