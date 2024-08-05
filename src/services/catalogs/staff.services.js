@@ -102,7 +102,7 @@ class Staffervice {
 
     static async getEvaluatorsByFilters(yachtId, departamentId, positionId) {
         try {
-            const where = {};
+            const where = {}
 
             if (departamentId) {
                 where.departamentId = departamentId;

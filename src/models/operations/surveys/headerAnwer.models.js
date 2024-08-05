@@ -7,6 +7,11 @@ const HeaderAnswer = db.define('headerAnswer', {
     primaryKey: true,
     autoIncrement: true,
   },
+  yachtId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'yacht_id'
+  },
   formId: {
     type: DataTypes.INTEGER,
     allowNull: false,

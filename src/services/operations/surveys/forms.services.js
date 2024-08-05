@@ -173,6 +173,7 @@ class FormService {
             for (const evaluado of data.evaluated) {
                 for (const evaluador of data.evaluator) {
                     const result = await HeaderAnswer.create({
+                        yachtId: data.yachtId ? data.yachtId : null ,
                         formId: data.formId,
                         stateId: 1,
                         evaluatorId: evaluador,

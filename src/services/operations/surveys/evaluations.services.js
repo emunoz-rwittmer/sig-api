@@ -10,23 +10,33 @@ const CrewYacht = require('../../../models/catalogs/crewYacht.models');
 const Crew = require('../../../models/catalogs/crews.models');
 const Yacht = require('../../../models/catalogs/yacht.models');
 const { Op } = require('sequelize');
-const { model } = require('mongoose');
-
-
+const Staff = require('../../../models/catalogs/staff.models');
+const Departaments = require('../../../models/catalogs/departament.models');
+const Positions = require('../../../models/catalogs/positions.models');
 
 class EvaluationService {
-    static async getEvaluationsByCapitanl(names) {
+    static async getEvaluationsByUser(evaluatorId) {
         try {
             const result = await HeaderAnswer.findAll({
-                where: { evaluator: names, isComplete: false },
+                where: { evaluatorId, stateId: 1 },
+                attributes: ['id', 'formId', 'createdAt'],
                 include: [{
                     model: Form,
                     as: "header_form",
                     attributes: ['title'],
                 }, {
-                    model: Yacht,
-                    as: "header_yacht",
-                    attributes: ['name'],
+                    model: Staff,
+                    as: "header_evaluted",
+                    attributes: ['id', 'firstName', 'lastName'],
+                    include: [{
+                        model: Departaments,
+                        as: 'staff_departament',
+                        attributes: ['id', 'name'],
+                    }, {
+                        model: Positions,
+                        as: 'staff_position',
+                        attributes: ['id', 'name'],
+                    }]
                 }]
             });
             return result;
@@ -97,9 +107,11 @@ class EvaluationService {
         }
     }
 
-    static async updateStatusHeaderAnswers(evaluationId) {
+    static async updateStatusHeaderAnswers(id) {
         try {
-            const result = await HeaderAnswer.update({ isComplete: true }, { where: { id: evaluationId } });
+            const result = await HeaderAnswer.update(
+                { stateId: 2 },
+                { where: { id } });
             return result
         } catch (error) {
             throw error;
@@ -139,11 +151,12 @@ class EvaluationService {
     static async getEvaluationsByYacht(yachtId, startDate, endDate) {
         try {
             const result = await HeaderAnswer.findAll({
-                where: { yachtId,
+                where: {
+                    yachtId,
                     createdAt: {
                         [Op.between]: [startDate, endDate]
                     }
-                 },
+                },
                 include: [
                     {
                         model: FormAnswer,
@@ -160,10 +173,12 @@ class EvaluationService {
     static async getEvaluationByEvaluated(names, startDate, endDate) {
         try {
             const result = await HeaderAnswer.findAll({
-                where: { evaluated: names,
+                where: {
+                    evaluated: names,
                     createdAt: {
                         [Op.between]: [startDate, endDate]
-                    } },
+                    }
+                },
                 include: [{
                     model: Form,
                     as: "header_form",

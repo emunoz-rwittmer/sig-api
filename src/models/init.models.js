@@ -48,10 +48,12 @@ const initModels = () => {
     Staff.hasMany(HeaderAnswer, { as: 'evaluator_header', foreignKey: 'evaluator_id' });
     HeaderAnswer.belongsTo(Staff, { as: 'header_evaluted', foreignKey: 'evaluated_id' });
     Staff.hasMany(HeaderAnswer, { as: 'evaluated_header', foreignKey: 'evaluator_id' });
+    HeaderAnswer.belongsTo(Yacht, { as: 'header_yacht', foreignKey: 'yacht_id' });
+    Yacht.hasMany(HeaderAnswer, { as: 'yacht_header', foreignKey: 'yacht_id' });
     
     //state
-    StatusEvaluation.belongsTo(HeaderAnswer, { as: "header_state", foreignKey: "state_id" });
-    HeaderAnswer.hasMany(StatusEvaluation, { as: 'state', foreignKey: 'state_id' });
+    HeaderAnswer.belongsTo(StatusEvaluation, { as: 'state', foreignKey: 'state_id' });
+    StatusEvaluation.hasMany(HeaderAnswer, { as: "header_state", foreignKey: "state_id" });
 
     Question,
     HouseRule,

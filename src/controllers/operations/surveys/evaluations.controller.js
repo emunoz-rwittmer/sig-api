@@ -7,18 +7,14 @@ const CrewService = require('../../../services/catalogs/crews.services');
 const getAllEvaluations = async (req, res) => {
     try {
         const userId = Utils.decode(req.query.user_id)
-        if (req.query.rol === "captain") {
-            const captain = await CaptainService.getCaptainById(userId)
-            const names = captain.dataValues.first_name + " " + captain.dataValues.last_name
-            const result = await EvaluationService.getEvaluationsByCapitanl(names);
-            if (result instanceof Array) {
-                result.map((x) => {
-                    x.dataValues.id = Utils.encode(x.dataValues.id);
-                    x.dataValues.formId = Utils.encode(x.dataValues.formId);
-                });
-            }
-            res.status(200).json(result);
+        const result = await EvaluationService.getEvaluationsByUser(userId);
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+                x.dataValues.formId = Utils.encode(x.dataValues.formId);
+            });
         }
+        res.status(200).json(result);
     } catch (error) {
         res.status(400).json(error.message)
     }

@@ -156,15 +156,12 @@ const sendEvaluation = async (req, res) => {
         const data = req.body
         const expirationDate = moment().add(2, 'days').toDate();
         data.formId = Utils.decode(req.body.formId);
-        data.yachtId = Utils.decode(req.body.yachtId);
         data.evaluator = data.evaluator.map(id => Utils.decode(id))
         data.evaluated = data.evaluated.map(id => Utils.decode(id))
         data.expirationDate = expirationDate;
-
         const evaluator = await Staffervice.getEvaluatorsById(data.evaluator)
         const result = await FormService.createHeaderAnswer(data);
         if (result) {
-            console.log("estoy dentro")
             for (const evaluador of evaluator) {
                 const action = "new evaluation"
                 sendEmail(evaluador, " ", action);

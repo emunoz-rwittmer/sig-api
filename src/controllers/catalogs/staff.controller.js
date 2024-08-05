@@ -59,11 +59,9 @@ const getEvaluators = async (req, res) => {
 
 const getEvaluatorsByFilters = async (req, res) => {
     try {
-       
         const yachtId = req.query.yachtId
         const departamentId = req.query.departamentId
         const positionId = req.query.positionId
-        console.log(yachtId, departamentId, positionId)
         const result = await StaffService.getEvaluatorsByFilters(yachtId, departamentId, positionId);
         if (result instanceof Array) {
             result.map((x) => {
