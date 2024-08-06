@@ -92,9 +92,9 @@ const serchCrew = async (req, res) => {
 
 const createForm = async (req, res) => {
     try {
-        const positionId = Utils.decode(req.body.positionId)
+        const positionId = Utils.decode(req.body.data.positionId)
         const form = req.body;
-        form.positionId = positionId
+        form.data.positionId = positionId
         const newForm = await FormService.createForm(form.data);
         if (newForm) {
             const newEstructure = await FormService.createEstructureQuestion(newForm.id, form.preguntas)

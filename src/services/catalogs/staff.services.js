@@ -191,27 +191,28 @@ class Staffervice {
             if (positionId) {
                 where.positionId = positionId;
             }
+            
+            const yachtInclude = {
+                model: StaffYacht,
+                as: 'yachts',
+                attributes: ['id'],
+                include: [{
+                    model: Yachts,
+                    as: 'yacht_staff'
+                }]
+            };
 
-            const yachtWhere = {};
             if (yachtId) {
-                yachtWhere.yachtId = yachtId;
+                yachtInclude.where = { yachtId: yachtId };
             }
+
             const result = await Staff.findAll({
                 where,
                 attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'company', 'active'],
                 order: [
                     ['first_name', 'ASC']
                 ],
-                include: [{
-                    model: StaffYacht,
-                    as: 'yachts',
-                    attributes: ['id'],
-                    where: yachtWhere, // Filtro de yate específico
-                    include: [{
-                        model: Yachts,
-                        as: 'yacht_staff'
-                    }]
-                }]
+                include: [yachtInclude]
             });
             return result;
         } catch (error) {

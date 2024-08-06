@@ -5,6 +5,7 @@ const YachtService = require('../../../services/catalogs/yachts.services');
 const CrewService = require('../../../services/catalogs/crews.services');
 const moment = require('moment');
 const Staffervice = require('../../../services/catalogs/staff.services');
+const DepartamentService = require('../../../services/catalogs/departaments.services');
 
 const getAllEvaluations = async (req, res) => {
     try {
@@ -91,6 +92,34 @@ const getReportingByYacht = async (req, res) => {
     }
 }
 
+const getReportingByDepartament = async (req, res) => {
+    try {
+        const departamentId = Utils.decode(req.params.departament_id);
+        const startDate = req.query.startDate;
+        const endDate = req.query.endDate;
+        const departament = await DepartamentService.getDepartamentById(departamentId);
+        const evaluations = await EvaluationService.getEvaluationsByDepartament(departamentId, startDate, endDate)
+        if (evaluations instanceof Array) {
+            evaluations.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+                x.dataValues.evaluatedId = Utils.encode(x.dataValues.evaluatedId);
+            });
+        }
+        const result = await EvaluationService.getReportingByDepartament(departamentId);
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+            });
+        }
+
+        console.log(evaluations)
+        res.status(200).json({ departament, result, evaluations });
+    } catch (error) {
+        console.log(error)
+        res.status(400).json(error.message)
+    }
+}
+
 const getReportingEvaluationsByCrew = async (req, res) => {
     try {
         const crewId = Utils.decode(req.params.crew_id);
@@ -115,6 +144,7 @@ const EvaluationController = {
     getEvaluation,
     respondEvaluation,
     getReportingByYacht,
+    getReportingByDepartament,
     getReportingEvaluationsByCrew
 }
 module.exports = EvaluationController
