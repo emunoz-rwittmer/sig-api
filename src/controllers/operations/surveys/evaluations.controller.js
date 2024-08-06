@@ -98,21 +98,25 @@ const getReportingByDepartament = async (req, res) => {
         const startDate = req.query.startDate;
         const endDate = req.query.endDate;
         const departament = await DepartamentService.getDepartamentById(departamentId);
-        const evaluations = await EvaluationService.getEvaluationsByDepartament(departamentId, startDate, endDate)
-        if (evaluations instanceof Array) {
-            evaluations.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
-                x.dataValues.evaluatedId = Utils.encode(x.dataValues.evaluatedId);
-            });
-        }
         const result = await EvaluationService.getReportingByDepartament(departamentId);
+        const pruebas = await Promise.all(
+            result.map(async (staff) => {
+                const test = await EvaluationService.getEvaluationsByDepartament(staff.id, startDate, endDate);
+                if (test instanceof Array) {
+                    test.map((x) => {
+                        x.dataValues.id = Utils.encode(x.dataValues.id);
+                        x.dataValues.evaluatedId = Utils.encode(x.dataValues.evaluatedId);
+                    });
+                }
+                return test
+            })
+        );
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
             });
         }
-
-        console.log(evaluations)
+        const evaluations = pruebas[0]
         res.status(200).json({ departament, result, evaluations });
     } catch (error) {
         console.log(error)
@@ -127,7 +131,7 @@ const getReportingEvaluationsByCrew = async (req, res) => {
         const endDate = req.query.endDate;
         const staff = await Staffervice.getStaffById(crewId)
         const evaluations = await EvaluationService.getEvaluationByEvaluated(crewId, startDate, endDate)
-        res.status(200).json({staff, evaluations});
+        res.status(200).json({ staff, evaluations });
 
     } catch (error) {
         console.log(error)

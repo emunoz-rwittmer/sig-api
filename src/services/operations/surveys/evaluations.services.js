@@ -178,32 +178,24 @@ class EvaluationService {
         }
     }
 
-    static async getEvaluationsByDepartament(departamentId, startDate, endDate) {
+    static async getEvaluationsByDepartament(evaluatedId, startDate, endDate) {
         try {
             const result = await HeaderAnswer.findAll({
+                where: {
+                    evaluatedId,
+                    createdAt: {
+                        [Op.between]: [new Date(startDate), new Date(endDate)]
+                    },
+
+                },
                 attributes: ['id', 'evaluatedId'],
                 include: [
-                    {
-                        model: Staff,
-                        as: "header_evaluted",
-                        attributes: ['id', 'firstName', 'lastName'],
-                        include: [{
-                            model: Departaments,
-                            as: 'staff_departament',
-                            attributes: ['id', 'name'],
-                            where: { id: departamentId }
-                        }]
-                    },
                     {
                         model: FormAnswer,
                         as: 'answer_header'
                     }
                 ],
-                where: {
-                    createdAt: {
-                        [Op.between]: [new Date(startDate), new Date(endDate)]
-                    }
-                },
+
             });
             return result;
         } catch (error) {

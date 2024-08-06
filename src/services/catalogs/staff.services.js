@@ -240,7 +240,16 @@ class Staffervice {
         try {
             const result = await Staff.findOne({
                 where: { id },
-                attributes: ['first_name', 'last_name', 'email', 'cell_phone', 'departamentId', 'positionId', 'company', 'active']
+                attributes: ['first_name', 'last_name', 'email', 'cell_phone', 'departamentId', 'positionId', 'company', 'active'],
+                include: [{
+                    model: Departaments,
+                    as: 'staff_departament',
+                    attributes: ['id', 'name'],
+                }, {
+                    model: Positions,
+                    as: 'staff_position',
+                    attributes: ['id', 'name'],
+                }],
             });
 
             return result;
