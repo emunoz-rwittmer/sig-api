@@ -1,6 +1,5 @@
 const Users = require('../../models/catalogs/user.models');
 const Staff = require('../../models/catalogs/staff.models');
-const Crew = require('../../models/catalogs/crews.models'); 
 const Roles = require('../../models/catalogs/roles.models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');

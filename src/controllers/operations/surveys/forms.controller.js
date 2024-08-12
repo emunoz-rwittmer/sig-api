@@ -1,14 +1,11 @@
 const FormService = require('../../../services/operations/surveys/forms.services');
-const CrewService = require('../../../services/catalogs/crews.services');
-const CaptainService = require('../../../services/catalogs/captains.services');
-const Utils = require('../../../utils/Utils');
-const bcrypt = require('bcrypt');
-const sendEmail = require('../../../utils/mailer');
 const PositionService = require('../../../services/catalogs/positions.services');
 const DepartamentService = require('../../../services/catalogs/departaments.services');
 const YachtService = require('../../../services/catalogs/yachts.services');
-const YachtController = require('../../catalogs/yachts.controller');
 const Staffervice = require('../../../services/catalogs/staff.services');
+const Utils = require('../../../utils/Utils');
+const bcrypt = require('bcrypt');
+const sendEmail = require('../../../utils/mailer');
 const moment = require('moment');
 
 const getAllForms = async (req, res) => {
@@ -79,16 +76,6 @@ const getFormAllNecesary = async (req, res) => {
     }
 }
 
-const serchCrew = async (req, res) => {
-    try {
-        const yachtId = Utils.decode(req.params.yacht_id);
-        const result = await FormService.serchCrew(yachtId);
-        res.status(200).json(result);
-    } catch (error) {
-        console.log(error)
-        res.status(400).json(error.message)
-    }
-}
 
 const createForm = async (req, res) => {
     try {
@@ -182,7 +169,6 @@ const FormController = {
     updateForm,
     deleteForm,
     deleteQuestionForm,
-    serchCrew,
     getFormAllNecesary,
     sendEvaluation
 }

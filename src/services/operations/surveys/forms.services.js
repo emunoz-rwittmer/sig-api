@@ -2,11 +2,6 @@ const Form = require('../../../models/operations/surveys/form.models');
 const EstructureQuestion = require("../../../models/operations/surveys/estructureQuestion.models");
 const FormEstructure = require("../../../models/operations/surveys/formEstructure.models");
 const HeaderAnswer = require('../../../models/operations/surveys/headerAnwer.models')
-//CATALOGS MODELS
-const Captain = require('../../../models/catalogs/captains.models');
-const CaptainYacht = require('../../../models/catalogs/captainYacht.models');
-const CrewYacht = require('../../../models/catalogs/crewYacht.models');
-const Crew = require('../../../models/catalogs/crews.models');
 const Positions = require('../../../models/catalogs/positions.models');
 
 
@@ -48,32 +43,7 @@ class FormService {
         }
     }
 
-    static async serchCrew(yachtId) {
-        try {
-            const captains = await CaptainYacht.findAll({
-                where: { yachtId },
-                attributes: ['id'],
-                include: [{
-                    model: Captain,
-                    as: "captain_yacht",
-                    attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
-                }]
-            });
-            const crew = await CrewYacht.findAll({
-                where: { yachtId },
-                attributes: ['id'],
-                include: [{
-                    model: Crew,
-                    as: "crew_yacht",
-                    attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
-                }]
-            });
-            return { captains, crew };
-        } catch (error) {
-            throw error;
-        }
-    }
-
+    
     static async createForm(form) {
         try {
             const result = await Form.create(form);
