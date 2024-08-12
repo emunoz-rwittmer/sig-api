@@ -43,7 +43,6 @@ class FormService {
         }
     }
 
-    
     static async createForm(form) {
         try {
             const result = await Form.create(form);
