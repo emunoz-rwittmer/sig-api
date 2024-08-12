@@ -8,7 +8,6 @@ const yachtRoutes = require("./catalogs/yachts.routes")
 const staffRoutes = require("./catalogs/staff.routes"); 
 const formsRoutes = require("./operations/surveys/forms.routes");
 const HouseRulesRoutes = require("./catalogs/houseRules.routes");
-const AdministrativeRoutes = require("./catalogs/administratives.routes");
 //Operations
 const questiondRoutes = require("./operations/surveys/questions.routes");
 const evaluationRoutes = require("./operations/surveys/evaluation.routes");
@@ -23,7 +22,6 @@ const routerApi = (app) => {
     app.use("/api/yachts", authJwt.verifyToken, yachtRoutes); 
     app.use("/api/staffs", authJwt.verifyToken, staffRoutes);
     app.use("/api/houseRules", authJwt.verifyToken, HouseRulesRoutes);
-    app.use("/api/administratives", authJwt.verifyToken, AdministrativeRoutes);
     //OPERATIONS
     app.use("/api/questions", authJwt.verifyToken, questiondRoutes);
     app.use("/api/forms", formsRoutes);

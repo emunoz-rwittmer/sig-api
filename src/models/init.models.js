@@ -7,7 +7,6 @@ const Staff = require('./catalogs/staff.models');
 const StaffYacht = require('./catalogs/staffYacht.models')
 const Question = require('./operations/surveys/question.models');
 const HouseRule = require('./catalogs/houseRule.models');
-const Administrative = require('./catalogs/administratives.models');
 const Form = require('./operations/surveys/form.models');
 const FormEstructure = require('./operations/surveys/formEstructure.models');
 const EstructureQuestion = require('./operations/surveys/estructureQuestion.models');
@@ -56,8 +55,7 @@ const initModels = () => {
     StatusEvaluation.hasMany(HeaderAnswer, { as: "header_state", foreignKey: "state_id" });
 
     Question,
-    HouseRule,
-    Administrative
+    HouseRule
 
 }
 
