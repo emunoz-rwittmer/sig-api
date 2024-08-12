@@ -7,29 +7,35 @@ const HeaderAnswer = db.define('headerAnswer', {
     primaryKey: true,
     autoIncrement: true,
   },
+  yachtId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'yacht_id'
+  },
   formId: {
     type: DataTypes.INTEGER,
     allowNull: false,
     field: 'form_id'
   },
-  yachtId: {
+  stateId: {
     type: DataTypes.INTEGER,
+    defaultValue: 1,
+    field: 'state_id'
+  },
+  evaluatorId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'evaluator_id'
+  },
+  evaluatedId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'evaluated_id'
+  },
+  expirationDate: {
+    type: DataTypes.DATE,
     allowNull: false,
-    field: 'yacht_id'
   },
-  evaluator: {
-    type: DataTypes.STRING,
-    allowNull: true,
-  },
-  evaluated: {
-    type: DataTypes.STRING,
-    allowNull: true,
-  },
-  isComplete: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
-  },
-
 });
 
 module.exports = HeaderAnswer;

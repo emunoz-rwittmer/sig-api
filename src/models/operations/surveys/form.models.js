@@ -11,9 +11,10 @@ const Form = db.define('form', {
     type: DataTypes.STRING,
     allowNull: false
   },
-  people: {
-    type: DataTypes.STRING,
-    allowNull: false
+  positionId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    field: 'position_id'
   },
   active: {
     type: DataTypes.BOOLEAN,

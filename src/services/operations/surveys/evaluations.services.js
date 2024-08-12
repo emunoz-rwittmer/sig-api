@@ -3,30 +3,40 @@ const EstructureQuestion = require("../../../models/operations/surveys/estructur
 const FormEstructure = require("../../../models/operations/surveys/formEstructure.models");
 const HeaderAnswer = require('../../../models/operations/surveys/headerAnwer.models')
 const FormAnswer = require('../../../models/operations/surveys/formAnswer.models');
-//CATALOGS MODELS
-const Captain = require('../../../models/catalogs/captains.models');
-const CaptainYacht = require('../../../models/catalogs/captainYacht.models');
-const CrewYacht = require('../../../models/catalogs/crewYacht.models');
-const Crew = require('../../../models/catalogs/crews.models');
 const Yacht = require('../../../models/catalogs/yacht.models');
 const { Op } = require('sequelize');
-const { model } = require('mongoose');
-
-
+const Staff = require('../../../models/catalogs/staff.models');
+const Departaments = require('../../../models/catalogs/departament.models');
+const Positions = require('../../../models/catalogs/positions.models');
+const StaffYacht = require('../../../models/catalogs/staffYacht.models');
 
 class EvaluationService {
-    static async getEvaluationsByCapitanl(names) {
+    static async getEvaluationsByUser(evaluatorId) {
         try {
             const result = await HeaderAnswer.findAll({
-                where: { evaluator: names, isComplete: false },
+                where: { evaluatorId, stateId: 1 },
+                attributes: ['id', 'formId', 'expirationDate', 'createdAt'],
                 include: [{
+                    model: Yacht,
+                    as: 'header_yacht',
+                    attributes: ['name'],
+                }, {
                     model: Form,
                     as: "header_form",
                     attributes: ['title'],
                 }, {
-                    model: Yacht,
-                    as: "header_yacht",
-                    attributes: ['name'],
+                    model: Staff,
+                    as: "header_evaluted",
+                    attributes: ['id', 'firstName', 'lastName'],
+                    include: [{
+                        model: Departaments,
+                        as: 'staff_departament',
+                        attributes: ['id', 'name'],
+                    }, {
+                        model: Positions,
+                        as: 'staff_position',
+                        attributes: ['id', 'name'],
+                    }]
                 }]
             });
             return result;
@@ -97,9 +107,22 @@ class EvaluationService {
         }
     }
 
-    static async updateStatusHeaderAnswers(evaluationId) {
+    static async updateStatusHeaderAnswers(id) {
         try {
-            const result = await HeaderAnswer.update({ isComplete: true }, { where: { id: evaluationId } });
+            const result = await HeaderAnswer.update(
+                { stateId: 2 },
+                { where: { id } });
+            return result
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async updateEvaluation(id) {
+        try {
+            const result = await HeaderAnswer.update(
+                { stateId: 3 },
+                { where: { id } });
             return result
         } catch (error) {
             throw error;
@@ -110,27 +133,23 @@ class EvaluationService {
 
     static async getReportingByYacht(yachtId) {
         try {
-            const captains = await CaptainYacht.findAll({
+            const result = await StaffYacht.findAll({
                 where: { yachtId },
                 attributes: ['id'],
                 include: [{
-                    model: Captain,
-                    as: "captain_yacht",
+                    model: Staff,
+                    as: "staff_yacht",
                     attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
+                    include: [
+                        {
+                            model: Positions,
+                            as: 'staff_position',
+                            attributes: ['id', 'name'],
+                        }
+                    ]
                 }]
             });
-
-            const crews = await CrewYacht.findAll({
-                where: { yachtId },
-                attributes: ['id'],
-                include: [{
-                    model: Crew,
-                    as: "crew_yacht",
-                    attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
-                }]
-            });
-
-            return { captains, crews };
+            return result;
         } catch (error) {
             throw error;
         }
@@ -139,11 +158,13 @@ class EvaluationService {
     static async getEvaluationsByYacht(yachtId, startDate, endDate) {
         try {
             const result = await HeaderAnswer.findAll({
-                where: { yachtId,
+                where: {
+                    yachtId,
                     createdAt: {
                         [Op.between]: [startDate, endDate]
                     }
-                 },
+                },
+                attributes: ['id', 'evaluatedId'],
                 include: [
                     {
                         model: FormAnswer,
@@ -157,14 +178,77 @@ class EvaluationService {
         }
     }
 
-    static async getEvaluationByEvaluated(names, startDate, endDate) {
+    static async getEvaluationsByDepartament(evaluatedId, startDate, endDate) {
         try {
             const result = await HeaderAnswer.findAll({
-                where: { evaluated: names,
+                where: {
+                    evaluatedId,
+                    createdAt: {
+                        [Op.between]: [new Date(startDate), new Date(endDate)]
+                    },
+
+                },
+                attributes: ['id', 'evaluatedId'],
+                include: [
+                    {
+                        model: FormAnswer,
+                        as: 'answer_header'
+                    }
+                ],
+
+            });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async getReportingByDepartament(departamentId) {
+        try {
+            const result = await Staff.findAll({
+                where: { departamentId },
+                attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'company', 'active'],
+                order: [
+                    ['first_name', 'ASC']
+                ],
+                include: [{
+                    model: Departaments,
+                    as: 'staff_departament',
+                    attributes: ['id', 'name'],
+                }, {
+                    model: Positions,
+                    as: 'staff_position',
+                    attributes: ['id', 'name'],
+                }],
+            });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async getEvaluationByEvaluated(evaluatedId, startDate, endDate) {
+        try {
+            const result = await HeaderAnswer.findAll({
+                where: {
+                    evaluatedId,
                     createdAt: {
                         [Op.between]: [startDate, endDate]
-                    } },
+                    }
+                },
+                attributes: ['id', 'stateId', 'updatedAt', 'createdAt'],
                 include: [{
+                    model: Staff,
+                    as: "header_evalutor",
+                    attributes: ['firstName', 'lastName'],
+                    include: [
+                        {
+                            model: Positions,
+                            as: 'staff_position',
+                            attributes: ['id', 'name'],
+                        }
+                    ]
+                }, {
                     model: Form,
                     as: "header_form",
                     attributes: ['id', 'title'],

@@ -2,7 +2,7 @@ const db = require('../../utils/database');
 const { DataTypes } = require('sequelize');
 const bcrypt = require('bcrypt');
 
-const Administrative= db.define('administrative',{
+const Staff= db.define('staff',{
     id:{
         type: DataTypes.INTEGER,
         primaryKey: true,
@@ -42,7 +42,30 @@ const Administrative= db.define('administrative',{
     active: {
         type: DataTypes.BOOLEAN,
         defaultValue: true
+    },
+    departamentId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        field:"departament_id",
+    }, 
+    positionId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        field:"position_id",
+    }, 
+    changePassword: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true,
+    },
+},{
+    hooks: {
+        beforeCreate: (user, options) => {
+            const { password } = user;
+            const hash = bcrypt.hashSync(password, 10);
+            user.password = hash;
+        }
     }
 });
 
-module.exports = Administrative;
+
+module.exports = Staff;

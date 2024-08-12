@@ -1,6 +1,5 @@
 const Users = require('../../models/catalogs/user.models');
-const Captain = require('../../models/catalogs/captains.models');
-const Crew = require('../../models/catalogs/crews.models'); 
+const Staff = require('../../models/catalogs/staff.models');
 const Roles = require('../../models/catalogs/roles.models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -30,10 +29,10 @@ class AuthService {
         }
     }
 
-    static async loginCaptains(credentials) {
+    static async loginUsers(credentials) {
         try {
             const { email, password } = credentials;
-            const user = await Captain.findOne({
+            const user = await Staff.findOne({
                 where: { email },
             });
             if (user) {
@@ -46,20 +45,23 @@ class AuthService {
         }
     }
 
-    static async loginCrews(password) {
+    static async userUpgradePassword(user) {
         try {
-            const user = await Crew.findOne({
-                where: { password },
-            });
-            return user
+            const result = await Users.update(
+                { password: user.password, changePassword: user.changePassword },
+                {
+                    where: { id: user.id }
+                }
+            );
+            return result;
         } catch (error) {
             throw error;
         }
     }
 
-    static async upgradePassword(user) {
+    static async staffUpgradePassword(user) {
         try {
-            const result = await Users.update(
+            const result = await Staff.update(
                 { password: user.password, changePassword: user.changePassword },
                 {
                     where: { id: user.id }

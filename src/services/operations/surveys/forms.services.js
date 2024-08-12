@@ -2,18 +2,19 @@ const Form = require('../../../models/operations/surveys/form.models');
 const EstructureQuestion = require("../../../models/operations/surveys/estructureQuestion.models");
 const FormEstructure = require("../../../models/operations/surveys/formEstructure.models");
 const HeaderAnswer = require('../../../models/operations/surveys/headerAnwer.models')
-//CATALOGS MODELS
-const Captain = require('../../../models/catalogs/captains.models');
-const CaptainYacht = require('../../../models/catalogs/captainYacht.models');
-const CrewYacht = require('../../../models/catalogs/crewYacht.models');
-const Crew = require('../../../models/catalogs/crews.models');
+const Positions = require('../../../models/catalogs/positions.models');
 
 
 class FormService {
     static async getAll() {
         try {
             const result = await Form.findAll({
-                attributes: ['id', 'title', 'active', 'people', 'createdAt']
+                attributes: ['id', 'title', 'active', 'createdAt'],
+                include: [{
+                    model: Positions,
+                    as: 'position_form',
+                    attributes: ['name']
+                }]
             });
             return result;
         } catch (error) {
@@ -25,7 +26,7 @@ class FormService {
         try {
             const result = await Form.findOne({
                 where: { id },
-                attributes: ['id', 'title', 'active', 'people', 'createdAt'],
+                attributes: ['id', 'title', 'positionId', 'active', 'createdAt'],
                 include: [{
                     model: FormEstructure,
                     as: "form_estructure",
@@ -37,34 +38,6 @@ class FormService {
                 }]
             });
             return result;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    static async serchCrew(yachtId) {
-        try {
-            const captains = await CaptainYacht.findAll({
-                where: { yachtId },
-                attributes: ['id'],
-                include: [{
-                    model: Captain,
-                    as: "captain_yacht",
-                    attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
-                    where: { active : true}
-                }]
-            });
-            const crew = await CrewYacht.findAll({
-                where: { yachtId },
-                attributes: ['id'],
-                include: [{
-                    model: Crew,
-                    as: "crew_yacht",
-                    attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
-                    where: { active : true}
-                }]
-            });
-            return { captains, crew };
         } catch (error) {
             throw error;
         }
@@ -169,15 +142,18 @@ class FormService {
             for (const evaluado of data.evaluated) {
                 for (const evaluador of data.evaluator) {
                     const result = await HeaderAnswer.create({
+                        yachtId: data.yachtId ? data.yachtId : null ,
                         formId: data.formId,
-                        yachtId: data.yachtId,
-                        evaluator: evaluador.dataValues.first_name + " " + evaluador.dataValues.last_name,
-                        evaluated: evaluado.dataValues.first_name + " " + evaluado.dataValues.last_name,
+                        stateId: 1,
+                        evaluatorId: evaluador,
+                        evaluatedId: evaluado,
+                        expirationDate: data.expirationDate
                     });
                 }
             }
             return "Is Ok"
         } catch (error) {
+            console.log(error)
             throw error;
         }
     }

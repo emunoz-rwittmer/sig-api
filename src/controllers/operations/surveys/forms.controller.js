@@ -1,9 +1,12 @@
 const FormService = require('../../../services/operations/surveys/forms.services');
-const CrewService = require('../../../services/catalogs/crews.services');
-const CaptainService = require('../../../services/catalogs/captains.services');
+const PositionService = require('../../../services/catalogs/positions.services');
+const DepartamentService = require('../../../services/catalogs/departaments.services');
+const YachtService = require('../../../services/catalogs/yachts.services');
+const Staffervice = require('../../../services/catalogs/staff.services');
 const Utils = require('../../../utils/Utils');
 const bcrypt = require('bcrypt');
 const sendEmail = require('../../../utils/mailer');
+const moment = require('moment');
 
 const getAllForms = async (req, res) => {
     try {
@@ -25,6 +28,8 @@ const getForm = async (req, res) => {
         const result = await FormService.getFormById(formId);
         if (result instanceof Object) {
             result.dataValues.id = Utils.encode(result.dataValues.id);
+            result.dataValues.positionId = Utils.encode(result.dataValues.positionId);
+
         }
         res.status(200).json(result);
     } catch (error) {
@@ -32,20 +37,51 @@ const getForm = async (req, res) => {
     }
 }
 
-const serchCrew = async (req, res) => {
+const getFormAllNecesary = async (req, res) => {
     try {
-        const yachtId = Utils.decode(req.params.yacht_id);
-        const result = await FormService.serchCrew(yachtId);
+        const formId = Utils.decode(req.params.form_id);
+        const result = {}
+        const form = await FormService.getFormById(formId);
+        if (form instanceof Object) {
+            form.dataValues.id = Utils.encode(form.dataValues.id);
+            form.dataValues.positionId = Utils.encode(form.dataValues.positionId);
+
+        }
+        const yachts = await YachtService.getAll();
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+            });
+        }
+        const positions = await PositionService.getAll();
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+            });
+        }
+        const departaments = await DepartamentService.getAll();
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+            });
+        }
+        result.form = form
+        result.yachts = yachts
+        result.positions = positions
+        result.departaments = departaments
+
         res.status(200).json(result);
     } catch (error) {
-        console.log(error)
         res.status(400).json(error.message)
     }
 }
 
+
 const createForm = async (req, res) => {
     try {
+        const positionId = Utils.decode(req.body.data.positionId)
         const form = req.body;
+        form.data.positionId = positionId
         const newForm = await FormService.createForm(form.data);
         if (newForm) {
             const newEstructure = await FormService.createEstructureQuestion(newForm.id, form.preguntas)
@@ -60,8 +96,10 @@ const createForm = async (req, res) => {
 
 const updateForm = async (req, res) => {
     try {
+        const positionId = Utils.decode(req.body.data.positionId)
         const formId = Utils.decode(req.params.form_id);
         const form = req.body;
+        form.data.positionId = positionId
         const result = await FormService.updateForm(form.data, {
             where: { id: formId },
         });
@@ -103,45 +141,21 @@ const deleteQuestionForm = async (req, res) => {
 const sendEvaluation = async (req, res) => {
     try {
         const data = req.body
+        const expirationDate = moment().add(2, 'days').toDate();
         data.formId = Utils.decode(req.body.formId);
-        data.yachtId = Utils.decode(req.body.yachtId);
-        const form = await FormService.getFormById(data.formId);
-        const crews = await CrewService.getCrewsById(form.people !== "Tripulación" ? data.evaluator : data.evaluated)
-        const captains = await CaptainService.getCaptainsById(form.people !== "Capitanes" ? data.evaluator : data.evaluated)
-        if (form.people === "Tripulación") {
-            data.evaluator = captains
-            data.evaluated = crews;
-            data.evaluatedJob = 'tripulante';
-        } else if (form.people === "Capitanes") {
-            data.evaluator = crews
-            data.evaluated = captains;
-            data.evaluatedJob = 'capitan';
-        }
+        data.evaluator = data.evaluator.map(id => Utils.decode(id))
+        data.evaluated = data.evaluated.map(id => Utils.decode(id))
+        data.expirationDate = expirationDate;
+        const evaluator = await Staffervice.getEvaluatorsById(data.evaluator)
         const result = await FormService.createHeaderAnswer(data);
-        if (result && form.people === "Tripulación") {
-            const action = "tripulacion"
-            for (const evaluador of captains) {
-                const passwordGenerate = Utils.getPasswordRandom();
-                const passwordGenerated = bcrypt.hashSync(passwordGenerate, 10);
-                sendEmail(evaluador, passwordGenerate, action);
-                const result = await CaptainService.updateCaptain({
-                    password: passwordGenerated
-                },
-                    { where: { id: evaluador.id } });
-            }
-            res.status(200).json({ data: 'evaluation send successfully' })
-        } else if (result && form.people === "Capitanes") {
-            const action = "capitanes"
-            for (const evaluador of crews) {
-                const passwordGenerate = Utils.getPasswordRandom();
-                sendEmail(evaluador, passwordGenerate, action);
-                const result = await CrewService.updateCrew({
-                    password: passwordGenerate
-                },
-                    { where: { id: evaluador.id } });
+        if (result) {
+            for (const evaluador of evaluator) {
+                const action = "new evaluation"
+                sendEmail(evaluador, " ", action);
             }
             res.status(200).json({ data: 'evaluation send successfully' })
         }
+
     } catch (error) {
         console.log(error)
         res.status(400).json(error.message);
@@ -155,7 +169,7 @@ const FormController = {
     updateForm,
     deleteForm,
     deleteQuestionForm,
-    serchCrew,
+    getFormAllNecesary,
     sendEvaluation
 }
 module.exports = FormController

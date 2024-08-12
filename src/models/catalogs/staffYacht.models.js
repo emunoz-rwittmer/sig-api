@@ -1,16 +1,16 @@
 const db = require('../../utils/database');
 const { DataTypes } = require('sequelize');
 
-const CaptainYacht= db.define('captainYacht',{
+const StaffYacht= db.define('staffYacht',{
     id:{
         type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true,
     },
-    captainId: {
+    staffId: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        field:"captain_id",
+        field:"staff_id",
     },
     yachtId: {
         type: DataTypes.INTEGER,
@@ -19,4 +19,4 @@ const CaptainYacht= db.define('captainYacht',{
     },
 });
 
-module.exports = CaptainYacht;
+module.exports = StaffYacht;

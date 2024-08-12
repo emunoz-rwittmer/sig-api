@@ -1,28 +1,38 @@
 const EvaluationService = require('../../../services/operations/surveys/evaluations.services');
 const Utils = require('../../../utils/Utils');
-const CaptainService = require('../../../services/catalogs/captains.services');
 const YachtService = require('../../../services/catalogs/yachts.services');
-const CrewService = require('../../../services/catalogs/crews.services');
+const Staffervice = require('../../../services/catalogs/staff.services');
+const DepartamentService = require('../../../services/catalogs/departaments.services');
+const moment = require('moment');
 
 const getAllEvaluations = async (req, res) => {
     try {
-        const userId = Utils.decode(req.query.user_id)
-        if (req.query.rol === "captain") {
-            const captain = await CaptainService.getCaptainById(userId)
-            const names = captain.dataValues.first_name + " " + captain.dataValues.last_name
-            const result = await EvaluationService.getEvaluationsByCapitanl(names);
-            if (result instanceof Array) {
-                result.map((x) => {
-                    x.dataValues.id = Utils.encode(x.dataValues.id);
-                    x.dataValues.formId = Utils.encode(x.dataValues.formId);
-                });
-            }
-            res.status(200).json(result);
+        const userId = Utils.decode(req.query.user_id);
+        let evaluations = await EvaluationService.getEvaluationsByUser(userId);
+
+        await Promise.all(
+            evaluations.map(async (evaluation) => {
+                if (isTempPasswordExpired(evaluation.expirationDate)) {
+                    await EvaluationService.updateEvaluation(evaluation.id);
+                }
+            })
+        );
+
+        evaluations = await EvaluationService.getEvaluationsByUser(userId);
+
+        if (evaluations instanceof Array) {
+            evaluations = evaluations.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+                x.dataValues.formId = Utils.encode(x.dataValues.formId);
+                return x;
+            });
         }
+
+        res.status(200).json(evaluations);
     } catch (error) {
-        res.status(400).json(error.message)
+        res.status(400).json(error.message);
     }
-}
+};
 
 const getEvaluation = async (req, res) => {
     try {
@@ -61,20 +71,51 @@ const getReportingByYacht = async (req, res) => {
         const endDate = req.query.endDate;
         const yacht = await YachtService.getYachtById(yachtId)
         const evaluations = await EvaluationService.getEvaluationsByYacht(yachtId, startDate, endDate)
+        if (evaluations instanceof Array) {
+            evaluations.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+                x.dataValues.evaluatedId = Utils.encode(x.dataValues.evaluatedId);
+            });
+        }
         const result = await EvaluationService.getReportingByYacht(yachtId);
-        if (result.captains instanceof Array) {
-            result.captains.map((x) => {
-                x.captain_yacht.dataValues.id = Utils.encode(x.captain_yacht.dataValues.id);
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.staff_yacht.dataValues.id = Utils.encode(x.staff_yacht.dataValues.id);
             });
         }
-        if (result.crews instanceof Array) {
-            result.crews.map((x) => {
-                x.crew_yacht.dataValues.id = Utils.encode(x.crew_yacht.dataValues.id);
+        res.status(200).json({ yacht, result, evaluations });
+    } catch (error) {
+        console.log(error)
+        res.status(400).json(error.message)
+    }
+}
+
+const getReportingByDepartament = async (req, res) => {
+    try {
+        const departamentId = Utils.decode(req.params.departament_id);
+        const startDate = req.query.startDate;
+        const endDate = req.query.endDate;
+        const departament = await DepartamentService.getDepartamentById(departamentId);
+        const result = await EvaluationService.getReportingByDepartament(departamentId);
+        const pruebas = await Promise.all(
+            result.map(async (staff) => {
+                const test = await EvaluationService.getEvaluationsByDepartament(staff.id, startDate, endDate);
+                if (test instanceof Array) {
+                    test.map((x) => {
+                        x.dataValues.id = Utils.encode(x.dataValues.id);
+                        x.dataValues.evaluatedId = Utils.encode(x.dataValues.evaluatedId);
+                    });
+                }
+                return test
+            })
+        );
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
             });
         }
-        result.yacht = yacht.dataValues
-        result.evaluations = evaluations
-        res.status(200).json(result);
+        const evaluations = pruebas[0]
+        res.status(200).json({ departament, result, evaluations });
     } catch (error) {
         console.log(error)
         res.status(400).json(error.message)
@@ -86,36 +127,26 @@ const getReportingEvaluationsByCrew = async (req, res) => {
         const crewId = Utils.decode(req.params.crew_id);
         const startDate = req.query.startDate;
         const endDate = req.query.endDate;
-        const type = req.query.type;
-        let result = {}
-        if (type === 'captain') {
-            const captain = await CaptainService.getCaptainById(crewId);
-            const names = captain.dataValues.first_name + " " + captain.dataValues.last_name
-            const evaluations = await EvaluationService.getEvaluationByEvaluated(names, startDate, endDate)
-            result.crew = captain
-            result.evaluations = evaluations
-            res.status(200).json(result);
-        } else {
-            const crew = await CrewService.getCrewById(crewId);
-            const names = crew.dataValues.first_name + " " + crew.dataValues.last_name;
-            const evaluations = await EvaluationService.getEvaluationByEvaluated(names, startDate, endDate);
-            result.crew = crew
-            result.evaluations = evaluations
-            res.status(200).json(result);
-        }
+        const staff = await Staffervice.getStaffById(crewId)
+        const evaluations = await EvaluationService.getEvaluationByEvaluated(crewId, startDate, endDate)
+        res.status(200).json({ staff, evaluations });
+
     } catch (error) {
         console.log(error)
         res.status(400).json(error.message)
     }
 }
 
-
+isTempPasswordExpired = (expirationDate) => {
+    return moment().isAfter(moment(expirationDate));
+};
 
 const EvaluationController = {
     getAllEvaluations,
     getEvaluation,
     respondEvaluation,
     getReportingByYacht,
+    getReportingByDepartament,
     getReportingEvaluationsByCrew
 }
 module.exports = EvaluationController

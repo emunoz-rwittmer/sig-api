@@ -5,8 +5,7 @@ const tokenModel = require('../../models/mongoModels/Token.models');
 const EvaluationService = require('../../services/operations/surveys/evaluations.services')
 const bcrypt = require('bcrypt');
 const sendEmail = require('../../utils/mailer');
-
-
+const Staffervice = require('../../services/catalogs/staff.services');
 
 const login = async (req, res) => {
     try {
@@ -47,7 +46,7 @@ const login = async (req, res) => {
     }
 }
 
-const loginCaptains = async (req, res) => {
+const loginUsers = async (req, res) => {
     try {
         const { email, password } = req.body;
         if (!email) {
@@ -56,7 +55,7 @@ const loginCaptains = async (req, res) => {
         if (!password) {
             res.status(400).json({ data: 'Not password provided' });
         }
-        const result = await AuthService.loginCaptains({ email, password });
+        const result = await AuthService.loginUsers({ email, password });
         if (result.isValid) {
             if (result.user.active) {
                 const { id, firstName, lastName, email } = result.user;
@@ -65,7 +64,7 @@ const loginCaptains = async (req, res) => {
                 const token = await Utils.generateAccessToken(userData);
                 const refreshToken = await Utils.generateRefreshToken(userData);
                 userData.token = token;
-                userData.rol = "captain";
+                userData.changePassword = result.user.changePassword
                 const newToken = new tokenModel({
                     user: firstName + " " + lastName,
                     userId: Utils.encode(id),
@@ -85,59 +84,25 @@ const loginCaptains = async (req, res) => {
     }
 }
 
-const loginCrews = async (req, res) => {
-    try {
-        const { password } = req.body;
-        if (!password) {
-            res.status(400).json({ data: 'Not password provided' });
-        }
-        const result = await AuthService.loginCrews(password);
-        if (result) {
-            if (result.active) {
-                const { id, firstName, lastName, email } = result;
-                const userData = { id, firstName, lastName, email };
-                userData.id = Utils.encode(userData.id);
-                const token = await Utils.generateAccessToken(userData);
-                const refreshToken = await Utils.generateRefreshToken(userData);
-                userData.token = token;
-                userData.rol = "crew";
-                const getEvaluation = await EvaluationService.getEvaluationByEvaluator(firstName + " " + lastName)
-                if (getEvaluation) {
-                    userData.formId = Utils.encode(getEvaluation.formId)
-                    userData.evaluationId = Utils.encode(getEvaluation.id)
-                    const newToken = new tokenModel({
-                        user: firstName + " " + lastName,
-                        userId: Utils.encode(id),
-                        accessToken: token,
-                        refreshtoken: refreshToken
-                    });
-                    newToken.save();
-                    res.status(200).json(userData);
-                } else {
-                    res.status(400).json({ data: 'no reviews available' })
-                }
-            } else {
-                res.status(400).json({ data: 'disabled user' })
-            }
-        } else {
-            res.status(400).json({ data: 'user or password incorrect' })
-        }
-    } catch (error) {
-        console.log(error)
-        res.status(400).json({ data: 'somethign wrong' })
-    }
-}
-
 const upgradePassword = async (req, res) => {
     try {
         const userId = Utils.decode(req.params.user_id);
-        const user = {
+        const data = {
             id: userId,
             password: bcrypt.hashSync(req.body.password, 10),
             changePassword: false
         };
-        const result = await AuthService.upgradePassword(user);
-        res.status(200).json({ data: 'password updated successfully' });
+        const user = await UserService.getUserById(userId);
+        const staff = await Staffervice.getStaffById(userId);
+        if(user){
+            const result = await AuthService.userUpgradePassword(data);
+            return res.status(200).json({ data: 'password updated successfully' });
+        }
+        if(staff){
+            const result = await AuthService.staffUpgradePassword(data);
+            return res.status(200).json({ data: 'password updated successfully' });
+        }
+
     } catch (error) {
         console.log(error)
         res.status(400).json(error.message);
@@ -149,22 +114,33 @@ const forgotPassword = async (req, res) => {
         const useEmail = req.body.email;
         const passwordGenerate = Utils.getPasswordRandom();
         const result = await UserService.getUserByEmail(useEmail);
+        const staff = await Staffervice.getStaffByEmail(useEmail);
+        const passwordGenerated = bcrypt.hashSync(passwordGenerate, 10);
+        const action = "forgot passowrd"
         if (result) {
-            const passwordGenerated = bcrypt.hashSync(passwordGenerate, 10);
-            const action = "forgot passowrd"
             sendEmail(result, passwordGenerate, action);
             const userResponse = await UserService.updateUser({
                 password: passwordGenerated, changePassword: true
             },
                 { where: { id: result.id } });
             if (userResponse instanceof Object) {
-                res.status(200).json({ data: "password updated successfully" });
+                return res.status(200).json({ data: "password updated successfully" });
             } else {
-                res.status(500).json({ data: userResponse });
+                return res.status(500).json({ data: userResponse });
             }
+        }
+        if (staff) {
+            sendEmail(staff, passwordGenerate, action);
+            const respose = await Staffervice.updateStaff(
+                {
+                    password: passwordGenerated, changePassword: true
+                }, { where: { id: staff.id } });
 
-        } else {
-            res.status(400).json({ message: 'something wrong' });
+            if (respose instanceof Object) {
+                return res.status(200).json({ data: "password updated successfully" });
+            } else {
+                return res.status(500).json({ data: respose });
+            }
         }
     } catch (error) {
         res.status(400).json(error.message);
@@ -174,8 +150,7 @@ const forgotPassword = async (req, res) => {
 
 const AuthController = {
     login,
-    loginCaptains,
-    loginCrews,
+    loginUsers,
     upgradePassword,
     forgotPassword
 }
