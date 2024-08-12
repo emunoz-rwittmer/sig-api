@@ -58,14 +58,14 @@ db.sync({ force: false })
     .then(() => {
         console.log('Iniciando con el sembrario malicioso');
 
-        //departaments.forEach((rol) => Departaments.create(rol));
+        departaments.forEach((rol) => Departaments.create(rol));
 
         setTimeout(() => {
             positions.forEach((user) => Positions.create(user));
         }, 1000);
 
-        // setTimeout(() => {
-        //     states.forEach((state) => StatusEvaluation.create(state));
-        // }, 3000);
+        setTimeout(() => {
+            states.forEach((state) => StatusEvaluation.create(state));
+        }, 3000);
     })
     .catch((error) => console.log(error))
