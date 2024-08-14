@@ -178,11 +178,10 @@ class EvaluationService {
         }
     }
 
-    static async getEvaluationsByDepartament(evaluatedId, startDate, endDate) {
+    static async getEvaluationsByDepartament(departamentId, startDate, endDate) {
         try {
             const result = await HeaderAnswer.findAll({
                 where: {
-                    evaluatedId,
                     createdAt: {
                         [Op.between]: [new Date(startDate), new Date(endDate)]
                     },
@@ -190,6 +189,11 @@ class EvaluationService {
                 },
                 attributes: ['id', 'evaluatedId'],
                 include: [
+                    {
+                        model: Staff,
+                        as: 'header_evaluted',
+                       where: {departamentId}
+                    },
                     {
                         model: FormAnswer,
                         as: 'answer_header'
