@@ -9,6 +9,7 @@ const Staff = require('../../../models/catalogs/staff.models');
 const Departaments = require('../../../models/catalogs/departament.models');
 const Positions = require('../../../models/catalogs/positions.models');
 const StaffYacht = require('../../../models/catalogs/staffYacht.models');
+const StatusEvaluation = require('../../../models/operations/surveys/statusEvaluations.models');
 
 class EvaluationService {
     static async getEvaluationsByUser(evaluatorId) {
@@ -240,7 +241,7 @@ class EvaluationService {
                         [Op.between]: [startDate, endDate]
                     }
                 },
-                attributes: ['id', 'stateId', 'updatedAt', 'createdAt'],
+                attributes: ['id','stateId' ,'updatedAt', 'createdAt'],
                 include: [{
                     model: Staff,
                     as: "header_evalutor",
@@ -253,6 +254,10 @@ class EvaluationService {
                         }
                     ]
                 }, {
+                    model: StatusEvaluation,
+                    as: "state",
+                    attributes: ['state'],
+                },{
                     model: Form,
                     as: "header_form",
                     attributes: ['id', 'title'],
