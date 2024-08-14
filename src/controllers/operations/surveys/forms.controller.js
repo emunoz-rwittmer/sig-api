@@ -7,6 +7,7 @@ const Utils = require('../../../utils/Utils');
 const bcrypt = require('bcrypt');
 const sendEmail = require('../../../utils/mailer');
 const moment = require('moment');
+const UserService = require('../../../services/catalogs/users.services');
 
 const getAllForms = async (req, res) => {
     try {
@@ -162,6 +163,23 @@ const sendEvaluation = async (req, res) => {
     }
 }
 
+const sendRetroalimentation = async (req, res) => {
+    try {
+        const evaluadoId = Utils.decode(req.body.evaluadoId)
+        const userId = Utils.decode(req.body.userId)
+        const emailEvaluado = await Staffervice.getStaffById(evaluadoId)
+        const emailUser = await UserService.getUserById(userId);
+        if (emailEvaluado && emailUser) {
+                const action = "retroalimetation"
+                sendEmail(emailEvaluado, " ", action, emailUser, req.body.email);
+            res.status(200).json({ data: 'evaluation send successfully' })
+        }
+    } catch (error) {
+        console.log(error)
+        res.status(400).json(error.message);
+    }
+}
+
 const FormController = {
     getAllForms,
     getForm,
@@ -170,6 +188,7 @@ const FormController = {
     deleteForm,
     deleteQuestionForm,
     getFormAllNecesary,
-    sendEvaluation
+    sendEvaluation,
+    sendRetroalimentation
 }
 module.exports = FormController

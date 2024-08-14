@@ -252,8 +252,7 @@ class Mails {
                     <p>por favor llenarlas lo antes posible, utiliza tu correo y contraseña registrados para acceder.</p>
                   </div>
                    <div class="body-container">
-                    <p>Nota: si es tu primer inicio de sesión deja en blanco el campo de password,</p>
-                    <p>el sistema te guiara para restablecer la contraseña</p>
+                    <p>Nota: Si es tu primer inicio de sesión sigue el manual enviado con anterioridad</p>
                   </div>
                   <div class="credencial-container">
                     <h3 class="credential-tittle">User:</h3> <p>${result.email}</p>
@@ -261,6 +260,84 @@ class Mails {
                   <div class="buttom-container">
                       <a href=${process.env.URL_CAPTAINS} class="button">Iniciar sesión</a>
                   </div>
+                  <div class="footer">
+                    <p>Atentamente</p>
+                    <h3>Rolf Wittmer</h3>
+                  </div>
+              </div>
+          </body>
+          </html>
+          `;
+    return htmlContent;
+  }
+
+  static htmlContentRetoalimentationEvaluation(result) {
+    const htmlContent = `
+          <!DOCTYPE html>
+          <html lang="es">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                  body {
+                      font-family: arial, sans-serif;
+                  }
+                  .container-pass {
+                      max-width: 600px;
+                      margin: 0 auto;
+                  }
+                  .image-container {
+                      text-align: center;
+                      margin-top: 20px;
+                  }
+                  .styled-image {
+                    width: 230px;
+                  }
+                  .credencial-container {
+                    display: flex;
+                    align-items: center;
+                  }
+                  .credencial-container p, h3 {
+                    margin: 0px;
+                  }
+                  .credential-tittle {
+                    margin-right: 10px;
+                  }
+                  .button {
+                      display: inline-block;
+                      padding: 10px 20px;
+                      text-decoration: none;
+                      background-color: #F29100;
+                      border-radius: 150px;
+                      color: #ffffff;
+                  }
+                  .buttom-container {
+                      display: flex;
+                      justify-content: center;
+                      margin-bottom: 20px;
+                      margin-top: 20px;
+                  }
+                  .body-container p {
+                    margin: 0px;
+                  }
+                  .body-container {
+                    margin-bottom: 20px;
+                  }
+                  .footer p,h3 {
+                    margin: 0px;
+                  }
+                  .footer {
+                    margin-top: 20px;
+                  }
+              </style>
+          </head>
+          <body>
+              <div class="container-pass">
+                  <div class="image-container">
+                    <img src="https://reservation.rwittmer.com/logo_rwittmer.png" alt="Imagen con Estilos" class="styled-image">
+                  </div>
+                  <h2>Retroalimentacion de evaluaciones de desempeño</h2>
+                  <p>${result} </p>
                   <div class="footer">
                     <p>Atentamente</p>
                     <h3>Rolf Wittmer</h3>
