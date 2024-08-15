@@ -87,21 +87,22 @@ const loginUsers = async (req, res) => {
 const upgradePassword = async (req, res) => {
     try {
         const userId = Utils.decode(req.params.user_id);
+        const userEmail = req.body.email;
         const data = {
             id: userId,
             password: bcrypt.hashSync(req.body.password, 10),
             changePassword: false
         };
-        const user = await UserService.getUserById(userId);
-        const staff = await Staffervice.getStaffById(userId);
-        if(user){
+        const user = await UserService.getUserByEmail(userEmail);
+
+        if (user) {
             const result = await AuthService.userUpgradePassword(data);
             return res.status(200).json({ data: 'password updated successfully' });
-        }
-        if(staff){
+        } else {
             const result = await AuthService.staffUpgradePassword(data);
             return res.status(200).json({ data: 'password updated successfully' });
         }
+
 
     } catch (error) {
         console.log(error)
