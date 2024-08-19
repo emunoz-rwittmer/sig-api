@@ -235,30 +235,25 @@ class EvaluationService {
     static async getEvaluationByEvaluated(evaluatedId, startDate, endDate, yachtId) {
         try {
 
-            const yachtInclude = {
-                model: StaffYacht,
-                as: 'yachts',
-                attributes: ['id'],
+            const whereClause = {
+                evaluatedId,
+                createdAt: {
+                    [Op.between]: [startDate, endDate]
+                }
             };
 
             if (yachtId) {
-                yachtInclude.where = { yachtId: yachtId };
+                whereClause.yachtId = yachtId;
             }
 
             const result = await HeaderAnswer.findAll({
-                where: {
-                    evaluatedId,
-                    createdAt: {
-                        [Op.between]: [startDate, endDate]
-                    }
-                },
+                where: whereClause,
                 attributes: ['id', 'stateId', 'updatedAt', 'createdAt'],
                 include: [{
                     model: Staff,
                     as: "header_evalutor",
                     attributes: ['firstName', 'lastName'],
                     include: [
-                        yachtInclude,
                         {
                             model: Positions,
                             as: 'staff_position',
