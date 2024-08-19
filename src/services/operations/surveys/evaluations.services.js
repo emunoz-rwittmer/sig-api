@@ -193,7 +193,7 @@ class EvaluationService {
                     {
                         model: Staff,
                         as: 'header_evaluted',
-                       where: {departamentId}
+                        where: { departamentId }
                     },
                     {
                         model: FormAnswer,
@@ -232,8 +232,19 @@ class EvaluationService {
         }
     }
 
-    static async getEvaluationByEvaluated(evaluatedId, startDate, endDate) {
+    static async getEvaluationByEvaluated(evaluatedId, startDate, endDate, yachtId) {
         try {
+
+            const yachtInclude = {
+                model: StaffYacht,
+                as: 'yachts',
+                attributes: ['id'],
+            };
+
+            if (yachtId) {
+                yachtInclude.where = { yachtId: yachtId };
+            }
+
             const result = await HeaderAnswer.findAll({
                 where: {
                     evaluatedId,
@@ -241,12 +252,13 @@ class EvaluationService {
                         [Op.between]: [startDate, endDate]
                     }
                 },
-                attributes: ['id','stateId' ,'updatedAt', 'createdAt'],
+                attributes: ['id', 'stateId', 'updatedAt', 'createdAt'],
                 include: [{
                     model: Staff,
                     as: "header_evalutor",
                     attributes: ['firstName', 'lastName'],
                     include: [
+                        yachtInclude,
                         {
                             model: Positions,
                             as: 'staff_position',
@@ -257,7 +269,7 @@ class EvaluationService {
                     model: StatusEvaluation,
                     as: "state",
                     attributes: ['state'],
-                },{
+                }, {
                     model: Form,
                     as: "header_form",
                     attributes: ['id', 'title'],

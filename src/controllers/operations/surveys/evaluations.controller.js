@@ -119,10 +119,11 @@ const getReportingByDepartament = async (req, res) => {
 const getReportingEvaluationsByCrew = async (req, res) => {
     try {
         const crewId = Utils.decode(req.params.crew_id);
+        const yachtId = Utils.decode(req.query.yachtId)
         const startDate = req.query.startDate;
         const endDate = req.query.endDate;
         const staff = await Staffervice.getStaffById(crewId)
-        const evaluations = await EvaluationService.getEvaluationByEvaluated(crewId, startDate, endDate)
+        const evaluations = await EvaluationService.getEvaluationByEvaluated(crewId, startDate, endDate, yachtId)
         res.status(200).json({ staff, evaluations });
 
     } catch (error) {
