@@ -97,14 +97,18 @@ class EvaluationService {
                     as: "header_form",
                     attributes: ['title'],
                 }, {
+                    model: Yacht,
+                    as: "header_yacht",
+                    attributes: ['name'],
+                }, {
                     model: Staff,
                     as: "header_evalutor",
                     attributes: ['firstName', 'lastName'],
-                },{
+                }, {
                     model: Staff,
                     as: "header_evalutor",
                     attributes: ['firstName', 'lastName'],
-                },{
+                }, {
                     model: StatusEvaluation,
                     as: "state",
                     attributes: ['state'],
@@ -153,7 +157,7 @@ class EvaluationService {
         try {
             const result = await HeaderAnswer.update(
                 { stateId: 3 },
-                { where: { id, stateId:1 } });
+                { where: { id, stateId: 1 } });
             return result
         } catch (error) {
             throw error;
