@@ -153,7 +153,7 @@ class EvaluationService {
         try {
             const result = await HeaderAnswer.update(
                 { stateId: 3 },
-                { where: { id } });
+                { where: { id, stateId:1 } });
             return result
         } catch (error) {
             throw error;
