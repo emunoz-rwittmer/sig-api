@@ -166,7 +166,6 @@ class Staffervice {
 
     static async getEvaluateds(search) {
         try {
-
             const result = await Staff.findAll({
                 where: {
                     positionId: search,
