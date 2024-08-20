@@ -111,7 +111,7 @@ class EvaluationService {
                 }, {
                     model: StatusEvaluation,
                     as: "state",
-                    attributes: ['state'],
+                    attributes: ['id','state'],
                 }, evaluatedInclude
                 ]
             });
