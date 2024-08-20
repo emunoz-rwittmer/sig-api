@@ -4,7 +4,7 @@ const FormEstructure = require("../../../models/operations/surveys/formEstructur
 const HeaderAnswer = require('../../../models/operations/surveys/headerAnwer.models')
 const FormAnswer = require('../../../models/operations/surveys/formAnswer.models');
 const Yacht = require('../../../models/catalogs/yacht.models');
-const { Op } = require('sequelize');
+const { Op, where } = require('sequelize');
 const Staff = require('../../../models/catalogs/staff.models');
 const Departaments = require('../../../models/catalogs/departament.models');
 const Positions = require('../../../models/catalogs/positions.models');
@@ -46,26 +46,6 @@ class EvaluationService {
         }
     }
 
-    static async getEvaluationByEvaluator(names) {
-        try {
-            const result = await HeaderAnswer.findOne({
-                where: { evaluator: names, isComplete: false },
-                include: [{
-                    model: Form,
-                    as: "header_form",
-                    attributes: ['id', 'title'],
-                }, {
-                    model: Yacht,
-                    as: "header_yacht",
-                    attributes: ['name'],
-                }]
-            });
-            return result;
-        } catch (error) {
-            throw error;
-        }
-    }
-
     static async getEvaluationById(id) {
         try {
             const result = await Form.findOne({
@@ -80,6 +60,56 @@ class EvaluationService {
                         as: "questions_estucture",
                     }]
                 }]
+            });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async getEvaluationsToDay(startDate, endDate, positionId) {
+        try {
+
+            const evaluatedInclude = {
+                model: Staff,
+                as: "header_evaluted",
+                attributes: ['firstName', 'lastName'],
+                include: [{
+                    model: Positions,
+                    as: 'staff_position',
+                    attributes: ['name'],
+                }]
+            }
+
+            if (positionId) {
+                evaluatedInclude.where = { positionId: positionId };
+            }
+
+            const result = await HeaderAnswer.findAll({
+                where: {
+                    createdAt: {
+                        [Op.between]: [startDate, endDate]
+                    }
+                },
+                attributes: ['id', 'formId', 'expirationDate', 'createdAt'],
+                include: [{
+                    model: Form,
+                    as: "header_form",
+                    attributes: ['title'],
+                }, {
+                    model: Staff,
+                    as: "header_evalutor",
+                    attributes: ['firstName', 'lastName'],
+                },{
+                    model: Staff,
+                    as: "header_evalutor",
+                    attributes: ['firstName', 'lastName'],
+                },{
+                    model: StatusEvaluation,
+                    as: "state",
+                    attributes: ['state'],
+                }, evaluatedInclude
+                ]
             });
             return result;
         } catch (error) {

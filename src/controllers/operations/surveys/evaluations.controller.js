@@ -47,6 +47,38 @@ const getEvaluation = async (req, res) => {
     }
 }
 
+const getEvaluationsToDay = async (req, res) => {
+    try {
+       
+        const positionId = Utils.decode(req.query.position_id);
+        const startDate = req.query.startDate;
+        const endDate = req.query.endDate;
+        let evaluations = await EvaluationService.getEvaluationsToDay(startDate, endDate, positionId );
+
+        await Promise.all(
+            evaluations.map(async (evaluation) => {
+                if (isTempPasswordExpired(evaluation.expirationDate)) {
+                    await EvaluationService.updateEvaluation(evaluation.id);
+                }
+            })
+        );
+
+        evaluations = await EvaluationService.getEvaluationsToDay(startDate, endDate, positionId);
+
+        if (evaluations instanceof Array) {
+            evaluations = evaluations.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+                x.dataValues.formId = Utils.encode(x.dataValues.formId);
+                return x;
+            });
+        }
+
+        res.status(200).json(evaluations);
+    } catch (error) {
+        res.status(400).json(error.message);
+    }
+};
+
 const respondEvaluation = async (req, res) => {
     try {
         const evaluationId = Utils.decode(req.body.evaluation_id)
@@ -139,6 +171,7 @@ isTempPasswordExpired = (expirationDate) => {
 const EvaluationController = {
     getAllEvaluations,
     getEvaluation,
+    getEvaluationsToDay,
     respondEvaluation,
     getReportingByYacht,
     getReportingByDepartament,

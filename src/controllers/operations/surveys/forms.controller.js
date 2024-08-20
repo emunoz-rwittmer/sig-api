@@ -147,13 +147,8 @@ const sendEvaluation = async (req, res) => {
         data.evaluator = data.evaluator.map(id => Utils.decode(id))
         data.evaluated = data.evaluated.map(id => Utils.decode(id))
         data.expirationDate = expirationDate;
-        const evaluator = await Staffervice.getEvaluatorsById(data.evaluator)
         const result = await FormService.createHeaderAnswer(data);
         if (result) {
-            for (const evaluador of evaluator) {
-                const action = "new evaluation"
-                sendEmail(evaluador, " ", action);
-            }
             res.status(200).json({ data: 'evaluation send successfully' })
         }
 
