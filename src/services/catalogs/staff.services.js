@@ -11,7 +11,7 @@ class Staffervice {
             const result = await Staff.findAll({
                 attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'company', 'active'],
                 order: [
-                    ['first_name', 'ASC']
+                    ['last_name', 'ASC']
                 ],
                 include: [{
                     model: StaffYacht,
@@ -65,7 +65,7 @@ class Staffervice {
                 where,
                 attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'company', 'active'],
                 order: [
-                    ['first_name', 'ASC']
+                    ['last_name', 'ASC']
                 ],
                 include: [{
                     model: StaffYacht,
@@ -100,8 +100,13 @@ class Staffervice {
                 },
                 attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'company', 'active'],
                 order: [
-                    ['first_name', 'ASC']
+                    ['last_name', 'ASC']
                 ],
+                include: [{
+                    model: Positions,
+                    as: 'staff_position',
+                    attributes: ['id', 'name'],
+                }]
             });
             return result;
         } catch (error) {
@@ -109,15 +114,18 @@ class Staffervice {
         }
     }
 
-    static async getEvaluatorsByFilters(yachtId, departamentId, positionId) {
+    static async getEvaluatorsByFilters(search, yachtId, departamentId, positionId) {
         try {
             const where = {}
 
             if (departamentId) {
                 where.departamentId = departamentId;
             }
+
             if (positionId) {
                 where.positionId = positionId;
+            } else {
+                where.positionId = { [Op.ne]: search };
             }
 
             const yachtInclude = {
@@ -137,8 +145,12 @@ class Staffervice {
             const result = await Staff.findAll({
                 where,
                 attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'company', 'active'],
-                order: [['first_name', 'ASC']],
-                include: [yachtInclude]
+                order: [['last_name', 'ASC']],
+                include: [{
+                    model: Positions,
+                    as: 'staff_position',
+                    attributes: ['id', 'name'],
+                }, yachtInclude]
             });
 
             return result;
@@ -173,8 +185,13 @@ class Staffervice {
                 },
                 attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'company', 'active'],
                 order: [
-                    ['first_name', 'ASC']
+                    ['last_name', 'ASC']
                 ],
+                include: [{
+                    model: Positions,
+                    as: 'staff_position',
+                    attributes: ['id', 'name'],
+                }]
             });
             return result;
         } catch (error) {
@@ -190,7 +207,7 @@ class Staffervice {
             if (positionId) {
                 where.positionId = positionId;
             }
-            
+
             const yachtInclude = {
                 model: StaffYacht,
                 as: 'yachts',
@@ -209,9 +226,13 @@ class Staffervice {
                 where,
                 attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'company', 'active'],
                 order: [
-                    ['first_name', 'ASC']
+                    ['last_name', 'ASC']
                 ],
-                include: [yachtInclude]
+                include: [{
+                    model: Positions,
+                    as: 'staff_position',
+                    attributes: ['id', 'name'],
+                }, yachtInclude]
             });
             return result;
         } catch (error) {
@@ -270,7 +291,6 @@ class Staffervice {
 
     static async updateStaff(staff, id) {
         try {
-            console.log(" entre aqui")
             const result = await Staff.update(staff, id);
             return result;
         } catch (error) {

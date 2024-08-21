@@ -59,10 +59,11 @@ const getEvaluators = async (req, res) => {
 
 const getEvaluatorsByFilters = async (req, res) => {
     try {
+        const search = Utils.decode(req.query.search)
         const yachtId = req.query.yachtId
         const departamentId = req.query.departamentId
         const positionId = req.query.positionId
-        const result = await StaffService.getEvaluatorsByFilters(yachtId, departamentId, positionId);
+        const result = await StaffService.getEvaluatorsByFilters(search, yachtId, departamentId, positionId);
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
