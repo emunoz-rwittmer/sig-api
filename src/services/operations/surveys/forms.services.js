@@ -139,17 +139,19 @@ class FormService {
 
     static async createHeaderAnswer(data) {
         try {
-            const results = await Promise.all(data.evaluated.map(async (item) => {
-                const result = await HeaderAnswer.create({
-                    yachtId: data.yachtId ? data.yachtId : null,
-                    formId: data.formId,
-                    stateId: 1,
-                    evaluatorId: data.evaluator[0],
-                    evaluatedId: item,
-                    expirationDate: data.expirationDate
-                });
-
-                return result;
+            const results = await Promise.all(data.evaluated.map(async (evaluado) => {
+                const resultTwo = await Promise.all(data.evaluator.map(async (evaluador) => {
+                    const result = await HeaderAnswer.create({
+                        yachtId: data.yachtId ? data.yachtId : null,
+                        formId: data.formId,
+                        stateId: 1,
+                        evaluatorId: evaluador,
+                        evaluatedId: evaluado,
+                        expirationDate: data.expirationDate
+                    });
+                    return result;
+                }))
+                return resultTwo;
             }));
 
             return results
