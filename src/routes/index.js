@@ -11,6 +11,7 @@ const HouseRulesRoutes = require("./catalogs/houseRules.routes");
 //Operations
 const questiondRoutes = require("./operations/surveys/questions.routes");
 const evaluationRoutes = require("./operations/surveys/evaluation.routes");
+const ordersRoutes = require('./operations/orders/order.routes');
 
 const routerApi = (app) => {
 
@@ -25,7 +26,8 @@ const routerApi = (app) => {
     //OPERATIONS
     app.use("/api/questions", authJwt.verifyToken, questiondRoutes);
     app.use("/api/forms", formsRoutes);
-    app.use("/api/evaluations", authJwt.verifyToken, evaluationRoutes)
+    app.use("/api/evaluations", authJwt.verifyToken, evaluationRoutes);
+    app.use("/api/orders", ordersRoutes);
   };
   
   module.exports = routerApi;

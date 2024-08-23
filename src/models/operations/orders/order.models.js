@@ -1,25 +1,31 @@
 const db = require('../../../utils/database');
 const { DataTypes } = require('sequelize');
 
-const Form = db.define('form', {
+const Order = db.define('Order', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
   },
-  title: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  positionId: {
+  yachtId: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    field: 'position_id'
+    field: 'yacht_id'
   },
-  active: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: true
+  name: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  userId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    field: 'user_id'
+
+  },
+  status: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
   },
 });
 
-module.exports = Form;
+module.exports = Order;
