@@ -65,11 +65,28 @@ class OrderService {
 
     static async createItemsOfOrder(items) {
         try {
+            console.log(items)
             const result = await itemsOrder.bulkCreate(items);
             return result;
         } catch (error) {
             throw error;
 
+        }
+    }
+
+    // Items by orders
+
+    static async getItemsByOrder(orderId) {
+        try {
+            const result = await itemsOrder.findAll({
+                where: { orderId },
+                // attributes: [
+                //     'id', 'name', 'createdAt',
+                // ],
+            });
+            return result;
+        } catch (error) {
+            throw error;
         }
     }
 

@@ -7,8 +7,8 @@ const router = Router();
 router.get('/',OrderController.getAllYachtWhitOrders);
 router.get('/ordersByYacht/:yacht_id',OrderController.getOrdersByYacht);
 router.post('/uploadOrder', uploadExcelFile, OrderController.uploadOrder);
-
-// router.get('/evaluationsSent/ToDay',OrderController.getEvaluationsToDay);
+router.post('/createOrder', uploadExcelFile, OrderController.createOrder);
+router.get('/itemsByOrder/:order_id',OrderController.getItemsByOrder);
 // router.get('/reportingByYacht/:yacht_id',OrderController.getReportingByYacht);
 // router.get('/reportingByDepartament/:departament_id',OrderController.getReportingByDepartament);
 // router.get('/reportingEvaluationsByCrew/:crew_id',OrderController.getReportingEvaluationsByCrew);

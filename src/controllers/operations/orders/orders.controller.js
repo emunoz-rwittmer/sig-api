@@ -76,48 +76,65 @@ const uploadOrder = async (req, res) => {
     }
 }
 
-// const respondOrder = async (req, res) => {
-//     try {
-//         const OrderId = Utils.decode(req.body.Order_id)
-//         const Order = req.body
-//         const result = await OrderService.createAnswers(OrderId, Order);
-//         const response = await OrderService.updateStatusHeaderAnswers(OrderId)
-//         if (response) {
-//             res.status(200).json({ data: 'resource created successfully' });
-//         }
-//     } catch (error) {
-//         console.log(error)
-//         res.status(400).json(error.message);
-//     }
-// }
+const createOrder = async (req, res) => {
+    try {
+        const data = req.body;
+        const order = {
+            yachtId: Utils.decode(data.yachtId),
+            userId: Utils.decode(data.userId),
+            name: data.name,
+            status: data.status
+        }
 
-// //OrderS REPORTING
+        const result = await OrderService.createOrder(order);
+        const orderId = result.id;
 
-// const getReportingByYacht = async (req, res) => {
-//     try {
-//         const yachtId = Utils.decode(req.params.yacht_id);
-//         const startDate = req.query.startDate;
-//         const endDate = req.query.endDate;
-//         const yacht = await YachtService.getYachtById(yachtId)
-//         const Orders = await OrderService.getOrdersByYacht(yachtId, startDate, endDate)
-//         if (Orders instanceof Array) {
-//             Orders.map((x) => {
-//                 x.dataValues.id = Utils.encode(x.dataValues.id);
-//                 x.dataValues.evaluatedId = Utils.encode(x.dataValues.evaluatedId);
-//             });
-//         }
-//         const result = await OrderService.getReportingByYacht(yachtId);
-//         if (result instanceof Array) {
-//             result.map((x) => {
-//                 x.staff_yacht.dataValues.id = Utils.encode(x.staff_yacht.dataValues.id);
-//             });
-//         }
-//         res.status(200).json({ yacht, result, Orders });
-//     } catch (error) {
-//         console.log(error)
-//         res.status(400).json(error.message)
-//     }
-// }
+        const products = data.product;
+        const quantitys = data.quantity;
+        const originalQuantitys = data.originalQuantity;
+        const items = []
+
+        for (let i = 0; i < products.length; i++) {
+            const product = products[i];
+            const quantity = quantitys[i];
+            const originalQuantity = originalQuantitys[i];
+            const item = {
+                product,
+                quantity,
+                originalQuantity,
+                orderId
+            }
+            items.push(item)
+        }
+
+        if (result) {
+            const result = await OrderService.createItemsOfOrder(items);
+            if (result) {
+                res.status(200).json({ data: 'resource created successfully' });
+            }
+        }
+
+    } catch (error) {
+        console.log(error)
+        res.status(400).json(error.message);
+    }
+}
+
+const getItemsByOrder = async (req, res) => {
+    try {
+        const orderId = Utils.decode(req.params.order_id);
+        const result = await OrderService.getItemsByOrder(orderId)
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+            });
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        console.log(error)
+        res.status(400).json(error.message)
+    }
+}
 
 // const getReportingByDepartament = async (req, res) => {
 //     try {
@@ -169,6 +186,8 @@ const OrderController = {
     getAllYachtWhitOrders,
     getOrdersByYacht,
     uploadOrder,
+    createOrder,
+    getItemsByOrder
     // getOrdersToDay,
     // respondOrder,
     // getReportingByYacht,

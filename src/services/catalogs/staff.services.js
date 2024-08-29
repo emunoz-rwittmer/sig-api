@@ -116,7 +116,7 @@ class Staffervice {
 
     static async getEvaluatorsByFilters(search, yachtId, departamentId, positionId) {
         try {
-            const where = {}
+            const where = {active: true}
 
             if (departamentId) {
                 where.departamentId = departamentId;
@@ -202,7 +202,7 @@ class Staffervice {
     static async getEvaluatedsByFilters(positionId, yachtId) {
         try {
 
-            const where = {};
+            const where = {active: true};
 
             if (positionId) {
                 where.positionId = positionId;
