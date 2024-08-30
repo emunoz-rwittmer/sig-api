@@ -2,6 +2,7 @@ const OrderService = require('../../../services/operations/orders/orders.service
 const YachtService = require('../../../services/catalogs/yachts.services');
 const Utils = require('../../../utils/Utils');
 const XLSX = require('xlsx');
+const { param } = require('../../../routes/operations/orders/order.routes');
 
 const getAllYachtWhitOrders = async (req, res) => {
     try {
@@ -120,6 +121,54 @@ const createOrder = async (req, res) => {
     }
 }
 
+const updateOrder = async (req, res) => {
+    try {
+
+        const { body, params } = req;
+
+        const ids = body.id;
+        const products = body.product;
+        const quantitys = body.quantity;
+        const originalQuantitys = body.originalQuantity;
+
+        const items = []
+        for (let i = 0; i < ids.length; i++) {
+            const id = ids[i];
+            const product = products[i];
+            const quantity = quantitys[i];
+            const originalQuantity = originalQuantitys[i];
+            const item = {
+                id,
+                product,
+                quantity,
+                originalQuantity,
+            }
+            items.push(item)
+        }
+
+        const itemsUpdate = items.filter(item => item.id !== "");
+        const result = await OrderService.updateOrder(itemsUpdate);
+
+        const newItems = items.filter(item => item.id === "");
+        if (newItems.length > 0) {
+            const orderId = Utils.decode(params.order_id);
+            const itemsCreate = newItems.map(({ id, ...rest }) => ({
+                ...rest,
+                orderId: orderId
+            }));
+            await OrderService.createItemsOfOrder(itemsCreate);
+        }
+
+        if (result) {
+            res.status(200).json({ data: 'resource created successfully' });
+        }
+
+    } catch (error) {
+        console.log(error)
+        res.status(400).json(error.message);
+    }
+}
+
 const getItemsByOrder = async (req, res) => {
     try {
         const orderId = Utils.decode(req.params.order_id);
@@ -133,6 +182,17 @@ const getItemsByOrder = async (req, res) => {
     } catch (error) {
         console.log(error)
         res.status(400).json(error.message)
+    }
+}
+
+const deleteItem = async (req, res) => {
+    try {
+        const itemId = Utils.decode(req.params.item_id);
+        const result = await OrderService.deleteItem(itemId);
+        res.status(200).json({ data: result })
+    } catch (error) {
+        console.log(error)
+        res.status(400).json(error.message);
     }
 }
 
@@ -187,7 +247,9 @@ const OrderController = {
     getOrdersByYacht,
     uploadOrder,
     createOrder,
-    getItemsByOrder
+    updateOrder,
+    getItemsByOrder,
+    deleteItem
     // getOrdersToDay,
     // respondOrder,
     // getReportingByYacht,

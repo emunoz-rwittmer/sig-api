@@ -5,7 +5,11 @@ const path = require('path');
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     let folder = ""; // Por ejemplo, 'tiptops' o 'person'
-    if (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+    if (file.mimetype.startsWith('image/')) {
+      folder = req.query.images;
+    } else if (file.mimetype === 'application/pdf') {
+      folder = req.query.file;
+    } else if (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
       file.mimetype === 'application/vnd.ms-excel') {
       folder = '/excel';
     }

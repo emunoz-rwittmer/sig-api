@@ -5,6 +5,7 @@ const rolesRoutes = require("./catalogs/roles.routes");
 const departamentsRoutes = require("./catalogs/departaments.routes");
 const positionsRoutes = require("./catalogs/positions.routes");
 const yachtRoutes = require("./catalogs/yachts.routes")
+const companyRoutes = require("./catalogs/company.routes");
 const staffRoutes = require("./catalogs/staff.routes"); 
 const formsRoutes = require("./operations/surveys/forms.routes");
 const HouseRulesRoutes = require("./catalogs/houseRules.routes");
@@ -20,7 +21,8 @@ const routerApi = (app) => {
     app.use("/api/roles", authJwt.verifyToken, authJwt.isAdmin, rolesRoutes);
     app.use("/api/departaments", authJwt.verifyToken, departamentsRoutes);
     app.use("/api/positions", authJwt.verifyToken, positionsRoutes);
-    app.use("/api/yachts", authJwt.verifyToken, yachtRoutes); 
+    app.use("/api/yachts", authJwt.verifyToken, yachtRoutes);
+    app.use("/api/companies", authJwt.verifyToken, companyRoutes); 
     app.use("/api/staffs", authJwt.verifyToken, staffRoutes);
     app.use("/api/houseRules", authJwt.verifyToken, HouseRulesRoutes);
     //OPERATIONS

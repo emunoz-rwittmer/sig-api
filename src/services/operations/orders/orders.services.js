@@ -4,6 +4,7 @@ const Yachts = require('../../../models/catalogs/yacht.models');
 const itemsOrder = require('../../../models/operations/orders/itemsOrder.models');
 const Order = require('../../../models/operations/orders/order.models');
 const { Sequelize, Op, where } = require("sequelize");
+const Utils = require('../../../utils/Utils');
 
 
 
@@ -63,14 +64,23 @@ class OrderService {
         }
     }
 
-    static async createItemsOfOrder(items) {
+    static async updateOrder(data) {
         try {
-            console.log(items)
-            const result = await itemsOrder.bulkCreate(items);
-            return result;
+            const results = await Promise.all(data.map(async (item) => {
+                const result = await itemsOrder.update({
+                    product: item.product,
+                    quantity: item.quantity,
+                    originalQuantity: item.originalQuantity,
+                },
+                    {
+                        where: { id: Utils.decode(item.id) }
+                    });
+                return result;
+            }));
+            return results;
         } catch (error) {
+            console.log(error)
             throw error;
-
         }
     }
 
@@ -80,15 +90,36 @@ class OrderService {
         try {
             const result = await itemsOrder.findAll({
                 where: { orderId },
-                // attributes: [
-                //     'id', 'name', 'createdAt',
-                // ],
             });
             return result;
         } catch (error) {
             throw error;
         }
     }
+
+    static async createItemsOfOrder(items) {
+        try {
+            const result = await itemsOrder.bulkCreate(items);
+            return result;
+        } catch (error) {
+            throw error;
+
+        }
+    }
+
+    static async deleteItem(itemId) {
+        try {
+            const result = await itemsOrder.destroy({
+                where: { id: itemId }
+            });
+            if (result) {
+                return 'resource deleted successfully'
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
+
 
     // static async updateYacht(yacht, id) {
     //     try {

@@ -1,7 +1,5 @@
 const YachtService = require('../../services/catalogs/yachts.services');
 const Utils = require('../../utils/Utils');
-const sendEmail = require('../../utils/mailer');
-const bcrypt = require("bcrypt");
 
 const getAllYachts = async (req, res) => {
     try {
@@ -23,6 +21,7 @@ const getYacht = async (req, res) => {
         const result = await YachtService.getYachtById(yachtId);
         if (result instanceof Object) {
             result.id = Utils.encode(result.id);
+            result.companyId = Utils.encode(result.companyId);
         }
         res.status(200).json(result);
     } catch (error) {
@@ -33,6 +32,7 @@ const getYacht = async (req, res) => {
 const createYacht = async (req, res) => {
     try {
         const yacht = req.body;
+        yacht.companyId = Utils.decode(yacht.companyId)
         const result = await YachtService.createYacht(yacht);
         if (result) {
             res.status(200).json({ data: 'resource created successfully' });
@@ -48,6 +48,7 @@ const updateYacht = async (req, res) => {
     try {
         const yachtId = Utils.decode(req.params.yacht_id);
         const yacht = req.body;
+        yacht.companyId = Utils.decode(yacht.companyId)
         const result = await YachtService.updateYacht(yacht, {
             where: { id: yachtId },
         });

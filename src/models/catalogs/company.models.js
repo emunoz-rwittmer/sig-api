@@ -2,26 +2,30 @@ const db = require('../../utils/database');
 const { DataTypes } = require('sequelize');
 const bcrypt = require('bcrypt');
 
-const Yacht= db.define('yacht',{
-    id:{
+const Company = db.define('company', {
+    id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true,
-    },
-    companyId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        field: 'company_id'
     },
     name: {
         type: DataTypes.STRING,
         allowNull: false,
     },
-    code: {
+    comercialName: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        field: 'comercial_name'
+    },
+    ruc: {
         type: DataTypes.STRING,
         allowNull: false,
     },
-    color: {
+    logo: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
+    adress: {
         type: DataTypes.STRING,
         allowNull: false,
     },
@@ -31,4 +35,4 @@ const Yacht= db.define('yacht',{
     },
 });
 
-module.exports = Yacht;
+module.exports = Company;

@@ -3,6 +3,7 @@ const Roles = require('./catalogs/roles.models');
 const Positions = require('./catalogs/positions.models');
 const Departaments = require('./catalogs/departament.models');
 const Yacht = require('./catalogs/yacht.models');
+const Company = require('./catalogs/company.models');
 const Staff = require('./catalogs/staff.models');
 const StaffYacht = require('./catalogs/staffYacht.models')
 const Question = require('./operations/surveys/question.models');
@@ -29,6 +30,7 @@ const initModels = () => {
     Staff.hasMany(StaffYacht, { as: 'yachts', foreignKey: 'staff_id' });
     Form.belongsTo(Positions, { as: "position_form", foreignKey: "position_id" });
     Positions.hasMany(Form, { as: 'positions', foreignKey: 'position_id' });
+    Yacht.belongsTo(Company, { as: 'company', foreignKey: 'company_id' });
     //operations
     FormEstructure.belongsTo(Form, { as: "form_questions", foreignKey: "form_id" });
     FormEstructure.belongsTo(EstructureQuestion, { as: "questions_estucture", foreignKey: "estructure_question_id" });

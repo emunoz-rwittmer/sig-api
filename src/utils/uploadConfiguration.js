@@ -1,7 +1,10 @@
 const uploadMiddleware = require('../middlewares/uploadMiddleware');
 
-const uploadExcelFile = uploadMiddleware('file');
+const uploadExcelFile = uploadMiddleware('single','file');
+
+const uploadSingleImage = uploadMiddleware("array", 'logo');
 
 module.exports =  {
-    uploadExcelFile
+    uploadExcelFile,
+    uploadSingleImage
 };
