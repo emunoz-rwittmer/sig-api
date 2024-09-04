@@ -3,10 +3,11 @@ const YachtService = require('../../../services/catalogs/yachts.services');
 const Utils = require('../../../utils/Utils');
 const XLSX = require('xlsx');
 const { param } = require('../../../routes/operations/orders/order.routes');
+const CompanyService = require('../../../services/catalogs/company.services');
 
-const getAllYachtWhitOrders = async (req, res) => {
+const getAllCompaniesWhitOrders = async (req, res) => {
     try {
-        const result = await OrderService.getYachtsWhitOrders();
+        const result = await OrderService.getAllCompaniesWhitOrders();
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
@@ -21,7 +22,7 @@ const getAllYachtWhitOrders = async (req, res) => {
 const getOrdersByYacht = async (req, res) => {
     try {
         const yachtId = Utils.decode(req.params.yacht_id);
-        const yacht = await YachtService.getYachtById(yachtId)
+        const yacht = await CompanyService.getCompanyById(yachtId);
         if (yacht instanceof Array) {
             yacht.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
@@ -33,6 +34,8 @@ const getOrdersByYacht = async (req, res) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
             });
         }
+
+      
         res.status(200).json({ yacht, result });
     } catch (error) {
         res.status(400).json(error.message)
@@ -42,7 +45,7 @@ const getOrdersByYacht = async (req, res) => {
 const uploadOrder = async (req, res) => {
     try {
         const data = req.body;
-        data.yachtId = Utils.decode(data.yachtId)
+        data.companyId = Utils.decode(data.companyId)
         data.userId = Utils.decode(data.userId)
         const result = await OrderService.createOrder(data);
         const orderId = result.id;
@@ -243,7 +246,7 @@ const deleteItem = async (req, res) => {
 // };
 
 const OrderController = {
-    getAllYachtWhitOrders,
+    getAllCompaniesWhitOrders,
     getOrdersByYacht,
     uploadOrder,
     createOrder,

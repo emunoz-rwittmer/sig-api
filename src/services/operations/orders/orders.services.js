@@ -5,15 +5,16 @@ const itemsOrder = require('../../../models/operations/orders/itemsOrder.models'
 const Order = require('../../../models/operations/orders/order.models');
 const { Sequelize, Op, where } = require("sequelize");
 const Utils = require('../../../utils/Utils');
+const Company = require('../../../models/catalogs/company.models');
 
 
 
 class OrderService {
-    static async getYachtsWhitOrders() {
+    static async getAllCompaniesWhitOrders() {
         try {
-            const result = await Yachts.findAll({
+            const result = await Company.findAll({
                 attributes: [
-                    'id', 'name', 'code',
+                    'id', 'name', 'logo', 'ruc',
                     [Sequelize.fn('COUNT', Sequelize.col('Orders.id')), 'ordersCount']
                 ],
                 include: [{
@@ -29,10 +30,10 @@ class OrderService {
         }
     }
 
-    static async getOrdersByYacht(yachtId) {
+    static async getOrdersByYacht(companyId) {
         try {
             const result = await Order.findAll({
-                where: { yachtId },
+                where: { companyId },
                 attributes: [
                     'id', 'name', 'createdAt',
                     [Sequelize.fn('COUNT', Sequelize.col('items.id')), 'itemsCount']
@@ -90,6 +91,7 @@ class OrderService {
         try {
             const result = await itemsOrder.findAll({
                 where: { orderId },
+                attributes:['id','barCode', 'product', 'quantity']
             });
             return result;
         } catch (error) {

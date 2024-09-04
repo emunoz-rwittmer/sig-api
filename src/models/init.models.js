@@ -51,8 +51,8 @@ const initModels = () => {
     HeaderAnswer.belongsTo(StatusEvaluation, { as: 'state', foreignKey: 'state_id' });
     StatusEvaluation.hasMany(HeaderAnswer, { as: "header_state", foreignKey: "state_id" });
     //Order
-    Order.belongsTo(Yacht, { as: "order_yacht", foreignKey: "yacht_id" });
-    Yacht.hasMany(Order, { as: "orders", foreignKey: "yacht_id" });
+    Order.belongsTo(Company, { as: "order_company", foreignKey: "company_id" });
+    Company.hasMany(Order, { as: "orders", foreignKey: "company_id" });
     
     itemsOrder.belongsTo(Order, {as: "items_order", foreignKey: "order_id"})
     Order.hasMany(itemsOrder, { as: "items", foreignKey: "order_id" });

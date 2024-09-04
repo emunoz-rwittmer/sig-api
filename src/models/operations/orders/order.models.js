@@ -7,10 +7,10 @@ const Order = db.define('Order', {
     primaryKey: true,
     autoIncrement: true,
   },
-  yachtId: {
+  companyId: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    field: 'yacht_id'
+    field: 'company_id'
   },
   name: {
     type: DataTypes.STRING,
