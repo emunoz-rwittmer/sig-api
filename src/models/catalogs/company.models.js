@@ -1,6 +1,5 @@
 const db = require('../../utils/database');
 const { DataTypes } = require('sequelize');
-const bcrypt = require('bcrypt');
 
 const Company = db.define('company', {
     id: {
@@ -11,11 +10,6 @@ const Company = db.define('company', {
     name: {
         type: DataTypes.STRING,
         allowNull: false,
-    },
-    comercialName: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        field: 'comercial_name'
     },
     ruc: {
         type: DataTypes.STRING,

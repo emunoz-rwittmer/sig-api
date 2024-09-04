@@ -15,10 +15,6 @@ const Product = db.define('product', {
     type: DataTypes.STRING,
     allowNull: true,
   },
-  category: {
-    type: DataTypes.STRING,
-    allowNull: true,
-  },
 });
 
 module.exports = Product;

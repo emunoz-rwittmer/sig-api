@@ -30,21 +30,21 @@ class OrderService {
         }
     }
 
-    static async getOrdersByYacht(companyId) {
+    static async getOrdersByCompany(companyId) {
         try {
             const result = await Order.findAll({
                 where: { companyId },
                 attributes: [
                     'id', 'name', 'createdAt',
-                    [Sequelize.fn('COUNT', Sequelize.col('items.id')), 'itemsCount']
+                    [Sequelize.fn('COUNT', Sequelize.col('orderItems.id')), 'itemsCount']
                 ],
                 include: [{
                     model: itemsOrder,
-                    as: 'items',
+                    as: 'orderItems',
                     attributes: []
                 },{
                     model: Users,
-                    as: 'order_user',
+                    as: 'responsible',
                     attributes: ['firstName','lastName']
                 }],
                 group: ['id']

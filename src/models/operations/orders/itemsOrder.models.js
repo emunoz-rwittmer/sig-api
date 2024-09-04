@@ -12,10 +12,13 @@ const itemsOrder = db.define('itemsOrder', {
     allowNull: false,
     field: 'order_id'
   },
-  productId: {
-    type: DataTypes.INTEGER,
+  product: {
+    type: DataTypes.STRING,
     allowNull: false,
-    field: 'product_id'
+  },
+  sku: {
+    type: DataTypes.STRING,
+    allowNull: true,
   },
   quantity: {
     type: DataTypes.INTEGER,

@@ -1,9 +1,7 @@
 const OrderService = require('../../../services/operations/orders/orders.services');
-const YachtService = require('../../../services/catalogs/yachts.services');
 const Utils = require('../../../utils/Utils');
-const XLSX = require('xlsx');
-const { param } = require('../../../routes/operations/orders/order.routes');
 const CompanyService = require('../../../services/catalogs/company.services');
+const XLSX = require('xlsx');
 
 const getAllCompaniesWhitOrders = async (req, res) => {
     try {
@@ -19,24 +17,22 @@ const getAllCompaniesWhitOrders = async (req, res) => {
     }
 }
 
-const getOrdersByYacht = async (req, res) => {
+const getOrdersByCompany = async (req, res) => {
     try {
-        const yachtId = Utils.decode(req.params.yacht_id);
-        const yacht = await CompanyService.getCompanyById(yachtId);
-        if (yacht instanceof Array) {
-            yacht.map((x) => {
+        const companyId = Utils.decode(req.params.company_id);
+        const company = await CompanyService.getCompanyById(companyId);
+        if (company instanceof Array) {
+            company.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
             });
         }
-        const result = await OrderService.getOrdersByYacht(yachtId);
+        const result = await OrderService.getOrdersByCompany(companyId);
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
             });
         }
-
-      
-        res.status(200).json({ yacht, result });
+        res.status(200).json({ company, result });
     } catch (error) {
         res.status(400).json(error.message)
     }
@@ -84,7 +80,7 @@ const createOrder = async (req, res) => {
     try {
         const data = req.body;
         const order = {
-            yachtId: Utils.decode(data.yachtId),
+            companyId: Utils.decode(data.companyId),
             userId: Utils.decode(data.userId),
             name: data.name,
             status: data.status
@@ -228,11 +224,11 @@ const deleteItem = async (req, res) => {
 // const getReportingOrdersByCrew = async (req, res) => {
 //     try {
 //         const crewId = Utils.decode(req.params.crew_id);
-//         const yachtId = Utils.decode(req.query.yachtId)
+//         const companyId = Utils.decode(req.query.companyId)
 //         const startDate = req.query.startDate;
 //         const endDate = req.query.endDate;
 //         const staff = await Staffervice.getStaffById(crewId)
-//         const Orders = await OrderService.getOrderByEvaluated(crewId, startDate, endDate, yachtId)
+//         const Orders = await OrderService.getOrderByEvaluated(crewId, startDate, endDate, companyId)
 //         res.status(200).json({ staff, Orders });
 
 //     } catch (error) {
@@ -247,7 +243,7 @@ const deleteItem = async (req, res) => {
 
 const OrderController = {
     getAllCompaniesWhitOrders,
-    getOrdersByYacht,
+    getOrdersByCompany,
     uploadOrder,
     createOrder,
     updateOrder,

@@ -14,8 +14,13 @@ const EstructureQuestion = require('./operations/surveys/estructureQuestion.mode
 const FormAnswer = require('./operations/surveys/formAnswer.models');
 const HeaderAnswer = require('./operations/surveys/headerAnwer.models');
 const StatusEvaluation = require('./operations/surveys/statusEvaluations.models');
+// Invetory Models
 const Order = require('./operations/orders/order.models');
 const itemsOrder = require('./operations/orders/itemsOrder.models');
+const Warehouse = require('./catalogs/wareHouse.models');
+const Stock = require('./operations/inventory/stock.models');
+const Product = require('./operations/orders/product.models');
+const Transaction = require('./operations/inventory/transaction.models');
 
 const initModels = () => {
 
@@ -30,7 +35,6 @@ const initModels = () => {
     Staff.hasMany(StaffYacht, { as: 'yachts', foreignKey: 'staff_id' });
     Form.belongsTo(Positions, { as: "position_form", foreignKey: "position_id" });
     Positions.hasMany(Form, { as: 'positions', foreignKey: 'position_id' });
-    Yacht.belongsTo(Company, { as: 'company', foreignKey: 'company_id' });
     //operations
     FormEstructure.belongsTo(Form, { as: "form_questions", foreignKey: "form_id" });
     FormEstructure.belongsTo(EstructureQuestion, { as: "questions_estucture", foreignKey: "estructure_question_id" });
@@ -50,15 +54,37 @@ const initModels = () => {
     //state
     HeaderAnswer.belongsTo(StatusEvaluation, { as: 'state', foreignKey: 'state_id' });
     StatusEvaluation.hasMany(HeaderAnswer, { as: "header_state", foreignKey: "state_id" });
-    //Order
-    Order.belongsTo(Company, { as: "order_company", foreignKey: "company_id" });
-    Company.hasMany(Order, { as: "orders", foreignKey: "company_id" });
-    
-    itemsOrder.belongsTo(Order, {as: "items_order", foreignKey: "order_id"})
-    Order.hasMany(itemsOrder, { as: "items", foreignKey: "order_id" });
 
-    Order.belongsTo(Users, { as: "order_user", foreignKey: "user_id" });
-    Users.hasMany(Order, { as: "user_orders", foreignKey: "user_id" });
+    //INVENTORY RELATIONS
+    // Company a Yacht: Relación uno a uno (cada empresa tiene un yate).
+    Company.hasOne(Yacht, { foreignKey: 'company_id', as: 'yacht' });
+    Yacht.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
+    // Yacht a Warehouse: Relación uno a uno (cada yate tiene una bodega).
+    Yacht.hasOne(Warehouse, { foreignKey: 'yacht_id', as: 'warehouse' });
+    Warehouse.belongsTo(Yacht, { foreignKey: 'yacht_id', as: 'yacht' });
+    // Company a Order: Relación uno a muchos (una empresa puede realizar múltiples pedidos).
+    Company.hasMany(Order, { foreignKey: 'company_id', as: 'orders' });
+    Order.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
+    // Order a OrderItem: Relación uno a muchos (un pedido puede tener múltiples items).
+    Order.hasMany(itemsOrder, { foreignKey: 'order_id', as: 'orderItems' });
+    itemsOrder.belongsTo(Order, { foreignKey: 'order_id', as: 'order' });
+    // Order a User (Responsable): Relación muchos a uno (varios pedidos pueden ser gestionados por un mismo responsable).
+    Order.belongsTo(Users, { foreignKey: 'responsible_id', as: 'responsible' });
+    Users.hasMany(Order, { foreignKey: 'responsible_id', as: 'orders' });
+    // Warehouse a Stock: Relación uno a muchos (una bodega tiene múltiples stocks de productos).
+    Warehouse.hasMany(Stock, { foreignKey: 'warehouse_id', as: 'stocks' });
+    Stock.belongsTo(Warehouse, { foreignKey: 'warehouse_id', as: 'warehouse' });
+    // Product a Stock: Relación uno a muchos (un producto puede estar en múltiples bodegas).
+    Product.hasMany(Stock, { foreignKey: 'product_id', as: 'stocks' });
+    Stock.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
+    // Product a Transaction: Relación uno a muchos (un producto puede tener múltiples transacciones).
+    Product.hasMany(Transaction, { foreignKey: 'product_id', as: 'transactions' });
+    Transaction.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
+    // Warehouse a Transaction: Relación uno a muchos (una bodega puede estar involucrada en múltiples transacciones).
+    Warehouse.hasMany(Transaction, { foreignKey: 'warehouse_from_id', as: 'outgoingTransactions' });// Bodega de origen
+    Warehouse.hasMany(Transaction, { foreignKey: 'warehouse_to_id', as: 'incomingTransactions' }); // Bodega de destino
+    Transaction.belongsTo(Warehouse, { foreignKey: 'warehouse_from_id', as: 'warehouseFrom' });
+    Transaction.belongsTo(Warehouse, { foreignKey: 'warehouse_to_id', as: 'warehouseTo' });
 
     Question,
     HouseRule

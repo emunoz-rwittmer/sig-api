@@ -16,7 +16,7 @@ class CompanyService {
         try {
             const result = await Company.findOne({
                 where: { id },
-                attributes: ['id','name','comercialName','ruc','adress', 'logo', 'active']
+                attributes: ['id','name','ruc','adress', 'logo', 'active']
             });
             return result;
         } catch (error) {

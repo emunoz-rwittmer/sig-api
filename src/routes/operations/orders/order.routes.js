@@ -5,7 +5,7 @@ const { uploadExcelFile } = require('../../../utils/uploadConfiguration');
 const router = Router();
 
 router.get('/',OrderController.getAllCompaniesWhitOrders);
-router.get('/ordersByYacht/:yacht_id',OrderController.getOrdersByYacht);
+router.get('/ordersByCompany/:company_id',OrderController.getOrdersByCompany);
 router.post('/uploadOrder', uploadExcelFile, OrderController.uploadOrder);
 router.post('/createOrder', uploadExcelFile, OrderController.createOrder);
 
