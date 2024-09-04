@@ -48,7 +48,7 @@ const uploadOrder = async (req, res) => {
         const file = req.file;
         if (result) {
             const fieldMapping = {
-                'barCode': 'barCode',
+                'sku': 'sku',
                 'product': 'product',
                 'quantity': 'quantity',
                 'originalQuantity': 'originalQuantity',
@@ -63,6 +63,7 @@ const uploadOrder = async (req, res) => {
                     mappedRow[modelField] = row[excelField];
                 }
                 mappedRow.orderId = orderId;
+                mappedRow.status = 'en espera';
                 return mappedRow;
             });
             const result = await OrderService.createItemsOfOrder(mappedData);

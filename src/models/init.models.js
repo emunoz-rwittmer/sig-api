@@ -69,8 +69,8 @@ const initModels = () => {
     Order.hasMany(itemsOrder, { foreignKey: 'order_id', as: 'orderItems' });
     itemsOrder.belongsTo(Order, { foreignKey: 'order_id', as: 'order' });
     // Order a User (Responsable): Relación muchos a uno (varios pedidos pueden ser gestionados por un mismo responsable).
-    Order.belongsTo(Users, { foreignKey: 'responsible_id', as: 'responsible' });
-    Users.hasMany(Order, { foreignKey: 'responsible_id', as: 'orders' });
+    Order.belongsTo(Users, { foreignKey: 'user_id', as: 'responsible' });
+    Users.hasMany(Order, { foreignKey: 'user_id', as: 'orders' });
     // Warehouse a Stock: Relación uno a muchos (una bodega tiene múltiples stocks de productos).
     Warehouse.hasMany(Stock, { foreignKey: 'warehouse_id', as: 'stocks' });
     Stock.belongsTo(Warehouse, { foreignKey: 'warehouse_id', as: 'warehouse' });

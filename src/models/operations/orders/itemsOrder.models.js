@@ -29,6 +29,10 @@ const itemsOrder = db.define('itemsOrder', {
     allowNull: true,
     field: 'original_quantity'
   },
+  status: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
 });
 
 module.exports = itemsOrder;

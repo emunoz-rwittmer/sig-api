@@ -23,7 +23,7 @@ const Order = db.define('Order', {
 
   },
   status: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.STRING,
     allowNull: false,
   },
 });
