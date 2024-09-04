@@ -8,6 +8,11 @@ const Yacht= db.define('yacht',{
         primaryKey: true,
         autoIncrement: true,
     },
+    warehouseId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        field: 'warehouse_id'
+    },
     companyId: {
         type: DataTypes.INTEGER,
         allowNull: false,
