@@ -85,6 +85,20 @@ class OrderService {
         }
     }
 
+    static async updateStatusOrder(id, status) {
+        try {
+            const result = await Order.update({
+                status
+            },{
+                where: { id }
+            });
+            return result;
+        } catch (error) {
+            throw error;
+
+        }
+    }
+
     // Items by orders
 
     static async getItemsByOrder(orderId) {

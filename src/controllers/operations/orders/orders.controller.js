@@ -169,6 +169,16 @@ const updateOrder = async (req, res) => {
     }
 }
 
+const updateStatusOrder= async (req, res) => {
+    const orderId = Utils.decode(req.params.order_id);
+    const status = req.body.status
+    const result = await OrderService.updateStatusOrder(orderId, status);
+    if (result) {
+        res.status(200).json({ data: 'resource updated successfully' });
+    }
+    
+}
+
 const getItemsByOrder = async (req, res) => {
     try {
         const orderId = Utils.decode(req.params.order_id);
@@ -196,64 +206,16 @@ const deleteItem = async (req, res) => {
     }
 }
 
-// const getReportingByDepartament = async (req, res) => {
-//     try {
-//         const departamentId = Utils.decode(req.params.departament_id);
-//         const startDate = req.query.startDate;
-//         const endDate = req.query.endDate;
-//         const yacht = await DepartamentService.getDepartamentById(departamentId);
-//         const Orders = await OrderService.getOrdersByDepartament(departamentId, startDate, endDate);
-//         if (Orders instanceof Array) {
-//             Orders.map((x) => {
-//                 x.dataValues.id = Utils.encode(x.dataValues.id);
-//                 x.dataValues.evaluatedId = Utils.encode(x.dataValues.evaluatedId);
-//             });
-//         }
-//         const result = await OrderService.getReportingByDepartament(departamentId);
-//         if (result instanceof Array) {
-//             result.map((x) => {
-//                x.dataValues.id = Utils.encode(x.dataValues.id);
-//             });
-//         }
-//         res.status(200).json({ yacht, result, Orders });
-//     } catch (error) {
-//         console.log(error)
-//         res.status(400).json(error.message)
-//     }
-// }
 
-// const getReportingOrdersByCrew = async (req, res) => {
-//     try {
-//         const crewId = Utils.decode(req.params.crew_id);
-//         const companyId = Utils.decode(req.query.companyId)
-//         const startDate = req.query.startDate;
-//         const endDate = req.query.endDate;
-//         const staff = await Staffervice.getStaffById(crewId)
-//         const Orders = await OrderService.getOrderByEvaluated(crewId, startDate, endDate, companyId)
-//         res.status(200).json({ staff, Orders });
-
-//     } catch (error) {
-//         console.log(error)
-//         res.status(400).json(error.message)
-//     }
-// }
-
-// isTempPasswordExpired = (expirationDate) => {
-//     return moment().isAfter(moment(expirationDate));
-// };
 
 const OrderController = {
     getAllCompaniesWhitOrders,
     getOrdersByCompany,
     uploadOrder,
     createOrder,
+    updateStatusOrder,
     updateOrder,
     getItemsByOrder,
     deleteItem
-    // getOrdersToDay,
-    // respondOrder,
-    // getReportingByYacht,
-    // getReportingByDepartament,
-    // getReportingOrdersByCrew
 }
 module.exports = OrderController

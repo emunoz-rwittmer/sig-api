@@ -8,6 +8,8 @@ router.get('/',OrderController.getAllCompaniesWhitOrders);
 router.get('/ordersByCompany/:company_id',OrderController.getOrdersByCompany);
 router.post('/uploadOrder', uploadExcelFile, OrderController.uploadOrder);
 router.post('/createOrder', uploadExcelFile, OrderController.createOrder);
+router.put('/updateStatusOrder/:order_id', OrderController.updateStatusOrder);
+
 
 //ITEMS ORDER
 router.get('/itemsByOrder/:order_id',OrderController.getItemsByOrder);
