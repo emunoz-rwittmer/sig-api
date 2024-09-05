@@ -82,8 +82,8 @@ const initModels = () => {
     Transaction.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
     // Warehouse a Transaction: Relación uno a muchos (una bodega puede estar involucrada en múltiples transacciones).
     Warehouse.hasMany(Transaction, { foreignKey: 'warehouse_from_id', as: 'outgoingTransactions' });// Bodega de origen
-    Warehouse.hasMany(Transaction, { foreignKey: 'warehouse_to_id', as: 'incomingTransactions' }); // Bodega de destino
     Transaction.belongsTo(Warehouse, { foreignKey: 'warehouse_from_id', as: 'warehouseFrom' });
+    Warehouse.hasMany(Transaction, { foreignKey: 'warehouse_to_id', as: 'incomingTransactions' }); // Bodega de destino
     Transaction.belongsTo(Warehouse, { foreignKey: 'warehouse_to_id', as: 'warehouseTo' });
 
     Question,

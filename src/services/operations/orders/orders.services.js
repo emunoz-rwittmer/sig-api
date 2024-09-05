@@ -109,6 +109,20 @@ class OrderService {
         }
     }
 
+    static async updateStatusItemOfOrder(id) {
+        try {
+            const result = await itemsOrder.update({
+                status: 'ingresado'
+            },{
+                where: { id }
+            });
+            return result;
+        } catch (error) {
+            throw error;
+
+        }
+    }
+
     static async deleteItem(itemId) {
         try {
             const result = await itemsOrder.destroy({

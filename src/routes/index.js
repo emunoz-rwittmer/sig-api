@@ -13,6 +13,7 @@ const HouseRulesRoutes = require("./catalogs/houseRules.routes");
 const questiondRoutes = require("./operations/surveys/questions.routes");
 const evaluationRoutes = require("./operations/surveys/evaluation.routes");
 const ordersRoutes = require('./operations/orders/order.routes');
+const transactionsRoutes = require('./operations/inventory/transactions.routes');
 
 const routerApi = (app) => {
 
@@ -29,7 +30,8 @@ const routerApi = (app) => {
     app.use("/api/questions", authJwt.verifyToken, questiondRoutes);
     app.use("/api/forms", formsRoutes);
     app.use("/api/evaluations", authJwt.verifyToken, evaluationRoutes);
-    app.use("/api/orders", ordersRoutes);
+    app.use("/api/orders", authJwt.verifyToken, ordersRoutes);
+    app.use("/api/transactions", authJwt.verifyToken, transactionsRoutes)
   };
   
   module.exports = routerApi;
