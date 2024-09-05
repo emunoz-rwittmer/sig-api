@@ -93,16 +93,19 @@ const createOrder = async (req, res) => {
         const products = data.product;
         const quantitys = data.quantity;
         const originalQuantitys = data.originalQuantity;
+        const statusItems = data.statusItems;
         const items = []
 
         for (let i = 0; i < products.length; i++) {
             const product = products[i];
             const quantity = quantitys[i];
             const originalQuantity = originalQuantitys[i];
+            const statusI = statusItems[i];
             const item = {
                 product,
                 quantity,
                 originalQuantity,
+                status: statusI,
                 orderId
             }
             items.push(item)
