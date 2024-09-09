@@ -4,7 +4,7 @@ class CompanyService {
     static async getAll() {
         try {
             const result = await Company.findAll({
-                attributes: ['id','name','comercialName','ruc','adress', 'logo', 'active']
+                attributes: ['id','name','ruc','adress', 'logo', 'active']
             });
             return result;
         } catch (error) {
