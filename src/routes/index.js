@@ -15,7 +15,7 @@ const evaluationRoutes = require("./operations/surveys/evaluation.routes");
 const ordersRoutes = require('./operations/orders/order.routes');
 const transactionsRoutes = require('./operations/inventory/transactions.routes');
 const productsRoutes = require('./operations/inventory/products.routes');
-
+const warehouseRoutes = require('./operations/inventory/warehouse.routes');
 const routerApi = (app) => {
 
     app.use("/api/auth", authRoutes);
@@ -32,6 +32,7 @@ const routerApi = (app) => {
     app.use("/api/forms", formsRoutes);
     app.use("/api/evaluations", authJwt.verifyToken, evaluationRoutes);
     app.use("/api/orders", authJwt.verifyToken, ordersRoutes);
+    app.use("/api/warehouse",  warehouseRoutes)
     app.use("/api/transactions", authJwt.verifyToken, transactionsRoutes)
     app.use("/api/products", authJwt.verifyToken, productsRoutes)
 
