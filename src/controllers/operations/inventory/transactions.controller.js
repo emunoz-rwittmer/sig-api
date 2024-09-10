@@ -22,7 +22,7 @@ const productEntryInWarehouse = async (req, res) => {
             warehouseToId: warehouseId,
             quantity: data.quantity
         }
-        
+
         const result = await TransactionService.productEntryInWarehouse(productData, stockData, transactionData);
         if (result) {
             await OrderService.updateStatusItemOfOrder(Utils.decode(data.id))
@@ -34,9 +34,29 @@ const productEntryInWarehouse = async (req, res) => {
     }
 }
 
+const transactionWarehouse = async (req, res) => {
+    try {
+        const { products, warehouseFromId, warehouseToId } = req.body;
+
+        const transactions = await TransactionService.createTransaction({
+            products,
+            warehouseFromId,
+            warehouseToId,
+        });
+
+        res.status(201).json({
+            message: 'Transacciones registradas con éxito.',
+            transactions,
+        });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+}
+
 
 
 const TransactionController = {
     productEntryInWarehouse,
+    transactionWarehouse,
 }
 module.exports = TransactionController

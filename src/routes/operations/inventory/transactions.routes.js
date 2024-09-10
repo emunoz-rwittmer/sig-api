@@ -4,6 +4,7 @@ const TransactionController  = require ('../../../controllers/operations/invento
 const router = Router();
 
 router.post('/productEntryInWarehouse/:warehouse_id', TransactionController.productEntryInWarehouse);
+router.post('/transactionBetweenWarehouse', TransactionController.transactionWarehouse);
 
 
 module.exports = router;
