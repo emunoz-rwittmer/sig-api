@@ -6,6 +6,8 @@ const findProduct = async (req, res) => {
         const result = await ProductService.findProduct(sku);
         if (result) {
              res.status(200).json({ data: result });
+        } else {
+            res.status(400).json(`Producto no encontrado para sku: ${sku}`)
         }
     } catch (error) {
         console.log(error)

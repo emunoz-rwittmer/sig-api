@@ -11,10 +11,19 @@ class TransactionService {
             let product = await Product.findOne({ where: { sku: productData.sku }, transaction });
 
             if (product) {
-                await Stock.update(
-                    { quantity: db.literal(`quantity + ${stockData.quantity}`) },
-                    { where: { productId: product.id, warehouseId: stockData.warehouseId }, transaction }
-                );
+
+                const [stock, created] = await Stock.findOrCreate({
+                    where: { productId: product.id, warehouseId: stockData.warehouseId },
+                    defaults: { ...stockData, productId: product.id },
+                    transaction
+                });
+
+                if (!created) {
+                    await stock.update(
+                        { quantity: db.literal(`quantity + ${stockData.quantity}`) },
+                        { transaction }
+                    );
+                }
 
                 await Transaction.create(
                     {
@@ -63,55 +72,47 @@ class TransactionService {
     static async createTransaction(transactionData) {
         const { products, warehouseFromId, warehouseToId } = transactionData;
 
-        // Iniciar una transacción con Sequelize
         const transaction = await db.transaction();
 
         try {
-            // Procesamos los productos utilizando la transacción
             const transactionResults = await Promise.all(
                 products.map(async (product) => {
-                    // Buscar y actualizar el stock de la bodega de origen
                     const stockFrom = await Stock.findOne({
-                        where: { product_id: product.id, warehouse_id: warehouseFromId },
-                        transaction, // Pasamos la transacción aquí
+                        where: { productId: product.id, warehouseId: warehouseFromId },
+                        transaction,
                     });
 
                     if (!stockFrom || stockFrom.quantity < product.quantity) {
-                        throw new Error(`Stock insuficiente para el producto ${product.id}`);
+                        throw new Error(`Stock insuficiente para el producto: ${product.name}`);
                     }
 
                     stockFrom.quantity -= product.quantity;
-                    await stockFrom.save({ transaction }); // Guardamos utilizando la transacción
+                    await stockFrom.save({ transaction });
 
-                    // Buscar o crear y actualizar el stock de la bodega de destino
                     const [stockToInstance] = await Stock.findOrCreate({
-                        where: { product_id: product.id, warehouse_id: warehouseToId },
+                        where: { productId: product.id, warehouseId: warehouseToId },
                         defaults: { quantity: 0 },
-                        transaction, // Pasamos la transacción aquí
+                        transaction,
                     });
 
                     stockToInstance.quantity += product.quantity;
-                    await stockToInstance.save({ transaction }); // Guardamos utilizando la transacción
+                    await stockToInstance.save({ transaction });
 
-                    // Crear la transacción de registro
                     return Transaction.create({
-                        product_id: product.id,
-                        warehouse_from_id: warehouseFromId,
-                        warehouse_to_id: warehouseToId,
+                        productId: product.id,
+                        warehouseFromId: warehouseFromId,
+                        warehouseToId: warehouseToId,
                         quantity: product.quantity,
                         type: 'OUT',
-                    }, { transaction }); // Crear utilizando la transacción
+                    }, { transaction });
                 })
             );
 
-            // Confirmar la transacción si todas las operaciones fueron exitosas
             await transaction.commit();
-
             return transactionResults;
         } catch (error) {
-            // Si ocurre algún error, revertir todos los cambios realizados en la base de datos
             await transaction.rollback();
-            throw new Error(`Error al crear la transacción: ${error.message}`);
+            throw new Error(error.message);
         }
     }
 }

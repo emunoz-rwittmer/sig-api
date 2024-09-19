@@ -36,20 +36,19 @@ const productEntryInWarehouse = async (req, res) => {
 
 const transactionWarehouse = async (req, res) => {
     try {
-        const { products, warehouseFromId, warehouseToId } = req.body;
-
+        const { products } = req.body;
+        const warehouseFromId = Utils.decode(req.body.warehouseFromId)
+        const warehouseToId = Utils.decode(req.body.warehouseToId)
+        
         const transactions = await TransactionService.createTransaction({
             products,
             warehouseFromId,
             warehouseToId,
         });
-
-        res.status(201).json({
-            message: 'Transacciones registradas con éxito.',
-            transactions,
-        });
+        res.status(200).json({ data: 'transactions register success.' });
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        console.log(error.message)
+        res.status(400).json(error.message);
     }
 }
 
