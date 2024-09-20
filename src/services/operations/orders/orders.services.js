@@ -45,7 +45,7 @@ class OrderService {
                 },{
                     model: Users,
                     as: 'responsible',
-                    attributes: ['firstName','lastName']
+                    attributes: ['id','firstName','lastName']
                 }],
                 group: ['id']
             });

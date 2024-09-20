@@ -30,6 +30,7 @@ const getOrdersByCompany = async (req, res) => {
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
+                x.dataValues.responsible.dataValues.id = Utils.encode(x.dataValues.responsible.dataValues.id);
             });
         }
         res.status(200).json({ company, result });
@@ -172,14 +173,14 @@ const updateOrder = async (req, res) => {
     }
 }
 
-const updateStatusOrder= async (req, res) => {
+const updateStatusOrder = async (req, res) => {
     const orderId = Utils.decode(req.params.order_id);
     const status = req.body.status
     const result = await OrderService.updateStatusOrder(orderId, status);
     if (result) {
         res.status(200).json({ data: 'resource updated successfully' });
     }
-    
+
 }
 
 const getItemsByOrder = async (req, res) => {

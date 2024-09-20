@@ -1,6 +1,7 @@
 const Users = require('../../../models/catalogs/user.models');
 const Warehouse = require('../../../models/catalogs/wareHouse.models');
 const Stock = require('../../../models/operations/inventory/stock.models');
+const Transaction = require('../../../models/operations/inventory/transaction.models');
 const Product = require('../../../models/operations/orders/product.models');
 const Utils = require('../../../utils/Utils');
 const { Sequelize, Op, where } = require("sequelize");
@@ -47,7 +48,37 @@ class WarehouseService {
                 include: [{
                     model: Product,
                     as: 'product',
-                    attributes: ['name','sku']
+                    attributes: ['name', 'sku']
+                }]
+            });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async getTransactionsWarehouse(warehouseId) {
+        try {
+            const result = await Transaction.findAll({
+                where: {
+                    [Op.or]:
+                    {
+                        warehouseToId: warehouseId,
+                        warehouseFromId: warehouseId
+                    }
+                },
+                order: [
+                    ['createdAt', 'DESC']
+                ],
+                attributes: ['warehouseToId','type', 'quantity', 'createdAt'],
+                include: [{
+                    model: Product,
+                    as: 'product',
+                    attributes: ['name']
+                }, {
+                    model: Warehouse,
+                    as: 'warehouseTo',
+                    attributes: ['name']
                 }]
             });
             return result;
@@ -90,7 +121,7 @@ class WarehouseService {
         try {
             const result = await Warehouse.update({
                 status
-            },{
+            }, {
                 where: { id }
             });
             return result;
@@ -106,7 +137,7 @@ class WarehouseService {
         try {
             const result = await itemsWarehouse.findAll({
                 where: { WarehouseId },
-                attributes:['id','sku', 'product', 'quantity', 'originalQuantity', 'status' ]
+                attributes: ['id', 'sku', 'product', 'quantity', 'originalQuantity', 'status']
             });
             return result;
         } catch (error) {
@@ -128,7 +159,7 @@ class WarehouseService {
         try {
             const result = await itemsWarehouse.update({
                 status: 'ingresado'
-            },{
+            }, {
                 where: { id }
             });
             return result;
