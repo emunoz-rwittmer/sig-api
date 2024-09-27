@@ -103,7 +103,7 @@ class TransactionService {
                         warehouseFromId: warehouseFromId,
                         warehouseToId: warehouseToId,
                         quantity: product.quantity,
-                        type: 'Egreso',
+                        type: 'Salida',
                     }, { transaction });
                 })
             );

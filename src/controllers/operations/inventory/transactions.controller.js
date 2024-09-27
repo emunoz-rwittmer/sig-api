@@ -18,7 +18,7 @@ const productEntryInWarehouse = async (req, res) => {
         }
 
         const transactionData = {
-            type: 'Ingreso',
+            type: 'Entrada',
             warehouseToId: warehouseId,
             quantity: data.quantity
         }
