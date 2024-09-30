@@ -2,6 +2,7 @@ const OrderService = require('../../../services/operations/orders/orders.service
 const Utils = require('../../../utils/Utils');
 const CompanyService = require('../../../services/catalogs/company.services');
 const XLSX = require('xlsx');
+const { where } = require('sequelize');
 
 const getAllCompaniesWhitOrders = async (req, res) => {
     try {
@@ -175,12 +176,13 @@ const updateOrder = async (req, res) => {
 
 const updateStatusOrder = async (req, res) => {
     const orderId = Utils.decode(req.params.order_id);
-    const status = req.body.status
-    const result = await OrderService.updateStatusOrder(orderId, status);
+    const data = req.body
+    const result = await OrderService.updateStatusOrder(data, {
+        where: { id: orderId}
+    });
     if (result) {
         res.status(200).json({ data: 'resource updated successfully' });
     }
-
 }
 
 const getItemsByOrder = async (req, res) => {

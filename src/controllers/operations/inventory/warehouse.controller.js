@@ -39,7 +39,7 @@ const getTransactionsWarehouse = async (req, res) => {
         const result = await WarehouseService.getTransactionsWarehouse(warehouseId);
         result.map((x) => {
             if (warehouseId === x.warehouseToId) {
-                x.dataValues.type = 'Ingreso';
+                x.dataValues.type = 'Entrada';
             }
         });
         res.status(200).json({ warehouse, result });

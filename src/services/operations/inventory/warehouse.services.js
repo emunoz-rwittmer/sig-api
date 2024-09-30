@@ -79,6 +79,10 @@ class WarehouseService {
                     model: Warehouse,
                     as: 'warehouseTo',
                     attributes: ['name']
+                }, {
+                    model: Users,
+                    as: 'responsible',
+                    attributes: ['firstName', 'lastName']
                 }]
             });
             return result;

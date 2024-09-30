@@ -11,6 +11,11 @@ const Transaction = db.define('transaction', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  userId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    field: 'user_id'
+  },
   productId: {
     type: DataTypes.INTEGER,
     allowNull: false,

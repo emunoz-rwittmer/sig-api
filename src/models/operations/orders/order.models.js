@@ -26,6 +26,10 @@ const Order = db.define('Order', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  guide: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
 });
 
 module.exports = Order;

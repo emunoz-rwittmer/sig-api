@@ -85,13 +85,9 @@ class OrderService {
         }
     }
 
-    static async updateStatusOrder(id, status) {
+    static async updateStatusOrder(data, id) {
         try {
-            const result = await Order.update({
-                status
-            },{
-                where: { id }
-            });
+            const result = await Order.update(data, id);
             return result;
         } catch (error) {
             throw error;
@@ -123,10 +119,11 @@ class OrderService {
         }
     }
 
-    static async updateStatusItemOfOrder(id) {
+    static async updateStatusAndQuantityItemOfOrder(id, quantity) {
         try {
             const result = await itemsOrder.update({
-                status: 'ingresado'
+                status: 'ingresado',
+                quantity
             },{
                 where: { id }
             });
