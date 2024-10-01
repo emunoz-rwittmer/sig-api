@@ -70,7 +70,7 @@ class TransactionService {
     }
 
     static async createTransaction(transactionData) {
-        const { products, warehouseFromId, warehouseToId } = transactionData;
+        const { products, warehouseFromId, warehouseToId, userId } = transactionData;
 
         const transaction = await db.transaction();
 
@@ -100,6 +100,7 @@ class TransactionService {
 
                     return Transaction.create({
                         productId: product.id,
+                        userId: userId,
                         warehouseFromId: warehouseFromId,
                         warehouseToId: warehouseToId,
                         quantity: product.quantity,

@@ -35,7 +35,7 @@ class OrderService {
             const result = await Order.findAll({
                 where: { companyId },
                 attributes: [
-                    'id', 'name','status', 'createdAt',
+                    'id', 'name','status', 'guide','createdAt',
                     [Sequelize.fn('COUNT', Sequelize.col('orderItems.id')), 'itemsCount']
                 ],
                 include: [{
