@@ -51,7 +51,7 @@ const transactionWarehouse = async (req, res) => {
             userId
         });
         if (transactions) {
-            const response = await axios.post('https://5439-190-12-15-164.ngrok-free.app/print/transactions', { products });
+            const response = await axios.post('https://5439-190-12-15-164.ngrok-free.app/print/transactions', products);
             console.log(response)
             res.status(200).json({ data: 'transactions register success' });
         }
