@@ -1,4 +1,4 @@
-const { axios } = require('axios');
+const  axios = require('axios');
 const TransactionService = require('../../../services/operations/inventory/transactions.services');
 const OrderService = require('../../../services/operations/orders/orders.services');
 const Utils = require('../../../utils/Utils');
