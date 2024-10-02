@@ -39,10 +39,10 @@ const productEntryInWarehouse = async (req, res) => {
 
 const transactionWarehouse = async (req, res) => {
     try {
-        const { products } = req.body;
+        const { products, userName, company } = req.body;
         const warehouseFromId = Utils.decode(req.body.warehouseFromId)
         const warehouseToId = Utils.decode(req.body.warehouseToId)
-        const userId = Utils.decode(req.body.user)
+        const userId = Utils.decode(req.body.userId)
 
         const transactions = await TransactionService.createTransaction({
             products,
@@ -51,8 +51,11 @@ const transactionWarehouse = async (req, res) => {
             userId
         });
         if (transactions) {
-            axios.post('https://5439-190-12-15-164.ngrok-free.app/print/transactions', products)
-            res.status(200).json({ data: 'transactions register success' });
+            axios.post('https://5439-190-12-15-164.ngrok-free.app/print/transactions', { products, userName, company })
+            .then(res => {
+                res.status(200).json({ data: 'transactions register success' });
+            })
+            
         }
     } catch (error) {
         console.log(error.message)
