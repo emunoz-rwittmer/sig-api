@@ -1,4 +1,4 @@
-const { default: axios } = require('axios');
+const { axios } = require('axios');
 const TransactionService = require('../../../services/operations/inventory/transactions.services');
 const OrderService = require('../../../services/operations/orders/orders.services');
 const Utils = require('../../../utils/Utils');
@@ -51,8 +51,7 @@ const transactionWarehouse = async (req, res) => {
             userId
         });
         if (transactions) {
-            const response = await axios.post('https://5439-190-12-15-164.ngrok-free.app/print/transactions', products);
-            console.log(response)
+            await axios.post('https://5439-190-12-15-164.ngrok-free.app/print/transactions', products);
             res.status(200).json({ data: 'transactions register success' });
         }
     } catch (error) {
