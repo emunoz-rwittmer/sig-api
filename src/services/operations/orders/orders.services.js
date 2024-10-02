@@ -15,7 +15,7 @@ class OrderService {
             const result = await Company.findAll({
                 attributes: [
                     'id', 'name', 'logo', 'ruc',
-                    [Sequelize.fn('COUNT', Sequelize.col('Orders.id')), 'ordersCount']
+                    [Sequelize.fn('COUNT', Sequelize.col('orders.id')), 'ordersCount']
                 ],
                 include: [{
                     model: Order,
