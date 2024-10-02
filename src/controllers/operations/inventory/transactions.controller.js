@@ -1,7 +1,6 @@
 const TransactionService = require('../../../services/operations/inventory/transactions.services');
 const OrderService = require('../../../services/operations/orders/orders.services');
 const Utils = require('../../../utils/Utils');
-const thermalPrinter = require('node-thermal-printer');
 const escpos = require('escpos');
 
 const productEntryInWarehouse = async (req, res) => {
@@ -50,7 +49,10 @@ const transactionWarehouse = async (req, res) => {
             warehouseToId,
             userId
         });
-        res.status(200).json({ data: 'transactions register success' });
+        if (transactions) {
+            const response = await axios.post('https://5439-190-12-15-164.ngrok-free.app/print/transactions', { products, company });
+            res.status(200).json({ data: 'transactions register success' });
+        }
     } catch (error) {
         console.log(error.message)
         res.status(400).json(error.message);
@@ -59,7 +61,6 @@ const transactionWarehouse = async (req, res) => {
 
 const printTransactions = async (req, res) => {
     try {
-
         escpos.USB = require('escpos-usb');
         const device = new escpos.USB(0x04B8, 0x0202);
         const printer = new escpos.Printer(device);
