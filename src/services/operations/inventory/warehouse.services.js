@@ -44,11 +44,27 @@ class WarehouseService {
         try {
             const result = await Stock.findAll({
                 where: { warehouseId },
-                attributes: ['quantity'],
+                attributes: ['quantity',
+
+                    [Sequelize.literal(`
+                    (
+                        SELECT SUM(CASE WHEN transactions.type = 'Entrada' THEN transactions.quantity ELSE 0 END)
+                        FROM transactions
+                        WHERE transactions.product_id = product.id
+                    )
+                `), 'totalIncome'],
+                    [Sequelize.literal(`
+                    (
+                        SELECT SUM(CASE WHEN transactions.type = 'Salida' THEN transactions.quantity ELSE 0 END)
+                        FROM transactions
+                        WHERE transactions.product_id = product.id
+                    )
+                `), 'totalOutcome']
+                ],
                 include: [{
                     model: Product,
                     as: 'product',
-                    attributes: ['name', 'sku']
+                    attributes: ['name', 'sku'],
                 }]
             });
             return result;
@@ -70,7 +86,7 @@ class WarehouseService {
                 order: [
                     ['createdAt', 'DESC']
                 ],
-                attributes: ['warehouseToId','type', 'quantity', 'createdAt'],
+                attributes: ['warehouseToId', 'type', 'quantity', 'createdAt'],
                 include: [{
                     model: Product,
                     as: 'product',

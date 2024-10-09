@@ -21,6 +21,7 @@ const Warehouse = require('./catalogs/wareHouse.models');
 const Stock = require('./operations/inventory/stock.models');
 const Product = require('./operations/orders/product.models');
 const Transaction = require('./operations/inventory/transaction.models');
+const productCalculations = require('./operations/orders/productCalculations.models');
 
 const initModels = () => {
 
@@ -89,8 +90,11 @@ const initModels = () => {
     Warehouse.hasMany(Transaction, { foreignKey: 'warehouse_to_id', as: 'incomingTransactions' }); // Bodega de destino
     Transaction.belongsTo(Warehouse, { foreignKey: 'warehouse_to_id', as: 'warehouseTo' });
 
+    Product.hasOne(productCalculations, { foreignKey: 'product_id', as: 'configurations' });
+    productCalculations.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
+
     Question,
-        HouseRule
+    HouseRule
 
 }
 
