@@ -22,6 +22,8 @@ const Stock = require('./operations/inventory/stock.models');
 const Product = require('./operations/orders/product.models');
 const Transaction = require('./operations/inventory/transaction.models');
 const productCalculations = require('./operations/orders/productCalculations.models');
+const Request = require('./operations/yachtRequest/request.models');
+const itemsRequest = require('./operations/yachtRequest/itemsRequest.models');
 
 const initModels = () => {
 
@@ -92,6 +94,12 @@ const initModels = () => {
 
     Product.hasOne(productCalculations, { foreignKey: 'product_id', as: 'configurations' });
     productCalculations.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
+
+    Warehouse.hasMany(Request, { foreignKey: 'warehouse_id', as: 'requests' });
+    Request.belongsTo(Warehouse, { foreignKey: 'warehouse_id', as: 'warehouse' });
+
+    Request.hasMany(itemsRequest, { foreignKey: 'request_id', as: 'requestItems' });
+    itemsRequest.belongsTo(Request, { foreignKey: 'request_id', as: 'request' });
 
     Question,
     HouseRule
