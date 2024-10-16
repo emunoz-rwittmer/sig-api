@@ -2,6 +2,8 @@ const Product = require('../../../models/operations/orders/product.models');
 const Stock = require('../../../models/operations/inventory/stock.models');
 const Transaction = require('../../../models/operations/inventory/transaction.models');
 const db = require('../../../utils/database');
+const Request = require('../../../models/operations/yachtRequest/request.models');
+const itemsRequest = require('../../../models/operations/yachtRequest/itemsRequest.models');
 
 class TransactionService {
     static async productEntryInWarehouse(productData, stockData, transactionData) {
@@ -114,6 +116,32 @@ class TransactionService {
         } catch (error) {
             await transaction.rollback();
             throw new Error(error.message);
+        }
+    }
+
+    static async requestWarehouse(transactionData) {
+        const { products, requestData } = transactionData;
+        const transaction = await db.transaction();
+        try {
+            const newRequest = await Request.create(requestData, { transaction })
+            await Promise.all(
+                products.map(async (product) => {
+                    return await itemsRequest.create(
+                        {
+                            ...product,
+                            requestId: newRequest.id,
+                        },
+                        { transaction }
+                    );
+                })
+            );
+            await transaction.commit();
+            return {
+                message: 'request created successfully',
+            };
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
         }
     }
 }

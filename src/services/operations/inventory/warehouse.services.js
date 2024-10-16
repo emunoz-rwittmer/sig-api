@@ -1,8 +1,12 @@
+const Staff = require('../../../models/catalogs/staff.models');
 const Users = require('../../../models/catalogs/user.models');
 const Warehouse = require('../../../models/catalogs/wareHouse.models');
 const Stock = require('../../../models/operations/inventory/stock.models');
 const Transaction = require('../../../models/operations/inventory/transaction.models');
 const Product = require('../../../models/operations/orders/product.models');
+const productCalculations = require('../../../models/operations/orders/productCalculations.models');
+const itemsRequest = require('../../../models/operations/yachtRequest/itemsRequest.models');
+const Request = require('../../../models/operations/yachtRequest/request.models');
 const Utils = require('../../../utils/Utils');
 const { Sequelize, Op, where } = require("sequelize");
 
@@ -202,6 +206,53 @@ class WarehouseService {
         }
     }
 
+    //Yacht request
+
+    static async getRequestToWareHouse(warehouseId) {
+        try {
+            const result = await Request.findAll({
+                where: { warehouseId },
+                attributes: [
+                    'id', 'name', 'status', 'createdAt',
+                    [Sequelize.fn('COUNT', Sequelize.col('requestItems.id')), 'itemsCount']
+                ],
+                include: [{
+                    model: itemsRequest,
+                    as: 'requestItems',
+                    attributes: []
+                }, {
+                    model: Staff,
+                    as: 'responsible',
+                    attributes: ['id', 'firstName', 'lastName']
+                }],
+                group: ['id']
+            });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async getItemsToRequest(requestId) {
+        try {
+            const result = await itemsRequest.findAll({
+                where: { requestId },
+                attributes: ['id', 'stock', 'order'],
+                include: [{
+                    model: Product,
+                    as: 'product',
+                    attributes: ['name'],
+                    include: [{
+                        model: productCalculations,
+                        as: 'configurations',
+                    }]
+                }]
+            });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 module.exports = WarehouseService;

@@ -101,6 +101,12 @@ const initModels = () => {
     Request.hasMany(itemsRequest, { foreignKey: 'request_id', as: 'requestItems' });
     itemsRequest.belongsTo(Request, { foreignKey: 'request_id', as: 'request' });
 
+    Request.belongsTo(Staff, { foreignKey: 'user_id', as: 'responsible' });
+    Staff.hasMany(Request, { foreignKey: 'user_id', as: 'request' });
+    
+    Product.hasOne(itemsRequest, { foreignKey: 'product_id', as: 'itemProduct' });
+    itemsRequest.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
+
     Question,
     HouseRule
 

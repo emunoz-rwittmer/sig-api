@@ -48,13 +48,54 @@ const getTransactionsWarehouse = async (req, res) => {
     }
 }
 
+const getRequestToWareHouse = async (req, res) => {
+    try {
+        const warehouseId = Utils.decode(req.params.warehouse_id);
+        const warehouse = await WarehouseService.getWarehouseById(warehouseId);
+        if (warehouse instanceof Object) {
+            warehouse.dataValues.id = Utils.encode(warehouse.dataValues.id);
+        }
+        const result = await WarehouseService.getRequestToWareHouse(warehouseId);
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+            });
+        }
+        res.status(200).json({ warehouse, result });
+    } catch (error) {
+        res.status(400).json(error.message)
+    }
+}
+
+const getItemsToRequest = async (req, res) => {
+    try {
+        const warehouseId = Utils.decode(req.params.warehouse_id);
+        const requestId = Utils.decode(req.params.request_id);
+        const warehouse = await WarehouseService.getWarehouseById(warehouseId);
+        if (warehouse instanceof Object) {
+            warehouse.dataValues.id = Utils.encode(warehouse.dataValues.id);
+        }
+        const result = await WarehouseService.getItemsToRequest(requestId);
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+            });
+        }
+        res.status(200).json({ warehouse, result });
+    } catch (error) {
+        res.status(400).json(error.message)
+    }
+}
+
 
 
 
 const WarehouseController = {
     getAllWarehouses,
     getStockInWarehouse,
-    getTransactionsWarehouse
+    getTransactionsWarehouse,
+    getRequestToWareHouse,
+    getItemsToRequest
 
 }
 module.exports = WarehouseController
