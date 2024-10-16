@@ -3,6 +3,7 @@ const WarehouseController  = require ('../../../controllers/operations/inventory
 const router = Router();
 
 router.get('/',WarehouseController.getAllWarehouses);
+router.get('/typeYacht',WarehouseController.getAllWarehousesTypeYacht);
 router.get('/stockInWareHouse/:warehouse_id',WarehouseController.getStockInWarehouse);
 router.get('/:warehouse_id/transactions',WarehouseController.getTransactionsWarehouse);
 

@@ -1,4 +1,5 @@
 const WarehouseService = require('../../../services/operations/inventory/warehouse.services');
+const RequestService = require('../../../services/operations/yachtRequest/yachtRequest.services');
 const Utils = require('../../../utils/Utils');
 
 const getAllWarehouses = async (req, res) => {
@@ -14,6 +15,21 @@ const getAllWarehouses = async (req, res) => {
         res.status(400).json(error.message)
     }
 }
+
+const getAllWarehousesTypeYacht = async (req, res) => {
+    try {
+        const result = await WarehouseService.getAllWarehousesTypeYacht();
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+            });
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(400).json(error.message)
+    }
+}
+
 
 const getStockInWarehouse = async (req, res) => {
     try {
@@ -75,12 +91,18 @@ const getItemsToRequest = async (req, res) => {
         if (warehouse instanceof Object) {
             warehouse.dataValues.id = Utils.encode(warehouse.dataValues.id);
         }
+        const request = await RequestService.getRequestById(requestId);
+        if (request instanceof Object) {
+            request.dataValues.id = Utils.encode(request.dataValues.id);
+        }
         const result = await WarehouseService.getItemsToRequest(requestId);
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
+                x.dataValues.productId = Utils.encode(x.dataValues.productId);
             });
         }
+        warehouse.dataValues.request = request.dataValues.name
         res.status(200).json({ warehouse, result });
     } catch (error) {
         res.status(400).json(error.message)
@@ -92,6 +114,7 @@ const getItemsToRequest = async (req, res) => {
 
 const WarehouseController = {
     getAllWarehouses,
+    getAllWarehousesTypeYacht,
     getStockInWarehouse,
     getTransactionsWarehouse,
     getRequestToWareHouse,
