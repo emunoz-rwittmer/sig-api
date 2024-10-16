@@ -35,7 +35,7 @@ class WarehouseService {
     static async getAllWarehousesTypeYacht() {
         try {
             const result = await Warehouse.findAll({
-                where: { type: "Yate"},
+                where: { type: "Yate" },
                 attributes: [
                     'id', 'name', 'location', 'type',
                     [Sequelize.fn('COUNT', Sequelize.col('requests.id')), 'requestsCount']
@@ -66,21 +66,30 @@ class WarehouseService {
     }
 
     static async getStockInWarehouse(warehouseId) {
+        console.log(warehouseId)
         try {
             const result = await Stock.findAll({
                 where: { warehouseId },
                 attributes: ['quantity',
 
                     [Sequelize.literal(`
-                    (
-                        SELECT SUM(CASE WHEN transactions.type = 'Entrada' THEN transactions.quantity ELSE 0 END)
-                        FROM transactions
-                        WHERE transactions.product_id = product.id
-                    )
-                `), 'totalIncome'],
+                        (
+                            SELECT SUM(CASE 
+                                WHEN  transactions.warehouse_to_id = ${warehouseId}
+                                THEN transactions.quantity 
+                                ELSE 0 
+                            END)
+                            FROM transactions
+                            WHERE transactions.product_id = product.id
+                        )
+                    `), 'totalIncome'],
                     [Sequelize.literal(`
                     (
-                        SELECT SUM(CASE WHEN transactions.type = 'Salida' THEN transactions.quantity ELSE 0 END)
+                        SELECT SUM(CASE 
+                            WHEN transactions.type = 'Salida' AND transactions.warehouse_from_id = ${warehouseId} 
+                            THEN transactions.quantity 
+                            ELSE 0 
+                        END)
                         FROM transactions
                         WHERE transactions.product_id = product.id
                     )
@@ -258,7 +267,7 @@ class WarehouseService {
         try {
             const result = await itemsRequest.findAll({
                 where: { requestId },
-                attributes: ['id', 'stock', 'order','productId'],
+                attributes: ['id', 'stock', 'order', 'productId'],
                 include: [{
                     model: Product,
                     as: 'product',

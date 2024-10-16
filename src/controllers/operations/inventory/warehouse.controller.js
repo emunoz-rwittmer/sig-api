@@ -12,6 +12,7 @@ const getAllWarehouses = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
+        console.log(error)
         res.status(400).json(error.message)
     }
 }
@@ -99,7 +100,6 @@ const getItemsToRequest = async (req, res) => {
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
-                x.dataValues.productId = Utils.encode(x.dataValues.productId);
             });
         }
         warehouse.dataValues.request = request.dataValues.name
