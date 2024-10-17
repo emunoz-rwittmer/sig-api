@@ -104,8 +104,6 @@ const upgradePassword = async (req, res) => {
             const result = await AuthService.staffUpgradePassword(data);
             return res.status(200).json({ data: 'password updated successfully' });
         }
-
-
     } catch (error) {
         console.log(error)
         res.status(400).json(error.message);
