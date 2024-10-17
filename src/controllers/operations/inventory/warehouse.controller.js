@@ -103,6 +103,7 @@ const getItemsToRequest = async (req, res) => {
             });
         }
         warehouse.dataValues.request = request.dataValues.name
+        warehouse.dataValues.status = request.dataValues.status
         res.status(200).json({ warehouse, result });
     } catch (error) {
         res.status(400).json(error.message)

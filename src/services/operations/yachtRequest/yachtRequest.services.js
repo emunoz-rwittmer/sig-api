@@ -7,11 +7,21 @@ class RequestService {
         try {
             const result = await Request.findOne({
                 where: { id },
-                attributes: ['id', 'name']
+                attributes: ['id', 'name', 'status']
             });
             return result;
         } catch (error) {
             throw error;
+        }
+    }
+
+    static async updateStatusYachtRequest(data, id) {
+        try {
+            const result = await Request.update(data, id);
+            return result;
+        } catch (error) {
+            throw error;
+
         }
     }
 }
