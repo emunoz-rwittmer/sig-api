@@ -51,7 +51,7 @@ const transactionWarehouse = async (req, res) => {
             userId
         });
         if (transactions) {
-            axios.post('http://192.168.1.31:8925/print/transactions', { products, userName, company })
+            axios.post('http://190.12.15.164:8925/print/transactions', { products, userName, company })
             res.status(200).json({ data: 'transactions register success' });
         }
     } catch (error) {
