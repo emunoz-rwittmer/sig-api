@@ -6,9 +6,7 @@ const router = Router();
 router.put('/updateStatusRequest/:request_id', YachtRequestController.updateStatusYachtRequest);
 
 //ITEMS ORDER
-// router.get('/itemsByYachtRequest/:order_id',YachtRequestController.getItemsByYachtRequest);
-// router.put('/updateItemsYachtRequest/:order_id', uploadExcelFile, YachtRequestController.updateYachtRequest);
-// router.delete('/deleteItem/:item_id', YachtRequestController.deleteItem);
+router.put('/updateQuantityItemRequest', YachtRequestController.updateQuantityItemRequest);
 
 
 

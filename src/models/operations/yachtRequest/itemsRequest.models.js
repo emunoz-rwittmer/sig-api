@@ -25,6 +25,10 @@ const itemsRequest = db.define('itemsRequest', {
     type: DataTypes.INTEGER,
     allowNull: true,
   },
+  quantity: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
 });
 
 module.exports = itemsRequest;

@@ -66,7 +66,6 @@ class WarehouseService {
     }
 
     static async getStockInWarehouse(warehouseId) {
-        console.log(warehouseId)
         try {
             const result = await Stock.findAll({
                 where: { warehouseId },
@@ -187,10 +186,10 @@ class WarehouseService {
 
     // Items by Warehouses
 
-    static async getItemsByWarehouse(WarehouseId) {
+    static async getItemsByWarehouse(warehouseId) {
         try {
             const result = await itemsWarehouse.findAll({
-                where: { WarehouseId },
+                where: { warehouseId },
                 attributes: ['id', 'sku', 'product', 'quantity', 'originalQuantity', 'status']
             });
             return result;
@@ -267,7 +266,7 @@ class WarehouseService {
         try {
             const result = await itemsRequest.findAll({
                 where: { requestId },
-                attributes: ['id', 'stock', 'order', 'productId'],
+                attributes: ['id', 'stock', 'order', 'productId','quantity'],
                 include: [{
                     model: Product,
                     as: 'product',

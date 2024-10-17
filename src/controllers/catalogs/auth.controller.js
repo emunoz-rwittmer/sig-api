@@ -61,6 +61,7 @@ const loginUsers = async (req, res) => {
                 const { id, firstName, lastName, email } = result.user;
                 const userData = { id, firstName, lastName, email };
                 userData.id = Utils.encode(userData.id);
+                userData.role = result.user.staff_position.name
                 const token = await Utils.generateAccessToken(userData);
                 const refreshToken = await Utils.generateRefreshToken(userData);
                 userData.token = token;
@@ -80,6 +81,7 @@ const loginUsers = async (req, res) => {
             res.status(400).json({ data: 'user or password incorrect' })
         }
     } catch (error) {
+        console.log(error)
         res.status(400).json({ data: 'somethign wrong' })
     }
 }

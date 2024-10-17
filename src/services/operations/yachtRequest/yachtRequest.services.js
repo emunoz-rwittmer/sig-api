@@ -24,6 +24,16 @@ class RequestService {
 
         }
     }
+
+    static async updateQuantityItemRequest(data, id) {
+        try {
+            const result = await itemsRequest.update(data, id);
+            return result;
+        } catch (error) {
+            throw error;
+
+        }
+    }
 }
 
 module.exports = RequestService;

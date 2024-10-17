@@ -3,6 +3,7 @@ const Staff = require('../../models/catalogs/staff.models');
 const Roles = require('../../models/catalogs/roles.models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const Positions = require('../../models/catalogs/positions.models');
 
 require('dotenv').config();
 
@@ -34,6 +35,11 @@ class AuthService {
             const { email, password } = credentials;
             const user = await Staff.findOne({
                 where: { email },
+                include:[{
+                    model: Positions,
+                    as: 'staff_position',
+                    attributes: ['name']
+                }]
             });
             if (user) {
                 const isValid = bcrypt.compareSync(password, user.password);
