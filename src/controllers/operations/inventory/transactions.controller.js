@@ -1,4 +1,4 @@
-const  axios = require('axios');
+const axios = require('axios');
 const TransactionService = require('../../../services/operations/inventory/transactions.services');
 const OrderService = require('../../../services/operations/orders/orders.services');
 const Utils = require('../../../utils/Utils');
@@ -52,7 +52,7 @@ const transactionWarehouse = async (req, res) => {
         });
         if (transactions) {
             axios.post('https://5439-190-12-15-164.ngrok-free.app/print/transactions', { products, userName, company })
-            res.status(200).json({ data: 'transactions register success' }); 
+            res.status(200).json({ data: 'transactions register success' });
         }
     } catch (error) {
         console.log(error.message)
@@ -112,9 +112,36 @@ const printTransactions = async (req, res) => {
     }
 }
 
+//yacht recuest 
+
+const requestWarehouse = async (req, res) => {
+    try {
+        const { products, name, status } = req.body;
+        const warehouseId = Utils.decode(req.body.warehouseId)
+        const userId = Utils.decode(req.body.userId)
+        const requestData = {
+            warehouseId,
+            userId,
+            name,
+            status
+        }
+
+        const result = await TransactionService.requestWarehouse({
+            products,
+            requestData
+        });
+
+        res.status(200).json({ data: result.message }); 
+    } catch (error) {
+        console.log(error.message)
+        res.status(400).json(error.message);
+    }
+}
+
 const TransactionController = {
     productEntryInWarehouse,
     transactionWarehouse,
-    printTransactions
+    printTransactions,
+    requestWarehouse
 }
 module.exports = TransactionController

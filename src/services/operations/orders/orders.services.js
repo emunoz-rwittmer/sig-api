@@ -35,17 +35,17 @@ class OrderService {
             const result = await Order.findAll({
                 where: { companyId },
                 attributes: [
-                    'id', 'name','status', 'guide','createdAt',
+                    'id', 'name', 'status', 'guide', 'createdAt',
                     [Sequelize.fn('COUNT', Sequelize.col('orderItems.id')), 'itemsCount']
                 ],
                 include: [{
                     model: itemsOrder,
                     as: 'orderItems',
                     attributes: []
-                },{
+                }, {
                     model: Users,
                     as: 'responsible',
-                    attributes: ['id','firstName','lastName']
+                    attributes: ['id', 'firstName', 'lastName']
                 }],
                 group: ['id']
             });
@@ -101,7 +101,7 @@ class OrderService {
         try {
             const result = await itemsOrder.findAll({
                 where: { orderId },
-                attributes:['id','sku', 'product', 'quantity', 'originalQuantity', 'status' ]
+                attributes: ['id', 'sku', 'product', 'quantity', 'originalQuantity', 'status']
             });
             return result;
         } catch (error) {
@@ -124,7 +124,7 @@ class OrderService {
             const result = await itemsOrder.update({
                 status: 'ingresado',
                 quantity
-            },{
+            }, {
                 where: { id }
             });
             return result;
@@ -147,24 +147,6 @@ class OrderService {
         }
     }
 
-
-    // static async updateYacht(yacht, id) {
-    //     try {
-    //         const result = await Yachts.update(yacht,id);
-    //         return result;
-    //     } catch (error) {
-    //         throw error;  
-    //     }
-    // }
-
-    // static async delete(id) {
-    //     try {
-    //         const result = await Yachts.destroy(id);
-    //         return result;
-    //     } catch (error) {
-    //         throw error;
-    //     }
-    // }
 }
 
 module.exports = OrderService;

@@ -1,8 +1,12 @@
+const Staff = require('../../../models/catalogs/staff.models');
 const Users = require('../../../models/catalogs/user.models');
 const Warehouse = require('../../../models/catalogs/wareHouse.models');
 const Stock = require('../../../models/operations/inventory/stock.models');
 const Transaction = require('../../../models/operations/inventory/transaction.models');
 const Product = require('../../../models/operations/orders/product.models');
+const productCalculations = require('../../../models/operations/orders/productCalculations.models');
+const itemsRequest = require('../../../models/operations/yachtRequest/itemsRequest.models');
+const Request = require('../../../models/operations/yachtRequest/request.models');
 const Utils = require('../../../utils/Utils');
 const { Sequelize, Op, where } = require("sequelize");
 
@@ -18,6 +22,27 @@ class WarehouseService {
                 include: [{
                     model: Stock,
                     as: 'stocks',
+                    attributes: []
+                }],
+                group: ['id']
+            });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async getAllWarehousesTypeYacht() {
+        try {
+            const result = await Warehouse.findAll({
+                where: { type: "Yate" },
+                attributes: [
+                    'id', 'name', 'location', 'type',
+                    [Sequelize.fn('COUNT', Sequelize.col('requests.id')), 'requestsCount']
+                ],
+                include: [{
+                    model: Request,
+                    as: 'requests',
                     attributes: []
                 }],
                 group: ['id']
@@ -44,11 +69,35 @@ class WarehouseService {
         try {
             const result = await Stock.findAll({
                 where: { warehouseId },
-                attributes: ['quantity'],
+                attributes: ['quantity',
+
+                    [Sequelize.literal(`
+                        (
+                            SELECT SUM(CASE 
+                                WHEN  transactions.warehouse_to_id = ${warehouseId}
+                                THEN transactions.quantity 
+                                ELSE 0 
+                            END)
+                            FROM transactions
+                            WHERE transactions.product_id = product.id
+                        )
+                    `), 'totalIncome'],
+                    [Sequelize.literal(`
+                    (
+                        SELECT SUM(CASE 
+                            WHEN transactions.type = 'Salida' AND transactions.warehouse_from_id = ${warehouseId} 
+                            THEN transactions.quantity 
+                            ELSE 0 
+                        END)
+                        FROM transactions
+                        WHERE transactions.product_id = product.id
+                    )
+                `), 'totalOutcome']
+                ],
                 include: [{
                     model: Product,
                     as: 'product',
-                    attributes: ['name', 'sku']
+                    attributes: ['name', 'sku'],
                 }]
             });
             return result;
@@ -70,7 +119,7 @@ class WarehouseService {
                 order: [
                     ['createdAt', 'DESC']
                 ],
-                attributes: ['warehouseToId','type', 'quantity', 'createdAt'],
+                attributes: ['warehouseToId', 'type', 'quantity', 'createdAt'],
                 include: [{
                     model: Product,
                     as: 'product',
@@ -137,10 +186,10 @@ class WarehouseService {
 
     // Items by Warehouses
 
-    static async getItemsByWarehouse(WarehouseId) {
+    static async getItemsByWarehouse(warehouseId) {
         try {
             const result = await itemsWarehouse.findAll({
-                where: { WarehouseId },
+                where: { warehouseId },
                 attributes: ['id', 'sku', 'product', 'quantity', 'originalQuantity', 'status']
             });
             return result;
@@ -186,6 +235,53 @@ class WarehouseService {
         }
     }
 
+    //Yacht request
+
+    static async getRequestToWareHouse(warehouseId) {
+        try {
+            const result = await Request.findAll({
+                where: { warehouseId },
+                attributes: [
+                    'id', 'name', 'status', 'createdAt',
+                    [Sequelize.fn('COUNT', Sequelize.col('requestItems.id')), 'itemsCount']
+                ],
+                include: [{
+                    model: itemsRequest,
+                    as: 'requestItems',
+                    attributes: []
+                }, {
+                    model: Staff,
+                    as: 'responsible',
+                    attributes: ['id', 'firstName', 'lastName']
+                }],
+                group: ['id']
+            });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async getItemsToRequest(requestId) {
+        try {
+            const result = await itemsRequest.findAll({
+                where: { requestId },
+                attributes: ['id', 'stock', 'order', 'productId','quantity'],
+                include: [{
+                    model: Product,
+                    as: 'product',
+                    attributes: ['name'],
+                    include: [{
+                        model: productCalculations,
+                        as: 'configurations',
+                    }]
+                }]
+            });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 module.exports = WarehouseService;

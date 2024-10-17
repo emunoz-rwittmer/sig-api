@@ -175,13 +175,18 @@ const updateOrder = async (req, res) => {
 }
 
 const updateStatusOrder = async (req, res) => {
-    const orderId = Utils.decode(req.params.order_id);
-    const data = req.body
-    const result = await OrderService.updateStatusOrder(data, {
-        where: { id: orderId}
-    });
-    if (result) {
-        res.status(200).json({ data: 'resource updated successfully' });
+    try {
+        const orderId = Utils.decode(req.params.order_id);
+        const data = req.body
+        const result = await OrderService.updateStatusOrder(data, {
+            where: { id: orderId }
+        });
+        if (result) {
+            res.status(200).json({ data: 'resource updated successfully' });
+        }
+    } catch (error) {
+        console.log(error)
+        res.status(400).json(error.message)
     }
 }
 
