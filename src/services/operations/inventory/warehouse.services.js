@@ -98,7 +98,8 @@ class WarehouseService {
                     model: Product,
                     as: 'product',
                     attributes: ['name', 'sku'],
-                }]
+                }],
+                order: [[{ model: Product, as: 'product' }, 'name', 'ASC']]
             });
             return result;
         } catch (error) {
