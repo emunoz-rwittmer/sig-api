@@ -5,6 +5,7 @@ const router = Router();
 
 router.post('/productEntryInWarehouse/:warehouse_id', TransactionController.productEntryInWarehouse);
 router.post('/transactionBetweenWarehouse', TransactionController.transactionWarehouse);
+router.post('/incomeProductsInWarehouse', TransactionController.incomeProductsInWarehouse);
 // Yacht request 
 router.post('/requestWarehouse', TransactionController.requestWarehouse);
 

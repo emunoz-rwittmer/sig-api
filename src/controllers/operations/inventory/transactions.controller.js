@@ -16,13 +16,13 @@ const productEntryInWarehouse = async (req, res) => {
 
         const stockData = {
             warehouseId,
-            quantity: data.quantity
+            quantity: parseInt(data.quantity)
         }
 
         const transactionData = {
             type: 'Entrada',
             warehouseToId: warehouseId,
-            quantity: data.quantity,
+            quantity: parseInt(data.quantity),
             userId: Utils.decode(data.user)
         }
 
@@ -44,7 +44,7 @@ const transactionWarehouse = async (req, res) => {
         const warehouseToId = Utils.decode(req.body.warehouseToId)
         const userId = Utils.decode(req.body.userId)
 
-        const transactions = await TransactionService.createTransaction({
+        const transactions = await TransactionService.transactionWarehouse({
             products,
             warehouseFromId,
             warehouseToId,
@@ -52,6 +52,26 @@ const transactionWarehouse = async (req, res) => {
         });
         if (transactions) {
             axios.post('http://190.12.15.164:8925/print/transactions', { products, userName, company })
+            res.status(200).json({ data: 'transactions register success' });
+        }
+    } catch (error) {
+        console.log(error.message)
+        res.status(400).json(error.message);
+    }
+}
+
+const incomeProductsInWarehouse = async (req, res) => {
+    try {
+        const { products, userName, company } = req.body;
+        const warehouseToId = Utils.decode(req.body.warehouseToId)
+        const userId = Utils.decode(req.body.userId)
+
+        const transactions = await TransactionService.incomeProductsInWarehouse({
+            products,
+            warehouseToId,
+            userId
+        });
+        if (transactions) {
             res.status(200).json({ data: 'transactions register success' });
         }
     } catch (error) {
@@ -89,6 +109,7 @@ const requestWarehouse = async (req, res) => {
 const TransactionController = {
     productEntryInWarehouse,
     transactionWarehouse,
+    incomeProductsInWarehouse,
     requestWarehouse
 }
 module.exports = TransactionController

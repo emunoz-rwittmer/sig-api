@@ -71,7 +71,7 @@ class TransactionService {
         }
     }
 
-    static async createTransaction(transactionData) {
+    static async transactionWarehouse(transactionData) {
         const { products, warehouseFromId, warehouseToId, userId } = transactionData;
 
         const transaction = await db.transaction();
@@ -88,7 +88,7 @@ class TransactionService {
                         throw new Error(`Stock insuficiente para el producto: ${product.name}`);
                     }
 
-                    stockFrom.quantity -= product.quantity;
+                    stockFrom.quantity -= parseInt(product.quantity);
                     await stockFrom.save({ transaction });
 
                     const [stockToInstance] = await Stock.findOrCreate({
@@ -97,7 +97,7 @@ class TransactionService {
                         transaction,
                     });
 
-                    stockToInstance.quantity += product.quantity;
+                    stockToInstance.quantity += parseInt(product.quantity);
                     await stockToInstance.save({ transaction });
 
                     return Transaction.create({
@@ -105,8 +105,43 @@ class TransactionService {
                         userId: userId,
                         warehouseFromId: warehouseFromId,
                         warehouseToId: warehouseToId,
-                        quantity: product.quantity,
+                        quantity: parseInt(product.quantity),
                         type: 'Salida',
+                    }, { transaction });
+                })
+            );
+
+            await transaction.commit();
+            return transactionResults;
+        } catch (error) {
+            await transaction.rollback();
+            throw new Error(error.message);
+        }
+    }
+
+    static async incomeProductsInWarehouse(transactionData) {
+        const { products, warehouseToId, userId } = transactionData;
+
+        const transaction = await db.transaction();
+
+        try {
+            const transactionResults = await Promise.all(
+                products.map(async (product) => {
+                    const [stockToInstance] = await Stock.findOrCreate({
+                        where: { productId: product.id, warehouseId: warehouseToId },
+                        defaults: { quantity: 0 },
+                        transaction,
+                    });
+
+                    stockToInstance.quantity += parseInt(product.quantity);
+                    await stockToInstance.save({ transaction });
+
+                    return Transaction.create({
+                        productId: product.id,
+                        userId: userId,
+                        warehouseToId: warehouseToId,
+                        quantity: parseInt(product.quantity),
+                        type: 'Entrada',
                     }, { transaction });
                 })
             );

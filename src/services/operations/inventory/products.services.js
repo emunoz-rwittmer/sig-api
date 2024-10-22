@@ -47,13 +47,31 @@ class ProductService {
 
     static async createProduct(product) {
         try {
-            const result = await Product.create(product);
+            const result = await Product.findOrCreate(product);
             return result;
         } catch (error) {
             throw error;
 
         }
     }
+
+    static async createProduct(productData) {
+        try {
+            const existingProduct = await Product.findOne({
+                where: { sku: productData.sku } 
+            });
+    
+            if (existingProduct) {
+                throw { message: `El producto con el SKU: ${productData.sku} ya existe`};
+            }
+            const newProduct = await Product.create(productData);
+            return newProduct;
+            
+        } catch (error) {
+            throw error;
+        }
+    }
+    
 
     static async updateProduct(product, id) {
         try {
