@@ -62,7 +62,7 @@ const transactionWarehouse = async (req, res) => {
 
 const incomeProductsInWarehouse = async (req, res) => {
     try {
-        const { products, userName, company } = req.body;
+        const { products } = req.body;
         const warehouseToId = Utils.decode(req.body.warehouseToId)
         const userId = Utils.decode(req.body.userId)
 
