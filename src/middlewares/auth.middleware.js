@@ -12,58 +12,53 @@ const verifyToken = async (req, res, next) => {
 
     if (token) {
         jwt.verify(token, process.env.JWT_SECRET, { algorithm: 'H5512' }, (err, decoded) => {
-            console.log(decoded)
             if (err) {
                 const sessionData = auth.fetchSessionData(token);
                 sessionData.then(response => {
                     jwt.verify(String(response.refreshtoken), process.env.JWT_REFRESH_SECRET, function (err, decoded) {
                         if (err) {
                             tokenModel.deleteOne({ accessToken: token }).exec();
-                            return res.status(498).json({ data:'unauthorized'});
+                            return res.status(498).json({ data: 'unauthorized' });
                         } else {
                             const newAccessToken = { accessToken: Utils.generateAccessToken({ id: response.userId, user_name: response.user }) };
                             tokenModel.findOneAndUpdate({ accessToken: token }, newAccessToken).exec();
-                            res.status(202).json({token: newAccessToken.accessToken});
+                            res.status(202).json({ token: newAccessToken.accessToken });
                         }
                     });
                 }).catch(error => {
                     console.log("error al renovar :" + error.name)
                 });
             } else {
-                req.user_id = Utils.decode(decoded.id);
+                req.userRol = decoded.rol;
                 next();
             }
         }
         );
 
     } else {
-        return res.status(403).json({data: "no token provided"});
+        return res.status(403).json({ data: "no token provided" });
     }
 };
 
 const isAdmin = async (req, res, next) => {
-    const id = req.user_id;
-    const response = await UserService.getUserById(id);
-    if (response.user_rol.name === 'admin') {
+    if (req.userRol === 'admin') {
         next();
     } else {
-        res.status(403).json({data: "Require Admin Role!"});
+        res.status(403).json({ data: "Require Admin Role!" });
     }
 }
 
-const isAdminOfSurveys = async(req, res, next) => {
-    const id = req.user_id;
-    const response = await UserService.getUserById(id);
-    if (response.user_rol.name === 'admin' || response.user_rol.name === 'surveys') {
+const isAdminOfSurveys = async (req, res, next) => {
+    if (req.userRol === 'admin' || req.userRol === 'surveys') {
         next();
     } else {
-        res.status(403).json({data: "Require Admin or Surveys Role!"});
+        res.status(403).json({ data: "Require Admin or Surveys Role!" });
     }
 }
 
 const authJwt = {
     verifyToken,
-    isAdmin,  
+    isAdmin,
     isAdminOfSurveys
 };
 
