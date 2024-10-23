@@ -4,12 +4,22 @@ const Utils = require('../../../utils/Utils');
 
 const getAllWarehouses = async (req, res) => {
     try {
-        const result = await WarehouseService.getAllWarehouses();
+        let result = await WarehouseService.getAllWarehouses();
+        const rol = req.userRol
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
             });
         }
+
+        if (rol === 'logistic' || rol === 'packer') {
+            result = result.filter(warehouse => warehouse.dataValues.name === 'UIO');
+        }
+
+        if (rol === 'logistic_gps') {
+            result = result.filter(warehouse => warehouse.dataValues.name !== 'UIO');
+        }
+
         res.status(200).json(result);
     } catch (error) {
         console.log(error)

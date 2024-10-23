@@ -23,7 +23,8 @@ class ProductService {
                     attributes:{
                         exclude: ['createdAt','updatedAt']
                     }
-                }]
+                }],
+                order:[['name', 'ASC']]
                 
             });
             return result;
