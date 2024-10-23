@@ -2,7 +2,6 @@ const AuthService = require('../../services/catalogs/auth.services');
 const UserService = require('../../services/catalogs/users.services');
 const Utils = require('../../utils/Utils');
 const tokenModel = require('../../models/mongoModels/Token.models');
-const EvaluationService = require('../../services/operations/surveys/evaluations.services')
 const bcrypt = require('bcrypt');
 const sendEmail = require('../../utils/mailer');
 const Staffervice = require('../../services/catalogs/staff.services');
@@ -22,10 +21,10 @@ const login = async (req, res) => {
                 const { id, firstName, lastName, email } = result.user;
                 const userData = { id, firstName, lastName, email };
                 userData.id = Utils.encode(userData.id);
+                userData.rol = result.user.user_rol?.name;
                 const token = await Utils.generateAccessToken(userData);
                 const refreshToken = await Utils.generateRefreshToken(userData);
                 userData.token = token;
-                userData.rol = result.user.user_rol?.name;
                 userData.changePassword = result.user.changePassword
                 const newToken = new tokenModel({
                     user: firstName + " " + lastName,
@@ -61,7 +60,7 @@ const loginUsers = async (req, res) => {
                 const { id, firstName, lastName, email } = result.user;
                 const userData = { id, firstName, lastName, email };
                 userData.id = Utils.encode(userData.id);
-                userData.role = result.user.staff_position.name
+                userData.rol = result.user.rol.name
                 const token = await Utils.generateAccessToken(userData);
                 const refreshToken = await Utils.generateRefreshToken(userData);
                 userData.token = token;
@@ -98,12 +97,13 @@ const upgradePassword = async (req, res) => {
         const user = await UserService.getUserByEmail(userEmail);
 
         if (user) {
-            const result = await AuthService.userUpgradePassword(data);
-            return res.status(200).json({ data: 'password updated successfully' });
+            await AuthService.userUpgradePassword(data);
         } else {
-            const result = await AuthService.staffUpgradePassword(data);
-            return res.status(200).json({ data: 'password updated successfully' });
+            await AuthService.staffUpgradePassword(data);
         }
+
+        return res.status(200).json({ data: 'password updated successfully' });
+        
     } catch (error) {
         console.log(error)
         res.status(400).json(error.message);

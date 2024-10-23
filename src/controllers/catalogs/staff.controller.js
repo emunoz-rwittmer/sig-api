@@ -9,7 +9,6 @@ const getAllStaffs = async (req, res) => {
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
-                x.dataValues.rol.dataValues.id = Utils.encode(x.dataValues.rol.dataValues.id);
                 x.dataValues.staff_departament.dataValues.id = Utils.encode(x.dataValues.staff_departament.dataValues.id);
                 x.dataValues.staff_position.dataValues.id = Utils.encode(x.dataValues.staff_position.dataValues.id);
             });

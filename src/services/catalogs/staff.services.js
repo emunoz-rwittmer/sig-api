@@ -23,10 +23,6 @@ class Staffervice {
                         as: 'yacht_staff'
                     }]
                 }, {
-                    model: Roles,
-                    as: 'rol',
-                    attributes: ['id', 'name'],
-                }, {
                     model: Departaments,
                     as: 'staff_departament',
                     attributes: ['id', 'name'],
