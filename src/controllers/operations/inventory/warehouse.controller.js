@@ -11,15 +11,6 @@ const getAllWarehouses = async (req, res) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
             });
         }
-
-        if (rol === 'logistic' || rol === 'packer') {
-            result = result.filter(warehouse => warehouse.dataValues.name === 'UIO');
-        }
-
-        if (rol === 'logistic_gps') {
-            result = result.filter(warehouse => warehouse.dataValues.name !== 'UIO');
-        }
-
         res.status(200).json(result);
     } catch (error) {
         console.log(error)

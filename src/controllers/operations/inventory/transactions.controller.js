@@ -11,7 +11,7 @@ const productEntryInWarehouse = async (req, res) => {
 
         const productData = {
             name: data.product,
-            sku: data.sku
+            sku: data.sku.replace(/^0+/, '')
         }
 
         const stockData = {

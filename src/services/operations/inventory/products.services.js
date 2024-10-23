@@ -46,16 +46,6 @@ class ProductService {
         }
     }
 
-    static async createProduct(product) {
-        try {
-            const result = await Product.findOrCreate(product);
-            return result;
-        } catch (error) {
-            throw error;
-
-        }
-    }
-
     static async createProduct(productData) {
         try {
             const existingProduct = await Product.findOne({
