@@ -43,6 +43,11 @@ const Staff= db.define('staff',{
         type: DataTypes.BOOLEAN,
         defaultValue: true
     },
+    roleId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        field:"role_id",
+    },
     departamentId: {
         type: DataTypes.INTEGER,
         allowNull: false,

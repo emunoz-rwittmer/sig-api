@@ -23,7 +23,8 @@ class ProductService {
                     attributes:{
                         exclude: ['createdAt','updatedAt']
                     }
-                }]
+                }],
+                order:[['name', 'ASC']]
                 
             });
             return result;
@@ -45,15 +46,23 @@ class ProductService {
         }
     }
 
-    static async createProduct(product) {
+    static async createProduct(productData) {
         try {
-            const result = await Product.create(product);
-            return result;
+            const existingProduct = await Product.findOne({
+                where: { sku: productData.sku } 
+            });
+    
+            if (existingProduct) {
+                throw { message: `El producto con el SKU: ${productData.sku} ya existe`};
+            }
+            const newProduct = await Product.create(productData);
+            return newProduct;
+            
         } catch (error) {
             throw error;
-
         }
     }
+    
 
     static async updateProduct(product, id) {
         try {

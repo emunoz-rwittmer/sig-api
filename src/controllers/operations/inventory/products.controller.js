@@ -3,7 +3,7 @@ const Utils = require('../../../utils/Utils');
 
 const findProduct = async (req, res) => {
     try {
-        const sku = req.params.sku
+        const sku = req.params.sku.replace(/^0+/, '');
         const result = await ProductService.findProduct(sku);
         if (result) {
              res.status(200).json({ data: result });
@@ -46,6 +46,7 @@ const getProduct = async (req, res) => {
 const createProduct = async (req, res) => {
     try {
         const product = req.body;
+        product.sku = product.sku.replace(/^0+/, '');
         const result = await ProductService.createProduct(product);
         if (result) {
             res.status(200).json({ data: 'resource created successfully' });
@@ -60,6 +61,7 @@ const updateProduct = async (req, res) => {
     try {
         const productId = Utils.decode(req.params.product_id);
         const product = req.body;
+        product.sku = product.sku.replace(/^0+/, '');
         const result = await ProductService.updateProduct(product, {
             where: { id: productId },
         });

@@ -36,9 +36,9 @@ class AuthService {
             const user = await Staff.findOne({
                 where: { email },
                 include:[{
-                    model: Positions,
-                    as: 'staff_position',
-                    attributes: ['name']
+                    model: Roles,
+                    as: 'rol',
+                    attributes: ['id', 'name'],
                 }]
             });
             if (user) {

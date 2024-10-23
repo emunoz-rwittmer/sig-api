@@ -13,6 +13,7 @@ const Product = db.define('product', {
   },
   sku: {
     type: DataTypes.STRING,
+    unique: true,
     allowNull: true,
   },
 });

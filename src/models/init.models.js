@@ -29,7 +29,10 @@ const initModels = () => {
 
     //catalogs
     Users.belongsTo(Roles, { as: "user_rol", foreignKey: "role_id" });
-    Roles.hasMany(Users, { as: "rol_user", foreignKey: "role_id" }); Staff.belongsTo(Positions, { as: "staff_position", foreignKey: "position_id" });
+    Roles.hasMany(Users, { as: "rol_user", foreignKey: "role_id" }); 
+    Staff.belongsTo(Roles, { as: "rol", foreignKey: "role_id" });
+    Roles.hasMany(Staff, { as: "staffs", foreignKey: "role_id" });
+    Staff.belongsTo(Positions, { as: "staff_position", foreignKey: "position_id" });
     Positions.hasMany(Staff, { as: "position_staff", foreignKey: "position_id" });
     Staff.belongsTo(Departaments, { as: "staff_departament", foreignKey: "departament_id" });
     Departaments.hasMany(Staff, { as: "departament_staff", foreignKey: "departament_id" });
@@ -84,8 +87,8 @@ const initModels = () => {
     Product.hasMany(Transaction, { foreignKey: 'product_id', as: 'transactions' });
     Transaction.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
     // Order a User (Responsable): Relación muchos a uno (varios pedidos pueden ser gestionados por un mismo responsable).
-    Transaction.belongsTo(Users, { foreignKey: 'user_id', as: 'responsible' });
-    Users.hasMany(Transaction, { foreignKey: 'user_id', as: 'transactions' });
+    Transaction.belongsTo(Staff, { foreignKey: 'user_id', as: 'responsible' });
+    Staff.hasMany(Transaction, { foreignKey: 'user_id', as: 'transactions' });
     // Warehouse a Transaction: Relación uno a muchos (una bodega puede estar involucrada en múltiples transacciones).
     Warehouse.hasMany(Transaction, { foreignKey: 'warehouse_from_id', as: 'outgoingTransactions' });// Bodega de origen
     Transaction.belongsTo(Warehouse, { foreignKey: 'warehouse_from_id', as: 'warehouseFrom' });

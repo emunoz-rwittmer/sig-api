@@ -115,6 +115,7 @@ const getStaff = async (req, res) => {
         const result = await StaffService.getStaffById(staffId);
         if (result instanceof Object) {
             result.id = Utils.encode(result.id);
+            result.roleId = Utils.encode(result.roleId);
             result.departamentId = Utils.encode(result.departamentId);
             result.positionId = Utils.encode(result.positionId);
         }
@@ -123,10 +124,12 @@ const getStaff = async (req, res) => {
         res.status(400).json(error.message)
     }
 }
+
 const createStaff = async (req, res) => {
     try {
         const staff = req.body;
         const passwordGenerate = Utils.getPasswordRandom();
+        staff.roleId = Utils.decode(req.body.roleId);
         staff.departamentId = Utils.decode(req.body.departamentId);
         staff.positionId = Utils.decode(req.body.positionId);
         staff.password = passwordGenerate
@@ -144,6 +147,7 @@ const updateStaff = async (req, res) => {
     try {
         const staffId = Utils.decode(req.params.staff_id);
         const staff = req.body;
+        staff.roleId = Utils.decode(req.body.roleId);
         staff.departamentId = Utils.decode(req.body.departamentId);
         staff.positionId = Utils.decode(req.body.positionId);
         const result = await StaffService.updateStaff(staff, {

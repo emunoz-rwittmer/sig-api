@@ -4,7 +4,8 @@ const Utils = require('../../../utils/Utils');
 
 const getAllWarehouses = async (req, res) => {
     try {
-        const result = await WarehouseService.getAllWarehouses();
+        let result = await WarehouseService.getAllWarehouses();
+        const rol = req.userRol
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);

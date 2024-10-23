@@ -1,5 +1,4 @@
 const Staff = require('../../../models/catalogs/staff.models');
-const Users = require('../../../models/catalogs/user.models');
 const Warehouse = require('../../../models/catalogs/wareHouse.models');
 const Stock = require('../../../models/operations/inventory/stock.models');
 const Transaction = require('../../../models/operations/inventory/transaction.models');
@@ -130,7 +129,7 @@ class WarehouseService {
                     as: 'warehouseTo',
                     attributes: ['name']
                 }, {
-                    model: Users,
+                    model: Staff,
                     as: 'responsible',
                     attributes: ['firstName', 'lastName']
                 }]
