@@ -12,6 +12,7 @@ const verifyToken = async (req, res, next) => {
 
     if (token) {
         jwt.verify(token, process.env.JWT_SECRET, { algorithm: 'H5512' }, (err, decoded) => {
+            console.log(decoded)
             if (err) {
                 const sessionData = auth.fetchSessionData(token);
                 sessionData.then(response => {

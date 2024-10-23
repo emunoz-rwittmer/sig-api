@@ -4,6 +4,7 @@ const Positions = require('../../models/catalogs/positions.models');
 const Departaments = require('../../models/catalogs/departament.models')
 const StaffYacht = require('../../models/catalogs/staffYacht.models');
 const { Op } = require("sequelize");
+const Roles = require('../../models/catalogs/roles.models');
 
 class Staffervice {
     static async getAll() {
@@ -21,6 +22,10 @@ class Staffervice {
                         model: Yachts,
                         as: 'yacht_staff'
                     }]
+                }, {
+                    model: Roles,
+                    as: 'rol',
+                    attributes: ['id', 'name'],
                 }, {
                     model: Departaments,
                     as: 'staff_departament',
@@ -116,7 +121,7 @@ class Staffervice {
 
     static async getEvaluatorsByFilters(search, yachtId, departamentId, positionId) {
         try {
-            const where = {active: true}
+            const where = { active: true }
 
             if (departamentId) {
                 where.departamentId = departamentId;
@@ -202,7 +207,7 @@ class Staffervice {
     static async getEvaluatedsByFilters(positionId, yachtId) {
         try {
 
-            const where = {active: true};
+            const where = { active: true };
 
             if (positionId) {
                 where.positionId = positionId;
@@ -260,10 +265,14 @@ class Staffervice {
         try {
             const result = await Staff.findOne({
                 where: { id },
-                attributes: ['first_name', 'last_name', 'email', 'cell_phone', 'departamentId', 'positionId', 'company', 'active'],
+                attributes: ['first_name', 'last_name', 'email', 'cell_phone', 'roleId', 'departamentId', 'positionId', 'company', 'active'],
                 include: [{
                     model: Departaments,
                     as: 'staff_departament',
+                    attributes: ['id', 'name'],
+                }, {
+                    model: Roles,
+                    as: 'rol',
                     attributes: ['id', 'name'],
                 }, {
                     model: Positions,

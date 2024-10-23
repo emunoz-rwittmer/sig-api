@@ -29,7 +29,10 @@ const initModels = () => {
 
     //catalogs
     Users.belongsTo(Roles, { as: "user_rol", foreignKey: "role_id" });
-    Roles.hasMany(Users, { as: "rol_user", foreignKey: "role_id" }); Staff.belongsTo(Positions, { as: "staff_position", foreignKey: "position_id" });
+    Roles.hasMany(Users, { as: "rol_user", foreignKey: "role_id" }); 
+    Staff.belongsTo(Roles, { as: "rol", foreignKey: "role_id" });
+    Roles.hasMany(Staff, { as: "staffs", foreignKey: "role_id" });
+    Staff.belongsTo(Positions, { as: "staff_position", foreignKey: "position_id" });
     Positions.hasMany(Staff, { as: "position_staff", foreignKey: "position_id" });
     Staff.belongsTo(Departaments, { as: "staff_departament", foreignKey: "departament_id" });
     Departaments.hasMany(Staff, { as: "departament_staff", foreignKey: "departament_id" });
