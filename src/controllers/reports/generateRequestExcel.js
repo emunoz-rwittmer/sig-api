@@ -2,22 +2,31 @@ const path = require('path');
 const xl = require("excel4node");
 const Utils = require("../../utils/Utils");
 const ReportService = require("../../services/reports/reports.services");
+const WarehouseService = require('../../services/operations/inventory/warehouse.services');
 
 const generateRequestExcel = async (req, res) => {
     try {
         var fechaActual = new Date();
         var options = { day: '2-digit', month: '2-digit', year: 'numeric' };
-        const fechaFormateada = (date) =>{
+        const fechaFormateada = (date) => {
             const formattedDate = date.toLocaleDateString('es-ES', options);
             return formattedDate;
-        } 
+        }
 
         var wb = new xl.Workbook({
             dateFormat: "dd/mm/yyyy hh:mm:ss",
         });
-        var ws = wb.addWorksheet("Pedidos Yates");
-        const request_id = Utils.decode(req.params.request_id);
-        const result = await ReportService.getReportHistory(request_id);
+        var ws = wb.addWorksheet("pedidos");
+
+        const requestId = Utils.decode(req.params.request_id);
+        const result = await ReportService.getRequestReport(requestId);
+        const warehouse = await WarehouseService.getWarehouseById(result.warehouseId);
+
+console.log(result)
+        // Verifica que result.orderItems no esté vacío o undefined
+        if (!result.requestItems || result.requestItems.length === 0) {
+            return res.status(400).json({ message: "No hay items en la orden." });
+        }
 
         //COLUMNS
         ws.column(1).setWidth(25);
@@ -28,25 +37,7 @@ const generateRequestExcel = async (req, res) => {
         ws.column(6).setWidth(15);
 
         //ADD IMAGE
-        // ws.addImage({
-        //     path: path.join(__dirname, "./icons/colacion.png"),
-        //     type: "picture",
-        //     position: {
-        //         type: 'twoCellAnchor',
-        //         from: {
-        //           col: 1, // Columna de inicio
-        //           colOff: 0, // Desplazamiento horizontal en celdas
-        //           row: 1, // Fila de inicio
-        //           rowOff: 0, // Desplazamiento vertical en celdas
-        //         },
-        //         to: {
-        //           col: 3, // Columna de final
-        //           colOff: 0, // Desplazamiento horizontal en celdas
-        //           row: 5, // Fila de final
-        //           rowOff: 0, // Desplazamiento vertical en celdas
-        //         },
-        //     },
-        // });
+       
         var titleStyle = wb.createStyle({
             alignment: {
                 horizontal: ["center"],
@@ -77,49 +68,52 @@ const generateRequestExcel = async (req, res) => {
             },
         });
         //TITULOS
-        ws.cell(1, 1, 1, 7, true)
-            .string("REPORTE MI COLACION")
+        ws.cell(3, 1, 3, 4, true)
+            .string('Reporte de perdidos')
             .style(titleStyle);
-        ws.cell(2, 1, 2, 7, true)
-            .string("RUC:1707748776001")
+        ws.cell(4, 1, 4, 4, true)
+            .string(warehouse.name)
             .style(titleStyle);
-        ws.cell(3, 1, 3, 7, true)
-            .string("TELEFONOS: 0968580445")
+        ws.cell(5, 1, 5, 4, true)
+            .string(fechaFormateada(fechaActual))
             .style(titleStyle);
-        ws.cell(4, 1, 4, 7, true)
-            .string("DIRECCION: Av. Simón Bolívar Km 2 1/2")
-            .style(titleStyle);
-        ws.cell(5, 1, 5, 7, true)
-            .string("FECHA: " + fechaFormateada(fechaActual))
-            .style(titleStyle);
-        // CABECERA DETALLE 
-        ws.cell(7, 1).string("Fecha y Hora ").style(headerLeftWrapStyle);
-        ws.cell(7, 2).string("Estudiante").style(headerLeftWrapStyle);
-        ws.cell(7, 3).string("Seccion").style(headerLeftWrapStyle);
-        ws.cell(7, 4).string("Servicio").style(headerLeftWrapStyle);
-        ws.cell(7, 5).string("Valor ").style(headerLeftWrapStyle);
-        ws.cell(7, 6).string("Consumidos").style(headerLeftWrapStyle);
 
-        //SHOW DATA
-        for (var i = 0, l = result.length; i < l; i++) {
-            ws.cell(8 + i, 1).string(fechaFormateada(result[i].dataValues.createdAt));
-            ws.cell(8 + i, 2).string(result[i].dataValues.lastName + " " + result[i].dataValues.firstName);
-            ws.cell(8 + i, 3).string(result[i].dataValues.history_seccion?.name);
-            ws.cell(8 + i, 4).string(result[i].dataValues.history_servicio?.name);
-            ws.cell(8 + i, 5).string(result[i].dataValues.history_servicio?.price);
-            ws.cell(8 + i, 6).string(result[i].dataValues?.breakfastConsumed);
-            ws.cell(8 + i, 6).string("1");
-        }
+        //SUBTITULOS
+
+        ws.cell(8, 1, 8, 4, true)
+            .string(`NOMBRE PEDIDO: ${result.name}`)
+        ws.cell(9, 1, 9, 4, true)
+            .string(`SOLICITANTE: ${result.responsible?.firstName + " " + result.responsible?.lastName}`)
+        ws.cell(10, 1, 10, 4, true)
+            .string(`ESTATUS: ${result.status}`)
+        ws.cell(11, 1, 11, 4, true)
+            .string(`FECHA DE SOLICITUD: ${fechaFormateada(result.createdAt)}`)
+
+
+        // CABECERA DETALLE 
+        ws.cell(13, 1).string("Producto").style(headerLeftWrapStyle);
+        ws.cell(13, 2).string("Stock").style(headerLeftWrapStyle);
+        ws.cell(13, 3).string("Solicitado").style(headerLeftWrapStyle);
+        ws.cell(13, 4).string("Despachado").style(headerLeftWrapStyle);
+
+
+        //SHOW DATA - Revisa el array result.orderItems usando forEach
+        result.requestItems.forEach((item, index) => {
+            ws.cell(14 + index, 1).string(item.product.name || "Sin producto");
+            ws.cell(14 + index, 2).string(item.stock.toString() || "0");
+            ws.cell(14 + index, 3).string(item.order.toString() || "0");
+            ws.cell(14 + index, 4).string(item.quantity || "0");
+        });
+
         //GENERATE EXCEL
-        if (result instanceof Array) {
-            wb.write("HistorialConsumos.xlsx", res);
-        } else {
-            res.send({
-                code: 500,
-                data: result,
-            });
-        }
+        // Genera el archivo y lo envía como respuesta
+        res.setHeader(
+            'Content-Disposition',
+            'attachment; filename=Reporte.xlsx'
+        );
+        wb.write(`report.xlsx`, res);
     } catch (error) {
+        console.log(error)
         res.status(400).json(error.message)
     }
 

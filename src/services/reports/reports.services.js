@@ -6,6 +6,8 @@ const Transaction = require("../../models/operations/inventory/transaction.model
 const itemsOrder = require("../../models/operations/orders/itemsOrder.models");
 const Order = require('../../models/operations/orders/order.models');
 const Product = require("../../models/operations/orders/product.models");
+const Request = require("../../models/operations/yachtRequest/request.models");
+const itemsRequest = require("../../models/operations/yachtRequest/itemsRequest.models");
 
 class ReportService {
     static async getOrderReport(id) {
@@ -67,6 +69,32 @@ class ReportService {
                     model: Staff,
                     as: 'responsible',
                     attributes: ['firstName', 'lastName']
+                }]
+            });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async getRequestReport(id) {
+        try {
+            const result = await Request.findOne({
+                where: { id },
+                attributes: ['id', 'name', 'status','warehouseId','createdAt'],
+                include:[{
+                    model:Staff,
+                    as: 'responsible',
+                    attributes: ['firstName', 'lastName']
+                },{
+                    model:itemsRequest,
+                    as: 'requestItems',
+                    attributes: ['stock', 'order', 'quantity'],
+                    include: [{
+                        model: Product,
+                        as: 'product',
+                        attributes: ['name'],
+                    }]
                 }]
             });
             return result;
