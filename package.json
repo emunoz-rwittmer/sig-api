@@ -20,6 +20,7 @@
     "dotenv": "^16.4.5",
     "escpos": "^3.0.0-alpha.6",
     "escpos-usb": "^3.0.0-alpha.4",
+    "excel4node": "^1.8.2",
     "express": "^4.19.2",
     "hashids": "^2.3.0",
     "jsonwebtoken": "^9.0.2",
@@ -32,7 +33,8 @@
     "nodemailer-gmail": "^3.0.0",
     "sequelize": "^6.37.2",
     "whatsapp-web.js": "^1.23.0",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "xmlbuilder": "^15.1.1"
   },
   "devDependencies": {
     "morgan": "^1.10.0",

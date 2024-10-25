@@ -17,6 +17,8 @@ const transactionsRoutes = require('./operations/inventory/transactions.routes')
 const productsRoutes = require('./operations/inventory/products.routes');
 const warehouseRoutes = require('./operations/inventory/warehouse.routes');
 const yachtRequestRoutes = require('./operations/yachtRequest/yachtRequest.routes');
+//Report
+const reportRoutes = require("./reports/reports.routes");
 
 
 const routerApi = (app) => {
@@ -39,6 +41,9 @@ const routerApi = (app) => {
   app.use("/api/transactions", authJwt.verifyToken, transactionsRoutes);
   app.use("/api/requests", authJwt.verifyToken, yachtRequestRoutes);
   app.use("/api/products", authJwt.verifyToken, productsRoutes);
+  //REPORT
+  app.use("/api/reports", reportRoutes);
+  
 
 };
 
