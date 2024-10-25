@@ -116,7 +116,7 @@ class WarehouseService {
                 ]
             };
 
-            if (startDate !== 'undefined' && endDate !== 'undefined') {
+            if (startDate && endDate) {
                 filters.createdAt = { [Op.between]: [new Date(startDate), new Date(endDate)] };
             }
 
@@ -127,7 +127,6 @@ class WarehouseService {
             const result = await Transaction.findAll({
                 where: filters,
                 order: [['createdAt', 'DESC']],
-                limit: 100,
                 attributes: ['warehouseToId', 'type', 'quantity', 'createdAt'],
                 include: [{
                     model: Product,

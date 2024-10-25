@@ -1,7 +1,11 @@
+const { Op } = require("sequelize");
 const Company = require("../../models/catalogs/company.models");
 const Staff = require("../../models/catalogs/staff.models");
+const Warehouse = require("../../models/catalogs/wareHouse.models");
+const Transaction = require("../../models/operations/inventory/transaction.models");
 const itemsOrder = require("../../models/operations/orders/itemsOrder.models");
 const Order = require('../../models/operations/orders/order.models');
+const Product = require("../../models/operations/orders/product.models");
 
 class ReportService {
     static async getOrderReport(id) {
@@ -21,6 +25,48 @@ class ReportService {
                     model:itemsOrder,
                     as: 'orderItems',
                     attributes: ['product', 'quantity', 'status']
+                }]
+            });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async getTransactionsReport(warehouseId, startDate, endDate, type) {
+        try {
+
+            let filters = {
+                [Op.or]: [
+                    { warehouseToId: warehouseId },
+                    { warehouseFromId: warehouseId }
+                ]
+            };
+
+            if (startDate && endDate) {
+                filters.createdAt = { [Op.between]: [new Date(startDate), new Date(endDate)] };
+            }
+
+            if (type) {
+                filters.type = type;
+            }
+
+            const result = await Transaction.findAll({
+                where: filters,
+                order: [['createdAt', 'DESC']],
+                attributes: ['warehouseToId', 'type', 'quantity', 'createdAt'],
+                include: [{
+                    model: Product,
+                    as: 'product',
+                    attributes: ['name']
+                }, {
+                    model: Warehouse,
+                    as: 'warehouseTo',
+                    attributes: ['name']
+                }, {
+                    model: Staff,
+                    as: 'responsible',
+                    attributes: ['firstName', 'lastName']
                 }]
             });
             return result;
