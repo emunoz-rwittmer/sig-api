@@ -50,11 +50,12 @@ const getStockInWarehouse = async (req, res) => {
 const getTransactionsWarehouse = async (req, res) => {
     try {
         const warehouseId = Utils.decode(req.params.warehouse_id);
+        const { startDate, endDate, type } = req.query
         const warehouse = await WarehouseService.getWarehouseById(warehouseId);
         if (warehouse instanceof Object) {
             warehouse.dataValues.id = Utils.encode(warehouse.dataValues.id);
         }
-        const result = await WarehouseService.getTransactionsWarehouse(warehouseId);
+        const result = await WarehouseService.getTransactionsWarehouse(warehouseId, startDate, endDate, type);
         result.map((x) => {
             if (warehouseId === x.warehouseToId) {
                 x.dataValues.type = 'Entrada';

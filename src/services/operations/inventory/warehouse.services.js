@@ -106,19 +106,27 @@ class WarehouseService {
         }
     }
 
-    static async getTransactionsWarehouse(warehouseId) {
+    static async getTransactionsWarehouse(warehouseId, startDate, endDate, type) {
         try {
+
+            let filters = {
+                [Op.or]: [
+                    { warehouseToId: warehouseId },
+                    { warehouseFromId: warehouseId }
+                ]
+            };
+
+            if (startDate && endDate) {
+                filters.createdAt = { [Op.between]: [new Date(startDate), new Date(endDate)] };
+            }
+
+            if (type) {
+                filters.type = type;
+            }
+
             const result = await Transaction.findAll({
-                where: {
-                    [Op.or]:
-                    {
-                        warehouseToId: warehouseId,
-                        warehouseFromId: warehouseId
-                    }
-                },
-                order: [
-                    ['createdAt', 'DESC']
-                ],
+                where: filters,
+                order: [['createdAt', 'DESC']],
                 attributes: ['warehouseToId', 'type', 'quantity', 'createdAt'],
                 include: [{
                     model: Product,
@@ -266,7 +274,7 @@ class WarehouseService {
         try {
             const result = await itemsRequest.findAll({
                 where: { requestId },
-                attributes: ['id', 'stock', 'order', 'productId','quantity'],
+                attributes: ['id', 'stock', 'order', 'productId', 'quantity'],
                 include: [{
                     model: Product,
                     as: 'product',

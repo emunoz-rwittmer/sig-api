@@ -43,7 +43,7 @@ class OrderService {
                     as: 'orderItems',
                     attributes: []
                 }, {
-                    model: Users,
+                    model: Staff,
                     as: 'responsible',
                     attributes: ['id', 'firstName', 'lastName']
                 }],
