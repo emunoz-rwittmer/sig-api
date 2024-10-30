@@ -4,7 +4,8 @@ class DepartamentService {
     static async getAll() {
         try {
             const result = await Departaments.findAll({
-                attributes: ['id','name']
+                attributes: ['id','name','indicators'],
+                order:[['name', 'ASC']]
             });
             return result;
         } catch (error) {

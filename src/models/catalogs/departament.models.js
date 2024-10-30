@@ -9,11 +9,14 @@ const Departaments = db.define('departaments', {
         autoIncrement: true,
         allowNull: false,
     },
-    
     name: {
         type: DataTypes.STRING,
         allowNull: true,
-    }
+    },
+    indicators: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+    },
 
 });
 

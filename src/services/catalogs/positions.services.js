@@ -4,7 +4,8 @@ class PositionService {
     static async getAll() {
         try {
             const result = await Positions.findAll({
-                attributes: ['id','name']
+                attributes: ['id','name'],
+                order:[['name', 'ASC']]
             });
             return result;
         } catch (error) {
