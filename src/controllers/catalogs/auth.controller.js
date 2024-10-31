@@ -60,7 +60,7 @@ const loginUsers = async (req, res) => {
                 const { id, firstName, lastName, email } = result.user;
                 const userData = { id, firstName, lastName, email };
                 userData.id = Utils.encode(userData.id);
-                userData.rol = result.user.rol.name
+                userData.rol = result.user.rol?.name
                 const token = await Utils.generateAccessToken(userData);
                 const refreshToken = await Utils.generateRefreshToken(userData);
                 userData.token = token;
