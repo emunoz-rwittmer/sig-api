@@ -38,6 +38,35 @@ const getIndicatorsByDepartament = async (req, res) => {
     }
 }
 
+const getTabulationsyDepartament = async (req, res) => {
+    try {
+        const departamentId = Utils.decode(req.params.departament_id);
+        const departament = await DepartamentService.getDepartamentById(departamentId);
+        if (departament instanceof Array) {
+            departament.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+            });
+        }
+        const result = await IndicatorService.getTabulationsyDepartament(departamentId);
+
+        if (result instanceof Array) {
+            for (const x of result) {
+                const changesPercent = await IndicatorService.getChangePercentageByMeasurement(x.id);
+                const totalAchieved = x.tabulations.reduce((sum, tabulation) => sum + parseInt(tabulation.percent), 0);
+                const averageAchieved = totalAchieved / x.tabulations.length;
+                // Asignar valores adicionales a dataValues
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+                x.dataValues.averageAchieved = averageAchieved.toFixed(2);
+                x.dataValues.changesPercent = changesPercent;
+            }
+        }
+
+        res.status(200).json({ departament, result });
+    } catch (error) {
+        res.status(400).json(error.message)
+    }
+}
+
 const getIndicatorById = async (req, res) => {
     try {
         const indicatorId = Utils.decode(req.params.indicator_id)
@@ -89,7 +118,7 @@ const updateIndicator = async (req, res) => {
         data.departamentId = Utils.decode(data.departamentId);
         data.formulaId = Utils.decode(data.formulaId);
         const result = await IndicatorService.updateIndicator(data, {
-            where: {id : indicatorId}
+            where: { id: indicatorId }
         });
 
         if (result) {
@@ -117,6 +146,7 @@ const deleteIndicator = async (req, res) => {
 const IndicatorController = {
     getAllDepartamentsWhitIndicators,
     getIndicatorsByDepartament,
+    getTabulationsyDepartament,
     getIndicatorById,
     getFormulas,
     createIndicator,

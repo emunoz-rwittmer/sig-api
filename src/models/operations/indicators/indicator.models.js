@@ -41,10 +41,14 @@ const Indicator = db.define('indicator', {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  goalYear: {
+  formula: {
     type: DataTypes.STRING,
     allowNull: false,
-    field: 'goal_year'
+  },
+  goal: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    field: 'goal'
   }
 });
 

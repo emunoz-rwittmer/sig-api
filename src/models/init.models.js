@@ -102,7 +102,7 @@ const initModels = () => {
     Indicator.belongsTo(Departaments, { as: "departament", foreignKey: "departament_id" });
     
     Formula.hasMany(Indicator, { as: "indicator", foreignKey: "formula_id" });
-    Indicator.belongsTo(Formula, { as: "formula", foreignKey: "formula_id" });
+    Indicator.belongsTo(Formula, { as: "formula_indicator", foreignKey: "formula_id" });
 
     Indicator.hasMany(Tabulation, { as: "tabulations", foreignKey: "indicator_id" });
     Tabulation.belongsTo(Indicator, { as: "indicator", foreignKey: "indicator_id" });
