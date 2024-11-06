@@ -4,6 +4,7 @@ const Transaction = require('../../../models/operations/inventory/transaction.mo
 const db = require('../../../utils/database');
 const Request = require('../../../models/operations/yachtRequest/request.models');
 const itemsRequest = require('../../../models/operations/yachtRequest/itemsRequest.models');
+const itemsOrder = require('../../../models/operations/orders/itemsOrder.models');
 
 class TransactionService {
     static async productEntryInWarehouse(productData, stockData, transactionData) {
@@ -151,6 +152,15 @@ class TransactionService {
         } catch (error) {
             await transaction.rollback();
             throw new Error(error.message);
+        }
+    }
+
+    static async updateStatusItem(data, id) {
+        try {
+            const result = await itemsOrder.update(data, id);
+            return result;
+        } catch (error) {
+            throw error;  
         }
     }
 

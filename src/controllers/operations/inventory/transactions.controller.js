@@ -39,7 +39,7 @@ const productEntryInWarehouse = async (req, res) => {
 
 const transactionWarehouse = async (req, res) => {
     try {
-        const { products, userName, company } = req.body;
+        const { products, userName, company, location } = req.body;
         const warehouseFromId = Utils.decode(req.body.warehouseFromId)
         const warehouseToId = Utils.decode(req.body.warehouseToId)
         const userId = Utils.decode(req.body.userId)
@@ -50,8 +50,14 @@ const transactionWarehouse = async (req, res) => {
             warehouseToId,
             userId
         });
-        if (transactions) {
+        if (transactions && location === 'UIO') {
             axios.post('http://190.12.15.164:8925/print/transactions', { products, userName, company })
+            res.status(200).json({ data: 'transactions register success' });
+        }
+
+        if (transactions && location === 'GPS') {
+            console.log('estoyimprimiendo en galapagos')
+            // axios.post('http://190.12.15.164:8925/print/transactions', { products, userName, company })
             res.status(200).json({ data: 'transactions register success' });
         }
     } catch (error) {
@@ -80,6 +86,23 @@ const incomeProductsInWarehouse = async (req, res) => {
     }
 }
 
+const updateStatusItem = async (req, res) => {
+    try {
+        const itemId = Utils.decode(req.params.item_id);
+        const data = req.body;
+        const result = await TransactionService.updateStatusItem(data,{
+            where: { id: itemId },
+        });
+        if (result) {
+            res.status(200).json({ data: 'resource updated successfully' });
+        }
+
+    } catch (error) {
+        console.log(error.message)
+        res.status(400).json(error.message);
+    }
+}
+
 //yacht recuest 
 
 const requestWarehouse = async (req, res) => {
@@ -99,7 +122,7 @@ const requestWarehouse = async (req, res) => {
             requestData
         });
 
-        res.status(200).json({ data: result.message }); 
+        res.status(200).json({ data: result.message });
     } catch (error) {
         console.log(error.message)
         res.status(400).json(error.message);
@@ -110,6 +133,7 @@ const TransactionController = {
     productEntryInWarehouse,
     transactionWarehouse,
     incomeProductsInWarehouse,
+    updateStatusItem,
     requestWarehouse
 }
 module.exports = TransactionController
