@@ -1,3 +1,4 @@
+const { Console } = require('escpos');
 const WarehouseService = require('../../../services/operations/inventory/warehouse.services');
 const RequestService = require('../../../services/operations/yachtRequest/yachtRequest.services');
 const Utils = require('../../../utils/Utils');
@@ -41,6 +42,12 @@ const getStockInWarehouse = async (req, res) => {
             warehouse.dataValues.id = Utils.encode(warehouse.dataValues.id);
         }
         const result = await WarehouseService.getStockInWarehouse(warehouseId);
+        if (result instanceof Array) {
+            result.map(x => (
+                x.dataValues.product.id = Utils.encode(x.dataValues.product.id)
+            ))
+        }
+
         res.status(200).json({ warehouse, result });
     } catch (error) {
         res.status(400).json(error.message)

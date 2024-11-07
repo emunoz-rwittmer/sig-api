@@ -16,6 +16,10 @@ const Product = db.define('product', {
     unique: true,
     allowNull: true,
   },
+  type: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
 });
 
 module.exports = Product;

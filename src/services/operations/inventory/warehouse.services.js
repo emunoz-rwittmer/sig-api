@@ -96,7 +96,7 @@ class WarehouseService {
                 include: [{
                     model: Product,
                     as: 'product',
-                    attributes: ['name', 'sku'],
+                    attributes: ['id','name', 'sku', 'type'],
                 }],
                 order: [[{ model: Product, as: 'product' }, 'name', 'ASC']]
             });
