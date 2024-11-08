@@ -90,7 +90,7 @@ const updateStatusItem = async (req, res) => {
     try {
         const itemId = Utils.decode(req.params.item_id);
         const data = req.body;
-        const result = await TransactionService.updateStatusItem(data,{
+        const result = await TransactionService.updateStatusItem(data, {
             where: { id: itemId },
         });
         if (result) {
@@ -108,6 +108,12 @@ const updateStatusItem = async (req, res) => {
 const requestWarehouse = async (req, res) => {
     try {
         const { products, name, status } = req.body;
+        products.map(product => {
+            product.productId = Utils.decode(product.productId)
+            product.stock = product.stock === '' ? 0 : product.stock
+            product.order = product.order === '' ? 0 : product.order
+
+        })
         const warehouseId = Utils.decode(req.body.warehouseId)
         const userId = Utils.decode(req.body.userId)
         const requestData = {
