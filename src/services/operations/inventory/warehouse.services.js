@@ -278,7 +278,7 @@ class WarehouseService {
                 include: [{
                     model: Product,
                     as: 'product',
-                    attributes: ['name'],
+                    attributes: ['name','type'],
                     include: [{
                         model: productCalculations,
                         as: 'configurations',

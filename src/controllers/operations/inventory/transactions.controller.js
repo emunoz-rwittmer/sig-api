@@ -51,7 +51,9 @@ const transactionWarehouse = async (req, res) => {
             userId
         });
         if (transactions && location === 'UIO') {
-            axios.post('http://190.12.15.164:8925/print/transactions', { products, userName, company })
+            console.log('estoyimprimiendo en quito')
+
+            //axios.post('http://190.12.15.164:8925/print/transactions', { products, userName, company })
             res.status(200).json({ data: 'transactions register success' });
         }
 

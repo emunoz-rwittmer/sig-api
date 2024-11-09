@@ -1,4 +1,4 @@
-const productCalculations = require('../../../models/operations/orders/productCalculations.models');
+const Staff = require('../../../models/catalogs/staff.models');
 const itemsRequest = require('../../../models/operations/yachtRequest/itemsRequest.models');
 const Request = require('../../../models/operations/yachtRequest/request.models');
 
@@ -7,7 +7,12 @@ class RequestService {
         try {
             const result = await Request.findOne({
                 where: { id },
-                attributes: ['id', 'name', 'status']
+                attributes: ['id', 'name', 'status'],
+                include : [{
+                    model: Staff,
+                    as: 'responsible',
+                    attributes: ['id', 'firstName', 'lastName']
+                }]
             });
             return result;
         } catch (error) {
@@ -15,7 +20,7 @@ class RequestService {
         }
     }
 
-    static async updateStatusYachtRequest(data, id) {
+    static async updateYachtRequest(data, id) {
         try {
             const result = await Request.update(data, id);
             return result;

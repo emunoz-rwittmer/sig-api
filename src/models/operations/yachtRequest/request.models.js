@@ -26,6 +26,18 @@ const Request = db.define('request', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  pax: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  cruise: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  supplyDate: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
 });
 
 module.exports = Request;

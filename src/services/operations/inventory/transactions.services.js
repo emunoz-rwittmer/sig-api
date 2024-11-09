@@ -160,7 +160,7 @@ class TransactionService {
             const result = await itemsOrder.update(data, id);
             return result;
         } catch (error) {
-            throw error;  
+            throw error;
         }
     }
 

@@ -1,11 +1,11 @@
 const YachtRequestService = require('../../../services/operations/yachtRequest/yachtRequest.services');
 const Utils = require('../../../utils/Utils');
 
-const updateStatusYachtRequest = async (req, res) => {
+const updateRequest = async (req, res) => {
     try {
         const requestId = Utils.decode(req.params.request_id);
         const data = req.body
-        const result = await YachtRequestService.updateStatusYachtRequest(data, {
+        const result = await YachtRequestService.updateYachtRequest(data, {
             where: { id: requestId }
         });
         if (result) {
@@ -38,7 +38,7 @@ const updateQuantityItemRequest = async (req, res) => {
 }
 
 const YachtRequestController = {
-    updateStatusYachtRequest,
+    updateRequest,
     updateQuantityItemRequest
 }
 module.exports = YachtRequestController
