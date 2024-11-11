@@ -29,7 +29,7 @@ const updateQuantityItemRequest = async (req, res) => {
             })
         )
         if (result) {
-            res.status(200).json({ data: 'resource updated successfully' });
+            res.status(200).json({ data: 'resource updated successfully'});
         }
     } catch (error) {
         console.log(error)

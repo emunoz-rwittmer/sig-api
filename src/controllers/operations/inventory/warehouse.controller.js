@@ -112,6 +112,9 @@ const getItemsToRequest = async (req, res) => {
             });
         }
         warehouse.dataValues.request = request.dataValues.name
+        warehouse.dataValues.pax = request.dataValues.pax
+        warehouse.dataValues.cruise = request.dataValues.cruise
+        warehouse.dataValues.supplyDate = request.dataValues.supplyDate
         warehouse.dataValues.responsaible = request.dataValues.responsible?.firstName + ' ' + request.dataValues.responsible?.lastName
         warehouse.dataValues.status = request.dataValues.status
         res.status(200).json({ warehouse, result });

@@ -7,7 +7,7 @@ class RequestService {
         try {
             const result = await Request.findOne({
                 where: { id },
-                attributes: ['id', 'name', 'status'],
+                attributes: ['id', 'name', 'status','pax','cruise','supplyDate'],
                 include : [{
                     model: Staff,
                     as: 'responsible',
