@@ -56,7 +56,7 @@ const transactionWarehouse = async (req, res) => {
         }
 
         if (transactions && location === 'GPS') {
-            axios.post('http://localhost:3000/print/transactions', { products, userName, company })
+            //axios.post('http://localhost:3000/print/transactions', { products, userName, company })
             res.status(200).json({ data: 'transactions register success' });
         }
     } catch (error) {
