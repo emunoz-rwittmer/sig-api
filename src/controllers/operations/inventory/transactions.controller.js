@@ -3,6 +3,9 @@ const TransactionService = require('../../../services/operations/inventory/trans
 const OrderService = require('../../../services/operations/orders/orders.services');
 const Utils = require('../../../utils/Utils');
 const escpos = require('escpos');
+const WarehouseService = require('../../../services/operations/inventory/warehouse.services');
+const { sendEmailNewOrder, sendConfirmationEmail, sendEmailNewRequest } = require('../../../utils/mailer');
+const Staffervice = require('../../../services/catalogs/staff.services');
 
 const productEntryInWarehouse = async (req, res) => {
     try {
@@ -127,6 +130,12 @@ const requestWarehouse = async (req, res) => {
             products,
             requestData
         });
+
+        const company = await WarehouseService.getWarehouseById(warehouseId)
+        const staff = await Staffervice.getStaffById(userId)
+        action = 'requerimiento'
+        sendEmailNewRequest(company.name);
+        sendConfirmationEmail(action, company.name, staff)
 
         res.status(200).json({ data: result.message });
     } catch (error) {

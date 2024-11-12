@@ -2,7 +2,7 @@ const OrderService = require('../../../services/operations/orders/orders.service
 const Utils = require('../../../utils/Utils');
 const CompanyService = require('../../../services/catalogs/company.services');
 const XLSX = require('xlsx');
-const { sendEmailNewOrder, sendConfirmationEmail } = require('../../../utils/mailer');
+const { sendEmailNewOrder, sendConfirmationEmail, sendDispatchOrderEmail, sendDispatchEmail } = require('../../../utils/mailer');
 const Staffervice = require('../../../services/catalogs/staff.services');
 
 const getAllCompaniesWhitOrders = async (req, res) => {
@@ -184,10 +184,15 @@ const updateStatusOrder = async (req, res) => {
     try {
         const orderId = Utils.decode(req.params.order_id);
         const data = req.body
+        const order = await OrderService.getOrderById(orderId)
         const result = await OrderService.updateStatusOrder(data, {
             where: { id: orderId }
         });
         if (result) {
+            if(data.status === 'Distribuido') {
+                const action = 'pedido'
+                sendDispatchEmail(action, order)
+            }
             res.status(200).json({ data: 'resource updated successfully' });
         }
     } catch (error) {

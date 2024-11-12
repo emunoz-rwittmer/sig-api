@@ -52,6 +52,27 @@ const sendEmailNewOrder = (companyName) => {
         })
 }
 
+const sendEmailNewRequest = (companyName) => {
+    const sgMail = require('@sendgrid/mail')
+    const htmlContentNewRequest = MailsOrder.htmlNewRequest(companyName)
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY)
+    const msg = {
+        to: 'fabian@rwittmer.com', // Change to your recipient
+        from: 'notify-sig@rwittmer.com', // Change to your verified sender
+        cc: 'pablo@rwittmer.com',
+        subject: 'Requerimiento recibido',
+        html: htmlContentNewRequest
+    }
+    sgMail
+        .send(msg)
+        .then(() => {
+            console.log('Email sent')
+        })
+        .catch((error) => {
+            console.error(error)
+        })
+}
+
 const sendConfirmationEmail = (action, companyName, user) => {
     const sgMail = require('@sendgrid/mail')
     const htmlContentNewOrder = MailsConfirmation.htmlConfirmationOrder(action, companyName, user.dataValues)
@@ -73,4 +94,30 @@ const sendConfirmationEmail = (action, companyName, user) => {
         })
 }
 
-module.exports = { sendEmail, sendEmailNewOrder, sendConfirmationEmail};
+const sendDispatchEmail = (action, content) => {
+    const sgMail = require('@sendgrid/mail')
+    const htmlDispatch = MailsConfirmation.htmlDispatch(action, content.dataValues)
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY)
+    const msg = {
+        to: content.responsible.email, // Change to your recipient
+        from: 'notify-sig@rwittmer.com', // Change to your verified sender
+        subject: `Su ${action} ha sido despachado`,
+        html: htmlDispatch
+    }
+    sgMail
+        .send(msg)
+        .then(() => {
+            console.log('Email sent')
+        })
+        .catch((error) => {
+            console.error(error)
+        })
+}
+
+module.exports = {
+    sendEmail,
+    sendEmailNewOrder,
+    sendConfirmationEmail,
+    sendDispatchEmail,
+    sendEmailNewRequest
+};

@@ -55,6 +55,31 @@ class OrderService {
         }
     }
 
+    static async getOrderById(id) {
+        try {
+            const result = await Order.findOne({
+                where: { id },
+                attributes: [
+                    'id', 'name', 'status', 'guide', 'createdAt',
+                ],
+                include: [
+                    {
+                        model: Company,
+                        as: 'company',
+                        attributes: ['name']
+                    },
+                    {
+                        model: Staff,
+                        as: 'responsible',
+                        attributes: ['firstName', 'lastName', 'email']
+                    }],
+            });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     static async createOrder(order) {
         try {
             const result = await Order.create(order);
