@@ -2,7 +2,8 @@ const OrderService = require('../../../services/operations/orders/orders.service
 const Utils = require('../../../utils/Utils');
 const CompanyService = require('../../../services/catalogs/company.services');
 const XLSX = require('xlsx');
-const { where } = require('sequelize');
+const { sendEmailNewOrder, sendConfirmationEmail } = require('../../../utils/mailer');
+const Staffervice = require('../../../services/catalogs/staff.services');
 
 const getAllCompaniesWhitOrders = async (req, res) => {
     try {
@@ -70,6 +71,11 @@ const uploadOrder = async (req, res) => {
             });
             const result = await OrderService.createItemsOfOrder(mappedData);
             if (result) {
+                const company = await CompanyService.getCompanyById(data.companyId)
+                const staff = await Staffervice.getStaffById(data.userId)
+                action = 'pedido'
+                sendEmailNewOrder(company.name);
+                sendConfirmationEmail(action, company.name, staff)
                 res.status(200).json({ data: 'resource created successfully' });
             }
         }

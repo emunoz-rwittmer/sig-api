@@ -10,17 +10,9 @@ router.post('/uploadOrder', uploadExcelFile, OrderController.uploadOrder);
 router.post('/createOrder', uploadExcelFile, OrderController.createOrder);
 router.put('/updateStatusOrder/:order_id', OrderController.updateStatusOrder);
 
-
 //ITEMS ORDER
 router.get('/itemsByOrder/:order_id',OrderController.getItemsByOrder);
 router.put('/updateItemsOrder/:order_id', uploadExcelFile, OrderController.updateOrder);
 router.delete('/deleteItem/:item_id', OrderController.deleteItem);
-
-// router.get('/reportingByYacht/:yacht_id',OrderController.getReportingByYacht);
-// router.get('/reportingByDepartament/:departament_id',OrderController.getReportingByDepartament);
-// router.get('/reportingEvaluationsByCrew/:crew_id',OrderController.getReportingEvaluationsByCrew);
-// router.post('/respondEvaluation',OrderController.respondEvaluation);
-
-
 
 module.exports = router;

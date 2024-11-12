@@ -50,15 +50,16 @@ const transactionWarehouse = async (req, res) => {
             warehouseToId,
             userId
         });
-        if (transactions && location === 'UIO') {
-            //axios.post('http://190.12.15.164:8925/print/transactions', { products, userName, company })
+        if (transactions) {
+            if (location === 'UIO') {
+                axios.post('http://190.12.15.164:8925/print/transactions', { products, userName, company })
+            }
+            if (location === 'GPS') {
+                console.log('ipimiendo en galapagos')
+                //axios.post('http://localhost:3000/print/transactions', { products, userName, company })
+            }
             res.status(200).json({ data: 'transactions register success' });
-        }
-
-        if (transactions && location === 'GPS') {
-            //axios.post('http://localhost:3000/print/transactions', { products, userName, company })
-            res.status(200).json({ data: 'transactions register success' });
-        }
+        }  
     } catch (error) {
         console.log(error.message)
         res.status(400).json(error.message);
