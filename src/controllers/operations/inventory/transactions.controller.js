@@ -112,7 +112,7 @@ const requestWarehouse = async (req, res) => {
     try {
         const { products, name, status } = req.body;
         products.map(product => {
-            product.productId = product.productId
+            product.placeYachtId = product.productId
             product.stock = product.stock === '' ? 0 : product.stock
             product.order = product.order === '' ? 0 : product.order
 

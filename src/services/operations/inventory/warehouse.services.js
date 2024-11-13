@@ -275,10 +275,10 @@ class WarehouseService {
         try {
             const result = await itemsRequest.findAll({
                 where: { requestId },
-                attributes: ['id', 'stock', 'order', 'productId', 'quantity'],
+                attributes: ['id', 'stock', 'order', 'quantity'],
                 include: [{
                     model: PlacesYacht,
-                    as: 'product',
+                    as: 'placeYacht',
                     attributes: ['name'],
                     include: [{
                         model: Product,
@@ -296,10 +296,6 @@ class WarehouseService {
                         ]
                     }]
                 }],
-                order: [
-                    [{ model: PlacesYacht, as: 'product' }, 'name', 'ASC'], // Orden para PlacesYacht
-                    [{ model: Product, as: 'product' }, 'name', 'ASC'] // Orden para el modelo incluido Product
-                ]
             });
             return result;
         } catch (error) {

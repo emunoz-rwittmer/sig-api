@@ -80,12 +80,14 @@ class TransactionService {
         try {
             const transactionResults = await Promise.all(
                 products.map(async (product) => {
-                    const stockFrom = await Stock.findOne({
+
+                    const [stockFrom] = await Stock.findOrCreate({
                         where: { productId: product.id, warehouseId: warehouseFromId },
+                        defaults: { quantity: 0 },
                         transaction,
                     });
 
-                    if (!stockFrom || stockFrom.quantity < product.quantity) {
+                    if (stockFrom.quantity < product.quantity) {
                         throw new Error(`Stock insuficiente para el producto: ${product.name}`);
                     }
 

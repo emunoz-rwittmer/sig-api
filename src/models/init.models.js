@@ -87,7 +87,7 @@ const initModels = () => {
     Warehouse.hasMany(Transaction, { foreignKey: 'warehouse_from_id', as: 'outgoingTransactions' });// Bodega de origen
     Transaction.belongsTo(Warehouse, { foreignKey: 'warehouse_from_id', as: 'warehouseFrom' });
     Warehouse.hasMany(Transaction, { foreignKey: 'warehouse_to_id', as: 'incomingTransactions' }); // Bodega de destino
-    Transaction.belongsTo(Warehouse, { foreignKey: 'warehouse_to_id', as: 'warehouseTo' }); 
+    Transaction.belongsTo(Warehouse, { foreignKey: 'warehouse_to_id', as: 'warehouseTo' });
 
     Product.hasMany(PlacesYacht, { as: 'configurations', foreignKey: 'product_id' });
     PlacesYacht.belongsTo(Product, { as: "product", foreignKey: "product_id" });
@@ -99,14 +99,12 @@ const initModels = () => {
     itemsRequest.belongsTo(Request, { foreignKey: 'request_id', as: 'request' });
     Request.belongsTo(Staff, { foreignKey: 'user_id', as: 'responsible' });
     Staff.hasMany(Request, { foreignKey: 'user_id', as: 'request' });
-
-    PlacesYacht.hasOne(itemsRequest, { foreignKey: 'placeYacht_id', as: 'itemProduct' });
-    itemsRequest.belongsTo(PlacesYacht, { foreignKey: 'placeYacht_id', as: 'product' });
+    itemsRequest.belongsTo(PlacesYacht, { foreignKey: 'placeYachtId', as: 'placeYacht' });
 
     // INDICATOR
     Departaments.hasMany(Indicator, { as: "indicadores", foreignKey: "departament_id" });
     Indicator.belongsTo(Departaments, { as: "departament", foreignKey: "departament_id" });
-    
+
     Formula.hasMany(Indicator, { as: "indicator", foreignKey: "formula_id" });
     Indicator.belongsTo(Formula, { as: "formula_indicator", foreignKey: "formula_id" });
 
@@ -114,7 +112,7 @@ const initModels = () => {
     Tabulation.belongsTo(Indicator, { as: "indicator", foreignKey: "indicator_id" });
 
     Question,
-    HouseRule
+        HouseRule
 
 }
 
