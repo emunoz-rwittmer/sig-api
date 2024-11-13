@@ -279,10 +279,10 @@ class WarehouseService {
                     model: Product,
                     as: 'product',
                     attributes: ['name','type'],
-                    include: [{
-                        model: productCalculations,
-                        as: 'configurations',
-                    }]
+                    // include: [{
+                    //     model: productCalculations,
+                    //     as: 'configurations',
+                    // }]
                 }]
             });
             return result;
