@@ -7,11 +7,6 @@ const productCalculations = db.define('productCalculations', {
     primaryKey: true,
     autoIncrement: true,
   },
-  productId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    field: 'product_id'
-  },
   sixteenPax: {
     type: DataTypes.STRING,
     allowNull: false,

@@ -28,6 +28,7 @@ const itemsRequest = require('./operations/yachtRequest/itemsRequest.models');
 const Indicator = require('./operations/indicators/indicator.models');
 const Tabulation = require('./operations/indicators/tabulation.models');
 const Formula = require('./operations/indicators/formula.models');
+const PlacesYacht = require('./operations/yachtRequest/placesYacht');
 
 const initModels = () => {
 
@@ -86,9 +87,12 @@ const initModels = () => {
     Warehouse.hasMany(Transaction, { foreignKey: 'warehouse_from_id', as: 'outgoingTransactions' });// Bodega de origen
     Transaction.belongsTo(Warehouse, { foreignKey: 'warehouse_from_id', as: 'warehouseFrom' });
     Warehouse.hasMany(Transaction, { foreignKey: 'warehouse_to_id', as: 'incomingTransactions' }); // Bodega de destino
-    Transaction.belongsTo(Warehouse, { foreignKey: 'warehouse_to_id', as: 'warehouseTo' });
-    Product.hasOne(productCalculations, { foreignKey: 'product_id', as: 'configurations' });
-    productCalculations.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
+    Transaction.belongsTo(Warehouse, { foreignKey: 'warehouse_to_id', as: 'warehouseTo' }); 
+
+    PlacesYacht.belongsTo(Product, { as: "product", foreignKey: "product_id" });
+    PlacesYacht.belongsTo(productCalculations, { as: "configuration", foreignKey: "configuration_id" });
+    Product.hasMany(PlacesYacht, { as: 'configurations', foreignKey: 'product_id' });
+
     Warehouse.hasMany(Request, { foreignKey: 'warehouse_id', as: 'requests' });
     Request.belongsTo(Warehouse, { foreignKey: 'warehouse_id', as: 'warehouse' });
     Request.hasMany(itemsRequest, { foreignKey: 'request_id', as: 'requestItems' });

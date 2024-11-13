@@ -6,7 +6,7 @@ const findProduct = async (req, res) => {
         const sku = req.params.sku.replace(/^0+/, '');
         const result = await ProductService.findProduct(sku);
         if (result) {
-             res.status(200).json({ data: result });
+            res.status(200).json({ data: result });
         } else {
             res.status(400).json(`Producto no encontrado para sku: ${sku}`)
         }
@@ -85,11 +85,21 @@ const deleteProduct = async (req, res) => {
 
 const createConfiguration = async (req, res) => {
     try {
-        const configuration = req.body;
-        configuration.productId = Utils.decode(configuration.productId);
-        const result = await ProductService.createConfiguration(configuration);
+        const { name, productId, sixteenPax, eighteenPax, twentyPax, twentyTwoPax, twentyFourPax } = req.body;
+        const placeYacht = {
+            name,
+            productId: Utils.decode(productId)
+        }
+        const configuration = {
+            sixteenPax: sixteenPax === '' ? 0 : parseInt(sixteenPax),
+            eighteenPax: eighteenPax === '' ? 0 : parseInt(eighteenPax),
+            twentyPax: twentyPax === '' ? 0 : parseInt(twentyPax),
+            twentyTwoPax: twentyTwoPax === '' ? 0 : parseInt(twentyTwoPax),
+            twentyFourPax: twentyFourPax === '' ? 0 : parseInt(twentyFourPax)
+        }
+        const result = await ProductService.createConfiguration({ placeYacht, configuration });
         if (result) {
-            res.status(200).json({ data: 'resource created successfully' });
+            res.status(200).json({ data: result.message });
         }
     } catch (error) {
         console.log(error)
@@ -99,18 +109,42 @@ const createConfiguration = async (req, res) => {
 
 const updateConfiguration = async (req, res) => {
     try {
-        const configurationId = req.params.configuration_id;
-        const configuration = req.body;
-        const result = await ProductService.updateConfiguration(configuration, {
-            where: { id: configurationId },
-        });
-        res.status(200).json({ data: 'resource updated successfully' });
+        const placeYachtId = req.params.configuration_id;
+        const { name, configurationId, sixteenPax, eighteenPax, twentyPax, twentyTwoPax, twentyFourPax } = req.body;
+        const placeYacht = {
+            id: parseInt(placeYachtId),
+            name,
+        }
+        const configuration = {
+            id: configurationId,
+            sixteenPax: sixteenPax === '' ? 0 : parseInt(sixteenPax),
+            eighteenPax: eighteenPax === '' ? 0 : parseInt(eighteenPax),
+            twentyPax: twentyPax === '' ? 0 : parseInt(twentyPax),
+            twentyTwoPax: twentyTwoPax === '' ? 0 : parseInt(twentyTwoPax),
+            twentyFourPax: twentyFourPax === '' ? 0 : parseInt(twentyFourPax)
+        }
+
+        const result = await ProductService.updateConfiguration({ placeYacht, configuration });
+        if (result) {
+            res.status(200).json({ data: result.message });
+        }
     } catch (error) {
         res.status(400).json(error.message);
     }
 }
 
-
+const deleteConfiguration = async (req, res) => {
+    try {
+        const placeYachtId = req.params.placeYacht_id;
+        const configurationId = req.params.configuration_id;
+        const result = await ProductService.deleteConfiguration({ placeYachtId, configurationId });
+        if (result) {
+            res.status(200).json({ data: result.message });
+        }
+    } catch (error) {
+        res.status(400).json(error.message);
+    }
+}
 const ProductController = {
     getProducts,
     getProduct,
@@ -119,6 +153,7 @@ const ProductController = {
     deleteProduct,
     findProduct,
     createConfiguration,
-    updateConfiguration
+    updateConfiguration,
+    deleteConfiguration
 }
 module.exports = ProductController
