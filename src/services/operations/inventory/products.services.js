@@ -52,8 +52,10 @@ class ProductService {
                         'twentyFourPax',
                     ]
                 }],
-                order: [['name', 'ASC']]
-
+                order: [
+                    ['name', 'ASC'], // Orden para PlacesYacht
+                    [{ model: Product, as: 'product' }, 'name', 'ASC'] // Orden para el modelo incluido Product
+                ]
             });
             return result;
         } catch (error) {
