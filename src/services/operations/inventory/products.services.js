@@ -44,7 +44,6 @@ class ProductService {
                     model: productCalculations,
                     as: 'configuration',
                     attributes: [
-                        'id',
                         'sixteenPax',
                         'eighteenPax',
                         'twentyPax',
