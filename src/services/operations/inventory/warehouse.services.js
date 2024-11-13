@@ -5,6 +5,7 @@ const Transaction = require('../../../models/operations/inventory/transaction.mo
 const Product = require('../../../models/operations/orders/product.models');
 const productCalculations = require('../../../models/operations/orders/productCalculations.models');
 const itemsRequest = require('../../../models/operations/yachtRequest/itemsRequest.models');
+const PlacesYacht = require('../../../models/operations/yachtRequest/placesYacht');
 const Request = require('../../../models/operations/yachtRequest/request.models');
 const Utils = require('../../../utils/Utils');
 const { Sequelize, Op, where } = require("sequelize");
@@ -96,7 +97,7 @@ class WarehouseService {
                 include: [{
                     model: Product,
                     as: 'product',
-                    attributes: ['id','name', 'sku', 'type'],
+                    attributes: ['id', 'name', 'sku', 'type'],
                 }],
                 order: [[{ model: Product, as: 'product' }, 'name', 'ASC']]
             });
@@ -276,14 +277,29 @@ class WarehouseService {
                 where: { requestId },
                 attributes: ['id', 'stock', 'order', 'productId', 'quantity'],
                 include: [{
-                    model: Product,
+                    model: PlacesYacht,
                     as: 'product',
-                    attributes: ['name','type'],
-                    // include: [{
-                    //     model: productCalculations,
-                    //     as: 'configurations',
-                    // }]
-                }]
+                    attributes: ['name'],
+                    include: [{
+                        model: Product,
+                        as: 'product',
+                        attributes: ['id', 'name'],
+                    }, {
+                        model: productCalculations,
+                        as: 'configuration',
+                        attributes: [
+                            'sixteenPax',
+                            'eighteenPax',
+                            'twentyPax',
+                            'twentyTwoPax',
+                            'twentyFourPax',
+                        ]
+                    }]
+                }],
+                order: [
+                    [{ model: PlacesYacht, as: 'product' }, 'name', 'ASC'], // Orden para PlacesYacht
+                    [{ model: Product, as: 'product' }, 'name', 'ASC'] // Orden para el modelo incluido Product
+                ]
             });
             return result;
         } catch (error) {

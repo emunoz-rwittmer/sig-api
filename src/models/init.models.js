@@ -99,8 +99,10 @@ const initModels = () => {
     itemsRequest.belongsTo(Request, { foreignKey: 'request_id', as: 'request' });
     Request.belongsTo(Staff, { foreignKey: 'user_id', as: 'responsible' });
     Staff.hasMany(Request, { foreignKey: 'user_id', as: 'request' });
-    Product.hasOne(itemsRequest, { foreignKey: 'product_id', as: 'itemProduct' });
-    itemsRequest.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
+
+    PlacesYacht.hasOne(itemsRequest, { foreignKey: 'placeYacht_id', as: 'itemProduct' });
+    itemsRequest.belongsTo(PlacesYacht, { foreignKey: 'placeYacht_id', as: 'product' });
+
     // INDICATOR
     Departaments.hasMany(Indicator, { as: "indicadores", foreignKey: "departament_id" });
     Indicator.belongsTo(Departaments, { as: "departament", foreignKey: "departament_id" });

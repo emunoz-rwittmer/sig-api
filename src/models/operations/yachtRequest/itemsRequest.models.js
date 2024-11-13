@@ -12,10 +12,10 @@ const itemsRequest = db.define('itemsRequest', {
     allowNull: false,
     field: 'request_id'
   },
-  productId: {
+  placeYachtId: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    field: 'product_id'
+    field: 'placeYacht_id'
   },
   stock: {
     type: DataTypes.INTEGER,
