@@ -4,6 +4,7 @@ const ProductController  = require ('../../../controllers/operations/inventory/p
 const router = Router();
 
 router.get('/', ProductController.getProducts);
+router.get('/allProductsWithConfigurations', ProductController.getProductsWithConfigurations);
 router.get('/findProduct/:sku', ProductController.findProduct);
 router.get('/:product_id', ProductController.getProduct);
 router.post('/createProduct', ProductController.createProduct);

@@ -30,6 +30,20 @@ const getProducts = async (req, res) => {
     }
 }
 
+const getProductsWithConfigurations = async (req, res) => {
+    try {
+        const result = await ProductService.getProductsWithConfigurations();
+        // if (result instanceof Array) {
+        //     result.map((x) => {
+        //         x.dataValues.id = Utils.encode(x.dataValues.id);
+        //     });
+        // }
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(400).json(error.message)
+    }
+}
+
 const getProduct = async (req, res) => {
     try {
         const productId = Utils.decode(req.params.product_id);
@@ -152,6 +166,7 @@ const ProductController = {
     updateProduct,
     deleteProduct,
     findProduct,
+    getProductsWithConfigurations,
     createConfiguration,
     updateConfiguration,
     deleteConfiguration

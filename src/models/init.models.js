@@ -89,9 +89,9 @@ const initModels = () => {
     Warehouse.hasMany(Transaction, { foreignKey: 'warehouse_to_id', as: 'incomingTransactions' }); // Bodega de destino
     Transaction.belongsTo(Warehouse, { foreignKey: 'warehouse_to_id', as: 'warehouseTo' }); 
 
+    Product.hasMany(PlacesYacht, { as: 'configurations', foreignKey: 'product_id' });
     PlacesYacht.belongsTo(Product, { as: "product", foreignKey: "product_id" });
     PlacesYacht.belongsTo(productCalculations, { as: "configuration", foreignKey: "configuration_id" });
-    Product.hasMany(PlacesYacht, { as: 'configurations', foreignKey: 'product_id' });
 
     Warehouse.hasMany(Request, { foreignKey: 'warehouse_id', as: 'requests' });
     Request.belongsTo(Warehouse, { foreignKey: 'warehouse_id', as: 'warehouse' });

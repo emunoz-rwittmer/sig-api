@@ -32,6 +32,36 @@ class ProductService {
         }
     }
 
+    static async getProductsWithConfigurations() {
+        try {
+            const result = await PlacesYacht.findAll({
+                attributes: ['id', 'name'],
+                include: [{
+                    model: Product,
+                    as: 'product',
+                    attributes: ['id','name'],
+                },{
+                    model: productCalculations,
+                    as: 'configuration',
+                    attributes: [
+                        'id',
+                        'sixteenPax',
+                        'eighteenPax',
+                        'twentyPax',
+                        'twentyTwoPax',
+                        'twentyFourPax',
+                    ]
+                }],
+                order: [['name', 'ASC']]
+
+            });
+            return result;
+        } catch (error) {
+            console.log(error)
+            throw error;
+        }
+    }
+
     static async getProductById(id) {
         try {
             const result = await Product.findOne({
