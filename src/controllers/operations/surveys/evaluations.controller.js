@@ -10,15 +10,15 @@ const getAllEvaluations = async (req, res) => {
         const userId = Utils.decode(req.query.user_id);
         let evaluations = await EvaluationService.getEvaluationsByUser(userId);
 
-        await Promise.all(
-            evaluations.map(async (evaluation) => {
-                if (isTempPasswordExpired(evaluation.expirationDate)) {
-                    await EvaluationService.updateEvaluation(evaluation.id);
-                }
-            })
-        );
+        // await Promise.all(
+        //     evaluations.map(async (evaluation) => {
+        //         if (isTempPasswordExpired(evaluation.expirationDate)) {
+        //             await EvaluationService.updateEvaluation(evaluation.id);
+        //         }
+        //     })
+        // );
 
-        evaluations = await EvaluationService.getEvaluationsByUser(userId);
+        //evaluations = await EvaluationService.getEvaluationsByUser(userId);
 
         if (evaluations instanceof Array) {
             evaluations = evaluations.map((x) => {

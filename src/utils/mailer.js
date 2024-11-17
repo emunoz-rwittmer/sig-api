@@ -80,7 +80,6 @@ const sendConfirmationEmail = (action, companyName, user) => {
     const msg = {
         to: user.email, // Change to your recipient
         from: 'notify-sig@rwittmer.com', // Change to your verified sender
-        //cc: 'belen@rwittmer.com',
         subject: `Su ${action} se envio correctamente`,
         html: htmlContentNewOrder
     }
