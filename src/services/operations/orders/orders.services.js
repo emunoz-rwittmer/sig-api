@@ -126,7 +126,9 @@ class OrderService {
         try {
             const result = await itemsOrder.findAll({
                 where: { orderId },
-                attributes: ['id', 'sku', 'product', 'quantity', 'originalQuantity', 'status']
+                attributes: ['id', 'sku', 'product', 'quantity', 'originalQuantity', 'status'],
+                order: ['product', 'ASC']
+                
             });
             return result;
         } catch (error) {
