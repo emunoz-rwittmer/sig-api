@@ -32,7 +32,7 @@ const getOrdersByCompany = async (req, res) => {
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
-                x.dataValues.responsible.dataValues.id = Utils.encode(x.dataValues.responsible.dataValues.id);
+                //x.dataValues.responsible.dataValues.id = Utils.encode(x.dataValues.responsible.dataValues.id);
             });
         }
         res.status(200).json({ company, result });
