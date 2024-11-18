@@ -55,7 +55,7 @@ const transactionWarehouse = async (req, res) => {
         });
         if (transactions) {
             if (location === 'UIO') {
-                axios.post('http://190.12.15.164:8925/print/transactions', { products, userName, company })
+                axios.post('http://190.12.15.164:5859/print/transactions', { products, userName, company })
             }
             if (location === 'GPS') {
                 console.log('ipimiendo en galapagos')
