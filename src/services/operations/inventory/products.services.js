@@ -72,7 +72,7 @@ class ProductService {
                 include: [{
                     model: PlacesYacht,
                     as: 'configurations',
-                    attributes: ['id', 'name'],
+                    attributes: ['id', 'name','group'],
                     include: [{
                         model: productCalculations,
                         as: 'configuration',

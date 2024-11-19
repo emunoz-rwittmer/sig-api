@@ -95,9 +95,10 @@ const deleteProduct = async (req, res) => {
 
 const createConfiguration = async (req, res) => {
     try {
-        const { name, productId, sixteenPax, eighteenPax, twentyPax, twentyTwoPax, twentyFourPax } = req.body;
+        const { name, group, productId, sixteenPax, eighteenPax, twentyPax, twentyTwoPax, twentyFourPax } = req.body;
         const placeYacht = {
             name,
+            group,
             productId: Utils.decode(productId)
         }
         const configuration = {
@@ -120,10 +121,11 @@ const createConfiguration = async (req, res) => {
 const updateConfiguration = async (req, res) => {
     try {
         const placeYachtId = req.params.configuration_id;
-        const { name, configurationId, sixteenPax, eighteenPax, twentyPax, twentyTwoPax, twentyFourPax } = req.body;
+        const { name, group, configurationId, sixteenPax, eighteenPax, twentyPax, twentyTwoPax, twentyFourPax } = req.body;
         const placeYacht = {
             id: parseInt(placeYachtId),
             name,
+            group
         }
         const configuration = {
             id: configurationId,
