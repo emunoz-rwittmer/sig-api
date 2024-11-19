@@ -2,7 +2,6 @@ const axios = require('axios');
 const TransactionService = require('../../../services/operations/inventory/transactions.services');
 const OrderService = require('../../../services/operations/orders/orders.services');
 const Utils = require('../../../utils/Utils');
-const escpos = require('escpos');
 const WarehouseService = require('../../../services/operations/inventory/warehouse.services');
 const { sendEmailNewOrder, sendConfirmationEmail, sendEmailNewRequest } = require('../../../utils/mailer');
 const Staffervice = require('../../../services/catalogs/staff.services');
@@ -108,9 +107,9 @@ const updateStatusItem = async (req, res) => {
 
 //yacht recuest 
 
-const requestWarehouse = async (req, res) => {
+const createRequestWarehouse = async (req, res) => {
     try {
-        const { products, name, status } = req.body;
+        const { products, name, status, group } = req.body;
         products.map(product => {
             product.placeYachtId = product.productId
             product.stock = product.stock === '' ? 0 : product.stock
@@ -123,10 +122,11 @@ const requestWarehouse = async (req, res) => {
             warehouseId,
             userId,
             name,
+            group,
             status
         }
 
-        const result = await TransactionService.requestWarehouse({
+        const result = await TransactionService.createRequestWarehouse({
             products,
             requestData
         });
@@ -149,6 +149,6 @@ const TransactionController = {
     transactionWarehouse,
     incomeProductsInWarehouse,
     updateStatusItem,
-    requestWarehouse
+    createRequestWarehouse
 }
 module.exports = TransactionController

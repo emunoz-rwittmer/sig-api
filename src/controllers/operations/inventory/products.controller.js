@@ -32,12 +32,8 @@ const getProducts = async (req, res) => {
 
 const getProductsWithConfigurations = async (req, res) => {
     try {
-        const result = await ProductService.getProductsWithConfigurations();
-        // if (result instanceof Array) {
-        //     result.map((x) => {
-        //         x.dataValues.id = Utils.encode(x.dataValues.id);
-        //     });
-        // }
+        const type = req.params.type
+        const result = await ProductService.getProductsWithConfigurations(type);
         res.status(200).json(result);
     } catch (error) {
         res.status(400).json(error.message)

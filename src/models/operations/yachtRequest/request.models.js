@@ -16,6 +16,10 @@ const Request = db.define('request', {
     type: DataTypes.STRING,
     allowNull: true,
   },
+  group: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
   userId: {
     type: DataTypes.INTEGER,
     allowNull: false,

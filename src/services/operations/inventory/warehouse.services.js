@@ -246,10 +246,10 @@ class WarehouseService {
 
     //Yacht request
 
-    static async getRequestToWareHouse(warehouseId) {
+    static async getRequestToWareHouse(warehouseId, group) {
         try {
             const result = await Request.findAll({
-                where: { warehouseId },
+                where: { warehouseId, group },
                 attributes: [
                     'id', 'name', 'status', 'createdAt',
                     [Sequelize.fn('COUNT', Sequelize.col('requestItems.id')), 'itemsCount']

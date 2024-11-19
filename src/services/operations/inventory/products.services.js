@@ -32,15 +32,16 @@ class ProductService {
         }
     }
 
-    static async getProductsWithConfigurations() {
+    static async getProductsWithConfigurations(type) {
         try {
             const result = await PlacesYacht.findAll({
+                where: { group: type },
                 attributes: ['id', 'name'],
                 include: [{
                     model: Product,
                     as: 'product',
-                    attributes: ['id','name'],
-                },{
+                    attributes: ['id', 'name'],
+                }, {
                     model: productCalculations,
                     as: 'configuration',
                     attributes: [

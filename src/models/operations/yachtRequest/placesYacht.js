@@ -11,6 +11,10 @@ const PlacesYacht = db.define('placesYacht', {
         type: DataTypes.STRING,
         allowNull: false,
     },
+    group: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
     productId: {
         type: DataTypes.INTEGER,
         allowNull: false,

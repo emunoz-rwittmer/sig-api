@@ -166,7 +166,7 @@ class TransactionService {
         }
     }
 
-    static async requestWarehouse(transactionData) {
+    static async createRequestWarehouse(transactionData) {
         const { products, requestData } = transactionData;
         const transaction = await db.transaction();
         try {

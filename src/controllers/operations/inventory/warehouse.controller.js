@@ -77,11 +77,12 @@ const getTransactionsWarehouse = async (req, res) => {
 const getRequestToWareHouse = async (req, res) => {
     try {
         const warehouseId = Utils.decode(req.params.warehouse_id);
+        const group = req.params.type
         const warehouse = await WarehouseService.getWarehouseById(warehouseId);
         if (warehouse instanceof Object) {
             warehouse.dataValues.id = Utils.encode(warehouse.dataValues.id);
         }
-        const result = await WarehouseService.getRequestToWareHouse(warehouseId);
+        const result = await WarehouseService.getRequestToWareHouse(warehouseId, group);
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
