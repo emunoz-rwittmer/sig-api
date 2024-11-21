@@ -98,6 +98,11 @@ class WarehouseService {
                     model: Product,
                     as: 'product',
                     attributes: ['id', 'name', 'sku', 'type'],
+                    include: [{
+                        model: PlacesYacht,
+                        as: 'configurations',
+                        attributes: ['name'],
+                    }],
                 }],
                 order: [[{ model: Product, as: 'product' }, 'name', 'ASC']]
             });
