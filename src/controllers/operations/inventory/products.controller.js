@@ -145,6 +145,23 @@ const updateConfiguration = async (req, res) => {
     }
 }
 
+const switchConfirguration = async (req, res) => {
+    try {
+
+        const configurationId = req.params.configuration_id;
+        const data = req.body
+        console.log(req.body)
+        const result = await ProductService.switchConfirguration(data, {
+            where: { id: configurationId }
+        });
+        if (result) {
+            res.status(200).json({ data: 'resource updated successfully' });
+        }
+    } catch (error) {
+        res.status(400).json(error.message);
+    }
+}
+
 const deleteConfiguration = async (req, res) => {
     try {
         const placeYachtId = req.params.placeYacht_id;
@@ -167,6 +184,7 @@ const ProductController = {
     getProductsWithConfigurations,
     createConfiguration,
     updateConfiguration,
+    switchConfirguration,
     deleteConfiguration
 }
 module.exports = ProductController

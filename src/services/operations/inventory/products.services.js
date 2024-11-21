@@ -35,7 +35,7 @@ class ProductService {
     static async getProductsWithConfigurations(type) {
         try {
             const result = await PlacesYacht.findAll({
-                where: { group: type },
+                where: { group: type, active: true},
                 attributes: ['id', 'name'],
                 include: [{
                     model: Product,
@@ -72,7 +72,7 @@ class ProductService {
                 include: [{
                     model: PlacesYacht,
                     as: 'configurations',
-                    attributes: ['id', 'name','group'],
+                    attributes: ['id', 'name', 'group', 'active'],
                     include: [{
                         model: productCalculations,
                         as: 'configuration',
@@ -170,6 +170,16 @@ class ProductService {
             throw error;
         }
     }
+
+    static async switchConfirguration(data, id) {
+        try {
+            const result = await PlacesYacht.update(data, id);
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
 
     static async deleteConfiguration(transactionData) {
         const { placeYachtId, configurationId } = transactionData;

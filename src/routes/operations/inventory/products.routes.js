@@ -13,6 +13,7 @@ router.delete('/:product_id', ProductController.deleteProduct);
 
 router.post('/configurations/createConfiguration', ProductController.createConfiguration);
 router.put('/configurations/updateConfiguration/:configuration_id', ProductController.updateConfiguration);
+router.put('/configurations/switchConfiguration/:configuration_id', ProductController.switchConfirguration);
 router.delete('/configurations/:placeYacht_id/:configuration_id', ProductController.deleteConfiguration);
 
 

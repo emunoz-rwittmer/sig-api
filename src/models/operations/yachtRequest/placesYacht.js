@@ -25,6 +25,10 @@ const PlacesYacht = db.define('placesYacht', {
         allowNull: false,
         field: "configuration_id",
     },
+    active: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true
+    },
 });
 
 module.exports = PlacesYacht;
