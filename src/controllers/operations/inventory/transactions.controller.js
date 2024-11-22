@@ -3,7 +3,7 @@ const TransactionService = require('../../../services/operations/inventory/trans
 const OrderService = require('../../../services/operations/orders/orders.services');
 const Utils = require('../../../utils/Utils');
 const WarehouseService = require('../../../services/operations/inventory/warehouse.services');
-const { sendEmailNewOrder, sendConfirmationEmail, sendEmailNewRequest } = require('../../../utils/mailer');
+const { sendConfirmationEmail, sendEmailNewRequest } = require('../../../utils/mailer');
 const Staffervice = require('../../../services/catalogs/staff.services');
 
 const productEntryInWarehouse = async (req, res) => {

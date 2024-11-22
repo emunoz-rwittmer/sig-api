@@ -3,7 +3,7 @@ const UserService = require('../../services/catalogs/users.services');
 const Utils = require('../../utils/Utils');
 const tokenModel = require('../../models/mongoModels/Token.models');
 const bcrypt = require('bcrypt');
-const sendEmail = require('../../utils/mailer');
+const { sendEmail } = require('../../utils/mailer');
 const Staffervice = require('../../services/catalogs/staff.services');
 
 const login = async (req, res) => {
@@ -103,7 +103,6 @@ const upgradePassword = async (req, res) => {
         }
 
         return res.status(200).json({ data: 'password updated successfully' });
-        
     } catch (error) {
         console.log(error)
         res.status(400).json(error.message);
@@ -131,6 +130,7 @@ const forgotPassword = async (req, res) => {
             }
         }
         if (staff) {
+            console.log('entre aqui')
             sendEmail(staff, passwordGenerate, action);
             const respose = await Staffervice.updateStaff(
                 {
@@ -144,6 +144,7 @@ const forgotPassword = async (req, res) => {
             }
         }
     } catch (error) {
+        console.log(error)
         res.status(400).json(error.message);
     }
 }
