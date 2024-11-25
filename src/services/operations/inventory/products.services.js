@@ -1,5 +1,6 @@
 const Product = require('../../../models/operations/orders/product.models');
 const productCalculations = require('../../../models/operations/orders/productCalculations.models');
+const LaundryYacht = require('../../../models/operations/yachtRequest/laundryYacht');
 const PlacesYacht = require('../../../models/operations/yachtRequest/placesYacht');
 const db = require('../../../utils/database');
 
@@ -41,6 +42,11 @@ class ProductService {
                     model: Product,
                     as: 'product',
                     attributes: ['id', 'name'],
+                    include:[{
+                        model: LaundryYacht,
+                        as: 'wineries',
+                        attributes: ['id','warehouseId']
+                    }]
                 }, {
                     model: productCalculations,
                     as: 'configuration',

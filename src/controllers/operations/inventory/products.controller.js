@@ -34,6 +34,13 @@ const getProductsWithConfigurations = async (req, res) => {
     try {
         const type = req.params.type
         const result = await ProductService.getProductsWithConfigurations(type);
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.product.wineries.map(warehose => {
+                    warehose.dataValues.warehouseId = Utils.encode(warehose.dataValues.warehouseId);
+                })
+            });
+        }
         res.status(200).json(result);
     } catch (error) {
         res.status(400).json(error.message)

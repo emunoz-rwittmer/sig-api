@@ -29,6 +29,7 @@ const Indicator = require('./operations/indicators/indicator.models');
 const Tabulation = require('./operations/indicators/tabulation.models');
 const Formula = require('./operations/indicators/formula.models');
 const PlacesYacht = require('./operations/yachtRequest/placesYacht');
+const LaundryYacht = require('./operations/yachtRequest/laundryYacht');
 
 const initModels = () => {
 
@@ -92,6 +93,10 @@ const initModels = () => {
     Product.hasMany(PlacesYacht, { as: 'configurations', foreignKey: 'product_id' });
     PlacesYacht.belongsTo(Product, { as: "product", foreignKey: "product_id" });
     PlacesYacht.belongsTo(productCalculations, { as: "configuration", foreignKey: "configuration_id" });
+
+    LaundryYacht.belongsTo(Product, { as: "product", foreignKey: "product_id" });
+    LaundryYacht.belongsTo(Warehouse, { as: "warehose", foreignKey: "warehouse_id" });
+    Product.hasMany(LaundryYacht, { as: 'wineries', foreignKey: 'product_id' });
 
     Warehouse.hasMany(Request, { foreignKey: 'warehouse_id', as: 'requests' });
     Request.belongsTo(Warehouse, { foreignKey: 'warehouse_id', as: 'warehouse' });
