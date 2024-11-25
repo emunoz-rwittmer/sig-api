@@ -119,6 +119,7 @@ class IndicatorService {
                 include: [{
                     model: Formula,
                     as: 'formula_indicator',
+                    attributes:['name']
                 }],
             });
             return result;
@@ -152,6 +153,7 @@ class IndicatorService {
             const result = await Indicator.update(data, id);
             return result;
         } catch (error) {
+            console.log(error)
             throw error;
 
         }
@@ -167,6 +169,18 @@ class IndicatorService {
             }
         } catch (error) {
             throw error;
+        }
+    }
+
+    // tabulation
+
+    static async createTabulation(tabulation) {
+        try {
+            const result = await Tabulation.create(tabulation);
+            return result;
+        } catch (error) {
+            throw error;
+
         }
     }
 

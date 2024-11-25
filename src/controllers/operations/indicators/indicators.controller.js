@@ -1,7 +1,7 @@
 const IndicatorService = require('../../../services/operations/indicators/indicators.services');
 const Utils = require('../../../utils/Utils');
 const DepartamentService = require('../../../services/catalogs/departaments.services');
-const { where } = require('sequelize');
+const { create, all } = require('mathjs'); // Para evaluar fórmulas dinámicas
 
 const getAllDepartamentsWhitIndicators = async (req, res) => {
     try {
@@ -112,7 +112,6 @@ const createIndicator = async (req, res) => {
 
 const updateIndicator = async (req, res) => {
     try {
-
         const indicatorId = Utils.decode(req.params.indicator_id);
         const data = req.body
         data.departamentId = Utils.decode(data.departamentId);
@@ -141,7 +140,38 @@ const deleteIndicator = async (req, res) => {
     }
 }
 
+const createTabulation = async (req, res) => {
+    try {
+        const math = create(all);
+        let { a, b, indicatorId } = req.body;
+        indicatorId = Utils.decode(indicatorId)
 
+        const indicador = await IndicatorService.getIndicatorById(indicatorId);
+
+        if (!indicador || !indicador.formula) {
+            return res.status(404).json('Indicador o fórmula no encontrados');
+        }
+
+        const formula = indicador.formula_indicator.name;
+        let scope = { a, b };
+        let percent;
+
+        try {
+            percent = math.evaluate(formula, scope);
+        } catch (error) {
+            res.status(400).json(error.message);
+        }
+
+        const result = await IndicatorService.createTabulation({ a, b, percent, indicatorId });
+
+        if (result) {
+            res.status(200).json({ data: 'resource created successfully' });
+        }
+    } catch (error) {
+        console.log(error)
+        res.status(400).json(error.message);
+    }
+}
 
 const IndicatorController = {
     getAllDepartamentsWhitIndicators,
@@ -151,6 +181,7 @@ const IndicatorController = {
     getFormulas,
     createIndicator,
     updateIndicator,
-    deleteIndicator
+    deleteIndicator,
+    createTabulation
 }
 module.exports = IndicatorController

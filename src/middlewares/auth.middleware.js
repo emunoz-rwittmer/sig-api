@@ -27,6 +27,7 @@ const verifyToken = async (req, res, next) => {
                     });
                 }).catch(error => {
                     console.log("error al renovar :" + error.name)
+                    return res.status(498).json({ data: 'unauthorized' });
                 });
             } else {
                 req.userRol = decoded.rol;
