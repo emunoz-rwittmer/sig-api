@@ -19,8 +19,6 @@ const generatReportEvaluationsByEmployed = async (req, res) => {
 
         const { reportingEvaluationsByCrewState, dataForReport } = req.body
 
-        console.log(dataForReport.startDate)
-
         //COLUMNS
         ws.column(1).setWidth(25);
         ws.column(2).setWidth(40);
