@@ -2,11 +2,11 @@ const path = require('path');
 const xl = require("excel4node");
 const { formatDateToLocal } = require('../../utils/Utils');
 
-const generateGeneralReportEvaluations = async (req, res) => {
+const generatReportEvaluationsByEmployed = async (req, res) => {
     try {
         var fechaActual = new Date();
         var options = { day: '2-digit', month: '2-digit', year: 'numeric' };
-       
+
         const fechaFormateada = (date) => {
             const formattedDate = date.toLocaleDateString('es-ES', options);
             return formattedDate;
@@ -17,9 +17,9 @@ const generateGeneralReportEvaluations = async (req, res) => {
         });
         var ws = wb.addWorksheet("general report");
 
-        const { reportingByYachtState, capitanesConEvaluaciones, dataForReport } = req.body
+        const { reportingEvaluationsByCrewState, dataForReport } = req.body
 
-        console.log('dataForReport.startDate', dataForReport.startDate)
+        console.log(dataForReport.startDate)
 
         //COLUMNS
         ws.column(1).setWidth(25);
@@ -82,38 +82,41 @@ const generateGeneralReportEvaluations = async (req, res) => {
         ws.cell(3, 1, 3, 3, true)
             .string('REPORTE GENERAL DE DESEMPEÑO')
             .style(titleStyle);
-        ws.cell(4, 1, 4, 3, true)
-            .string(reportingByYachtState.yacht?.name)
-            .style(titleStyle);
         ws.cell(5, 1, 5, 3, true)
             .string(fechaFormateada(fechaActual))
             .style(titleStyle);
 
         //SUBTITULOS
         ws.cell(7, 1, 7, 3, true)
-             .string(`RAGO DE FECHAS: ${formatDateToLocal(dataForReport.startDate) + " a " + formatDateToLocal(dataForReport.endDate)}`)
+            .string(`RAGO DE FECHAS: ${formatDateToLocal(dataForReport.startDate) + " a " + formatDateToLocal(dataForReport.endDate)}`)
         ws.cell(8, 1, 8, 3, true)
-            .string(`YATE EVALUADO: ${reportingByYachtState.yacht?.name}`)
+            .string(`PERSONA EVALUADA: ${reportingEvaluationsByCrewState.crew?.first_name+" "+reportingEvaluationsByCrewState.crew?.last_name}`)
         ws.cell(9, 1, 9, 3, true)
-            .string(`TRIPULACION: ${reportingByYachtState.staff?.length}`)
+            .string(`CARGO: ${reportingEvaluationsByCrewState.crew?.staff_position?.name}`)
         ws.cell(10, 1, 10, 3, true)
-            .string(`PUNTUACIÓN: ${dataForReport.promedioCapitanes}`)
+            .string(`EVALUACIONES: ${dataForReport.averageReviews.length}`)
+        ws.cell(11, 1, 11, 3, true)
+            .string(`PUNTUACIÓN: ${dataForReport.averageGeneral}`)
 
 
         // CABECERA DETALLE 
-        ws.cell(13, 1).string("Nombre").style(headerLeftWrapStyle);
-        ws.cell(13, 2).string("Función").style(headerLeftWrapStyle);
-        ws.cell(13, 3).string("Evaluaciones").style(headerLeftWrapStyle);
-        ws.cell(13, 4).string("Promedio").style(headerLeftWrapStyle);
+        ws.cell(13, 1).string("Fecha").style(headerLeftWrapStyle);
+        ws.cell(13, 2).string("Titulo").style(headerLeftWrapStyle);
+        ws.cell(13, 3).string("Yate").style(headerLeftWrapStyle);
+        ws.cell(13, 4).string("Evaluador").style(headerLeftWrapStyle);
+        ws.cell(13, 5).string("Estatus").style(headerLeftWrapStyle);
+        ws.cell(13, 6).string("Calificación").style(headerLeftWrapStyle);
 
 
         // //SHOW DATA - Revisa el array result.orderItems usando forEach
-        capitanesConEvaluaciones.forEach((captain, index) => {
-             ws.cell(14 + index, 1).string(captain.staff_yacht?.first_name + " " + captain.staff_yacht?.last_name || "Sin asignar");
-             ws.cell(14 + index, 2).string(captain.staff_yacht.staff_position?.name || "Sin asignar");
-             ws.cell(14 + index, 3).string(captain.evaluaciones.length.toString() || "Sin asignar");
-             ws.cell(14 + index, 4).string(captain.promedio.toString() || "Sin  asignar");
-         });
+        dataForReport.averageReviews.forEach((evaluation, index) => {
+            ws.cell(14 + index, 1).string(fechaFormateada(evaluation.createdAt) || "Sin asignar");
+            ws.cell(14 + index, 2).string(evaluation.header_form.title || "Sin asignar");
+            ws.cell(14 + index, 3).string(evaluation.header_yacht.name || "Sin asignar");
+            ws.cell(14 + index, 4).string(evaluation.header_evalutor?.firstName + " " + evaluation.header_evalutor?.lastName || "Sin  asignar");
+            ws.cell(14 + index, 5).string(evaluation.state.state || "Sin  asignar");
+            ws.cell(14 + index, 6).string(evaluation.promedio.toString() || "Sin  asignar");
+        });
 
         //GENERATE EXCEL
         // Genera el archivo y lo envía como respuesta
@@ -130,5 +133,5 @@ const generateGeneralReportEvaluations = async (req, res) => {
 }
 
 module.exports = {
-    generateGeneralReportEvaluations,
+    generatReportEvaluationsByEmployed,
 }

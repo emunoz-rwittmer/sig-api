@@ -8,6 +8,7 @@ router.get('/transactions/:warehouse_id', excelReports.generateTransactionsExcel
 router.get('/request/:request_id', excelReports.generateRequestExcel);
 
 router.post('/evaluations/generalReport', excelReports.generateGeneralReportEvaluations);
+router.post('/evaluations/reportByEmployed', excelReports.generatReportEvaluationsByEmployed);
 
 
 module.exports = router;
