@@ -108,7 +108,7 @@ const generatReportEvaluationsByEmployed = async (req, res) => {
 
         // //SHOW DATA - Revisa el array result.orderItems usando forEach
         dataForReport.averageReviews.forEach((evaluation, index) => {
-            ws.cell(14 + index, 1).string(fechaFormateada(evaluation.createdAt) || "Sin asignar");
+            ws.cell(14 + index, 1).string(formatDateToLocal(evaluation.createdAt) || "Sin asignar");
             ws.cell(14 + index, 2).string(evaluation.header_form.title || "Sin asignar");
             ws.cell(14 + index, 3).string(evaluation.header_yacht.name || "Sin asignar");
             ws.cell(14 + index, 4).string(evaluation.header_evalutor?.firstName + " " + evaluation.header_evalutor?.lastName || "Sin  asignar");
