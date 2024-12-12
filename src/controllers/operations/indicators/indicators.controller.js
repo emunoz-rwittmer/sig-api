@@ -51,18 +51,19 @@ const getTabulationsyDepartament = async (req, res) => {
 
         if (result instanceof Array) {
             for (const x of result) {
-                const changesPercent = await IndicatorService.getChangePercentageByMeasurement(x.id);
+                const changesPercent = await IndicatorService.getChangePercentageByMeasurement(x.id);            
                 const totalAchieved = x.tabulations.reduce((sum, tabulation) => sum + parseInt(tabulation.percent), 0);
                 const averageAchieved = totalAchieved / x.tabulations.length;
-                // Asignar valores adicionales a dataValues
                 x.dataValues.id = Utils.encode(x.dataValues.id);
                 x.dataValues.averageAchieved = averageAchieved.toFixed(2);
                 x.dataValues.changesPercent = changesPercent;
             }
         }
 
+        //console.log(result[0])
         res.status(200).json({ departament, result });
     } catch (error) {
+        console.log(error)
         res.status(400).json(error.message)
     }
 }
@@ -173,6 +174,23 @@ const createTabulation = async (req, res) => {
     }
 }
 
+const getTabulationsByIndicator = async (req, res) => {
+    try {
+        const indicatorId = Utils.decode(req.params.indicator_id);
+        const indicator = await IndicatorService.getIndicatorById(indicatorId);
+        if (indicator instanceof Object) {
+            indicator.dataValues.id = Utils.encode(indicator.dataValues.id);
+            indicator.dataValues.departamentId = Utils.encode(indicator.dataValues.departamentId);
+            indicator.dataValues.formulaId = Utils.encode(indicator.dataValues.formulaId);
+        }
+        const result = await IndicatorService.getTabulationsByIndicator(indicatorId);
+        res.status(200).json({ indicator, result });
+    } catch (error) {
+        console.log(error)
+        res.status(400).json(error.message)
+    }
+}
+
 const IndicatorController = {
     getAllDepartamentsWhitIndicators,
     getIndicatorsByDepartament,
@@ -182,6 +200,7 @@ const IndicatorController = {
     createIndicator,
     updateIndicator,
     deleteIndicator,
-    createTabulation
+    createTabulation,
+    getTabulationsByIndicator
 }
 module.exports = IndicatorController

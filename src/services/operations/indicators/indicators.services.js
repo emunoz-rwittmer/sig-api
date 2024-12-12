@@ -82,21 +82,19 @@ class IndicatorService {
         const intervalMonths = {
             mensual: 1,
             trimestral: 3,
-            //semiannual: 6,
-            //annual: 12,
+            semiannual: 6,
+            annual: 12,
         }[indicator.reading.toLowerCase()];
+
 
         tabulations.forEach((tabulation, index) => {
             const currentDate = tabulation.createdAt;
             const currentValue = parseInt(tabulation.percent);
-
             if (previousValue) {
                 const previousDate = previousValue.createdAt;
-
-                const monthsDiff = (currentDate.getFullYear() - previousDate.getFullYear()) * 12 + 
-                                    (currentDate.getMonth() - previousDate.getMonth());
-
-                if (monthsDiff === intervalMonths) {
+                const monthsDiff = (currentDate.getFullYear() - previousDate.getFullYear()) * 12 +
+                    (currentDate.getMonth() - previousDate.getMonth());
+                if (monthsDiff >= intervalMonths) {
                     const changePercentage = ((currentValue - parseInt(previousValue.percent)) / parseInt(previousValue.percent)) * 100;
                     changes.push({
                         period: `${previousDate.toISOString().slice(0, 7)} to ${currentDate.toISOString().slice(0, 7)}`,
@@ -108,7 +106,6 @@ class IndicatorService {
                 previousValue = tabulation;
             }
         });
-
         return changes;
     }
 
@@ -119,7 +116,7 @@ class IndicatorService {
                 include: [{
                     model: Formula,
                     as: 'formula_indicator',
-                    attributes:['name']
+                    attributes: ['name']
                 }],
             });
             return result;
@@ -181,6 +178,16 @@ class IndicatorService {
         } catch (error) {
             throw error;
 
+        }
+    }
+
+    static async getTabulationsByIndicator(indicatorId) {
+        try {
+            const result = await Tabulation.findAll({ where: { indicatorId } });
+            return result;
+        } catch (error) {
+            console.log(error)
+            throw error;
         }
     }
 

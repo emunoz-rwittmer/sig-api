@@ -13,4 +13,5 @@ router.put('/updateIndicator/:indicator_id', IndicatorController.updateIndicator
 router.delete('/:indicator_id', IndicatorController.deleteIndicator);
 //create tabulations
 router.post('/tabulations/createTabulation', IndicatorController.createTabulation);
+router.get('/tabulations/:indicator_id',IndicatorController.getTabulationsByIndicator);
 module.exports = router;

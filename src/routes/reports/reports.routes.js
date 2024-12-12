@@ -7,5 +7,7 @@ router.post('/stockWarehouse', excelReports.generateStockExcel);
 router.get('/transactions/:warehouse_id', excelReports.generateTransactionsExcel);
 router.get('/request/:request_id', excelReports.generateRequestExcel);
 
+router.post('/evaluations/generalReport', excelReports.generateGeneralReportEvaluations);
+
 
 module.exports = router;
