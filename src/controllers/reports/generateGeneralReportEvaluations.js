@@ -114,8 +114,8 @@ const generateGeneralReportEvaluations = async (req, res) => {
         capitanesConEvaluaciones.forEach((captain, index) => {
              ws.cell(14 + index, 1).string(captain.staff_yacht?.first_name + " " + captain.staff_yacht?.last_name || "Sin asignar");
              ws.cell(14 + index, 2).string(captain.staff_yacht.staff_position?.name || "Sin asignar");
-             ws.cell(14 + index, 3).string(captain.evaluaciones.length || "Sin asignar");
-             ws.cell(14 + index, 4).string(captain.promedio || "Sin  asignar");
+             ws.cell(14 + index, 3).string(captain.evaluaciones.length.toString() || "Sin asignar");
+             ws.cell(14 + index, 4).string(captain.promedio.toString() || "Sin  asignar");
          });
 
         //GENERATE EXCEL
