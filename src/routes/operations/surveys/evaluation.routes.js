@@ -10,6 +10,7 @@ router.get('/reportingByYacht/:yacht_id',EvaluationController.getReportingByYach
 router.get('/reportingByDepartament/:departament_id',EvaluationController.getReportingByDepartament);
 router.get('/reportingEvaluationsByCrew/:crew_id',EvaluationController.getReportingEvaluationsByCrew);
 router.post('/respondEvaluation',EvaluationController.respondEvaluation);
+router.delete('/:evaluation_id',EvaluationController.deleteEvaluation);
 
 
 

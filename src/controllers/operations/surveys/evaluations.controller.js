@@ -164,6 +164,19 @@ const getReportingEvaluationsByCrew = async (req, res) => {
     }
 }
 
+const deleteEvaluation = async (req, res) => {
+    try {
+        const evaluatedId = Utils.decode(req.params.evaluation_id);
+        const result = await EvaluationService.delete({
+            where: { id: evaluatedId, stateId: [1,3] }
+        });
+        res.status(200).json({ data: 'resource deleted successfully' })
+    } catch (error) {
+        console.log(error)
+        res.status(400).json(error.message);
+    }
+}
+
 isTempPasswordExpired = (expirationDate) => {
     return moment().isAfter(moment(expirationDate));
 };
@@ -175,6 +188,7 @@ const EvaluationController = {
     respondEvaluation,
     getReportingByYacht,
     getReportingByDepartament,
-    getReportingEvaluationsByCrew
+    getReportingEvaluationsByCrew,
+    deleteEvaluation
 }
 module.exports = EvaluationController

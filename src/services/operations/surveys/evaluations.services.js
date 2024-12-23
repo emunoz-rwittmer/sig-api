@@ -323,6 +323,15 @@ class EvaluationService {
         }
     }
 
+    static async delete(id) {
+        try {
+            const result = await HeaderAnswer.destroy(id);
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
 }
 
 module.exports = EvaluationService;
