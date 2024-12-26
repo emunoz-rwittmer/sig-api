@@ -51,7 +51,12 @@ class IndicatorService {
                 include: [{
                     model: Tabulation,
                     as: 'tabulations',
+                    separate: true, // Esto asegura que las tabulaciones se ordenen por separado
+                    order: [['createdAt', 'ASC']], // Ordena las tabulaciones por la fecha de creación
                 }],
+                order: [
+                    ['createdAt', 'ASC'], // Ordena los indicadores por su propia fecha de creación
+                ],
             });
             return result;
         } catch (error) {
@@ -59,7 +64,6 @@ class IndicatorService {
         }
     }
 
-    // Función para obtener el cambio porcentual según la periodicidad de la medición
     static async getChangePercentageByMeasurement(indicatorId) {
         const indicator = await Indicator.findByPk(indicatorId);
         if (!indicator) {
@@ -71,41 +75,52 @@ class IndicatorService {
             order: [['createdAt', 'ASC']],
         });
 
-        if (tabulations.length < 2) {
-            throw new Error('Not enough tabulations to calculate change');
+        if (!tabulations || tabulations.length < 2) {
+            return [];
         }
 
         const changes = [];
         let previousValue = null;
 
-        // Obtener el intervalo de comparación basado en el tipo de medición
         const intervalMonths = {
             mensual: 1,
             trimestral: 3,
             semiannual: 6,
             annual: 12,
-        }[indicator.reading.toLowerCase()];
+        }[indicator.reading.toLowerCase()] || 1; // Predeterminado a 1 mes si el tipo no coincide
 
-
-        tabulations.forEach((tabulation, index) => {
+        tabulations.forEach((tabulation) => {
             const currentDate = tabulation.createdAt;
-            const currentValue = parseInt(tabulation.percent);
+            const currentValue = parseInt(tabulation.percent, 10);
+
             if (previousValue) {
                 const previousDate = previousValue.createdAt;
-                const monthsDiff = (currentDate.getFullYear() - previousDate.getFullYear()) * 12 +
+                const monthsDiff =
+                    (currentDate.getFullYear() - previousDate.getFullYear()) * 12 +
                     (currentDate.getMonth() - previousDate.getMonth());
+
                 if (monthsDiff >= intervalMonths) {
-                    const changePercentage = ((currentValue - parseInt(previousValue.percent)) / parseInt(previousValue.percent)) * 100;
+                    const changePercentage =
+                        ((currentValue - parseInt(previousValue.percent, 10)) /
+                            parseInt(previousValue.percent, 10)) *
+                        100;
+
                     changes.push({
                         period: `${previousDate.toISOString().slice(0, 7)} to ${currentDate.toISOString().slice(0, 7)}`,
-                        changePercentage: changePercentage.toFixed(2),
+                        changePercentage: isNaN(changePercentage) ? 0 : changePercentage.toFixed(2),
                     });
+
                     previousValue = tabulation;
                 }
             } else {
                 previousValue = tabulation;
             }
         });
+
+        if (changes.length === 0) {
+            return [];
+        }
+
         return changes;
     }
 

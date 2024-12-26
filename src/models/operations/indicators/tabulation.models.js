@@ -21,7 +21,7 @@ const Tabulation = db.define('tabulation', {
     allowNull: true,
   }, 
   percent: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.FLOAT(8,2),
     allowNull: true,
   }, 
 });

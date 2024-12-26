@@ -50,17 +50,31 @@ const getTabulationsyDepartament = async (req, res) => {
         const result = await IndicatorService.getTabulationsyDepartament(departamentId);
 
         if (result instanceof Array) {
+
+            const currentYear = new Date().getFullYear();
+
             for (const x of result) {
-                const changesPercent = await IndicatorService.getChangePercentageByMeasurement(x.id);            
-                const totalAchieved = x.tabulations.reduce((sum, tabulation) => sum + parseInt(tabulation.percent), 0);
-                const averageAchieved = totalAchieved / x.tabulations.length;
+                const changesPercent = await IndicatorService.getChangePercentageByMeasurement(x.id);
+                const yearsTabulation = x.tabulations.reduce((acc, tabulation) => {
+                    const year = new Date(tabulation.createdAt).getFullYear();
+                    if (!acc[year]) {
+                        acc[year] = { tabulations: [], averagePercent: 0 };
+                    }
+                    acc[year].tabulations.push(tabulation);
+                    acc[year].averagePercent = acc[year].tabulations.reduce((sum, tab) => sum + tab.percent, 0) / acc[year].tabulations.length;
+                    return acc;
+                }, {});
+
+                const currentYearTabulations = x.tabulations.filter(tabulation => new Date(tabulation.createdAt).getFullYear() === currentYear);
+                const totalAchieved = currentYearTabulations.reduce((sum, tabulation) => sum + tabulation.percent, 0);
+                const averageAchieved = currentYearTabulations.length > 0 ? totalAchieved / currentYearTabulations.length : 0;
+                x.dataValues.yearsTabulation = yearsTabulation;
                 x.dataValues.id = Utils.encode(x.dataValues.id);
                 x.dataValues.averageAchieved = averageAchieved.toFixed(2);
                 x.dataValues.changesPercent = changesPercent;
             }
         }
 
-        //console.log(result[0])
         res.status(200).json({ departament, result });
     } catch (error) {
         console.log(error)
