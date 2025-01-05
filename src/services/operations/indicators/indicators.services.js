@@ -10,6 +10,16 @@ const Positions = require("../../../models/catalogs/positions.models");
 
 
 class IndicatorService {
+
+    static async getProcessById(id) {
+        try {
+            const result = await Process.findByPk(id);
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     static async getAllDepartamentsWhitIndicators() {
         try {
             const result = await Process.findAll({
@@ -211,7 +221,6 @@ class IndicatorService {
             const result = await Tabulation.findAll({ where: { indicatorId } });
             return result;
         } catch (error) {
-            console.log(error)
             throw error;
         }
     }

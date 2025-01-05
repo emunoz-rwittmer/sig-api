@@ -20,7 +20,7 @@ const getAllDepartamentsWhitIndicators = async (req, res) => {
 const getIndicatorsByDepartament = async (req, res) => {
     try {
         const departamentId = Utils.decode(req.params.departament_id);
-        const departament = await DepartamentService.getDepartamentById(departamentId);
+        const departament = await IndicatorService.getProcessById(departamentId);
         if (departament instanceof Array) {
             departament.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
@@ -32,6 +32,8 @@ const getIndicatorsByDepartament = async (req, res) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
             });
         }
+
+        console.log({ departament, result })
         res.status(200).json({ departament, result });
     } catch (error) {
         res.status(400).json(error.message)
