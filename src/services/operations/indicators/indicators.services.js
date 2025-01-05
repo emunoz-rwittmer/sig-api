@@ -16,13 +16,22 @@ class IndicatorService {
                 //where: { indicators: true },
                 attributes: [
                     'id', 'name',
-                    [Sequelize.fn('COUNT', Sequelize.col('indicadores.id')), 'indicatorsCount']
+                    [Sequelize.fn('COUNT', Sequelize.col('indicadores.id')), 'indicatorsCount'],                 
                 ],
                 include: [{
                     model: Indicator,
                     as: 'indicadores',
                     attributes: []
-                }],
+                }], 
+                include: [{
+                    model: ProcessStaff,
+                    as: 'processStaff',
+                    include: [{
+                        model: Staff,
+                        as: 'staffs',
+                        attributes: ['firstName', 'lastName'],
+                    }], 
+                }], 
                 group: ['id'],
                 order: [['name', 'ASC']]
             });
@@ -243,7 +252,6 @@ class IndicatorService {
                 });
                 return response;
             }));
-            console.log(result[0])
             return result; // Devuelve el resultado después de que todas las promesas se resuelvan
         } catch (error) {
             throw error;
