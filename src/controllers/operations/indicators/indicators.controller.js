@@ -1,7 +1,7 @@
 const IndicatorService = require('../../../services/operations/indicators/indicators.services');
 const Utils = require('../../../utils/Utils');
 const DepartamentService = require('../../../services/catalogs/departaments.services');
-const { create, all } = require('mathjs'); // Para evaluar fórmulas dinámicas
+const { create, all, cos } = require('mathjs'); // Para evaluar fórmulas dinámicas
 
 const getAllDepartamentsWhitIndicators = async (req, res) => {
     try {
@@ -205,6 +205,47 @@ const getTabulationsByIndicator = async (req, res) => {
     }
 }
 
+const getAllStaffsByProces = async (req, res) => {
+    try {
+        const processId = Utils.decode(req.params.process_id)
+        const result = await IndicatorService.getAllStaffsByProces(processId);
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+            });
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(400).json(error.message);
+    }
+}
+
+const assignStaff = async (req, res) => {
+    try {
+        const data = req.body;
+        data.staffs = data.staffs.map(staffId => ({ staffId: Utils.decode(staffId) }))
+        data.processId = Utils.decode(req.params.process_id)
+        const result = await IndicatorService.assignStaff(data);
+        if (result) {
+            res.status(200).json({ data: 'resource created successfully' });
+        }
+    } catch (error) {
+        res.status(400).json(error.message);
+    }
+}
+
+const deleteStafft = async (req, res) => {
+    try {
+        const id = Utils.decode(req.params.staff_id)
+        const result = await IndicatorService.deleteStafft({
+            where: { id }
+        });
+        res.status(200).json({ data: 'resource deleted successfully' })
+    } catch (error) {
+        res.status(400).json(error.message);
+    }
+}
+
 const IndicatorController = {
     getAllDepartamentsWhitIndicators,
     getIndicatorsByDepartament,
@@ -215,6 +256,9 @@ const IndicatorController = {
     updateIndicator,
     deleteIndicator,
     createTabulation,
-    getTabulationsByIndicator
+    getTabulationsByIndicator,
+    getAllStaffsByProces,
+    assignStaff,
+    deleteStafft,
 }
 module.exports = IndicatorController

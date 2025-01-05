@@ -118,6 +118,9 @@ const initModels = () => {
     Indicator.hasMany(Tabulation, { as: "tabulations", foreignKey: "indicator_id" });
     Tabulation.belongsTo(Indicator, { as: "indicator", foreignKey: "indicator_id" });
 
+    ProcessStaff.belongsTo(Process, { as: "process", foreignKey: "process_id" });
+    ProcessStaff.belongsTo(Staff, { as: "staffs", foreignKey: "staff_id" });
+
     Question,
     HouseRule
 

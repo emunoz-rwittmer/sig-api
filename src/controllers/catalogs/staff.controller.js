@@ -170,7 +170,7 @@ const deleteStaff = async (req, res) => {
     }
 }
 
-// CAPITAN - YACHT
+// Staff - Yacht
 
 const getAllYachts = async (req, res) => {
     try {

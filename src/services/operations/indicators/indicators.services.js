@@ -1,9 +1,11 @@
 const { Sequelize, Op, where } = require("sequelize");
-const Departaments = require('../../../models/catalogs/departament.models');
 const Indicator = require('../../../models/operations/indicators/indicator.models');
 const Formula = require('../../../models/operations/indicators/formula.models');
 const Tabulation = require("../../../models/operations/indicators/tabulation.models");
 const Process = require("../../../models/operations/indicators/process.models");
+const ProcessStaff = require("../../../models/operations/indicators/processStaffs.models");
+const Staff = require("../../../models/catalogs/staff.models");
+const Positions = require("../../../models/catalogs/positions.models");
 
 
 
@@ -203,6 +205,57 @@ class IndicatorService {
             return result;
         } catch (error) {
             console.log(error)
+            throw error;
+        }
+    }
+
+    // indicator - staff 
+
+    static async getAllStaffsByProces(id) {
+        try {
+            const result = await ProcessStaff.findAll({
+                where: { processId: id },
+                attributes: ['id'],
+                include: {
+                    model: Staff,
+                    as: 'staffs',
+                    attributes: ['firstName', 'lastName'],
+                    include: {
+                        model: Positions,
+                        as: 'staff_position',
+                        attributes: ['name'],
+                    }
+                }
+            });
+            return result;
+        } catch (error) {
+            console.log(error)
+            throw error;
+        }
+    }
+
+    static async assignStaff(data) {
+        try {
+            const result = await Promise.all(data.staffs.map(async (staff) => {
+                const response = await ProcessStaff.create({
+                    processId: data.processId,
+                    staffId: staff.staffId
+                });
+                return response;
+            }));
+            console.log(result[0])
+            return result; // Devuelve el resultado después de que todas las promesas se resuelvan
+        } catch (error) {
+            throw error;
+        }
+    }
+    
+
+    static async deleteStafft(id) {
+        try {
+            const result = await ProcessStaff.destroy(id);
+            return result;
+        } catch (error) {
             throw error;
         }
     }

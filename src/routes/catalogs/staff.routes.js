@@ -20,7 +20,6 @@ router.get('/sendForm/evaluators',StaffController.getEvaluators);
 router.get('/sendForm/evaluatorsByFilters',StaffController.getEvaluatorsByFilters);
 router.get('/send_form/evaluateds',StaffController.getEvaluateds);
 router.get('/send_form/evaluatedsByFilters',StaffController.getEvaluatedsByFilters);
-// router.post('/evaluatedsByFilters',StaffController.assingYacht);
 
 
 module.exports = router;
