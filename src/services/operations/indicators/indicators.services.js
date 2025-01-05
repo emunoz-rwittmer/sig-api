@@ -13,26 +13,24 @@ class IndicatorService {
     static async getAllDepartamentsWhitIndicators() {
         try {
             const result = await Process.findAll({
-                //where: { indicators: true },
                 attributes: [
                     'id', 'name',
-                    [Sequelize.fn('COUNT', Sequelize.col('indicadores.id')), 'indicatorsCount'],                 
+                    [Sequelize.literal(`(
+                        SELECT COUNT(*)
+                        FROM indicators AS indicadores
+                        WHERE indicadores.departament_id = Process.id
+                    )`), 'indicatorsCount']
                 ],
-                include: [{
-                    model: Indicator,
-                    as: 'indicadores',
-                    attributes: []
-                }], 
                 include: [{
                     model: ProcessStaff,
                     as: 'processStaff',
-                    include: [{
+                    include: {
                         model: Staff,
                         as: 'staffs',
                         attributes: ['firstName', 'lastName'],
-                    }], 
-                }], 
-                group: ['id'],
+                    }
+                }],
+                group: ['Process.id', 'Process.name', 'processStaff.id'],
                 order: [['name', 'ASC']]
             });
             return result;
@@ -257,7 +255,7 @@ class IndicatorService {
             throw error;
         }
     }
-    
+
 
     static async deleteStafft(id) {
         try {
