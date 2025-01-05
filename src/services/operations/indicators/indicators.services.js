@@ -3,14 +3,15 @@ const Departaments = require('../../../models/catalogs/departament.models');
 const Indicator = require('../../../models/operations/indicators/indicator.models');
 const Formula = require('../../../models/operations/indicators/formula.models');
 const Tabulation = require("../../../models/operations/indicators/tabulation.models");
+const Process = require("../../../models/operations/indicators/process.models");
 
 
 
 class IndicatorService {
     static async getAllDepartamentsWhitIndicators() {
         try {
-            const result = await Departaments.findAll({
-                where: { indicators: true },
+            const result = await Process.findAll({
+                //where: { indicators: true },
                 attributes: [
                     'id', 'name',
                     [Sequelize.fn('COUNT', Sequelize.col('indicadores.id')), 'indicatorsCount']

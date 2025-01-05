@@ -24,12 +24,14 @@ const Transaction = require('./operations/inventory/transaction.models');
 const productCalculations = require('./operations/orders/productCalculations.models');
 const Request = require('./operations/yachtRequest/request.models');
 const itemsRequest = require('./operations/yachtRequest/itemsRequest.models');
+const PlacesYacht = require('./operations/yachtRequest/placesYacht');
+const LaundryYacht = require('./operations/yachtRequest/laundryYacht');
 // Manameng Indicators
 const Indicator = require('./operations/indicators/indicator.models');
 const Tabulation = require('./operations/indicators/tabulation.models');
 const Formula = require('./operations/indicators/formula.models');
-const PlacesYacht = require('./operations/yachtRequest/placesYacht');
-const LaundryYacht = require('./operations/yachtRequest/laundryYacht');
+const Process = require('./operations/indicators/process.models');
+const ProcessStaff = require('./operations/indicators/processStaffs.models');
 
 const initModels = () => {
 
@@ -107,8 +109,8 @@ const initModels = () => {
     itemsRequest.belongsTo(PlacesYacht, { foreignKey: 'placeYachtId', as: 'placeYacht' });
 
     // INDICATOR
-    Departaments.hasMany(Indicator, { as: "indicadores", foreignKey: "departament_id" });
-    Indicator.belongsTo(Departaments, { as: "departament", foreignKey: "departament_id" });
+    Process.hasMany(Indicator, { as: "indicadores", foreignKey: "departament_id" });
+    Indicator.belongsTo(Process, { as: "departament", foreignKey: "departament_id" });
 
     Formula.hasMany(Indicator, { as: "indicator", foreignKey: "formula_id" });
     Indicator.belongsTo(Formula, { as: "formula_indicator", foreignKey: "formula_id" });
@@ -117,7 +119,7 @@ const initModels = () => {
     Tabulation.belongsTo(Indicator, { as: "indicator", foreignKey: "indicator_id" });
 
     Question,
-        HouseRule
+    HouseRule
 
 }
 
