@@ -68,15 +68,6 @@ class UserService {
         }
     }
 
-    static async changePassword(password, id) {
-        try {
-            const result = await Users.update({password}, id);
-            return result;
-        } catch (error) {
-            throw error;  
-        }
-    }
-
     static async delete(id) {
         try {
             const result = await Users.destroy(id);

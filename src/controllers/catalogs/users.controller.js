@@ -1,6 +1,6 @@
 const UserService = require('../../services/catalogs/users.services');
 const Utils = require('../../utils/Utils');
-const sendEmail = require('../../utils/mailer');
+const { sendEmail } = require('../../utils/mailer');
 const bcrypt = require("bcrypt");
 
 const getAllUsers = async (req, res) => {
@@ -40,7 +40,7 @@ const createUser = async (req, res) => {
         const action = "new user"
         const result = await UserService.createUser(user);
         if (result) {
-            sendEmail(result, passwordGenerate, action );
+            sendEmail(result, passwordGenerate, action);
             res.status(200).json({ data: 'resource created successfully' });
         }
     } catch (error) {
@@ -60,43 +60,6 @@ const updateUser = async (req, res) => {
         });
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        
-        res.status(400).json(error.message);
-    }
-}
-
-const changePassword = async (req, res) => {
-    try {
-        const userId = Utils.decode(req.params.user_id);
-        const passwordGenerate = Utils.getPasswordRandom();
-        const hash = bcrypt.hashSync(passwordGenerate, 10);
-        const result = await UserService.changePassword(hash, { where: { id: userId } });
-        if (result) {
-            res.status(201).json({ message: 'password change successfully' });
-            const user = await UserService.getUserById(userId);
-            const userRegistrationEmail = {
-                from: 'Millionaire Flyer',
-                to: user.email,
-                subject: 'Email confirmation',
-                html: `<h1>Su password ha sido restablecido</h1>
-                   <h3>Estimado/a ${user.dataValues.first_name} ${user.dataValues.last_name},</h3>
-                   <p>Se ha restablecido su contraseña a: ${passwordGenerate}</p>
-                   <p>por favor ingrese al siguiente link <a href="http://127.0.0.1:5173/login">voladora_millonaria.com</a>, use su nueva contraseña</p>
-            
-                   <h3>Atentamente</h3>
-                   <h3>Equipo Millionaire Flyer</h3>`,
-            };
-            transporter.sendMail(userRegistrationEmail, (error, info) => {
-                if (error) {
-                    console.error('Error al enviar el correo electrónico:', error);
-                } else {
-                    console.log('Correo electrónico de notificación enviado:', info.response);
-                }
-            });
-        } else {
-            res.status(400).json({ message: 'something wrong' });
-        }
-    } catch (error) {
         res.status(400).json(error.message);
     }
 }
@@ -109,7 +72,7 @@ const deleteUser = async (req, res) => {
         });
         res.status(200).json({ data: 'resource deleted successfully' })
     } catch (error) {
-        
+
         res.status(400).json(error.message);
     }
 }
