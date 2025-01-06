@@ -82,7 +82,6 @@ const UserController = {
     getUser,
     createUser,
     updateUser,
-    changePassword,
     deleteUser
 }
 module.exports = UserController
