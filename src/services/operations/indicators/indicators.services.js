@@ -7,8 +7,6 @@ const ProcessStaff = require("../../../models/operations/indicators/processStaff
 const Staff = require("../../../models/catalogs/staff.models");
 const Positions = require("../../../models/catalogs/positions.models");
 
-
-
 class IndicatorService {
 
     static async getProcessById(id) {
@@ -226,6 +224,24 @@ class IndicatorService {
     }
 
     // indicator - staff 
+
+    static async getProcesStaffs(staffId) {
+        try {
+            const result = await ProcessStaff.findAll({
+                where: { staffId },
+                attributes: ['id'],
+                include: {
+                    model: Process,
+                    as: 'process',
+                    attributes: ['id', 'name'],
+                }
+            });
+            return result;
+        } catch (error) {
+            console.log(error)
+            throw error;
+        }
+    }
 
     static async getAllStaffsByProces(id) {
         try {

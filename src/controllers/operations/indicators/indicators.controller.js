@@ -1,6 +1,5 @@
 const IndicatorService = require('../../../services/operations/indicators/indicators.services');
 const Utils = require('../../../utils/Utils');
-const DepartamentService = require('../../../services/catalogs/departaments.services');
 const { create, all, cos } = require('mathjs'); // Para evaluar fórmulas dinámicas
 
 const getAllDepartamentsWhitIndicators = async (req, res) => {
@@ -32,8 +31,6 @@ const getIndicatorsByDepartament = async (req, res) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
             });
         }
-
-        console.log({ departament, result })
         res.status(200).json({ departament, result });
     } catch (error) {
         res.status(400).json(error.message)
@@ -43,7 +40,7 @@ const getIndicatorsByDepartament = async (req, res) => {
 const getTabulationsyDepartament = async (req, res) => {
     try {
         const departamentId = Utils.decode(req.params.departament_id);
-        const departament = await DepartamentService.getDepartamentById(departamentId);
+        const departament = await IndicatorService.getProcessById(departamentId);
         if (departament instanceof Array) {
             departament.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
@@ -207,6 +204,24 @@ const getTabulationsByIndicator = async (req, res) => {
     }
 }
 
+//idicator staffs
+
+const getProcesStaffs = async (req, res) => {
+    try {
+        const staffId = Utils.decode(req.params.staff_id)
+        const result = await IndicatorService.getProcesStaffs(staffId);
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+            });
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        console.log(error)
+        res.status(400).json(error.message);
+    }
+}
+
 const getAllStaffsByProces = async (req, res) => {
     try {
         const processId = Utils.decode(req.params.process_id)
@@ -225,6 +240,9 @@ const getAllStaffsByProces = async (req, res) => {
 const assignStaff = async (req, res) => {
     try {
         const data = req.body;
+        if (!Array.isArray(data.staffs)) {
+            data.staffs = [data.staffs];
+        }
         data.staffs = data.staffs.map(staffId => ({ staffId: Utils.decode(staffId) }))
         data.processId = Utils.decode(req.params.process_id)
         const result = await IndicatorService.assignStaff(data);
@@ -259,6 +277,7 @@ const IndicatorController = {
     deleteIndicator,
     createTabulation,
     getTabulationsByIndicator,
+    getProcesStaffs,
     getAllStaffsByProces,
     assignStaff,
     deleteStafft,

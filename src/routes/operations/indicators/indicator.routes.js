@@ -12,6 +12,7 @@ router.post('/createIndicator', IndicatorController.createIndicator);
 router.put('/updateIndicator/:indicator_id', IndicatorController.updateIndicator);
 router.delete('/:indicator_id', IndicatorController.deleteIndicator);
 //indicators staffs 
+router.get('/staffs/:staff_id',IndicatorController.getProcesStaffs);
 router.get('/:process_id/staffs',IndicatorController.getAllStaffsByProces);
 router.post('/:process_id/assingStaff',IndicatorController.assignStaff);
 router.delete('/:process_id/process/:staff_id',IndicatorController.deleteStafft);
