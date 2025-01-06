@@ -89,7 +89,7 @@ const respondEvaluation = async (req, res) => {
             res.status(200).json({ data: 'resource created successfully' });
         }
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message);
     }
 }
@@ -117,7 +117,7 @@ const getReportingByYacht = async (req, res) => {
         }
         res.status(200).json({ yacht, result, evaluations });
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message)
     }
 }
@@ -143,7 +143,7 @@ const getReportingByDepartament = async (req, res) => {
         }
         res.status(200).json({ yacht, result, evaluations });
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message)
     }
 }
@@ -159,7 +159,7 @@ const getReportingEvaluationsByCrew = async (req, res) => {
         res.status(200).json({ staff, evaluations });
 
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message)
     }
 }
@@ -172,7 +172,7 @@ const deleteEvaluation = async (req, res) => {
         });
         res.status(200).json({ data: 'resource deleted successfully' })
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message);
     }
 }

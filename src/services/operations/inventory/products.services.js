@@ -28,7 +28,7 @@ class ProductService {
             });
             return result;
         } catch (error) {
-            console.log(error)
+            
             throw error;
         }
     }
@@ -65,7 +65,7 @@ class ProductService {
             });
             return result;
         } catch (error) {
-            console.log(error)
+            
             throw error;
         }
     }

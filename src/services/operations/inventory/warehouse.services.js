@@ -179,7 +179,7 @@ class WarehouseService {
             }));
             return results;
         } catch (error) {
-            console.log(error)
+            
             throw error;
         }
     }

@@ -156,7 +156,7 @@ class FormService {
 
             return results
         } catch (error) {
-            console.log(error)
+            
             throw error;
         }
     }

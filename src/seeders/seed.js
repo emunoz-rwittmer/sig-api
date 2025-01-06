@@ -19,4 +19,4 @@ db.sync({ force: false })
         console.log('Iniciando con el sembrario malicioso');
         indicatorProcess.forEach((rol) => Process.create(rol));
     })
-    .catch((error) => console.log(error))
+    .catch((error) => )

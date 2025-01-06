@@ -15,7 +15,7 @@ const getAllStaffs = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message)
     }
 }
@@ -36,7 +36,7 @@ const getStaffsByFilters = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message)
     }
 }
@@ -52,7 +52,7 @@ const getEvaluators = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message)
     }
 }
@@ -71,7 +71,7 @@ const getEvaluatorsByFilters = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message)
     }
 }
@@ -87,7 +87,7 @@ const getEvaluateds = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message)
     }
 }
@@ -104,7 +104,7 @@ const getEvaluatedsByFilters = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message)
     }
 }
@@ -138,7 +138,7 @@ const createStaff = async (req, res) => {
             res.status(200).json({ data: 'resource created successfully' });
         }
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message);
     }
 }
@@ -165,7 +165,7 @@ const deleteStaff = async (req, res) => {
         const result = await StaffService.delete(staffId);
         res.status(200).json({ data: result })
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message);
     }
 }

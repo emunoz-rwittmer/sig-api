@@ -22,7 +22,7 @@ const generateRequestExcel = async (req, res) => {
         const result = await ReportService.getRequestReport(requestId);
         const warehouse = await WarehouseService.getWarehouseById(result.warehouseId);
 
-console.log(result)
+
         // Verifica que result.orderItems no esté vacío o undefined
         if (!result.requestItems || result.requestItems.length === 0) {
             return res.status(400).json({ message: "No hay items en la orden." });
@@ -113,7 +113,7 @@ console.log(result)
         );
         wb.write(`report.xlsx`, res);
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message)
     }
 

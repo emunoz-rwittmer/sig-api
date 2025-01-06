@@ -288,7 +288,7 @@ class Staffervice {
             const result = await Staff.create(staff);
             return result;
         } catch (error) {
-            console.log(error)
+            
             throw error;
 
         }

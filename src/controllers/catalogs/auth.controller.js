@@ -80,7 +80,7 @@ const loginUsers = async (req, res) => {
             res.status(400).json({ data: 'user or password incorrect' })
         }
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json({ data: 'somethign wrong' })
     }
 }
@@ -104,7 +104,7 @@ const upgradePassword = async (req, res) => {
 
         return res.status(200).json({ data: 'password updated successfully' });
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message);
     }
 }
@@ -130,7 +130,6 @@ const forgotPassword = async (req, res) => {
             }
         }
         if (staff) {
-            console.log('entre aqui')
             sendEmail(staff, passwordGenerate, action);
             const respose = await Staffervice.updateStaff(
                 {
@@ -144,7 +143,7 @@ const forgotPassword = async (req, res) => {
             }
         }
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message);
     }
 }

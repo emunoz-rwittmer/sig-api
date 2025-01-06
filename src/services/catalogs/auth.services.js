@@ -59,7 +59,7 @@ class AuthService {
                     where: { id: user.id }
                 }
             );
-            console.log(result)
+            
             return result;
         } catch (error) {
             throw error;

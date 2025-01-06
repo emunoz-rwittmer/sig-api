@@ -103,7 +103,7 @@ const generateTransactionsExcel = async (req, res) => {
         );
         wb.write(`report.xlsx`, res);
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message)
     }
 

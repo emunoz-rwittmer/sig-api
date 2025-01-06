@@ -11,7 +11,7 @@ const findProduct = async (req, res) => {
             res.status(400).json(`Producto no encontrado para sku: ${sku}`)
         }
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message)
     }
 }
@@ -69,7 +69,7 @@ const createProduct = async (req, res) => {
             res.status(200).json({ data: 'resource created successfully' });
         }
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message);
     }
 }
@@ -94,7 +94,7 @@ const deleteProduct = async (req, res) => {
         const result = await ProductService.delete(productId);
         res.status(200).json({ data: result })
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message);
     }
 }
@@ -120,7 +120,7 @@ const createConfiguration = async (req, res) => {
             res.status(200).json({ data: result.message });
         }
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message);
     }
 }

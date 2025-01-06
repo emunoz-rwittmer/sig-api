@@ -80,7 +80,7 @@ const uploadOrder = async (req, res) => {
             }
         }
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message);
     }
 }
@@ -127,7 +127,7 @@ const createOrder = async (req, res) => {
         }
 
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message);
     }
 }
@@ -175,7 +175,7 @@ const updateOrder = async (req, res) => {
         }
 
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message);
     }
 }
@@ -196,7 +196,7 @@ const updateStatusOrder = async (req, res) => {
             res.status(200).json({ data: 'resource updated successfully' });
         }
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message)
     }
 }
@@ -212,7 +212,7 @@ const getItemsByOrder = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message)
     }
 }
@@ -223,7 +223,6 @@ const deleteItem = async (req, res) => {
         const result = await OrderService.deleteItem(itemId);
         res.status(200).json({ data: result })
     } catch (error) {
-        console.log(error)
         res.status(400).json(error.message);
     }
 }

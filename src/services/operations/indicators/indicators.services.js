@@ -41,10 +41,10 @@ class IndicatorService {
                 group: ['process.id', 'process.name', 'processStaff.id'],
                 order: [['name', 'ASC']]
             });
-            console.log(result)
+            
             return result;
         } catch (error) {
-            console.log(error)
+            
             throw error;
         }
     }
@@ -165,7 +165,7 @@ class IndicatorService {
             const result = await Formula.findAll();
             return result;
         } catch (error) {
-            console.log(error)
+            
             throw error;
         }
     }
@@ -185,7 +185,7 @@ class IndicatorService {
             const result = await Indicator.update(data, id);
             return result;
         } catch (error) {
-            console.log(error)
+            
             throw error;
 
         }
@@ -240,7 +240,7 @@ class IndicatorService {
             });
             return result;
         } catch (error) {
-            console.log(error)
+            
             throw error;
         }
     }
@@ -263,7 +263,7 @@ class IndicatorService {
             });
             return result;
         } catch (error) {
-            console.log(error)
+            
             throw error;
         }
     }
