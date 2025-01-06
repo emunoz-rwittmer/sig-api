@@ -121,7 +121,7 @@ const deleteForm = async (req, res) => {
         });
         res.status(200).json({ data: 'resource deleted successfully' })
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message);
     }
 }
@@ -153,7 +153,7 @@ const sendEvaluation = async (req, res) => {
         }
 
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message);
     }
 }
@@ -170,7 +170,7 @@ const sendRetroalimentation = async (req, res) => {
             res.status(200).json({ data: 'evaluation send successfully' })
         }
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message);
     }
 }

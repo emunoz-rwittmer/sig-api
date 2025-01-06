@@ -34,7 +34,7 @@ const productEntryInWarehouse = async (req, res) => {
             res.status(200).json({ data: result.message });
         }
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message)
     }
 }
@@ -63,7 +63,7 @@ const transactionWarehouse = async (req, res) => {
             res.status(200).json({ data: 'transactions register success' });
         }  
     } catch (error) {
-        console.log(error.message)
+        
         res.status(400).json(error.message);
     }
 }
@@ -83,7 +83,7 @@ const incomeProductsInWarehouse = async (req, res) => {
             res.status(200).json({ data: 'transactions register success' });
         }
     } catch (error) {
-        console.log(error.message)
+        
         res.status(400).json(error.message);
     }
 }
@@ -100,7 +100,7 @@ const updateStatusItem = async (req, res) => {
         }
 
     } catch (error) {
-        console.log(error.message)
+        
         res.status(400).json(error.message);
     }
 }
@@ -139,7 +139,7 @@ const createRequestWarehouse = async (req, res) => {
 
         res.status(200).json({ data: result.message });
     } catch (error) {
-        console.log(error.message)
+        
         res.status(400).json(error.message);
     }
 }

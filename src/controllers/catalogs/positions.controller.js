@@ -36,7 +36,7 @@ const createPosition = async (req, res) => {
             res.status(200).json({ data: 'resource created successfully' });
         }
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message);
     }
 }
@@ -60,7 +60,7 @@ const deletePosition = async (req, res) => {
         const result = await PositionService.delete(positionId);
         res.status(200).json({ data: result })
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message);
     }
 }

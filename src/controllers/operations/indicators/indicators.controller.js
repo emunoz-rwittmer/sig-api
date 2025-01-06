@@ -76,7 +76,7 @@ const getTabulationsyDepartament = async (req, res) => {
 
         res.status(200).json({ departament, result });
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message)
     }
 }
@@ -119,7 +119,7 @@ const createIndicator = async (req, res) => {
             res.status(200).json({ data: 'resource created successfully' });
         }
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message);
     }
 }
@@ -138,7 +138,7 @@ const updateIndicator = async (req, res) => {
             res.status(200).json({ data: 'resource updated successfully' });
         }
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message);
     }
 }
@@ -149,7 +149,7 @@ const deleteIndicator = async (req, res) => {
         const result = await IndicatorService.deleteIndicator(indicatorId);
         res.status(200).json({ data: result })
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message);
     }
 }
@@ -182,7 +182,7 @@ const createTabulation = async (req, res) => {
             res.status(200).json({ data: 'resource created successfully' });
         }
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message);
     }
 }
@@ -199,7 +199,7 @@ const getTabulationsByIndicator = async (req, res) => {
         const result = await IndicatorService.getTabulationsByIndicator(indicatorId);
         res.status(200).json({ indicator, result });
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message)
     }
 }
@@ -217,7 +217,7 @@ const getProcesStaffs = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message);
     }
 }

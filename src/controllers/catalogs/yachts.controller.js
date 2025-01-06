@@ -66,7 +66,7 @@ const deleteYacht = async (req, res) => {
         });
         res.status(200).json({ data: 'resource deleted successfully' })
     } catch (error) {
-        console.log(error)
+        
         res.status(400).json(error.message);
     }
 }

@@ -105,7 +105,7 @@ class OrderService {
             }));
             return results;
         } catch (error) {
-            console.log(error)
+            
             throw error;
         }
     }
