@@ -26,7 +26,7 @@ class IndicatorService {
                     [Sequelize.literal(`(
                         SELECT COUNT(*)
                         FROM indicators AS indicadores
-                        WHERE indicadores.departament_id = Process.id
+                        WHERE indicadores.departamentId = Process.id
                     )`), 'indicatorsCount']
                 ],
                 include: [{
