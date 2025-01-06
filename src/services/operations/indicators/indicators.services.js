@@ -41,8 +41,10 @@ class IndicatorService {
                 group: ['Process.id', 'Process.name', 'processStaff.id'],
                 order: [['name', 'ASC']]
             });
+            console.log(result)
             return result;
         } catch (error) {
+            console.log(error)
             throw error;
         }
     }
