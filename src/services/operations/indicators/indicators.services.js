@@ -38,7 +38,7 @@ class IndicatorService {
                         attributes: ['firstName', 'lastName'],
                     }
                 }],
-                group: ['Process.id', 'Process.name', 'processStaff.id'],
+                group: ['process.id', 'process.name', 'processStaff.id'],
                 order: [['name', 'ASC']]
             });
             console.log(result)
