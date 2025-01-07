@@ -14,7 +14,7 @@ const getAllWarehouses = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        
+
         res.status(400).json(error.message)
     }
 }
@@ -124,6 +124,16 @@ const getItemsToRequest = async (req, res) => {
     }
 }
 
+const updateStockLaundry = async (req, res) => {
+    try {
+        const warehouseId = Utils.decode(req.params.warehouse_id);
+        const result = await WarehouseService.updateStockLaundry(warehouseId);
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(400).json(error.message)
+    }
+}
+
 
 
 
@@ -133,7 +143,7 @@ const WarehouseController = {
     getStockInWarehouse,
     getTransactionsWarehouse,
     getRequestToWareHouse,
-    getItemsToRequest
-
+    getItemsToRequest,
+    updateStockLaundry
 }
 module.exports = WarehouseController

@@ -5,11 +5,12 @@ const Transaction = require('../../../models/operations/inventory/transaction.mo
 const Product = require('../../../models/operations/orders/product.models');
 const productCalculations = require('../../../models/operations/orders/productCalculations.models');
 const itemsRequest = require('../../../models/operations/yachtRequest/itemsRequest.models');
+const LaundryYacht = require('../../../models/operations/yachtRequest/laundryYacht');
 const PlacesYacht = require('../../../models/operations/yachtRequest/placesYacht');
 const Request = require('../../../models/operations/yachtRequest/request.models');
 const Utils = require('../../../utils/Utils');
 const { Sequelize, Op, where } = require("sequelize");
-
+const db = require('../../../utils/database');
 
 class WarehouseService {
     static async getAllWarehouses() {
@@ -179,7 +180,7 @@ class WarehouseService {
             }));
             return results;
         } catch (error) {
-            
+
             throw error;
         }
     }
@@ -305,6 +306,51 @@ class WarehouseService {
             return result;
         } catch (error) {
             throw error;
+        }
+    }
+
+    static async updateStockLaundry(warehouseId) {
+        const transaction = await db.transaction();
+        try {
+            const products = await LaundryYacht.findAll({ where: { warehouseId } })
+
+            const transactionResults = await Promise.all(
+                products.map(async (product) => {
+
+                    const lastValue = await Transaction.findOne({
+                        where: { 
+                            productId: product.product_id, 
+                            warehouseFromId: 2,  
+                            warehouseToId: warehouseId 
+                        },
+                        order: [['createdAt', 'DESC']],
+                        transaction, 
+                    });
+
+                    const stockToInstance = await Stock.findOne({
+                         where: { productId: product.product_id, warehouseId: 2 },
+                         transaction,
+                    });
+
+                    stockToInstance.quantity += parseInt(lastValue.quantity);
+                    await stockToInstance.save({ transaction });
+
+                    const stockToIWarehose = await Stock.findOne({
+                        where: { productId: product.product_id, warehouseId: warehouseId },
+                        transaction,
+                   });
+
+                   stockToIWarehose.quantity -= parseInt(lastValue.quantity);
+                   await stockToIWarehose.save({ transaction });
+
+                })
+            );
+
+            await transaction.commit();
+            return transactionResults;
+        } catch (error) {
+            await transaction.rollback();
+            throw new Error(error.message);
         }
     }
 }
