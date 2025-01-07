@@ -10,6 +10,6 @@ router.get('/:warehouse_id/transactions',WarehouseController.getTransactionsWare
 //Yacht request 
 router.get('/requestToWareHouse/:warehouse_id/:type',WarehouseController.getRequestToWareHouse);
 router.get('/:warehouse_id/itemsByRequest/:request_id',WarehouseController.getItemsToRequest);
-
+router.put('/updateStockLaundry/:warehouse_id',WarehouseController.updateStockLaundry);
 
 module.exports = router;
