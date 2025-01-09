@@ -57,6 +57,7 @@ class IndicatorService {
                     model: Formula,
                     as: 'formula_indicator',
                 }],
+                order:[['name', 'ASC']] 
             });
             return result;
         } catch (error) {
