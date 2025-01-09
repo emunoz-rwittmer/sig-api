@@ -5,6 +5,7 @@ const router = Router();
 
 router.get('/', DepartamentsController.getDepartaments);
 router.get('/:departament_id', DepartamentsController.getDepartament);
+router.get('/process/:departament_id', DepartamentsController.getProcessById);
 router.post('/createDepartament', DepartamentsController.createDepartament);
 router.put('/updateDepartament/:departament_id', DepartamentsController.updateDepartament);
 router.delete('/:departament_id', DepartamentsController.deleteDepartament);

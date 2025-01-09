@@ -28,6 +28,19 @@ const getDepartament = async (req, res) => {
     }
 }
 
+const getProcessById = async (req, res) => {
+    try {
+        const departamentId = Utils.decode(req.params.departament_id);
+        const result = await DepartamentService.getProcessById(departamentId);
+        if (result instanceof Object) {
+            result.id = Utils.encode(result.id);
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(400).json(error.message)
+    }
+}
+
 const createDepartament = async (req, res) => {
     try {
         const departament = req.body;
@@ -69,6 +82,7 @@ const deleteDepartament = async (req, res) => {
 const DepartamentsController = {
     getDepartaments,
     getDepartament,
+    getProcessById,
     createDepartament,
     updateDepartament,
     deleteDepartament

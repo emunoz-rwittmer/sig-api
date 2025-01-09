@@ -13,11 +13,11 @@ const Tabulation = db.define('tabulation', {
     field: 'indicator_id'
   },
   a: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.BIGINT,
     allowNull: true,
   }, 
   b: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.BIGINT,
     allowNull: true,
   }, 
   percent: {
