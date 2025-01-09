@@ -49,7 +49,14 @@ const Indicator = db.define('indicator', {
     type: DataTypes.STRING,
     allowNull: false,
     field: 'goal'
+  },
+  typeGoal: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    field: 'type_goal'
   }
+  
+  
 });
 
 module.exports = Indicator;

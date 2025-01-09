@@ -1,4 +1,5 @@
 const Departaments = require('../../models/catalogs/departament.models');
+const Process = require('../../models/operations/indicators/process.models');
 
 class DepartamentService {
     static async getAll() {
@@ -16,6 +17,18 @@ class DepartamentService {
     static async getDepartamentById(id) {
         try {
             const result = await Departaments.findOne({
+                where: { id },
+                attributes: ['id','name']
+            });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async getProcessById(id) {
+        try {
+            const result = await Process.findOne({
                 where: { id },
                 attributes: ['id','name']
             });
