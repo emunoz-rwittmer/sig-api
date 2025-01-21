@@ -5,7 +5,7 @@ const YachtService = require('../../../services/catalogs/yachts.services');
 const Staffervice = require('../../../services/catalogs/staff.services');
 const Utils = require('../../../utils/Utils');
 const bcrypt = require('bcrypt');
-const sendEmail = require('../../../utils/mailer');
+const { sendEmail } = require('../../../utils/mailer');
 const moment = require('moment');
 const UserService = require('../../../services/catalogs/users.services');
 
@@ -121,7 +121,7 @@ const deleteForm = async (req, res) => {
         });
         res.status(200).json({ data: 'resource deleted successfully' })
     } catch (error) {
-        
+
         res.status(400).json(error.message);
     }
 }
@@ -153,7 +153,7 @@ const sendEvaluation = async (req, res) => {
         }
 
     } catch (error) {
-        
+
         res.status(400).json(error.message);
     }
 }
@@ -165,12 +165,12 @@ const sendRetroalimentation = async (req, res) => {
         const emailEvaluado = await Staffervice.getStaffById(evaluadoId)
         const emailUser = await UserService.getUserById(userId);
         if (emailEvaluado && emailUser) {
-                const action = "retroalimetation"
-                sendEmail(emailEvaluado, " ", action, emailUser, req.body.email);
+            const action = "retroalimetation"
+            sendEmail(emailEvaluado, " ", action, emailUser, req.body.email);
             res.status(200).json({ data: 'evaluation send successfully' })
         }
     } catch (error) {
-        
+
         res.status(400).json(error.message);
     }
 }
