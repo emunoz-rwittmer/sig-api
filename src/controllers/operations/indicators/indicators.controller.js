@@ -166,25 +166,24 @@ const createTabulation = async (req, res) => {
         const formula = indicador.formula_indicator.name;
 
         // Verificar si a y b son fechas
-        const isDate = (value) => !isNaN(Date.parse(value));
+        //const isDate = (value) => !isNaN(Date.parse(value));
 
-        if (isDate(a) && isDate(b)) {
-            a = new Date(a).getTime();
-            b = new Date(b).getTime();
-            // Calcular los días entre a y b
-            const millisecondsPerDay = 24 * 60 * 60 * 1000;
-            percent = (b - a) / millisecondsPerDay;
-        } else {
+        // if (isDate(a) && isDate(b)) {
+        //     a = new Date(a).getTime();
+        //     b = new Date(b).getTime();
+        //     // Calcular los días entre a y b
+        //     const millisecondsPerDay = 24 * 60 * 60 * 1000;
+        //     percent = (b - a) / millisecondsPerDay;
+        // } else {
             let scope = { a, b };
             try {
                 percent = math.evaluate(formula, scope);
             } catch (error) {
                 return res.status(400).json(error.message);
             }
-        }
+        //}
 
         const result = await IndicatorService.createTabulation({ a, b, percent, indicatorId });
-
         if (result) {
             return res.status(200).json({ data: 'resource created successfully' });
         }
