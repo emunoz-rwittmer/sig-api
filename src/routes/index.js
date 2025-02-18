@@ -18,6 +18,7 @@ const productsRoutes = require('./operations/inventory/products.routes');
 const warehouseRoutes = require('./operations/inventory/warehouse.routes');
 const yachtRequestRoutes = require('./operations/yachtRequest/yachtRequest.routes');
 const indicatorsRoutes = require('./operations/indicators/indicator.routes');
+const probabilityRoutes = require('./operations/indicators/probability.routes');
 
 //Report
 const reportRoutes = require("./reports/reports.routes");
@@ -45,10 +46,11 @@ const routerApi = (app) => {
   app.use("/api/products", authJwt.verifyToken, productsRoutes);
   //INDICATORS
   app.use("/api/indicators", authJwt.verifyToken, indicatorsRoutes);
+  app.use("/api/probabilities", authJwt.verifyToken, probabilityRoutes)
   //REPORTS
   app.use("/api/reports", authJwt.verifyToken, reportRoutes);
-  
-  
+
+
 
 };
 
