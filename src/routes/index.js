@@ -20,7 +20,10 @@ const yachtRequestRoutes = require('./operations/yachtRequest/yachtRequest.route
 const indicatorsRoutes = require('./operations/indicators/indicator.routes');
 const probabilityRoutes = require('./operations/indicators/probability.routes');
 const impactRoutes = require('./operations/indicators/impact.routes');
-const levelRoutes = require('./operations/indicators/levels.routes');//Report
+const levelRoutes = require('./operations/indicators/levels.routes');
+const startegryRoutes = require('./operations/indicators/strategy.routes');
+
+//Report
 const reportRoutes = require("./reports/reports.routes");
 
 
@@ -46,14 +49,12 @@ const routerApi = (app) => {
   app.use("/api/products", authJwt.verifyToken, productsRoutes);
   //INDICATORS
   app.use("/api/indicators", authJwt.verifyToken, indicatorsRoutes);
-  app.use("/api/probabilities", authJwt.verifyToken, probabilityRoutes)
-  app.use("/api/impact", authJwt.verifyToken, impactRoutes)
-  app.use("/api/levels", authJwt.verifyToken, levelRoutes)
+  app.use("/api/probabilities", authJwt.verifyToken, probabilityRoutes);
+  app.use("/api/impact", authJwt.verifyToken, impactRoutes);
+  app.use("/api/levels", authJwt.verifyToken, levelRoutes);
+  app.use("/api/strategy", authJwt.verifyToken, startegryRoutes);
   //REPORTS
   app.use("/api/reports", authJwt.verifyToken, reportRoutes);
-
-
-
 };
 
 module.exports = routerApi;

@@ -34,6 +34,7 @@ const Process = require('./operations/indicators/process.models');
 const ProcessStaff = require('./operations/indicators/processStaffs.models');
 const Impact = require('./operations/indicators/impact.models');
 const Levels = require('./operations/indicators/levels.models');
+const Strategy = require('./operations/indicators/strategy.models');
 
 const initModels = () => {
 
@@ -130,7 +131,8 @@ const initModels = () => {
     ProcessStaff.belongsTo(Staff, { as: "staffs", foreignKey: "staff_id" });
 
     Impact
-    Levels
+    Levels,
+    Strategy
 
 }
 

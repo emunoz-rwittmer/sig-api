@@ -54,8 +54,12 @@ const Indicator = db.define('indicator', {
     type: DataTypes.STRING,
     allowNull: false,
     field: 'type_goal'
+  },
+  timeType: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'time_type'
   }
-  
   
 });
 
