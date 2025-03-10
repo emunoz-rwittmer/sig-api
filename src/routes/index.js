@@ -19,8 +19,8 @@ const warehouseRoutes = require('./operations/inventory/warehouse.routes');
 const yachtRequestRoutes = require('./operations/yachtRequest/yachtRequest.routes');
 const indicatorsRoutes = require('./operations/indicators/indicator.routes');
 const probabilityRoutes = require('./operations/indicators/probability.routes');
-
-//Report
+const impactRoutes = require('./operations/indicators/impact.routes');
+const levelRoutes = require('./operations/indicators/levels.routes');//Report
 const reportRoutes = require("./reports/reports.routes");
 
 
@@ -47,6 +47,8 @@ const routerApi = (app) => {
   //INDICATORS
   app.use("/api/indicators", authJwt.verifyToken, indicatorsRoutes);
   app.use("/api/probabilities", authJwt.verifyToken, probabilityRoutes)
+  app.use("/api/impact", authJwt.verifyToken, impactRoutes)
+  app.use("/api/levels", authJwt.verifyToken, levelRoutes)
   //REPORTS
   app.use("/api/reports", authJwt.verifyToken, reportRoutes);
 
