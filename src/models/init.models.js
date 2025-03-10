@@ -32,10 +32,15 @@ const Tabulation = require('./operations/indicators/tabulation.models');
 const Formula = require('./operations/indicators/formula.models');
 const Process = require('./operations/indicators/process.models');
 const ProcessStaff = require('./operations/indicators/processStaffs.models');
+const Impact = require('./operations/indicators/impact.models');
+const Levels = require('./operations/indicators/levels.models');
 
 const initModels = () => {
 
     //catalogs
+    
+    Question,
+    HouseRule
     Users.belongsTo(Roles, { as: "user_rol", foreignKey: "role_id" });
     Roles.hasMany(Users, { as: "rol_user", foreignKey: "role_id" });
     Staff.belongsTo(Roles, { as: "rol", foreignKey: "role_id" });
@@ -101,9 +106,11 @@ const initModels = () => {
     Product.hasMany(LaundryYacht, { as: 'wineries', foreignKey: 'product_id' });
 
     Warehouse.hasMany(Request, { foreignKey: 'warehouse_id', as: 'requests' });
+    
     Request.belongsTo(Warehouse, { foreignKey: 'warehouse_id', as: 'warehouse' });
     Request.hasMany(itemsRequest, { foreignKey: 'request_id', as: 'requestItems' });
     itemsRequest.belongsTo(Request, { foreignKey: 'request_id', as: 'request' });
+    
     Request.belongsTo(Staff, { foreignKey: 'user_id', as: 'responsible' });
     Staff.hasMany(Request, { foreignKey: 'user_id', as: 'request' });
     itemsRequest.belongsTo(PlacesYacht, { foreignKey: 'placeYachtId', as: 'placeYacht' });
@@ -122,8 +129,8 @@ const initModels = () => {
     ProcessStaff.belongsTo(Process, { as: "process", foreignKey: "process_id" });
     ProcessStaff.belongsTo(Staff, { as: "staffs", foreignKey: "staff_id" });
 
-    Question,
-    HouseRule
+    Impact
+    Levels
 
 }
 

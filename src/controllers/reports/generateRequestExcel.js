@@ -99,7 +99,7 @@ const generateRequestExcel = async (req, res) => {
 
         //SHOW DATA - Revisa el array result.orderItems usando forEach
         result.requestItems.forEach((item, index) => {
-            ws.cell(14 + index, 1).string(item.product.name || "Sin producto");
+            ws.cell(14 + index, 1).string(item.placeYacht.product?.name || "Sin producto");
             ws.cell(14 + index, 2).string(item.stock.toString() || "0");
             ws.cell(14 + index, 3).string(item.order.toString() || "0");
             ws.cell(14 + index, 4).string(item.quantity || "0");
@@ -113,7 +113,6 @@ const generateRequestExcel = async (req, res) => {
         );
         wb.write(`report.xlsx`, res);
     } catch (error) {
-        
         res.status(400).json(error.message)
     }
 

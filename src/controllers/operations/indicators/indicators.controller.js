@@ -158,7 +158,6 @@ const createTabulation = async (req, res) => {
         let { a, b, indicatorId } = req.body;
         indicatorId = Utils.decode(indicatorId);
         const indicador = await IndicatorService.getIndicatorById(indicatorId);
-
         if (!indicador || !indicador.formula) {
             return res.status(404).json('Indicador o fórmula no encontrados');
         }
@@ -177,8 +176,10 @@ const createTabulation = async (req, res) => {
         // } else {
             let scope = { a, b };
             try {
-                percent = math.evaluate(formula, scope);
+                percent = b === 0 ? null : math.evaluate(formula, scope);
+
             } catch (error) {
+                console.log(error.message)
                 return res.status(400).json(error.message);
             }
         //}
@@ -188,6 +189,7 @@ const createTabulation = async (req, res) => {
             return res.status(200).json({ data: 'resource created successfully' });
         }
     } catch (error) {
+        console.log(error)
         res.status(400).json(error.message);
     }
 }
