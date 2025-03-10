@@ -119,7 +119,6 @@ const createIndicator = async (req, res) => {
             res.status(200).json({ data: 'resource created successfully' });
         }
     } catch (error) {
-
         res.status(400).json(error.message);
     }
 }
@@ -128,7 +127,6 @@ const updateIndicator = async (req, res) => {
     try {
         const indicatorId = Utils.decode(req.params.indicator_id);
         const data = req.body
-        data.departamentId = Utils.decode(data.departamentId);
         data.formulaId = Utils.decode(data.formulaId);
         const result = await IndicatorService.updateIndicator(data, {
             where: { id: indicatorId }
