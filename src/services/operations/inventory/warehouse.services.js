@@ -11,6 +11,7 @@ const Request = require('../../../models/operations/yachtRequest/request.models'
 const Utils = require('../../../utils/Utils');
 const { Sequelize, Op, where } = require("sequelize");
 const db = require('../../../utils/database');
+const Company = require('../../../models/catalogs/company.models');
 
 class WarehouseService {
     static async getAllWarehouses() {
@@ -104,7 +105,13 @@ class WarehouseService {
                         as: 'configurations',
                         attributes: ['name'],
                     }],
-                }],
+                },
+                {
+                    model: Company,
+                    as: 'company',
+                    attributes: ['id','name'],
+                }
+            ],
                 order: [[{ model: Product, as: 'product' }, 'name', 'ASC']]
             });
             return result;

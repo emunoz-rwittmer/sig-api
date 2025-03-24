@@ -74,21 +74,31 @@ const initModels = () => {
     //state
     HeaderAnswer.belongsTo(StatusEvaluation, { as: 'state', foreignKey: 'state_id' });
     StatusEvaluation.hasMany(HeaderAnswer, { as: "header_state", foreignKey: "state_id" });
+   
     //INVENTORY RELATIONS
     Company.hasOne(Yacht, { foreignKey: 'company_id', as: 'yacht' });
     Yacht.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
     Yacht.hasOne(Warehouse, { foreignKey: 'yacht_id', as: 'warehouse' });
+    
     Warehouse.belongsTo(Yacht, { foreignKey: 'yacht_id', as: 'yacht' });
     Company.hasMany(Order, { foreignKey: 'company_id', as: 'orders' });
+
     Order.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
     Order.hasMany(itemsOrder, { foreignKey: 'order_id', as: 'orderItems' });
     itemsOrder.belongsTo(Order, { foreignKey: 'order_id', as: 'order' });
+
     Order.belongsTo(Staff, { foreignKey: 'user_id', as: 'responsible' });
     Staff.hasMany(Order, { foreignKey: 'user_id', as: 'orders' });
+
     Warehouse.hasMany(Stock, { foreignKey: 'warehouse_id', as: 'stocks' });
     Stock.belongsTo(Warehouse, { foreignKey: 'warehouse_id', as: 'warehouse' });
+    
     Product.hasMany(Stock, { foreignKey: 'product_id', as: 'stocks' });
     Stock.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
+
+    Company.hasMany(Stock, { foreignKey: 'company_id', as: 'stocks' });
+    Stock.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
+
     Product.hasMany(Transaction, { foreignKey: 'product_id', as: 'transactions' });
     Transaction.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
     Transaction.belongsTo(Staff, { foreignKey: 'user_id', as: 'responsible' });

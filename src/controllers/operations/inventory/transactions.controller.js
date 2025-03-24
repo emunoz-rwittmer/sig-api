@@ -18,7 +18,8 @@ const productEntryInWarehouse = async (req, res) => {
 
         const stockData = {
             warehouseId,
-            quantity: parseInt(data.quantity)
+            quantity: parseInt(data.quantity),
+            companyId: Utils.decode(data.company_id)
         }
 
         const transactionData = {

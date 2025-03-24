@@ -12,15 +12,19 @@ class TransactionService {
 
         try {
             let product = await Product.findOne({ where: { sku: productData.sku }, transaction });
-
             if (product) {
-
+                const whereCondition = {
+                    productId: product.id,
+                    warehouseId: stockData.warehouseId,
+                    ...(stockData.companyId && { companyId: stockData.companyId })  // Agrega companyId solo si existe
+                };
+                
                 const [stock, created] = await Stock.findOrCreate({
-                    where: { productId: product.id, warehouseId: stockData.warehouseId },
+                    where: whereCondition,
                     defaults: { ...stockData, productId: product.id },
                     transaction
                 });
-
+                
                 if (!created) {
                     await stock.update(
                         { quantity: db.literal(`quantity + ${stockData.quantity}`) },
