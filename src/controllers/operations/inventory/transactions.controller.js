@@ -134,8 +134,8 @@ const createRequestWarehouse = async (req, res) => {
         const company = await WarehouseService.getWarehouseById(warehouseId)
         const staff = await Staffervice.getStaffById(userId)
         action = 'requerimiento'
-        sendEmailNewRequest(company.name);
-        sendConfirmationEmail(action, company.name, staff)
+        // sendEmailNewRequest(company.name);
+        // sendConfirmationEmail(action, company.name, staff)
 
         res.status(200).json({ data: result.message });
     } catch (error) {

@@ -327,6 +327,15 @@ class WarehouseService {
                         transaction, 
                     });
 
+                    await Transaction.create({
+                        productId: product.product_id,
+                        userId: lastValue.userId,
+                        warehouseFromId: warehouseId,
+                        warehouseToId: 2,
+                        quantity: parseInt(lastValue.quantity),
+                        type: 'Entrada',
+                    }, { transaction });
+
                     const stockToInstance = await Stock.findOne({
                          where: { productId: product.product_id, warehouseId: 2 },
                          transaction,
@@ -339,10 +348,8 @@ class WarehouseService {
                         where: { productId: product.product_id, warehouseId: warehouseId },
                         transaction,
                    });
-
                    stockToIWarehose.quantity -= parseInt(lastValue.quantity);
                    await stockToIWarehose.save({ transaction });
-
                 })
             );
 
