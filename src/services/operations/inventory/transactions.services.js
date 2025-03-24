@@ -77,16 +77,21 @@ class TransactionService {
     }
 
     static async transactionWarehouse(transactionData) {
-        const { products, warehouseFromId, warehouseToId, userId } = transactionData;
+        const { products, warehouseFromId, warehouseToId, userId, companyId } = transactionData;
 
         const transaction = await db.transaction();
 
         try {
             const transactionResults = await Promise.all(
                 products.map(async (product) => {
+                    const whereFromCondition = {
+                        productId: product.id,
+                        warehouseId: warehouseFromId,
+                        ...(companyId && { companyId: companyId })  // Agrega companyId solo si existe
+                    };
 
                     const [stockFrom] = await Stock.findOrCreate({
-                        where: { productId: product.id, warehouseId: warehouseFromId },
+                        where: whereFromCondition ,
                         defaults: { quantity: 0 },
                         transaction,
                     });
@@ -98,8 +103,14 @@ class TransactionService {
                     stockFrom.quantity -= parseInt(product.quantity);
                     await stockFrom.save({ transaction });
 
+                    const whereToCondition = {
+                        productId: product.id,
+                        warehouseId: warehouseToId,
+                        ...(companyId && { companyId: companyId })  // Agrega companyId solo si existe
+                    };
+
                     const [stockToInstance] = await Stock.findOrCreate({
-                        where: { productId: product.id, warehouseId: warehouseToId },
+                        where: whereToCondition,
                         defaults: { quantity: 0 },
                         transaction,
                     });

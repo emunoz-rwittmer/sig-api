@@ -54,13 +54,13 @@ const transactionWarehouse = async (req, res) => {
             userId
         });
         if (transactions) {
-            if (location === 'UIO') {
-                axios.post('http://190.12.15.164:5859/print/transactions', { products, userName, company })
-            }
-            if (location === 'GPS') {
-                console.log('ipimiendo en galapagos')
-                //axios.post('http://localhost:3000/print/transactions', { products, userName, company })
-            }
+            // if (location === 'UIO') {
+            //     axios.post('http://190.12.15.164:5859/print/transactions', { products, userName, company })
+            // }
+            // if (location === 'GPS') {
+            //     console.log('ipimiendo en galapagos')
+            //     //axios.post('http://localhost:3000/print/transactions', { products, userName, company })
+            // }
             res.status(200).json({ data: 'transactions register success' });
         }  
     } catch (error) {
