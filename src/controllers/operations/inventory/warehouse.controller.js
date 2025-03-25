@@ -36,7 +36,10 @@ const getAllWarehousesTypeYacht = async (req, res) => {
 
 const getStockInWarehouse = async (req, res) => {
     try {
+        console.log(req.params.warehouse_id)
         const warehouseId = Utils.decode(req.params.warehouse_id);
+        console.log(warehouseId)
+
         const warehouse = await WarehouseService.getWarehouseById(warehouseId);
         if (warehouse instanceof Object) {
             warehouse.dataValues.id = Utils.encode(warehouse.dataValues.id);
