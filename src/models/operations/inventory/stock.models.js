@@ -19,7 +19,7 @@ const Stock = db.define('Stock', {
   },
   companyId: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
     field: 'company_id'
   },
   quantity: {

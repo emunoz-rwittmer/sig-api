@@ -90,11 +90,13 @@ const incomeProductsInWarehouse = async (req, res) => {
     try {
         const { products } = req.body;
         const warehouseToId = Utils.decode(req.body.warehouseToId)
+        const companyId = Utils.decode(req.body.companyId)
         const userId = Utils.decode(req.body.userId)
 
         const transactions = await TransactionService.incomeProductsInWarehouse({
             products,
             warehouseToId,
+            companyId,
             userId
         });
         if (transactions) {

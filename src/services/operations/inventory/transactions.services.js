@@ -154,7 +154,7 @@ class TransactionService {
     
 
     static async incomeProductsInWarehouse(transactionData) {
-        const { products, warehouseToId, userId, companyId } = transactionData;
+        const { products, warehouseToId, companyId, userId } = transactionData;
 
         const transaction = await db.transaction();
 

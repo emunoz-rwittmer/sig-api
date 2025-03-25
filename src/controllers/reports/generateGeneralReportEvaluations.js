@@ -19,8 +19,6 @@ const generateGeneralReportEvaluations = async (req, res) => {
 
         const { reportingByYachtState, capitanesConEvaluaciones, dataForReport } = req.body
 
-        console.log('dataForReport.startDate', dataForReport.startDate)
-
         //COLUMNS
         ws.column(1).setWidth(25);
         ws.column(2).setWidth(40);
