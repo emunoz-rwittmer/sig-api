@@ -53,6 +53,7 @@ const getStockInWarehouse = async (req, res) => {
 
         res.status(200).json({ warehouse, result });
     } catch (error) {
+        console.log(error)
         res.status(400).json(error.message)
     }
 }
