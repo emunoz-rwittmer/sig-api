@@ -5,6 +5,9 @@ const Utils = require('../../../utils/Utils');
 const WarehouseService = require('../../../services/operations/inventory/warehouse.services');
 const { sendConfirmationEmail, sendEmailNewRequest } = require('../../../utils/mailer');
 const Staffervice = require('../../../services/catalogs/staff.services');
+const path = require('path');
+const fs = require('fs');
+const CompanyService = require('../../../services/catalogs/company.services');
 
 const productEntryInWarehouse = async (req, res) => {
     try {
@@ -42,29 +45,43 @@ const productEntryInWarehouse = async (req, res) => {
 
 const transactionWarehouse = async (req, res) => {
     try {
-        const { products, userName, company, location } = req.body;
-        const warehouseFromId = Utils.decode(req.body.warehouseFromId)
-        const warehouseToId = Utils.decode(req.body.warehouseToId)
-        const userId = Utils.decode(req.body.userId)
+        const { products, userName, location } = req.body;
+        const companyId = Utils.decode(req.body.company);
+        const warehouseFromId = Utils.decode(req.body.warehouseFromId);
+        const warehouseToId = Utils.decode(req.body.warehouseToId);
+        const userId = Utils.decode(req.body.userId);
+
+         const counterFilePath = path.join(__dirname, 'printCounter.txt');
+         let currentCounter = 1;
+         if (fs.existsSync(counterFilePath)) {
+             currentCounter = parseInt(fs.readFileSync(counterFilePath, 'utf8'), 10);
+         }
+
+         const formattedCounter = `000-${currentCounter.toString().padStart(3, '0')}`;
+         currentCounter += 1;
+         fs.writeFileSync(counterFilePath, currentCounter.toString(), 'utf8');
 
         const transactions = await TransactionService.transactionWarehouse({
             products,
             warehouseFromId,
             warehouseToId,
-            userId
+            userId,
+            companyId,
+            formattedCounter
         });
-        if (transactions) {
-            // if (location === 'UIO') {
-            //     axios.post('http://190.12.15.164:5859/print/transactions', { products, userName, company })
-            // }
-            // if (location === 'GPS') {
-            //     console.log('ipimiendo en galapagos')
-            //     //axios.post('http://localhost:3000/print/transactions', { products, userName, company })
-            // }
-            res.status(200).json({ data: 'transactions register success' });
+
+        if (transactions.success) {
+            const result = await CompanyService.getCompanyById(companyId);
+            if (location === 'UIO') {
+                axios.post('http://190.12.15.164:5859/print/transactions', { products, userName, company:result.name, formattedCounter })
+            }
+            if (location === 'GPS') {
+                console.log('imprimiendo en galapagos')
+                //axios.post('http://localhost:3000/print/transactions', { products, userName, company })
+            }
+            res.status(200).json({ data: transactions.message });
         }  
     } catch (error) {
-        
         res.status(400).json(error.message);
     }
 }

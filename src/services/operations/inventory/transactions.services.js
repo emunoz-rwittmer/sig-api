@@ -5,6 +5,7 @@ const db = require('../../../utils/database');
 const Request = require('../../../models/operations/yachtRequest/request.models');
 const itemsRequest = require('../../../models/operations/yachtRequest/itemsRequest.models');
 const itemsOrder = require('../../../models/operations/orders/itemsOrder.models');
+const Register = require('../../../models/operations/inventory/register.models');
 
 class TransactionService {
     static async productEntryInWarehouse(productData, stockData, transactionData) {
@@ -18,13 +19,13 @@ class TransactionService {
                     warehouseId: stockData.warehouseId,
                     ...(stockData.companyId && { companyId: stockData.companyId })  // Agrega companyId solo si existe
                 };
-                
+
                 const [stock, created] = await Stock.findOrCreate({
                     where: whereCondition,
                     defaults: { ...stockData, productId: product.id },
                     transaction
                 });
-                
+
                 if (!created) {
                     await stock.update(
                         { quantity: db.literal(`quantity + ${stockData.quantity}`) },
@@ -77,76 +78,97 @@ class TransactionService {
     }
 
     static async transactionWarehouse(transactionData) {
-        const { products, warehouseFromId, warehouseToId, userId, companyId } = transactionData;
+        const { products, warehouseFromId, warehouseToId, userId, companyId, formattedCounter } = transactionData;
+    
+        const transaction = await db.transaction();
+        const suma = products.reduce((total, product) => total + parseInt(product.quantity), 0);
+    
+        try {
+            // Crear el registro antes de `Promise.all`
+            const register = await Register.create({
+                counter: formattedCounter,
+                userId,
+                companyId,
+                products: suma
+            }, { transaction });
+    
+            await Promise.all(products.map(async (product) => {
+                const quantity = parseInt(product.quantity);
+    
+                // Manejo de stock en la bodega de origen
+                const whereFromCondition = {
+                    productId: product.id,
+                    warehouseId: warehouseFromId,
+                    ...(companyId && { companyId })
+                };
+    
+                const [stockFrom] = await Stock.findOrCreate({
+                    where: whereFromCondition,
+                    defaults: { quantity: 0 },
+                    transaction,
+                });
+    
+                if (stockFrom.quantity < quantity) {
+                    throw new Error(`Stock insuficiente para el producto: ${product.name}`);
+                }
+    
+                stockFrom.quantity -= quantity;
+                await stockFrom.save({ transaction });
+    
+                // Manejo de stock en la bodega de destino
+                const whereToCondition = {
+                    productId: product.id,
+                    warehouseId: warehouseToId,
+                    ...(companyId && { companyId })
+                };
+    
+                const [stockToInstance] = await Stock.findOrCreate({
+                    where: whereToCondition,
+                    defaults: { quantity: 0 },
+                    transaction,
+                });
+    
+                stockToInstance.quantity += quantity;
+                await stockToInstance.save({ transaction });
+    
+                // Crear transacción
+                await Transaction.create({
+                    productId: product.id,
+                    userId,
+                    warehouseFromId,
+                    warehouseToId,
+                    quantity,
+                    type: 'Salida',
+                    register: register.id, // Se usa el valor del registro creado
+                }, { transaction });
+            }));
+    
+            await transaction.commit();
+            return { success: true, message: 'Transacción completada correctamente.' };
+    
+        } catch (error) {
+            await transaction.rollback();
+            throw new Error(`Error en la transacción: ${error.message}`);
+        }
+    }
+    
+
+    static async incomeProductsInWarehouse(transactionData) {
+        const { products, warehouseToId, userId, companyId } = transactionData;
 
         const transaction = await db.transaction();
 
         try {
             const transactionResults = await Promise.all(
                 products.map(async (product) => {
-                    const whereFromCondition = {
-                        productId: product.id,
-                        warehouseId: warehouseFromId,
-                        ...(companyId && { companyId: companyId })  // Agrega companyId solo si existe
-                    };
-
-                    const [stockFrom] = await Stock.findOrCreate({
-                        where: whereFromCondition ,
-                        defaults: { quantity: 0 },
-                        transaction,
-                    });
-
-                    if (stockFrom.quantity < product.quantity) {
-                        throw new Error(`Stock insuficiente para el producto: ${product.name}`);
-                    }
-
-                    stockFrom.quantity -= parseInt(product.quantity);
-                    await stockFrom.save({ transaction });
-
-                    const whereToCondition = {
+                    const whereCondition = {
                         productId: product.id,
                         warehouseId: warehouseToId,
                         ...(companyId && { companyId: companyId })  // Agrega companyId solo si existe
                     };
 
                     const [stockToInstance] = await Stock.findOrCreate({
-                        where: whereToCondition,
-                        defaults: { quantity: 0 },
-                        transaction,
-                    });
-
-                    stockToInstance.quantity += parseInt(product.quantity);
-                    await stockToInstance.save({ transaction });
-
-                    return Transaction.create({
-                        productId: product.id,
-                        userId: userId,
-                        warehouseFromId: warehouseFromId,
-                        warehouseToId: warehouseToId,
-                        quantity: parseInt(product.quantity),
-                        type: 'Salida',
-                    }, { transaction });
-                })
-            );
-
-            await transaction.commit();
-            return transactionResults;
-        } catch (error) {
-            await transaction.rollback();
-            throw new Error(error.message);
-        }
-    }
-
-    static async incomeProductsInWarehouse(transactionData) {
-        const { products, warehouseToId, userId } = transactionData;
-
-        const transaction = await db.transaction();
-
-        try {
-            const transactionResults = await Promise.all(
-                products.map(async (product) => {
-                    const [stockToInstance] = await Stock.findOrCreate({
-                        where: { productId: product.id, warehouseId: warehouseToId },
+                        where: whereCondition,
                         defaults: { quantity: 0 },
                         transaction,
                     });

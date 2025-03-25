@@ -35,6 +35,7 @@ const ProcessStaff = require('./operations/indicators/processStaffs.models');
 const Impact = require('./operations/indicators/impact.models');
 const Levels = require('./operations/indicators/levels.models');
 const Strategy = require('./operations/indicators/strategy.models');
+const Register = require('./operations/inventory/register.models');
 
 const initModels = () => {
 
@@ -102,6 +103,10 @@ const initModels = () => {
     Product.hasMany(Transaction, { foreignKey: 'product_id', as: 'transactions' });
     Transaction.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
     Transaction.belongsTo(Staff, { foreignKey: 'user_id', as: 'responsible' });
+
+    Register.hasMany(Transaction, { foreignKey: 'register_id', as: 'transactiones' });
+    Transaction.belongsTo(Register, { foreignKey: 'register_id', as: 'registro' });
+
     Staff.hasMany(Transaction, { foreignKey: 'user_id', as: 'transactions' });
     Warehouse.hasMany(Transaction, { foreignKey: 'warehouse_from_id', as: 'outgoingTransactions' });// Bodega de origen
     Transaction.belongsTo(Warehouse, { foreignKey: 'warehouse_from_id', as: 'warehouseFrom' });
