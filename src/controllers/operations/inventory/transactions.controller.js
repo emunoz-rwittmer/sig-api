@@ -98,7 +98,7 @@ const incomeProductsInWarehouse = async (req, res) => {
             userId
         });
         if (transactions) {
-            res.status(200).json({ data: 'transactions register success' });
+            res.status(200).json({ data: 'Transacción completada correctamente.' });
         }
     } catch (error) {
         

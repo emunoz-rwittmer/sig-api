@@ -139,7 +139,7 @@ class TransactionService {
                     warehouseToId,
                     quantity,
                     type: 'Salida',
-                    register: register.id, // Se usa el valor del registro creado
+                    registerId: register.id, // Se usa el valor del registro creado
                 }, { transaction });
             }));
     

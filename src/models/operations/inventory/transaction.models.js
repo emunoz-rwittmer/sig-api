@@ -9,7 +9,7 @@ const Transaction = db.define('transaction', {
   },
   registerId: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
     field:'register_id'
   },
   type: {
