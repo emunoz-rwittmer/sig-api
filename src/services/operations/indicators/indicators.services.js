@@ -106,8 +106,8 @@ class IndicatorService {
         const intervalMonths = {
             mensual: 1,
             trimestral: 3,
-            semiannual: 6,
-            annual: 12,
+            semestral: 6,
+            anual: 12,
         }[indicator.reading.toLowerCase()] || 1; // Predeterminado a 1 mes si el tipo no coincide
 
         tabulations.forEach((tabulation) => {

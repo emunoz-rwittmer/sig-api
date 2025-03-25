@@ -35,6 +35,7 @@ const ProcessStaff = require('./operations/indicators/processStaffs.models');
 const Impact = require('./operations/indicators/impact.models');
 const Levels = require('./operations/indicators/levels.models');
 const Strategy = require('./operations/indicators/strategy.models');
+const Register = require('./operations/inventory/register.models');
 
 const initModels = () => {
 
@@ -74,24 +75,38 @@ const initModels = () => {
     //state
     HeaderAnswer.belongsTo(StatusEvaluation, { as: 'state', foreignKey: 'state_id' });
     StatusEvaluation.hasMany(HeaderAnswer, { as: "header_state", foreignKey: "state_id" });
+   
     //INVENTORY RELATIONS
     Company.hasOne(Yacht, { foreignKey: 'company_id', as: 'yacht' });
     Yacht.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
     Yacht.hasOne(Warehouse, { foreignKey: 'yacht_id', as: 'warehouse' });
+    
     Warehouse.belongsTo(Yacht, { foreignKey: 'yacht_id', as: 'yacht' });
     Company.hasMany(Order, { foreignKey: 'company_id', as: 'orders' });
+
     Order.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
     Order.hasMany(itemsOrder, { foreignKey: 'order_id', as: 'orderItems' });
     itemsOrder.belongsTo(Order, { foreignKey: 'order_id', as: 'order' });
+
     Order.belongsTo(Staff, { foreignKey: 'user_id', as: 'responsible' });
     Staff.hasMany(Order, { foreignKey: 'user_id', as: 'orders' });
+
     Warehouse.hasMany(Stock, { foreignKey: 'warehouse_id', as: 'stocks' });
     Stock.belongsTo(Warehouse, { foreignKey: 'warehouse_id', as: 'warehouse' });
+    
     Product.hasMany(Stock, { foreignKey: 'product_id', as: 'stocks' });
     Stock.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
+
+    Company.hasMany(Stock, { foreignKey: 'company_id', as: 'stocks' });
+    Stock.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
+
     Product.hasMany(Transaction, { foreignKey: 'product_id', as: 'transactions' });
     Transaction.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
     Transaction.belongsTo(Staff, { foreignKey: 'user_id', as: 'responsible' });
+
+    Register.hasMany(Transaction, { foreignKey: 'register_id', as: 'transactiones' });
+    Transaction.belongsTo(Register, { foreignKey: 'register_id', as: 'registro' });
+
     Staff.hasMany(Transaction, { foreignKey: 'user_id', as: 'transactions' });
     Warehouse.hasMany(Transaction, { foreignKey: 'warehouse_from_id', as: 'outgoingTransactions' });// Bodega de origen
     Transaction.belongsTo(Warehouse, { foreignKey: 'warehouse_from_id', as: 'warehouseFrom' });

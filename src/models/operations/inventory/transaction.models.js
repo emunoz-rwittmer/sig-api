@@ -7,6 +7,11 @@ const Transaction = db.define('transaction', {
     primaryKey: true,
     autoIncrement: true,
   },
+  registerId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field:'register_id'
+  },
   type: {
     type: DataTypes.STRING,
     allowNull: false,
