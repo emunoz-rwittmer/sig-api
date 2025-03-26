@@ -70,9 +70,9 @@ const transactionWarehouse = async (req, res) => {
             formattedCounter
         });
 
-        if (transactions.success) {
-            const result = await CompanyService.getCompanyById(companyId);
+        if (transactions.success) {    
             if (location === 'UIO') {
+                const result = await CompanyService.getCompanyById(companyId);
                 axios.post('http://190.12.15.164:5859/print/transactions', { products, userName, company:result.name, formattedCounter })
             }
             if (location === 'GPS') {
@@ -82,6 +82,7 @@ const transactionWarehouse = async (req, res) => {
             res.status(200).json({ data: transactions.message });
         }  
     } catch (error) {
+        console.log(error)
         res.status(400).json(error.message);
     }
 }
