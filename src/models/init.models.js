@@ -36,11 +36,12 @@ const Impact = require('./operations/indicators/impact.models');
 const Levels = require('./operations/indicators/levels.models');
 const Strategy = require('./operations/indicators/strategy.models');
 const Register = require('./operations/inventory/register.models');
+const Consecutivo = require('./catalogs/consecutivo.model');
 
 const initModels = () => {
 
     //catalogs
-    
+    Consecutivo,
     Question,
     HouseRule
     Users.belongsTo(Roles, { as: "user_rol", foreignKey: "role_id" });

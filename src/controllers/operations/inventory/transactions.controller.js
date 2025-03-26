@@ -8,6 +8,7 @@ const Staffervice = require('../../../services/catalogs/staff.services');
 const path = require('path');
 const fs = require('fs');
 const CompanyService = require('../../../services/catalogs/company.services');
+const Consecutivo = require('../../../models/catalogs/consecutivo.model');
 
 const productEntryInWarehouse = async (req, res) => {
     try {
@@ -38,7 +39,7 @@ const productEntryInWarehouse = async (req, res) => {
             res.status(200).json({ data: result.message });
         }
     } catch (error) {
-        
+
         res.status(400).json(error.message)
     }
 }
@@ -51,15 +52,13 @@ const transactionWarehouse = async (req, res) => {
         const warehouseToId = Utils.decode(req.body.warehouseToId);
         const userId = Utils.decode(req.body.userId);
 
-         const counterFilePath = path.join(__dirname, 'printCounter.txt');
-         let currentCounter = 1;
-         if (fs.existsSync(counterFilePath)) {
-             currentCounter = parseInt(fs.readFileSync(counterFilePath, 'utf8'), 10);
-         }
+        const consecutivo = await Consecutivo.findOne({ where: {} });
+        if (consecutivo === null) {
+            await Consecutivo.create({ valor: 1 });
+        }
 
-         const formattedCounter = `000-${currentCounter.toString().padStart(3, '0')}`;
-         currentCounter += 1;
-         fs.writeFileSync(counterFilePath, currentCounter.toString(), 'utf8');
+        const formattedCounter = `000-${consecutivo.valor.toString().padStart(3, '0')}`;
+        await Consecutivo.update({ valor: consecutivo.valor + 1 }, { where: {} });
 
         const transactions = await TransactionService.transactionWarehouse({
             products,
@@ -70,17 +69,17 @@ const transactionWarehouse = async (req, res) => {
             formattedCounter
         });
 
-        if (transactions.success) {    
+        if (transactions.success) {
             if (location === 'UIO') {
                 const result = await CompanyService.getCompanyById(companyId);
-                axios.post('http://190.12.15.164:5859/print/transactions', { products, userName, company:result.name, formattedCounter })
+                axios.post('http://190.12.15.164:5859/print/transactions', { products, userName, company: result.name, formattedCounter })
             }
             if (location === 'GPS') {
                 console.log('imprimiendo en galapagos')
                 //axios.post('http://localhost:3000/print/transactions', { products, userName, company })
             }
             res.status(200).json({ data: transactions.message });
-        }  
+        }
     } catch (error) {
         console.log(error)
         res.status(400).json(error.message);
@@ -104,7 +103,7 @@ const incomeProductsInWarehouse = async (req, res) => {
             res.status(200).json({ data: 'Transacción completada correctamente.' });
         }
     } catch (error) {
-        
+
         res.status(400).json(error.message);
     }
 }
@@ -121,7 +120,7 @@ const updateStatusItem = async (req, res) => {
         }
 
     } catch (error) {
-        
+
         res.status(400).json(error.message);
     }
 }
@@ -160,7 +159,7 @@ const createRequestWarehouse = async (req, res) => {
 
         res.status(200).json({ data: result.message });
     } catch (error) {
-        
+
         res.status(400).json(error.message);
     }
 }
