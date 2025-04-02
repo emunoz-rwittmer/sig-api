@@ -155,7 +155,7 @@ const createTabulation = async (req, res) => {
         const math = create(all);
         const data = req.body;
         data.indicatorId = Utils.decode(data.indicatorId);
-        const indicador = await IndicatorService.getIndicatorById(indicatorId);
+        const indicador = await IndicatorService.getIndicatorById(data.indicatorId);
         if (!indicador || !indicador.formula) {
             return res.status(404).json('Indicador o fórmula no encontrados');
         }
