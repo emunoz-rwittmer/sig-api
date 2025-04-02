@@ -153,36 +153,26 @@ const deleteIndicator = async (req, res) => {
 const createTabulation = async (req, res) => {
     try {
         const math = create(all);
-        let { a, b, indicatorId } = req.body;
-        indicatorId = Utils.decode(indicatorId);
+        const data = req.body;
+        data.indicatorId = Utils.decode(data.indicatorId);
         const indicador = await IndicatorService.getIndicatorById(indicatorId);
         if (!indicador || !indicador.formula) {
             return res.status(404).json('Indicador o fórmula no encontrados');
         }
 
         const formula = indicador.formula_indicator.name;
+        let a = data.a;
+        let b = data.b;
+        let scope = { a, b };
 
-        // Verificar si a y b son fechas
-        //const isDate = (value) => !isNaN(Date.parse(value));
-
-        // if (isDate(a) && isDate(b)) {
-        //     a = new Date(a).getTime();
-        //     b = new Date(b).getTime();
-        //     // Calcular los días entre a y b
-        //     const millisecondsPerDay = 24 * 60 * 60 * 1000;
-        //     percent = (b - a) / millisecondsPerDay;
-        // } else {
-            let scope = { a, b };
-            try {
-                percent = b === 0 ? null : math.evaluate(formula, scope);
-
-            } catch (error) {
-                console.log(error.message)
-                return res.status(400).json(error.message);
-            }
-        //}
-
-        const result = await IndicatorService.createTabulation({ a, b, percent, indicatorId });
+        try {
+            percent = b === 0 ? null : math.evaluate(formula, scope);
+        } catch (error) {
+            throw error.message;
+        }
+       
+        data.percent = percent
+        const result = await IndicatorService.createTabulation(data);
         if (result) {
             return res.status(200).json({ data: 'resource created successfully' });
         }

@@ -24,6 +24,10 @@ const Tabulation = db.define('tabulation', {
     type: DataTypes.FLOAT(8,2),
     allowNull: true,
   }, 
+  observations: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  }, 
 });
 
 module.exports = Tabulation;
