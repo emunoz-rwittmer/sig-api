@@ -99,7 +99,7 @@ class WarehouseService {
                 include: [{
                     model: Product,
                     as: 'product',
-                    attributes: ['id', 'name', 'sku', 'type'],
+                    attributes: ['id', 'name', 'sku'],
                     include: [{
                         model: PlacesYacht,
                         as: 'configurations',

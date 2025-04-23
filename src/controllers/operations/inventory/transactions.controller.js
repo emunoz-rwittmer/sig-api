@@ -125,6 +125,30 @@ const updateStatusItem = async (req, res) => {
     }
 }
 
+const incomeProductsRegister = async (req, res) => {
+    try {
+        const { products, observations } = req.body;
+        const warehouseToId = 2
+        const companyId = req.body.companyId
+        const userId = req.body.userId
+        const registerId = req.body.registerId
+
+        const transactions = await TransactionService.incomeProductsRegister({
+            products,
+            warehouseToId,
+            companyId,
+            userId,
+            registerId,
+            observations
+        });
+        if (transactions) {
+            res.status(200).json({ data: 'Transacción completada correctamente.' });
+        }
+    } catch (error) {
+        res.status(400).json(error.message);
+    }
+}
+
 //yacht recuest 
 
 const createRequestWarehouse = async (req, res) => {
@@ -168,6 +192,7 @@ const TransactionController = {
     productEntryInWarehouse,
     transactionWarehouse,
     incomeProductsInWarehouse,
+    incomeProductsRegister,
     updateStatusItem,
     createRequestWarehouse
 }

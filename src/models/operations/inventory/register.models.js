@@ -25,7 +25,14 @@ const Register = db.define('register', {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
-
+  observations: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  }, 
+  isResived: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
 });
 
 module.exports = Register;

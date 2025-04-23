@@ -6,6 +6,7 @@ const Request = require('../../../models/operations/yachtRequest/request.models'
 const itemsRequest = require('../../../models/operations/yachtRequest/itemsRequest.models');
 const itemsOrder = require('../../../models/operations/orders/itemsOrder.models');
 const Register = require('../../../models/operations/inventory/register.models');
+const { where } = require('sequelize');
 
 class TransactionService {
     static async productEntryInWarehouse(productData, stockData, transactionData) {
@@ -79,10 +80,10 @@ class TransactionService {
 
     static async transactionWarehouse(transactionData) {
         const { products, warehouseFromId, warehouseToId, userId, companyId, formattedCounter } = transactionData;
-    
+
         const transaction = await db.transaction();
         const suma = products.reduce((total, product) => total + parseInt(product.quantity), 0);
-    
+
         try {
             // Crear el registro antes de `Promise.all`
             const register = await Register.create({
@@ -91,46 +92,46 @@ class TransactionService {
                 companyId,
                 products: suma
             }, { transaction });
-    
+
             await Promise.all(products.map(async (product) => {
                 const quantity = parseInt(product.quantity);
-    
+
                 // Manejo de stock en la bodega de origen
                 const whereFromCondition = {
                     productId: product.id,
                     warehouseId: warehouseFromId,
                     ...(companyId && { companyId })
                 };
-    
+
                 const [stockFrom] = await Stock.findOrCreate({
                     where: whereFromCondition,
                     defaults: { quantity: 0 },
                     transaction,
                 });
-    
+
                 if (stockFrom.quantity < quantity) {
                     throw new Error(`Stock insuficiente para el producto: ${product.name}`);
                 }
-    
+
                 stockFrom.quantity -= quantity;
                 await stockFrom.save({ transaction });
-    
+
                 // Manejo de stock en la bodega de destino
                 const whereToCondition = {
                     productId: product.id,
                     warehouseId: warehouseToId,
                     ...(companyId && { companyId })
                 };
-    
+
                 const [stockToInstance] = await Stock.findOrCreate({
                     where: whereToCondition,
                     defaults: { quantity: 0 },
                     transaction,
                 });
-    
+
                 stockToInstance.quantity += quantity;
                 await stockToInstance.save({ transaction });
-    
+
                 // Crear transacción
                 await Transaction.create({
                     productId: product.id,
@@ -142,17 +143,17 @@ class TransactionService {
                     registerId: register.id, // Se usa el valor del registro creado
                 }, { transaction });
             }));
-    
+
             await transaction.commit();
             return { success: true, message: 'Transacción completada correctamente.' };
-    
+
         } catch (error) {
             await transaction.rollback();
             console.log(error)
             throw new Error(`Error en la transacción: ${error.message}`);
         }
     }
-    
+
 
     static async incomeProductsInWarehouse(transactionData) {
         const { products, warehouseToId, companyId, userId } = transactionData;
@@ -227,6 +228,75 @@ class TransactionService {
         } catch (error) {
             await transaction.rollback();
             throw error;
+        }
+    }
+
+    static async incomeProductsRegister(transactionData) {
+        const { products, warehouseToId, companyId, userId, registerId, observations } = transactionData;
+
+        const transaction = await db.transaction();
+
+        try {
+
+            const transactionResults = await Promise.all(products.map(async (product) => {
+                const quantity = product.quantity || 0; // Asegúrate de que quantity tenga un valor numérico
+
+                const stockFrom = await Stock.findOne({
+                    where: {
+                        productId: product.id,
+                        warehouseId: 9,
+                        companyId
+                    },
+                    transaction,
+                });
+
+                if (stockFrom.quantity < quantity) {
+                    throw new Error(`Stock insuficiente para el producto en UIO-GPS: ${product.name}`);
+                }
+
+                stockFrom.quantity -= quantity;
+                await stockFrom.save({ transaction });
+
+                const whereToCondition = {
+                    productId: product.id,
+                    warehouseId: warehouseToId,
+                };
+
+                const [stockToInstance] = await Stock.findOrCreate({
+                    where: whereToCondition,
+                    defaults: { quantity: 0 },
+                    transaction,
+                });
+
+                stockToInstance.quantity += quantity;
+                await stockToInstance.save({ transaction });
+
+                await Transaction.create({
+                    productId: product.id,
+                    userId,
+                    warehouseFromId: 9,
+                    warehouseToId,
+                    quantity,
+                    type: 'Salida',
+                }, { transaction });
+
+                await Register.update(
+                    {
+                        isResived: true,
+                        observations,
+                    },
+                    {
+                        where: { id: registerId },
+                        transaction,
+                    }
+                );
+            }));
+            await transaction.commit();
+            return transactionResults;
+        } catch (error) {
+            console.log(error)
+            await transaction.rollback();
+            throw new Error(error.message);
         }
     }
 }
