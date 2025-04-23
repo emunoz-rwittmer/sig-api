@@ -149,6 +149,28 @@ const incomeProductsRegister = async (req, res) => {
     }
 }
 
+const printRegister = async (req, res) => {
+    try {
+        const formattedCounter = req.body.counter
+        const company = req.body.empresa?.name
+        const userName = req.body.responsable?.firstName + ' ' + req.body.responsable?.lastName
+        const products = req.body.transactiones.map(transaccion => {
+            return { name: transaccion.product.name, quantity: transaccion.quantity }
+        })
+
+        const result = await axios.post('http://190.12.15.164:5859/print/transactions', { products, userName, company, formattedCounter })
+        
+        if (result.status === 200) {
+            res.status(200).json({ data: 'Transacción completada correctamente.' });
+        } else {
+            res.status(400).json({ data: 'Error al imprimir el registro.' });
+        }    
+
+    } catch (error) {
+        res.status(400).json(error.message);
+    }
+}
+
 //yacht recuest 
 
 const createRequestWarehouse = async (req, res) => {
@@ -193,6 +215,7 @@ const TransactionController = {
     transactionWarehouse,
     incomeProductsInWarehouse,
     incomeProductsRegister,
+    printRegister,
     updateStatusItem,
     createRequestWarehouse
 }

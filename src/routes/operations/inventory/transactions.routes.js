@@ -8,6 +8,7 @@ router.post('/transactionBetweenWarehouse', TransactionController.transactionWar
 router.post('/incomeProductsInWarehouse', TransactionController.incomeProductsInWarehouse);
 router.put('/updateStatusItem/:item_id', TransactionController.updateStatusItem);
 router.post('/incomeProductsRegister', TransactionController.incomeProductsRegister);
+router.put('/printRegister', TransactionController.printRegister);
 // Yacht request 
 router.post('/createRequestWarehouse', TransactionController.createRequestWarehouse);
 
