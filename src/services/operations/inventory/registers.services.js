@@ -7,13 +7,28 @@ const itemsRequest = require('../../../models/operations/yachtRequest/itemsReque
 const itemsOrder = require('../../../models/operations/orders/itemsOrder.models');
 const Register = require('../../../models/operations/inventory/register.models');
 const Staff = require('../../../models/catalogs/staff.models');
+const Company = require('../../../models/catalogs/company.models');
 
 class RegisterService {
 
-    static async getAllRegisters() {
+    static async getAllRegisters(filter) {
         try {
+
+            const parsedFilter = filter === 'true' ? true : filter === 'false' ? false : '';
+            const where = {};
+
+            if (filter !== '') {
+                where.isResived = parsedFilter;
+            }
+
             const result = await Register.findAll({
+                where,
                 include: [
+                    {
+                        model: Company,
+                        as: 'empresa',
+                        attributes: ['id','name'],
+                    },
                     {
                         model: Staff,
                         as: 'responsable',

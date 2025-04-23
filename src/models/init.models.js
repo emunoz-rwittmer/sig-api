@@ -108,6 +108,9 @@ const initModels = () => {
     Register.hasMany(Transaction, { foreignKey: 'register_id', as: 'transactiones' });
     Transaction.belongsTo(Register, { foreignKey: 'register_id', as: 'registro' });
 
+    Company.hasMany(Register, { foreignKey: 'company_id', as: 'registros' });
+    Register.belongsTo(Company, { foreignKey: 'company_id', as: 'empresa' });
+
     Staff.hasMany(Register, { foreignKey: 'user_id', as: 'registros' });
     Register.belongsTo(Staff, { foreignKey: 'user_id', as: 'responsable' });
    
