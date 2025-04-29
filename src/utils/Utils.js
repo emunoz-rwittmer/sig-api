@@ -52,5 +52,28 @@ class Utils {
     return `${day}/${month}/${year}`;
 }
 
+static asignarPuntaje (respuesta) {
+  switch (respuesta) {
+      case "Casi siempre":
+      case "Excelente":
+          return 5;
+      case "Con frecuencia":
+      case "Muy bueno":
+      case "Muy Bueno":
+          return 4;
+      case "Mas o menos":
+      case "Bueno":
+          return 3;
+      case "A veces":
+      case "Regular":
+          return 2;
+      case "Casi nunca":
+      case "Ineficiente":
+          return 1;
+      default:
+          return 0;
+  }
+}
+
 }
 module.exports = Utils;

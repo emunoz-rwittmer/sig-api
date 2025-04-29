@@ -49,11 +49,11 @@ const getEvaluation = async (req, res) => {
 
 const getEvaluationsToDay = async (req, res) => {
     try {
-       
+
         const positionId = Utils.decode(req.query.position_id);
         const startDate = req.query.startDate;
         const endDate = req.query.endDate;
-        let evaluations = await EvaluationService.getEvaluationsToDay(startDate, endDate, positionId );
+        let evaluations = await EvaluationService.getEvaluationsToDay(startDate, endDate, positionId);
 
         await Promise.all(
             evaluations.map(async (evaluation) => {
@@ -89,7 +89,7 @@ const respondEvaluation = async (req, res) => {
             res.status(200).json({ data: 'resource created successfully' });
         }
     } catch (error) {
-        
+
         res.status(400).json(error.message);
     }
 }
@@ -103,21 +103,45 @@ const getReportingByYacht = async (req, res) => {
         const endDate = req.query.endDate;
         const yacht = await YachtService.getYachtById(yachtId)
         const evaluations = await EvaluationService.getEvaluationsByYacht(yachtId, startDate, endDate)
+
         if (evaluations instanceof Array) {
-            evaluations.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
-                x.dataValues.evaluatedId = Utils.encode(x.dataValues.evaluatedId);
-            });
-        }
-        const result = await EvaluationService.getReportingByYacht(yachtId);
-        if (result instanceof Array) {
-            result.map((x) => {
-                x.staff_yacht.dataValues.id = Utils.encode(x.staff_yacht.dataValues.id);
-            });
-        }
-        res.status(200).json({ yacht, result, evaluations });
-    } catch (error) {
+            let sumaPromediosIndividuales = 0;
+            let cantidadConEvaluaciones = 0;
+
+            evaluations.forEach((x) => {
+                const evaluaciones = x.dataValues.staff_yacht?.evaluated_header || [];
+                const totalEvaluaciones = evaluaciones.length;
+                let sumaPromediosPorEvaluacion = 0;
+                evaluaciones.forEach(evaluacion => {
+                    const respuestas = evaluacion.answer_header || [];
         
+                    const respuestasValidas = respuestas.filter(respuesta =>
+                        Utils.asignarPuntaje(respuesta.answer) 
+                    );
+        
+                    if (respuestasValidas.length > 0) {
+                        const suma = respuestasValidas.reduce((acc, r) => acc + Utils.asignarPuntaje(r.answer), 0);
+                        const promedioEvaluacion = suma / respuestasValidas.length;
+                        sumaPromediosPorEvaluacion += promedioEvaluacion;
+                    }
+                });
+
+                const promedioEmpleado = totalEvaluaciones > 0
+                    ? (sumaPromediosPorEvaluacion / totalEvaluaciones)
+                    : 0;
+
+                x.dataValues.total_evaluaciones = totalEvaluaciones;
+                x.dataValues.promedio = promedioEmpleado.toFixed(2);
+
+                if (totalEvaluaciones > 0) {
+                    sumaPromediosIndividuales += promedioEmpleado;
+                    cantidadConEvaluaciones++;
+                }
+            });
+        }
+        res.status(200).json({ yacht, evaluations });
+    } catch (error) {
+
         res.status(400).json(error.message)
     }
 }
@@ -138,19 +162,19 @@ const getReportingByDepartament = async (req, res) => {
         const result = await EvaluationService.getReportingByDepartament(departamentId);
         if (result instanceof Array) {
             result.map((x) => {
-               x.dataValues.id = Utils.encode(x.dataValues.id);
+                x.dataValues.id = Utils.encode(x.dataValues.id);
             });
         }
         res.status(200).json({ yacht, result, evaluations });
     } catch (error) {
-        
+
         res.status(400).json(error.message)
     }
 }
 
 const getReportingEvaluationsByCrew = async (req, res) => {
     try {
-        const crewId = Utils.decode(req.params.crew_id);
+        const crewId = req.params.crew_id;
         const yachtId = Utils.decode(req.query.yachtId)
         const startDate = req.query.startDate;
         const endDate = req.query.endDate;
@@ -159,7 +183,7 @@ const getReportingEvaluationsByCrew = async (req, res) => {
         res.status(200).json({ staff, evaluations });
 
     } catch (error) {
-        
+
         res.status(400).json(error.message)
     }
 }
@@ -168,11 +192,11 @@ const deleteEvaluation = async (req, res) => {
     try {
         const evaluatedId = Utils.decode(req.params.evaluation_id);
         const result = await EvaluationService.delete({
-            where: { id: evaluatedId, stateId: [1,3] }
+            where: { id: evaluatedId, stateId: [1, 3] }
         });
         res.status(200).json({ data: 'resource deleted successfully' })
     } catch (error) {
-        
+
         res.status(400).json(error.message);
     }
 }

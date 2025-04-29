@@ -111,7 +111,7 @@ class EvaluationService {
                 }, {
                     model: StatusEvaluation,
                     as: "state",
-                    attributes: ['id','state'],
+                    attributes: ['id', 'state'],
                 }, evaluatedInclude
                 ]
             });
@@ -192,20 +192,41 @@ class EvaluationService {
 
     static async getEvaluationsByYacht(yachtId, startDate, endDate) {
         try {
-            const result = await HeaderAnswer.findAll({
-                where: {
-                    yachtId,
-                    createdAt: {
-                        [Op.between]: [startDate, endDate]
-                    }
-                },
-                attributes: ['id', 'evaluatedId'],
+            const result = await StaffYacht.findAll({
+                where: { yachtId },
                 include: [
                     {
-                        model: FormAnswer,
-                        as: 'answer_header'
+                        model: Staff,
+                        as: "staff_yacht",
+                        attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
+                        include: [
+                            {
+                                model: Positions,
+                                as: 'staff_position',
+                                attributes: ['id', 'name'],
+                            },
+                            {
+                                model: HeaderAnswer,
+                                as: 'evaluated_header',
+                                attributes: ['id', 'evaluatedId'],
+                                where: {
+                                    createdAt: {
+                                        [Op.between]: [startDate, endDate],
+                                    },
+                                },
+                                required: true,
+                                include: [
+                                    {
+                                        model: FormAnswer,
+                                        as: 'answer_header',
+                                        attributes: ['id', 'answer'],
+                                    },        
+                                ]       
+                             },
+
+                        ]
                     }
-                ]
+                ],
             })
             return result;
         } catch (error) {
@@ -319,6 +340,7 @@ class EvaluationService {
             });
             return result;
         } catch (error) {
+            console.log(error)
             throw error;
         }
     }
