@@ -99,8 +99,8 @@ const generatReportEvaluationsByEmployed = async (req, res) => {
 
         // CABECERA DETALLE 
         ws.cell(13, 1).string("Fecha").style(headerLeftWrapStyle);
-        ws.cell(13, 2).string("Titulo").style(headerLeftWrapStyle);
-        ws.cell(13, 3).string("Yate").style(headerLeftWrapStyle);
+        ws.cell(13, 2).string("Yate").style(headerLeftWrapStyle);
+        ws.cell(13, 3).string("Evaluado").style(headerLeftWrapStyle);
         ws.cell(13, 4).string("Evaluador").style(headerLeftWrapStyle);
         ws.cell(13, 5).string("Estatus").style(headerLeftWrapStyle);
         ws.cell(13, 6).string("Calificación").style(headerLeftWrapStyle);
@@ -109,8 +109,8 @@ const generatReportEvaluationsByEmployed = async (req, res) => {
         // //SHOW DATA - Revisa el array result.orderItems usando forEach
         dataForReport.averageReviews.forEach((evaluation, index) => {
             ws.cell(14 + index, 1).string(formatDateToLocal(evaluation.createdAt) || "Sin asignar");
-            ws.cell(14 + index, 2).string(evaluation.header_form.title || "Sin asignar");
-            ws.cell(14 + index, 3).string(evaluation.header_yacht.name || "Sin asignar");
+            ws.cell(14 + index, 2).string(evaluation.header_yacht.name || "Sin asignar");
+            ws.cell(14 + index, 3).string(reportingEvaluationsByCrewState.crew?.first_name+" "+reportingEvaluationsByCrewState.crew?.last_name || "Sin  asignar");
             ws.cell(14 + index, 4).string(evaluation.header_evalutor?.firstName + " " + evaluation.header_evalutor?.lastName || "Sin  asignar");
             ws.cell(14 + index, 5).string(evaluation.state.state || "Sin  asignar");
             ws.cell(14 + index, 6).string(evaluation.promedio.toString() || "Sin  asignar");
