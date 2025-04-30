@@ -17,8 +17,6 @@ const generateGeneralReportEvaluations = async (req, res) => {
         });
         var ws = wb.addWorksheet("general report");
 
-        const { reportingByYachtState, capitanesConEvaluaciones, dataForReport } = req.body
-
         //COLUMNS
         ws.column(1).setWidth(25);
         ws.column(2).setWidth(40);
@@ -93,7 +91,7 @@ const generateGeneralReportEvaluations = async (req, res) => {
         ws.cell(8, 1, 8, 3, true)
             .string(`YATE EVALUADO: ${reportingByYachtState.yacht?.name}`)
         ws.cell(9, 1, 9, 3, true)
-            .string(`TRIPULACION: ${reportingByYachtState.staff?.length}`)
+            .string(`TRIPULACION: ${reportingByYachtState.evaluations?.length}`)
         ws.cell(10, 1, 10, 3, true)
             .string(`PUNTUACIÓN: ${dataForReport.promedioCapitanes}`)
 
@@ -106,10 +104,10 @@ const generateGeneralReportEvaluations = async (req, res) => {
 
 
         // //SHOW DATA - Revisa el array result.orderItems usando forEach
-        capitanesConEvaluaciones.forEach((captain, index) => {
+        reportingByYachtState.evaluations.forEach((captain, index) => {
              ws.cell(14 + index, 1).string(captain.staff_yacht?.first_name + " " + captain.staff_yacht?.last_name || "Sin asignar");
              ws.cell(14 + index, 2).string(captain.staff_yacht.staff_position?.name || "Sin asignar");
-             ws.cell(14 + index, 3).string(captain.evaluaciones.length.toString() || "Sin asignar");
+             ws.cell(14 + index, 3).string(captain.total_evaluaciones.toString() || "Sin asignar");
              ws.cell(14 + index, 4).string(captain.promedio.toString() || "Sin  asignar");
          });
 

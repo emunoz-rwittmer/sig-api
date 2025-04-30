@@ -193,11 +193,15 @@ class EvaluationService {
     static async getEvaluationsByYacht(yachtId, startDate, endDate) {
         try {
             const result = await StaffYacht.findAll({
-                where: { yachtId },
+                where: { 
+                    yachtId, 
+                    staffId: { [Op.ne]: null }
+                },
                 include: [
                     {
                         model: Staff,
                         as: "staff_yacht",
+                        required: true, // ← esto te asegura que no sea null
                         attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
                         include: [
                             {
@@ -213,8 +217,7 @@ class EvaluationService {
                                     createdAt: {
                                         [Op.between]: [startDate, endDate],
                                     },
-                                },
-                                required: true,
+                                },                     
                                 include: [
                                     {
                                         model: FormAnswer,

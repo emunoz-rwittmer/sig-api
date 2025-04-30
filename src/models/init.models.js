@@ -52,9 +52,11 @@ const initModels = () => {
     Positions.hasMany(Staff, { as: "position_staff", foreignKey: "position_id" });
     Staff.belongsTo(Departaments, { as: "staff_departament", foreignKey: "departament_id" });
     Departaments.hasMany(Staff, { as: "departament_staff", foreignKey: "departament_id" });
+
     StaffYacht.belongsTo(Staff, { as: "staff_yacht", foreignKey: "staff_id" });
     StaffYacht.belongsTo(Yacht, { as: "yacht_staff", foreignKey: "yacht_id" });
     Staff.hasMany(StaffYacht, { as: 'yachts', foreignKey: 'staff_id' });
+    
     Form.belongsTo(Positions, { as: "position_form", foreignKey: "position_id" });
     Positions.hasMany(Form, { as: 'positions', foreignKey: 'position_id' });
     //operations
