@@ -10,4 +10,8 @@ router.post('/createComentCard', authJwt.verifyToken, ComentCardController.creat
 router.put('/updateComentCard/:card_id', authJwt.verifyToken, ComentCardController.updateComentCard);
 router.delete('/:card_id', authJwt.verifyToken, ComentCardController.deleteComentCard);
 
+//COMMENTCARD YACHT
+router.post('/assing_yachts/coment_card', authJwt.verifyToken, ComentCardController.assingYachtToComentCard);
+
+
 module.exports = router;

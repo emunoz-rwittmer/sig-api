@@ -97,9 +97,9 @@ const initModels = () => {
     ComentCard.hasMany(ComentCardQuestions, { as: 'preguntas', foreignKey: "coment_card_id", onDelete: "CASCADE" });
     ComentCardQuestions.belongsTo(ComentCard, { as: 'coment_card', foreignKey: "coment_card_id" });
 
-    ComentCardYacht.belongsTo(ComentCard, { as: "coment_card", foreignKey: "staff_id" });
+    ComentCardYacht.belongsTo(ComentCard, { as: "coment_card", foreignKey: "coment_card_id" });
     ComentCardYacht.belongsTo(Yacht, { as: "yate", foreignKey: "yacht_id" });
-    ComentCard.hasMany(ComentCardYacht, { as: 'yates', foreignKey: 'staff_id' });
+    ComentCard.hasMany(ComentCardYacht, { as: 'yates', foreignKey: 'coment_card_id' });
 
     //state
     HeaderAnswer.belongsTo(StatusEvaluation, { as: 'state', foreignKey: 'state_id' });

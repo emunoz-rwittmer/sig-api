@@ -9,7 +9,7 @@ const ComentCardYacht = db.define('coment_card_yacht', {
         autoIncrement: true,
         allowNull: false,
     },
-    carId: {
+    cardId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         field: 'coment_card_id',

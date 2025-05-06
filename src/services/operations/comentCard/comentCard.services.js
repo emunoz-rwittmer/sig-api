@@ -28,7 +28,6 @@ class ComentCardService {
     }
 
     static async getComentCardById(id) {
-        console.log(id)
         try {
             const result = await ComentCard.findOne({
                 where: { id },
@@ -38,6 +37,16 @@ class ComentCardService {
                         model: ComentCardQuestions,
                         as: 'preguntas',
                         attributes: ['id', 'text', 'puntuacion']
+                    },
+                    {
+                        model: ComentCardYacht,
+                        as: 'yates',
+                        attributes: ['id'],
+                        include: [{
+                            model: Yacht,
+                            as: 'yate',
+                            attributes: ['id', 'name']
+                        }]
                     }
                 ]
             });
@@ -86,11 +95,11 @@ class ComentCardService {
                     transaction,
                 }
             );
-    
+
             if (result[0] === 0) {
                 throw new Error('No se pudo actualizar coment card');
             }
-    
+
             await Promise.all(
                 preguntas.map((pregunta) =>
                     ComentCardQuestions.update(
@@ -105,7 +114,7 @@ class ComentCardService {
                     )
                 )
             );
-    
+
             await transaction.commit();
             return result;
         } catch (error) {
@@ -114,10 +123,29 @@ class ComentCardService {
             throw error;
         }
     }
-    
+
     static async delete(id) {
         try {
             const result = await ComentCard.destroy(id);
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    //YACHT CARD
+    static async assingYachtToComentCard(cardId, yachts) {
+        try {
+            const result = await Promise.all(
+                yachts.map((id) =>
+                    ComentCardYacht.create(
+                        {
+                            cardId,
+                            yachtId: id,
+                        }    
+                    )
+                )
+            );
             return result;
         } catch (error) {
             throw error;

@@ -21,6 +21,9 @@ const getComentCard = async (req, res) => {
         const result = await ComentCardService.getComentCardById(formId);
         if (result instanceof Object) {
             result.dataValues.id = Utils.encode(result.dataValues.id);
+            result.dataValues.yates.map(item => (
+                item.yate.dataValues.id = Utils.encode(item.yate.dataValues.id)
+            )) 
         }
         res.status(200).json(result);
     } catch (error) {
@@ -65,6 +68,21 @@ const deleteComentCard = async (req, res) => {
     }
 }
 
+// YACHT COMMENT CARD
+
+
+const assingYachtToComentCard = async (req, res) => {
+    try {
+        const cardId = Utils.decode(req.body.card_id);
+        const yachts = req.body.yachts.map(id => (
+            id = Utils.decode(id)           
+        ))
+        await ComentCardService.assingYachtToComentCard(cardId, yachts);
+        // res.status(200).json({ data: 'resource created successfully' });
+    } catch (error) {
+        res.status(400).json(error.message);
+    }
+}
 
 
 const ComentCardController = {
@@ -73,5 +91,6 @@ const ComentCardController = {
     createComentCard,
     updateComentCard,
     deleteComentCard,
+    assingYachtToComentCard,
 }
 module.exports = ComentCardController
