@@ -37,6 +37,11 @@ const Levels = require('./operations/indicators/levels.models');
 const Strategy = require('./operations/indicators/strategy.models');
 const Register = require('./operations/inventory/register.models');
 const Consecutivo = require('./catalogs/consecutivo.model');
+const ComentCard = require('./operations/comentCard/comentCard.models');
+const ComentCardRespond = require('./operations/comentCard/comentCardRespond.models');
+const ComentCardAnswers = require('./operations/comentCard/comentCardAnswers.models');
+const ComentCardQuestions = require('./operations/comentCard/comentCardQuestions.models');
+const ComentCardYacht = require('./operations/comentCard/cardYacht.models');
 
 const initModels = () => {
 
@@ -67,7 +72,6 @@ const initModels = () => {
     HeaderAnswer.belongsTo(Form, { as: "header_form", foreignKey: "form_id" });
     Form.hasMany(HeaderAnswer, { as: 'form_header', foreignKey: 'form_id' });
    
-
     HeaderAnswer.hasMany(FormAnswer, { as: 'answer_header', foreignKey: 'header_answer_id' });
     FormAnswer.belongsTo(HeaderAnswer, { as: 'header_aswer', foreignKey: 'header_answer_id' });
     
@@ -81,6 +85,22 @@ const initModels = () => {
     HeaderAnswer.belongsTo(Yacht, { as: 'header_yacht', foreignKey: 'yacht_id' });
     
     Yacht.hasMany(HeaderAnswer, { as: 'yacht_header', foreignKey: 'yacht_id' });
+
+
+    //coment cards
+    ComentCard.hasMany(ComentCardRespond, { as: 'respuestas_coment_card', foreignKey: 'formulario_id', onDelete: "CASCADE" });
+    ComentCardRespond.belongsTo(ComentCard, { as: 'coment_card', foreignKey: 'formulario_id' });
+    
+    ComentCardRespond.hasMany(ComentCardAnswers, { as: 'respuestas', foreignKey: "respuesta_formulario_id", onDelete: "CASCADE" });
+    ComentCardAnswers.belongsTo(ComentCardRespond, { as: 'respuesta_formulario', foreignKey: "respuesta_formulario_id" });
+
+    ComentCard.hasMany(ComentCardQuestions, { as: 'preguntas', foreignKey: "coment_card_id", onDelete: "CASCADE" });
+    ComentCardQuestions.belongsTo(ComentCard, { as: 'coment_card', foreignKey: "coment_card_id" });
+
+    ComentCardYacht.belongsTo(ComentCard, { as: "coment_card", foreignKey: "staff_id" });
+    ComentCardYacht.belongsTo(Yacht, { as: "yate", foreignKey: "yacht_id" });
+    ComentCard.hasMany(ComentCardYacht, { as: 'yates', foreignKey: 'staff_id' });
+
     //state
     HeaderAnswer.belongsTo(StatusEvaluation, { as: 'state', foreignKey: 'state_id' });
     StatusEvaluation.hasMany(HeaderAnswer, { as: "header_state", foreignKey: "state_id" });
