@@ -42,13 +42,14 @@ const ComentCardRespond = require('./operations/comentCard/comentCardRespond.mod
 const ComentCardAnswers = require('./operations/comentCard/comentCardAnswers.models');
 const ComentCardQuestions = require('./operations/comentCard/comentCardQuestions.models');
 const ComentCardYacht = require('./operations/comentCard/cardYacht.models');
+const ComentCardQR = require('./operations/comentCard/cardQR.models');
 
 const initModels = () => {
 
     //catalogs
     Consecutivo,
-    Question,
-    HouseRule
+        Question,
+        HouseRule
     Users.belongsTo(Roles, { as: "user_rol", foreignKey: "role_id" });
     Roles.hasMany(Users, { as: "rol_user", foreignKey: "role_id" });
     Staff.belongsTo(Roles, { as: "rol", foreignKey: "role_id" });
@@ -61,7 +62,7 @@ const initModels = () => {
     StaffYacht.belongsTo(Staff, { as: "staff_yacht", foreignKey: "staff_id" });
     StaffYacht.belongsTo(Yacht, { as: "yacht_staff", foreignKey: "yacht_id" });
     Staff.hasMany(StaffYacht, { as: 'yachts', foreignKey: 'staff_id' });
-    
+
     Form.belongsTo(Positions, { as: "position_form", foreignKey: "position_id" });
     Positions.hasMany(Form, { as: 'positions', foreignKey: 'position_id' });
     //operations
@@ -71,26 +72,26 @@ const initModels = () => {
     //Anwers
     HeaderAnswer.belongsTo(Form, { as: "header_form", foreignKey: "form_id" });
     Form.hasMany(HeaderAnswer, { as: 'form_header', foreignKey: 'form_id' });
-   
+
     HeaderAnswer.hasMany(FormAnswer, { as: 'answer_header', foreignKey: 'header_answer_id' });
     FormAnswer.belongsTo(HeaderAnswer, { as: 'header_aswer', foreignKey: 'header_answer_id' });
-    
+
     FormAnswer.belongsTo(EstructureQuestion, { as: 'aswer_question', foreignKey: 'estructure_question_id' });
     HeaderAnswer.belongsTo(Staff, { as: 'header_evalutor', foreignKey: 'evaluator_id' });
-    
+
     Staff.hasMany(HeaderAnswer, { as: 'evaluator_header', foreignKey: 'evaluator_id' });
     HeaderAnswer.belongsTo(Staff, { as: 'header_evaluted', foreignKey: 'evaluated_id' });
-    
+
     Staff.hasMany(HeaderAnswer, { as: 'evaluated_header', foreignKey: 'evaluated_id' });
     HeaderAnswer.belongsTo(Yacht, { as: 'header_yacht', foreignKey: 'yacht_id' });
-    
+
     Yacht.hasMany(HeaderAnswer, { as: 'yacht_header', foreignKey: 'yacht_id' });
 
 
     //coment cards
     ComentCard.hasMany(ComentCardRespond, { as: 'respuestas_coment_card', foreignKey: 'formulario_id', onDelete: "CASCADE" });
     ComentCardRespond.belongsTo(ComentCard, { as: 'coment_card', foreignKey: 'formulario_id' });
-    
+
     ComentCardRespond.hasMany(ComentCardAnswers, { as: 'respuestas', foreignKey: "respuesta_formulario_id", onDelete: "CASCADE" });
     ComentCardAnswers.belongsTo(ComentCardRespond, { as: 'respuesta_formulario', foreignKey: "respuesta_formulario_id" });
 
@@ -101,6 +102,9 @@ const initModels = () => {
     ComentCardYacht.belongsTo(Yacht, { as: "yate", foreignKey: "yacht_id" });
     ComentCard.hasMany(ComentCardYacht, { as: 'yates', foreignKey: 'coment_card_id' });
 
+    ComentCardYacht.hasMany(ComentCardQR, { as: 'link_acceso', foreignKey: "coment_card_yacht_id", onDelete: "CASCADE" });
+    ComentCardQR.belongsTo(ComentCardYacht, { as: 'coment_card', foreignKey: "coment_card_yacht_id" });
+
     //state
     HeaderAnswer.belongsTo(StatusEvaluation, { as: 'state', foreignKey: 'state_id' });
     StatusEvaluation.hasMany(HeaderAnswer, { as: "header_state", foreignKey: "state_id" });
@@ -108,7 +112,7 @@ const initModels = () => {
     Company.hasOne(Yacht, { foreignKey: 'company_id', as: 'yacht' });
     Yacht.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
     Yacht.hasOne(Warehouse, { foreignKey: 'yacht_id', as: 'warehouse' });
-    
+
     Warehouse.belongsTo(Yacht, { foreignKey: 'yacht_id', as: 'yacht' });
     Company.hasMany(Order, { foreignKey: 'company_id', as: 'orders' });
 
@@ -121,7 +125,7 @@ const initModels = () => {
 
     Warehouse.hasMany(Stock, { foreignKey: 'warehouse_id', as: 'stocks' });
     Stock.belongsTo(Warehouse, { foreignKey: 'warehouse_id', as: 'warehouse' });
-    
+
     Product.hasMany(Stock, { foreignKey: 'product_id', as: 'stocks' });
     Stock.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
 
@@ -140,7 +144,7 @@ const initModels = () => {
 
     Staff.hasMany(Register, { foreignKey: 'user_id', as: 'registros' });
     Register.belongsTo(Staff, { foreignKey: 'user_id', as: 'responsable' });
-   
+
     Staff.hasMany(Transaction, { foreignKey: 'user_id', as: 'transactions' });
     Warehouse.hasMany(Transaction, { foreignKey: 'warehouse_from_id', as: 'outgoingTransactions' });// Bodega de origen
     Transaction.belongsTo(Warehouse, { foreignKey: 'warehouse_from_id', as: 'warehouseFrom' });
@@ -156,11 +160,11 @@ const initModels = () => {
     Product.hasMany(LaundryYacht, { as: 'wineries', foreignKey: 'product_id' });
 
     Warehouse.hasMany(Request, { foreignKey: 'warehouse_id', as: 'requests' });
-    
+
     Request.belongsTo(Warehouse, { foreignKey: 'warehouse_id', as: 'warehouse' });
     Request.hasMany(itemsRequest, { foreignKey: 'request_id', as: 'requestItems' });
     itemsRequest.belongsTo(Request, { foreignKey: 'request_id', as: 'request' });
-    
+
     Request.belongsTo(Staff, { foreignKey: 'user_id', as: 'responsible' });
     Staff.hasMany(Request, { foreignKey: 'user_id', as: 'request' });
     itemsRequest.belongsTo(PlacesYacht, { foreignKey: 'placeYachtId', as: 'placeYacht' });
@@ -181,7 +185,7 @@ const initModels = () => {
 
     Impact
     Levels,
-    Strategy
+        Strategy
 
 }
 

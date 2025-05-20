@@ -1,7 +1,7 @@
 const db = require('../../../utils/database');
 const { DataTypes } = require('sequelize');
 
-const ComentCardYacht = db.define('coment_card_yacht', {
+const ComentCardQR = db.define('coment_card_qr', {
 
     id: {
         primaryKey: true,
@@ -9,16 +9,16 @@ const ComentCardYacht = db.define('coment_card_yacht', {
         autoIncrement: true,
         allowNull: false,
     },
-    carId: {
+    comentCardYachtId: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        field: 'coment_card_id',
+        field: 'coment_card_yacht_id',
     },
-    yachtId: {
+    accessLink: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        field: 'yacht_id',
+        field: 'access_link',
     },
 });
 
-module.exports = ComentCardYacht;
+module.exports = ComentCardQR;

@@ -50,7 +50,6 @@ class ComentCardService {
                     }
                 ]
             });
-            console.log(result.preguntas)
             return result;
         } catch (error) {
             throw error;
@@ -87,6 +86,7 @@ class ComentCardService {
     static async updateComentCard(info) {
         const { preguntas, data, formId } = info;
         const transaction = await db.transaction();
+
         try {
             const result = await ComentCard.update(
                 data,
@@ -100,19 +100,30 @@ class ComentCardService {
                 throw new Error('No se pudo actualizar coment card');
             }
 
+            // 👇 IMPORTANTE: map con async
             await Promise.all(
-                preguntas.map((pregunta) =>
-                    ComentCardQuestions.update(
-                        {
+                preguntas.map(async (pregunta) => {
+                    const isNew = !pregunta.id || pregunta.id === '';
+
+                    if (isNew) {
+                        await ComentCardQuestions.create({
+                            comentCardId: formId,
                             text: pregunta.text,
-                            puntuacion: pregunta.puntuacion,
-                        },
-                        {
-                            where: { id: pregunta.id },
-                            transaction,
-                        }
-                    )
-                )
+                            puntuacion: pregunta.puntuacion
+                        }, { transaction });
+                    } else {
+                        await ComentCardQuestions.update(
+                            {
+                                text: pregunta.text,
+                                puntuacion: pregunta.puntuacion,
+                            },
+                            {
+                                where: { id: pregunta.id },
+                                transaction,
+                            }
+                        );
+                    }
+                })
             );
 
             await transaction.commit();
@@ -133,24 +144,72 @@ class ComentCardService {
         }
     }
 
-    //YACHT CARD
-    static async assingYachtToComentCard(cardId, yachts) {
+    static async getYachtsWithComentCard() {
         try {
-            const result = await Promise.all(
-                yachts.map((id) =>
-                    ComentCardYacht.create(
-                        {
-                            cardId,
-                            yachtId: id,
-                        }    
-                    )
-                )
-            );
+            const result = await ComentCardYacht.findAll({
+                attributes: ['id', 'createdAt'],
+                include: [
+                    {
+                        model: Yacht,
+                        as: 'yate',
+                        attributes: ['id', 'name']
+                    },
+
+                ]
+            });
             return result;
         } catch (error) {
             throw error;
         }
     }
+
+    static async createCardYacht(data) {
+        try {
+            const result = await ComentCardYacht.create(data)
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async deleteCardYacht(id) {
+        try {
+            const result = await ComentCardYacht.destroy(id);
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async getComentCardByYachtId(yachtId) {
+        try {
+            const result = await ComentCardYacht.findOne({
+                where: { yachtId },
+                attributes: ['id', 'createdAt'],
+                include: [
+                    {
+                        model: Yacht,
+                        as: 'yate',
+                        attributes: ['id', 'name']
+                    },
+                    {
+                        model: ComentCard,
+                        as: 'coment_card',
+                        attributes: ['id', 'name'],
+                        include: [{
+                            model: ComentCardQuestions,
+                            as: 'preguntas',
+                            attributes: ['id', 'text', 'puntuacion']
+                        }]
+                    }
+                ]
+            });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
 
 }
 

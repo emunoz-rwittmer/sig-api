@@ -1,3 +1,4 @@
+const { re } = require('mathjs');
 const ComentCardService = require('../../../services/operations/comentCard/comentCard.services');
 const Utils = require('../../../utils/Utils');
 
@@ -70,17 +71,58 @@ const deleteComentCard = async (req, res) => {
 
 // YACHT COMMENT CARD
 
-
-const assingYachtToComentCard = async (req, res) => {
+const getYachtsWithComentCard = async (req, res) => {
     try {
-        const cardId = Utils.decode(req.body.card_id);
-        const yachts = req.body.yachts.map(id => (
-            id = Utils.decode(id)           
-        ))
-        await ComentCardService.assingYachtToComentCard(cardId, yachts);
-        // res.status(200).json({ data: 'resource created successfully' });
+        const result = await ComentCardService.getYachtsWithComentCard();
+        // if (result instanceof Array) {
+        //     result.map((x) => {
+        //         x.dataValues.id = Utils.encode(x.dataValues.id);
+        //     });
+        // }
+        res.status(200).json(result);
+    } catch (error) {
+        console.log('error', error);
+        res.status(400).json(error.message)
+    }
+}
+
+
+const createCardYacht = async (req, res) => {
+    try {
+        const cardId = Utils.decode(req.params.card_id);
+        const yachtId = Utils.decode(req.body.yacht_id);
+
+        await ComentCardService.createCardYacht({cardId, yachtId});
+        res.status(200).json({ data: 'resource created successfully' });
+    } catch (error) {
+        console.log('error', error);
+        res.status(400).json(error.message);
+    }
+}
+
+const deleteCardYacht = async (req, res) => {
+    try {
+        const id = req.params.card_id;
+        await ComentCardService.deleteCardYacht({
+            where: { id }
+        });
+        res.status(200).json({ data: 'resource deleted successfully' })
     } catch (error) {
         res.status(400).json(error.message);
+    }
+}
+
+const getComentCardByYacht = async (req, res) => {
+    try {
+        const yachtId = Utils.decode(req.params.yacht_id);
+        const result = await ComentCardService.getComentCardByYachtId(yachtId);
+        if (result instanceof Object) {
+            result.dataValues.id = Utils.encode(result.dataValues.id);
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        console.log('error', error);
+        res.status(400).json(error.message)
     }
 }
 
@@ -91,6 +133,9 @@ const ComentCardController = {
     createComentCard,
     updateComentCard,
     deleteComentCard,
-    assingYachtToComentCard,
+    getYachtsWithComentCard,
+    createCardYacht,
+    deleteCardYacht,
+    getComentCardByYacht
 }
 module.exports = ComentCardController

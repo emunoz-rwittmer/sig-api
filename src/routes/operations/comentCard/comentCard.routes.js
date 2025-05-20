@@ -11,7 +11,9 @@ router.put('/updateComentCard/:card_id', authJwt.verifyToken, ComentCardControll
 router.delete('/:card_id', authJwt.verifyToken, ComentCardController.deleteComentCard);
 
 //COMMENTCARD YACHT
-router.post('/assing_yachts/coment_card', authJwt.verifyToken, ComentCardController.assingYachtToComentCard);
-
+router.get('/cards_yachts/yachts', authJwt.verifyToken, ComentCardController.getYachtsWithComentCard);
+router.get('/coment_card/:yacht_id', ComentCardController.getComentCardByYacht);
+router.post('/createCardYacht/:card_id', authJwt.verifyToken, ComentCardController.createCardYacht);
+router.delete('/delete_card_yacht/:card_id', authJwt.verifyToken, ComentCardController.deleteCardYacht);
 
 module.exports = router;
