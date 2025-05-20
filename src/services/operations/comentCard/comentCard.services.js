@@ -1,8 +1,11 @@
 const Yacht = require('../../../models/catalogs/yacht.models');
+const ComentCardQR = require('../../../models/operations/comentCard/cardQR.models');
 const ComentCardYacht = require('../../../models/operations/comentCard/cardYacht.models');
 const ComentCard = require('../../../models/operations/comentCard/comentCard.models');
 const ComentCardQuestions = require('../../../models/operations/comentCard/comentCardQuestions.models');
 const db = require('../../../utils/database');
+const Utils = require('../../../utils/Utils');
+require('dotenv').config();
 
 
 class ComentCardService {
@@ -144,6 +147,7 @@ class ComentCardService {
         }
     }
 
+    // COMMENT CARD YACHT
     static async getYachtsWithComentCard() {
         try {
             const result = await ComentCardYacht.findAll({
@@ -163,11 +167,47 @@ class ComentCardService {
         }
     }
 
+    static async getAllAccessLinks(comentCardYachtId) {
+        try {
+            const result = await ComentCardQR.findAll({
+                where: { comentCardYachtId },
+                attributes: ['id', 'access_link', 'start_date', 'createdAt'],
+                // include: [
+                //     {
+                //         model: ComentCard,
+                //         as: 'coment_card',
+                //         attributes: ['id', 'name']
+                //     },
+                // ],
+                order: [['start_date', 'DESC']]
+            });
+            console.log(result)
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     static async createCardYacht(data) {
         try {
             const result = await ComentCardYacht.create(data)
             return result;
         } catch (error) {
+            throw error;
+        }
+    }
+
+    static async createLink(data) {
+        const transaction = await db.transaction();
+        try {
+            const result = await ComentCardQR.create(data, { transaction });
+            const id = Utils.encode(result.dataValues.id);
+            const accessLink = `${process.env.URL_CAPTAINS}/coment_card/${id}`; // Cambia a tu estructura de URL
+            await result.update({ accessLink: accessLink }, { transaction });
+            await transaction.commit();
+            return result;
+        } catch (error) {
+            await transaction.rollback();
             throw error;
         }
     }

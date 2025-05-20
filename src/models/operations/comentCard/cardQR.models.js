@@ -15,9 +15,14 @@ const ComentCardQR = db.define('coment_card_qr', {
         field: 'coment_card_yacht_id',
     },
     accessLink: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
+        type: DataTypes.TEXT,
+        allowNull: true,
         field: 'access_link',
+    },
+    startDate: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        field: 'start_date',
     },
 });
 

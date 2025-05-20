@@ -9,15 +9,20 @@ const ComentCardRespond = db.define('respuesta_coment_card', {
         autoIncrement: true,
         allowNull: false,
     },
-    cardYachtId: {
+    cardQrId: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        field:"card_yacht_id",
+        field:"card_qr_id",
     },
     fullName: {
         type: DataTypes.STRING,
         allowNull: false,
         field: 'nombre_completo'
+    },
+    cabin: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        field: 'cabin'
     },
     isSubmited: { 
         type: DataTypes.BOOLEAN, 
