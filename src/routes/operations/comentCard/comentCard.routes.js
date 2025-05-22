@@ -20,7 +20,7 @@ router.post('/createLink/CardYacht', authJwt.verifyToken, ComentCardController.c
 
 
 //PUBLIC ACCESS LINK
-router.get('/coment_card/:yacht_id', ComentCardController.getComentCardByYacht);
+router.get('/coment_card_by_qr/:comet_card_qr', ComentCardController.getComentCardByQr);
 
 
 module.exports = router;

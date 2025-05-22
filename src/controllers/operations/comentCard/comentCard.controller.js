@@ -58,7 +58,7 @@ const updateComentCard = async (req, res) => {
 
 const deleteComentCard = async (req, res) => {
     try {
-        const formId = Utils.decode(req.params.form_id);
+        const formId = Utils.decode(req.params.card_id);
         const result = await ComentCardService.delete({
             where: { id: formId }
         });
@@ -139,10 +139,10 @@ const deleteCardYacht = async (req, res) => {
 
 
 //public access link
-const getComentCardByYacht = async (req, res) => {
+const getComentCardByQr = async (req, res) => {
     try {
-        const yachtId = Utils.decode(req.params.yacht_id);
-        const result = await ComentCardService.getComentCardByYachtId(yachtId);
+        const qr = Utils.decode(req.params.comet_card_qr);
+        const result = await ComentCardService.getComentCardByQr(qr);
         if (result instanceof Object) {
             result.dataValues.id = Utils.encode(result.dataValues.id);
         }
@@ -164,6 +164,6 @@ const ComentCardController = {
     createCardYacht,
     createLink,
     deleteCardYacht,
-    getComentCardByYacht
+    getComentCardByQr
 }
 module.exports = ComentCardController

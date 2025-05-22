@@ -39,7 +39,7 @@ class ComentCardService {
                     {
                         model: ComentCardQuestions,
                         as: 'preguntas',
-                        attributes: ['id', 'text', 'puntuacion']
+                        attributes: ['id', 'text', 'puntuacion', 'type', 'opciones']
                     },
                     {
                         model: ComentCardYacht,
@@ -73,7 +73,9 @@ class ComentCardService {
                 ComentCardQuestions.create({
                     comentCardId: result.id,
                     text: pregunta.text,
-                    puntuacion: pregunta.puntuacion
+                    puntuacion: pregunta.puntuacion,
+                    type: pregunta.type,
+                    opciones: pregunta.opciones.map((opcion) => opcion)
                 }, { transaction })
             ));
 
@@ -112,13 +114,17 @@ class ComentCardService {
                         await ComentCardQuestions.create({
                             comentCardId: formId,
                             text: pregunta.text,
-                            puntuacion: pregunta.puntuacion
+                            puntuacion: pregunta.puntuacion,
+                            type: pregunta.type,
+                            opciones: pregunta.opciones.map((opcion) => opcion)
                         }, { transaction });
                     } else {
                         await ComentCardQuestions.update(
                             {
                                 text: pregunta.text,
                                 puntuacion: pregunta.puntuacion,
+                                type: pregunta.type,
+                                opciones: pregunta.opciones.map((opcion) => opcion)
                             },
                             {
                                 where: { id: pregunta.id },
@@ -221,31 +227,35 @@ class ComentCardService {
         }
     }
 
-    static async getComentCardByYachtId(yachtId) {
+    static async getComentCardByQr(id) {
         try {
-            const result = await ComentCardYacht.findOne({
-                where: { yachtId },
-                attributes: ['id', 'createdAt'],
+            const result = await ComentCardQR.findOne({
+                where: { id },
+                attributes: ['id', 'comentCardYachtId', 'startDate'],
                 include: [
                     {
-                        model: Yacht,
-                        as: 'yate',
-                        attributes: ['id', 'name']
-                    },
-                    {
-                        model: ComentCard,
-                        as: 'coment_card',
-                        attributes: ['id', 'name'],
+                        model: ComentCardYacht,
+                        as: 'card_yacht',
+                        attributes: ['id'],
                         include: [{
-                            model: ComentCardQuestions,
-                            as: 'preguntas',
-                            attributes: ['id', 'text', 'puntuacion']
+                            model: ComentCard,
+                            as: 'coment_card',
+                            attributes: ['id', 'name'],
+                            include: [{
+                                model: ComentCardQuestions,
+                                as: 'preguntas',
+                                attributes: ['id', 'text', 'puntuacion', 'type', 'opciones']
+                            }]
                         }]
-                    }
+                    },
+
                 ]
             });
+
+            console.log(result)
             return result;
         } catch (error) {
+            console.log(error)
             throw error;
         }
     }

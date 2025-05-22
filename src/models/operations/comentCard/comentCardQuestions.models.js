@@ -12,16 +12,23 @@ const ComentCardQuestions = db.define('coment_card_questions', {
     comentCardId: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        field:'coment_card_id'
+        field: 'coment_card_id'
     },
     text: {
         type: DataTypes.TEXT,
         allowNull: false,
     },
-    puntuacion: {
-        type: DataTypes.INTEGER,
+    type: {
+        type: DataTypes.STRING,
         allowNull: false,
     },
+    puntuacion: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+    },
+    opciones: {
+        type: DataTypes.JSON // Almacena opciones como un JSON
+    }
 
 });
 
