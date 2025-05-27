@@ -1,8 +1,11 @@
+const { fn, col } = require('sequelize');
 const Yacht = require('../../../models/catalogs/yacht.models');
 const ComentCardQR = require('../../../models/operations/comentCard/cardQR.models');
 const ComentCardYacht = require('../../../models/operations/comentCard/cardYacht.models');
 const ComentCard = require('../../../models/operations/comentCard/comentCard.models');
+const ComentCardAnswers = require('../../../models/operations/comentCard/comentCardAnswers.models');
 const ComentCardQuestions = require('../../../models/operations/comentCard/comentCardQuestions.models');
+const ComentCardRespond = require('../../../models/operations/comentCard/comentCardRespond.models');
 const db = require('../../../utils/database');
 const Utils = require('../../../utils/Utils');
 require('dotenv').config();
@@ -177,18 +180,67 @@ class ComentCardService {
         try {
             const result = await ComentCardQR.findAll({
                 where: { comentCardYachtId },
-                attributes: ['id', 'access_link', 'start_date', 'createdAt'],
-                // include: [
-                //     {
-                //         model: ComentCard,
-                //         as: 'coment_card',
-                //         attributes: ['id', 'name']
-                //     },
-                // ],
-                order: [['start_date', 'DESC']]
+                attributes: [
+                    'id',
+                    'access_link',
+                    'start_date',
+                    'createdAt',
+                    [fn('COUNT', col('respuestas_coment_card.id')), 'cards_count'],
+                ],
+                include: [
+                    {
+                        model: ComentCardRespond,
+                        attributes: [], // No traemos las respuestas, solo las contamos
+                        as: 'respuestas_coment_card',
+                    },
+                ],
+                group: ['id'],
+                order: [['start_date', 'DESC']],
             });
-            console.log(result)
             return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async getAllComentCardsForLink(cardQrId) {
+        try {
+            const result = await ComentCardRespond.findAll({
+                where: { cardQrId },
+                attributes: [
+                    'id',
+                    'nombre_completo',
+                    'cabin',
+                    'isSubmited',
+                    'createdAt',
+                ],
+                include: [
+                    {
+                        model: ComentCardAnswers,
+                        attributes: ['answer'],
+                        as: 'respuestas',
+                        include: [
+                            {
+                                model: ComentCardQuestions,
+                                attributes: ['id', 'text'],
+                                as: 'pregunta',
+                            },
+                        ],
+                    },
+                ]
+            });
+
+            // Ordenar manualmente las respuestas por el id de la pregunta
+            const orderedResult = result.map(respond => {
+                const sortedRespuestas = [...respond.respuestas].sort((a, b) => {
+                    return a.pregunta.id - b.pregunta.id;
+                });
+                return {
+                    ...respond.toJSON(),
+                    respuestas: sortedRespuestas
+                };
+            });
+            return orderedResult;  
         } catch (error) {
             throw error;
         }
@@ -252,11 +304,42 @@ class ComentCardService {
                 ]
             });
 
-            console.log(result)
             return result;
         } catch (error) {
             console.log(error)
             throw error;
+        }
+    }
+
+    static async respondComentCard(info) {
+        const { responsesToInsert, passenger } = info;
+        const transaction = await db.transaction();
+        try {
+            const result = await ComentCardRespond.create(
+                {
+                    cardQrId: passenger.cometCardQr,
+                    fullName: passenger.name,
+                    cabin: passenger.cabin,
+                    isSubmited: true
+                }, { transaction });
+
+            if (!result) {
+                throw new Error('No se pudo crear coment card');
+            }
+
+            await Promise.all(responsesToInsert.map((respuesta) =>
+                ComentCardAnswers.create({
+                    respuestaId: result.id,
+                    ...respuesta
+                }, { transaction })
+            ));
+
+            await transaction.commit();
+            return result;
+        } catch (error) {
+            console.log(error)
+            await transaction.rollback();
+            throw new Error(error.message);
         }
     }
 

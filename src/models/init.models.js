@@ -93,6 +93,9 @@ const initModels = () => {
     ComentCardRespond.hasMany(ComentCardAnswers, { as: 'respuestas', foreignKey: "respuesta_coment_card_id", onDelete: "CASCADE" });
     ComentCardAnswers.belongsTo(ComentCardRespond, { as: 'respuesta_formulario', foreignKey: "respuesta_coment_card_id" });
 
+    ComentCardQuestions.hasOne(ComentCardAnswers, { as: 'respuesta', foreignKey: "pregunta_id", onDelete: "CASCADE" });
+    ComentCardAnswers.belongsTo(ComentCardQuestions, { as: 'pregunta', foreignKey: "pregunta_id" });
+
     ComentCard.hasMany(ComentCardQuestions, { as: 'preguntas', foreignKey: "coment_card_id", onDelete: "CASCADE" });
     ComentCardQuestions.belongsTo(ComentCard, { as: 'coment_card', foreignKey: "coment_card_id" });
 

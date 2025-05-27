@@ -93,7 +93,21 @@ const getAllAccessLinks = async (req, res) => {
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
-                //x.dataValues.yate.dataValues.id = Utils.encode(x.dataValues.yate.dataValues.id);
+            });
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(400).json(error.message)
+    }
+}
+
+const getAllComentCardsForLink = async (req, res) => {
+    try {
+        const cardQrId = Utils.decode(req.params.link_id);
+        const result = await ComentCardService.getAllComentCardsForLink(cardQrId);
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.id = Utils.encode(x.id);
             });
         }
         res.status(200).json(result);
@@ -152,6 +166,31 @@ const getComentCardByQr = async (req, res) => {
     }
 }
 
+const respondComentCard = async (req, res) => {
+    try {
+        const cometCardQr = Utils.decode(req.params.comet_card_qr);
+        const { answers, cabin, name } = req.body;
+        const passenger = { name, cabin, cometCardQr };
+        const responsesToInsert = answers
+            .map((answer, index) => {
+                if (answer !== null && answer !== undefined && answer !== '') {
+                    return {
+                        questionId: index,
+                        answer,
+                    };
+                }
+                return null;
+            })
+            .filter(Boolean); // elimina los nulls
+
+         await ComentCardService.respondComentCard({ responsesToInsert, passenger });
+         res.status(200).json({ data: 'resource created successfully' });
+    } catch (error) {
+        res.status(400).json(error.message);
+    }
+}
+
+
 
 const ComentCardController = {
     getAllComentCards,
@@ -161,9 +200,11 @@ const ComentCardController = {
     deleteComentCard,
     getYachtsWithComentCard,
     getAllAccessLinks,
+    getAllComentCardsForLink,
     createCardYacht,
     createLink,
     deleteCardYacht,
-    getComentCardByQr
+    getComentCardByQr,
+    respondComentCard
 }
 module.exports = ComentCardController
