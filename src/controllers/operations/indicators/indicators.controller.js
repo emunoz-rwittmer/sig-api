@@ -86,6 +86,7 @@ const getIndicatorById = async (req, res) => {
         if (result instanceof Object) {
             result.id = Utils.encode(result.id);
             result.formulaId = Utils.encode(result.formulaId);
+            result.departamentId = Utils.encode(result.departamentId);
         };
         res.status(200).json(result);
     } catch (error) {
