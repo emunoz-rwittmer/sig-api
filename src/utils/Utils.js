@@ -32,48 +32,51 @@ class Utils {
     const token = jwt.sign(data, process.env.JWT_SECRET, {
       expiresIn: "55m",
       algorithm: "HS512",
-  });
-  return token;
+    });
+    return token;
   }
 
   static generateRefreshToken(data) {
     const token = jwt.sign(data, process.env.JWT_REFRESH_SECRET, {
-      expiresIn: "10h", 
-      algorithm: "HS512", 
-  });
-  return token;
+      expiresIn: "10h",
+      algorithm: "HS512",
+    });
+    return token;
   }
 
-  static formatDateToLocal (date) {
+  static formatDateToLocal(date) {
     const formattedDate = new Date(date);
     const day = formattedDate.getDate();
     const month = formattedDate.getMonth() + 1; // Los meses empiezan desde 0
     const year = formattedDate.getFullYear();
     return `${day}/${month}/${year}`;
-}
-
-static asignarPuntaje (respuesta) {
-  switch (respuesta) {
-      case "Casi siempre":
-      case "Excelente":
-          return 5;
-      case "Con frecuencia":
-      case "Muy bueno":
-      case "Muy Bueno":
-          return 4;
-      case "Mas o menos":
-      case "Bueno":
-          return 3;
-      case "A veces":
-      case "Regular":
-          return 2;
-      case "Casi nunca":
-      case "Ineficiente":
-          return 1;
-      default:
-          return 0;
   }
-}
+
+  static asignarPuntaje(respuesta) {
+    // Intentar extraer el número entre paréntesis, si existe.
+    const match = respuesta.match(/\((\d)\)/);
+    if (match) {
+      return Number(match[1]);
+    }
+
+    // Si no hay número en paréntesis, usar la tabla como respaldo.
+    const puntajes = {
+      5: ['Casi siempre', 'Excelente'],
+      4: ['Con frecuencia', 'Muy bueno', 'Muy Bueno'],
+      3: ['Mas o menos', 'Bueno'],
+      2: ['A veces', 'Regular'],
+      1: ['Casi nunca', 'Ineficiente']
+    };
+
+    for (const [puntos, respuestas] of Object.entries(puntajes)) {
+      if (respuestas.includes(respuesta)) {
+        return Number(puntos);
+      }
+    }
+
+    // Valor por defecto si no hay coincidencia.
+    return 0;
+  }
 
 }
 module.exports = Utils;
