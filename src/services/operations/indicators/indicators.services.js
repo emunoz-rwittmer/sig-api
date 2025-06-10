@@ -53,10 +53,16 @@ class IndicatorService {
         try {
             const result = await Indicator.findAll({
                 where: { departamentId },
-                include: [{
-                    model: Formula,
-                    as: 'formula_indicator',
-                }],
+                include: [
+                    {
+                        model: Process,
+                        as: 'departament',
+                        attributes: ['name'],
+                    },
+                    {
+                        model: Formula,
+                        as: 'formula_indicator',
+                    }],
                 order: [['name', 'ASC']]
             });
             return result;
