@@ -129,6 +129,7 @@ const updateIndicator = async (req, res) => {
         const indicatorId = Utils.decode(req.params.indicator_id);
         const data = req.body
         data.formulaId = Utils.decode(data.formulaId);
+        data.departamentId = Utils.decode(data.departamentId)
         const result = await IndicatorService.updateIndicator(data, {
             where: { id: indicatorId }
         });
