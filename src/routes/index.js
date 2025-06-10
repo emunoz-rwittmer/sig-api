@@ -22,6 +22,7 @@ const indicatorsRoutes = require('./operations/indicators/indicator.routes');
 const probabilityRoutes = require('./operations/indicators/probability.routes');
 const impactRoutes = require('./operations/indicators/impact.routes');
 const levelRoutes = require('./operations/indicators/levels.routes');
+const processRoutes = require('./operations/indicators/proces.routes');
 const startegryRoutes = require('./operations/indicators/strategy.routes');
 const comentCardRoutes = require("./operations/comentCard/comentCard.routes");
 
@@ -55,6 +56,7 @@ const routerApi = (app) => {
   app.use("/api/indicators", authJwt.verifyToken, indicatorsRoutes);
   app.use("/api/probabilities", authJwt.verifyToken, probabilityRoutes);
   app.use("/api/impact", authJwt.verifyToken, impactRoutes);
+  app.use("/api/procedures", authJwt.verifyToken, processRoutes);
   app.use("/api/levels", authJwt.verifyToken, levelRoutes);
   app.use("/api/strategy", authJwt.verifyToken, startegryRoutes);
   //REPORTS

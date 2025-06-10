@@ -5,7 +5,6 @@ const bcrypt = require("bcrypt");
 
 const getAllUsers = async (req, res) => {
     try {
-        console.log("getAllUsers");
         const result = await UserService.getAll();
         if (result instanceof Array) {
             result.map((x) => {
