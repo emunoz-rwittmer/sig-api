@@ -25,10 +25,6 @@ const Indicator = db.define('indicator', {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  process: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
   source: {
     type: DataTypes.STRING,
     allowNull: false,
