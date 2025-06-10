@@ -29,6 +29,7 @@ const getIndicatorsByDepartament = async (req, res) => {
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
+                x.dataValues.departamentId = Utils.encode(x.dataValues.departamentId);
             });
         }
         res.status(200).json({ departament, result });
@@ -170,7 +171,7 @@ const createTabulation = async (req, res) => {
         } catch (error) {
             throw error.message;
         }
-       
+
         data.percent = percent
         const result = await IndicatorService.createTabulation(data);
         if (result) {
