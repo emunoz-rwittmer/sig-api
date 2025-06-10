@@ -77,6 +77,5 @@ class Utils {
     // Valor por defecto si no hay coincidencia.
     return 0;
   }
-
 }
 module.exports = Utils;
