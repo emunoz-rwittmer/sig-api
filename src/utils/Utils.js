@@ -53,13 +53,11 @@ class Utils {
   }
 
   static asignarPuntaje(respuesta) {
-    // Intentar extraer el número entre paréntesis, si existe.
     const match = respuesta.match(/\((\d)\)/);
     if (match) {
       return Number(match[1]);
     }
 
-    // Si no hay número en paréntesis, usar la tabla como respaldo.
     const puntajes = {
       5: ['Casi siempre', 'Excelente'],
       4: ['Con frecuencia', 'Muy bueno', 'Muy Bueno'],
@@ -74,7 +72,6 @@ class Utils {
       }
     }
 
-    // Valor por defecto si no hay coincidencia.
     return 0;
   }
 }

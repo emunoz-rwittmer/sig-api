@@ -43,6 +43,7 @@ const ComentCardAnswers = require('./operations/comentCard/comentCardAnswers.mod
 const ComentCardQuestions = require('./operations/comentCard/comentCardQuestions.models');
 const ComentCardYacht = require('./operations/comentCard/cardYacht.models');
 const ComentCardQR = require('./operations/comentCard/cardQR.models');
+const StaffCompany = require('./catalogs/staffCompany.models');
 
 const initModels = () => {
 
@@ -58,6 +59,10 @@ const initModels = () => {
     Positions.hasMany(Staff, { as: "position_staff", foreignKey: "position_id" });
     Staff.belongsTo(Departaments, { as: "staff_departament", foreignKey: "departament_id" });
     Departaments.hasMany(Staff, { as: "departament_staff", foreignKey: "departament_id" });
+
+    StaffCompany.belongsTo(Staff, { as: "staff", foreignKey: "staff_id" });
+    StaffCompany.belongsTo(Company, { as: "company", foreignKey: "company_id" });
+    Staff.hasMany(StaffCompany, { as: 'companies', foreignKey: 'staff_id' });
 
     StaffYacht.belongsTo(Staff, { as: "staff_yacht", foreignKey: "staff_id" });
     StaffYacht.belongsTo(Yacht, { as: "yacht_staff", foreignKey: "yacht_id" });
@@ -112,6 +117,7 @@ const initModels = () => {
     //state
     HeaderAnswer.belongsTo(StatusEvaluation, { as: 'state', foreignKey: 'state_id' });
     StatusEvaluation.hasMany(HeaderAnswer, { as: "header_state", foreignKey: "state_id" });
+
     //INVENTORY RELATIONS
     Company.hasOne(Yacht, { foreignKey: 'company_id', as: 'yacht' });
     Yacht.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });

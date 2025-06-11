@@ -212,6 +212,49 @@ const deleteYacht = async (req, res) => {
     }
 }
 
+// Staff - Company
+
+const getAllCompanies = async (req, res) => {
+    try {
+        const staffId = Utils.decode(req.params.staff_id)
+        const result = await StaffService.getAllCompanies(staffId);
+        if (result instanceof Object) {
+            result.id = Utils.encode(result.id);
+            result.company_id = Utils.encode(result.company_id);
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(400).json(error.message);
+    }
+}
+
+const assingCompany = async (req, res) => {
+    try {
+        const data = {};
+        data.staffId = Utils.decode(req.params.staff_id)
+        data.companyId = Utils.decode(req.body.company_id)
+        const result = await StaffService.assingCompany(data);
+        if (result) {
+            res.status(200).json({ data: 'resource created successfully' });
+        }
+    } catch (error) {
+        console.log(error.message)
+        res.status(400).json(error.message);
+    }
+}
+
+const deleteCompany = async (req, res) => {
+    try {
+        const id = req.params.id;
+        await StaffService.deleteCompany({
+            where: { id }
+        });
+        res.status(200).json({ data: 'resource deleted successfully' })
+    } catch (error) {
+        res.status(400).json(error.message);
+    }
+}
+
 const StaffController = {
     getAllStaffs,
     getStaffsByFilters,
@@ -225,6 +268,9 @@ const StaffController = {
     deleteStaff,
     getAllYachts,
     assingYacht,
-    deleteYacht
+    deleteYacht,
+    getAllCompanies,
+    assingCompany,
+    deleteCompany
 }
 module.exports = StaffController

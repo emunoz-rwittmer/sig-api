@@ -5,6 +5,8 @@ const Departaments = require('../../models/catalogs/departament.models')
 const StaffYacht = require('../../models/catalogs/staffYacht.models');
 const { Op } = require("sequelize");
 const Roles = require('../../models/catalogs/roles.models');
+const Company = require('../../models/catalogs/company.models');
+const StaffCompany = require('../../models/catalogs/staffCompany.models');
 
 class Staffervice {
     static async getAll() {
@@ -22,7 +24,21 @@ class Staffervice {
                         model: Yachts,
                         as: 'yacht_staff'
                     }]
-                }, {
+                },
+                {
+                    model: StaffCompany,
+                    as: 'companies',
+                    attributes: ['id'],
+                    include: [{
+                        model: Company,
+                        as: 'company',
+                        include: [{
+                            model: Yachts,
+                            as: 'yacht'
+                        }]
+                    }]
+                },
+                {
                     model: Departaments,
                     as: 'staff_departament',
                     attributes: ['id', 'name'],
@@ -288,7 +304,7 @@ class Staffervice {
             const result = await Staff.create(staff);
             return result;
         } catch (error) {
-            
+
             throw error;
 
         }
@@ -351,6 +367,44 @@ class Staffervice {
     static async deleteYacht(id) {
         try {
             const result = await StaffYacht.destroy(id);
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    // Staff - COMPANIES 
+
+    static async getAllCompanies(id) {
+        try {
+            const result = await StaffCompany.findAll({
+                where: { staffId: id },
+                attributes: ['id'],
+                include: {
+                    model: Company,
+                    as: 'company',
+                    attributes: ['name'],
+                }
+            });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async assingCompany(data) {
+        try {
+            const result = await StaffCompany.create(data);
+            return result;
+        } catch (error) {
+            throw error;
+
+        }
+    }
+
+    static async deleteCompany(id) {
+        try {
+            const result = await StaffCompany.destroy(id);
             return result;
         } catch (error) {
             throw error;
