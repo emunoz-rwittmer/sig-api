@@ -276,7 +276,8 @@ class WarehouseService {
                     as: 'responsible',
                     attributes: ['id', 'firstName', 'lastName']
                 }],
-                group: ['id']
+                group: ['id'],
+                order:[['createdAt', 'DESC']]
             });
             return result;
         } catch (error) {
