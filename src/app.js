@@ -17,16 +17,6 @@ app.use(morgan('tiny'));
 // linea para servir IMG o PDF
 app.use('/api/uploads', express.static(path.join(__dirname, '../uploads')));  
 // linea para descargar archivos
-app.get('/api/download/:filename', (req, res) => {
-    const filename = req.params.filename;
-    const filePath = path.join(__dirname, '../uploads/files', filename);
-    res.download(filePath, (err) => {
-        if (err) {
-            console.error('Error al descargar el archivo:', err);
-            res.status(500).send('Error al descargar el archivo.');
-        }
-    });
-});
 
 db.authenticate()
 .then(() => console.log('base de datos autenticada'))

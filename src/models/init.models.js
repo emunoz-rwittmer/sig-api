@@ -44,6 +44,7 @@ const ComentCardQuestions = require('./operations/comentCard/comentCardQuestions
 const ComentCardYacht = require('./operations/comentCard/cardYacht.models');
 const ComentCardQR = require('./operations/comentCard/cardQR.models');
 const StaffCompany = require('./catalogs/staffCompany.models');
+const Regulation = require('./rrhh/regulation.models');
 
 const initModels = () => {
 
@@ -63,6 +64,7 @@ const initModels = () => {
     StaffCompany.belongsTo(Staff, { as: "staff", foreignKey: "staff_id" });
     StaffCompany.belongsTo(Company, { as: "company", foreignKey: "company_id" });
     Staff.hasMany(StaffCompany, { as: 'companies', foreignKey: 'staff_id' });
+    Company.hasMany(StaffCompany, { as: 'personal', foreignKey: 'company_id' });
 
     StaffYacht.belongsTo(Staff, { as: "staff_yacht", foreignKey: "staff_id" });
     StaffYacht.belongsTo(Yacht, { as: "yacht_staff", foreignKey: "yacht_id" });
@@ -70,6 +72,10 @@ const initModels = () => {
 
     Form.belongsTo(Positions, { as: "position_form", foreignKey: "position_id" });
     Positions.hasMany(Form, { as: 'positions', foreignKey: 'position_id' });
+    //rrhh
+    Company.hasMany(Regulation, { as: "reglamentos", foreignKey: "company_id" });
+    Regulation.belongsTo(Company, { as: "companie", foreignKey: "company_id" });
+
     //operations
     FormEstructure.belongsTo(Form, { as: "form_questions", foreignKey: "form_id" });
     FormEstructure.belongsTo(EstructureQuestion, { as: "questions_estucture", foreignKey: "estructure_question_id" });

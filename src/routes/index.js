@@ -9,6 +9,7 @@ const companyRoutes = require("./catalogs/company.routes");
 const staffRoutes = require("./catalogs/staff.routes");
 const formsRoutes = require("./operations/surveys/forms.routes");
 const HouseRulesRoutes = require("./catalogs/houseRules.routes");
+const regulationsRoutes = require("./rrhh/regulations.routes");
 //Operations
 const questiondRoutes = require("./operations/surveys/questions.routes");
 const evaluationRoutes = require("./operations/surveys/evaluation.routes");
@@ -28,6 +29,7 @@ const comentCardRoutes = require("./operations/comentCard/comentCard.routes");
 
 //Report
 const reportRoutes = require("./reports/reports.routes");
+const downloadsRoutes = require("./donwloads/donwloads.routes");
 
 
 const routerApi = (app) => {
@@ -40,7 +42,8 @@ const routerApi = (app) => {
   app.use("/api/yachts", authJwt.verifyToken, yachtRoutes);
   app.use("/api/companies", authJwt.verifyToken, companyRoutes);
   app.use("/api/staffs", authJwt.verifyToken, staffRoutes);
-  app.use("/api/houseRules", authJwt.verifyToken, HouseRulesRoutes);
+  //RRHH
+  app.use("/api/regulations", authJwt.verifyToken, regulationsRoutes);
   //OPERATIONS
   app.use("/api/questions", authJwt.verifyToken, questiondRoutes);
   app.use("/api/forms", formsRoutes);
@@ -61,6 +64,8 @@ const routerApi = (app) => {
   app.use("/api/strategy", authJwt.verifyToken, startegryRoutes);
   //REPORTS
   app.use("/api/reports", authJwt.verifyToken, reportRoutes);
+  app.use("/api/downloads", authJwt.verifyToken, downloadsRoutes);
+
 };
 
 module.exports = routerApi;
