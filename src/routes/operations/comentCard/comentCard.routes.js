@@ -21,6 +21,7 @@ router.post('/createLink/CardYacht', authJwt.verifyToken, ComentCardController.c
 
 
 //PUBLIC ACCESS LINK
+router.get('/coment_card_by_yacht/dates/:yacht_id', ComentCardController.getComentCardByDates);
 router.get('/coment_card_by_qr/:comet_card_qr', ComentCardController.getComentCardByQr);
 router.post('/respond_coment_card/:comet_card_qr', ComentCardController.respondComentCard);
 

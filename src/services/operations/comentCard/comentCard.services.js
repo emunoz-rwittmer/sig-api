@@ -1,4 +1,4 @@
-const { fn, col } = require('sequelize');
+const { fn, col, Op } = require('sequelize');
 const Yacht = require('../../../models/catalogs/yacht.models');
 const ComentCardQR = require('../../../models/operations/comentCard/cardQR.models');
 const ComentCardYacht = require('../../../models/operations/comentCard/cardYacht.models');
@@ -240,7 +240,7 @@ class ComentCardService {
                     respuestas: sortedRespuestas
                 };
             });
-            return orderedResult;  
+            return orderedResult;
         } catch (error) {
             throw error;
         }
@@ -304,6 +304,36 @@ class ComentCardService {
                 ]
             });
 
+            return result;
+        } catch (error) {
+            console.log(error)
+            throw error;
+        }
+    }
+
+    static async getComentCardByDates(comentCardYachtId, toDay) {
+        const date = new Date(toDay);
+        try {
+            const result = await ComentCardQR.findOne({
+                where: {
+                    comentCardYachtId,
+                    startDate: { [Op.lte]: date },
+                    endtDate: { [Op.gte]: date }
+                },
+                attributes: ['accessLink', 'startDate', 'endtDate'],
+                include: [
+                    {
+                        model: ComentCardYacht,
+                        as: 'card_yacht',
+                        attributes: ['id'],
+                        include: [{
+                            model: Yacht,
+                            as: 'yate',
+                            attributes: ['code'],    
+                        }]
+                    },
+                ]
+            });
             return result;
         } catch (error) {
             console.log(error)

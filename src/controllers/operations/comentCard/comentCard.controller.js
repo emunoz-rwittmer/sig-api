@@ -166,6 +166,17 @@ const getComentCardByQr = async (req, res) => {
     }
 }
 
+const getComentCardByDates = async (req, res) => {
+    try {
+        const yachtId = Utils.decode(req.params.yacht_id);
+        const { toDay } = req.query;
+        const result = await ComentCardService.getComentCardByDates(yachtId, toDay);
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(400).json(error.message)
+    }
+}
+
 const respondComentCard = async (req, res) => {
     try {
         const cometCardQr = Utils.decode(req.params.comet_card_qr);
@@ -205,6 +216,7 @@ const ComentCardController = {
     createLink,
     deleteCardYacht,
     getComentCardByQr,
+    getComentCardByDates,
     respondComentCard
 }
 module.exports = ComentCardController

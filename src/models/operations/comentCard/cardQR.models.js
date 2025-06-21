@@ -24,6 +24,11 @@ const ComentCardQR = db.define('coment_card_qr', {
         allowNull: false,
         field: 'start_date',
     },
+    endtDate: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        field: 'end_date',
+    },
 });
 
 module.exports = ComentCardQR;
