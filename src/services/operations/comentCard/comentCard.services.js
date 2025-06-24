@@ -184,6 +184,7 @@ class ComentCardService {
                     'id',
                     'access_link',
                     'start_date',
+                    'end_date',
                     'createdAt',
                     [fn('COUNT', col('respuestas_coment_card.id')), 'cards_count'],
                 ],
@@ -329,7 +330,7 @@ class ComentCardService {
                         include: [{
                             model: Yacht,
                             as: 'yate',
-                            attributes: ['code'],    
+                            attributes: ['code'],
                         }]
                     },
                 ]
