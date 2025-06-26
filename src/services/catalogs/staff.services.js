@@ -12,7 +12,7 @@ class Staffervice {
     static async getAll() {
         try {
             const result = await Staff.findAll({
-                attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'company', 'active'],
+                attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
                 order: [
                     ['last_name', 'ASC']
                 ],
@@ -80,7 +80,7 @@ class Staffervice {
 
             const result = await Staff.findAll({
                 where,
-                attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'company', 'active'],
+                attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
                 order: [
                     ['last_name', 'ASC']
                 ],
@@ -115,7 +115,7 @@ class Staffervice {
                     positionId: { [Op.ne]: search },
                     active: true
                 },
-                attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'company', 'active'],
+                attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
                 order: [
                     ['last_name', 'ASC']
                 ],
@@ -161,7 +161,7 @@ class Staffervice {
 
             const result = await Staff.findAll({
                 where,
-                attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'company', 'active'],
+                attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
                 order: [['last_name', 'ASC']],
                 include: [{
                     model: Positions,
@@ -200,7 +200,7 @@ class Staffervice {
                     positionId: search,
                     active: true
                 },
-                attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'company', 'active'],
+                attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
                 order: [
                     ['last_name', 'ASC']
                 ],
@@ -241,7 +241,7 @@ class Staffervice {
 
             const result = await Staff.findAll({
                 where,
-                attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'company', 'active'],
+                attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone','active'],
                 order: [
                     ['last_name', 'ASC']
                 ],
@@ -277,7 +277,7 @@ class Staffervice {
         try {
             const result = await Staff.findOne({
                 where: { id },
-                attributes: ['first_name', 'last_name', 'email', 'cell_phone', 'roleId', 'departamentId', 'positionId', 'company', 'active'],
+                attributes: ['first_name', 'last_name', 'email', 'cell_phone', 'roleId', 'departamentId', 'positionId', 'active'],
                 include: [{
                     model: Departaments,
                     as: 'staff_departament',
