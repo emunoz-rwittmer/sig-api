@@ -31,10 +31,6 @@ const Staff= db.define('staff',{
         allowNull: false,
         field:"cell_phone",
     },
-    company: {
-        type: DataTypes.STRING,
-        allowNull: false,
-    },
     password: {
         type: DataTypes.STRING,
         allowNull: true,

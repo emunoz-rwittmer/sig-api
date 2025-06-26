@@ -271,6 +271,31 @@ class ComentCardService {
         }
     }
 
+    // static async createManyLink(data) {
+    //     const transaction = await db.transaction();
+    //     try {
+    //         await Promise.all(preguntas.map((pregunta) =>
+    //             ComentCardQuestions.create({
+    //                 comentCardId: result.id,
+    //                 text: pregunta.text,
+    //                 puntuacion: pregunta.puntuacion,
+    //                 type: pregunta.type,
+    //                 opciones: pregunta.opciones.map((opcion) => opcion)
+    //             }, { transaction })
+    //         ));
+
+    //         const result = await ComentCardQR.create(data, { transaction });
+    //         const id = Utils.encode(result.dataValues.id);
+    //         const accessLink = `${process.env.URL_CAPTAINS}/coment_card/${id}`; // Cambia a tu estructura de URL
+    //         await result.update({ accessLink: accessLink }, { transaction });
+    //         await transaction.commit();
+    //         return result;
+    //     } catch (error) {
+    //         await transaction.rollback();
+    //         throw error;
+    //     }
+    // }
+
     static async deleteCardYacht(id) {
         try {
             const result = await ComentCardYacht.destroy(id);
@@ -351,6 +376,7 @@ class ComentCardService {
                     cardQrId: passenger.cometCardQr,
                     fullName: passenger.name,
                     cabin: passenger.cabin,
+                    readPolitics: passenger.readPolitics,
                     isSubmited: true
                 }, { transaction });
 

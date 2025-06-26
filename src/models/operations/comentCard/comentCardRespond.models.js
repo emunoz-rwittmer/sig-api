@@ -12,7 +12,7 @@ const ComentCardRespond = db.define('respuesta_coment_card', {
     cardQrId: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        field:"card_qr_id",
+        field: "card_qr_id",
     },
     fullName: {
         type: DataTypes.STRING,
@@ -24,9 +24,13 @@ const ComentCardRespond = db.define('respuesta_coment_card', {
         allowNull: false,
         field: 'cabin'
     },
-    isSubmited: { 
-        type: DataTypes.BOOLEAN, 
-        defaultValue:false 
+    isSubmited: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    readPolitics: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
     },
 
 });

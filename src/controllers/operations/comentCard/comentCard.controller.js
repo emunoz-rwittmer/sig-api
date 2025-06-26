@@ -1,6 +1,8 @@
 const { re } = require('mathjs');
 const ComentCardService = require('../../../services/operations/comentCard/comentCard.services');
 const Utils = require('../../../utils/Utils');
+const XLSX = require('xlsx');
+const dayjs = require('dayjs');
 
 const getAllComentCards = async (req, res) => {
     try {
@@ -139,6 +141,57 @@ const createLink = async (req, res) => {
     }
 }
 
+const createManyLink = async (req, res) => {
+    // try {
+    //     const data = req.body
+    //     data.comentCardYachtId = Utils.decode(req.body.comentCardYachtId);
+    //     await ComentCardService.createManyLink(data);
+    //     res.status(200).json({ data: 'resource created successfully' });
+    // } catch (error) {
+    //     res.status(400).json(error.message);
+    // }
+
+    try {
+        const data = req.body;
+        data.comentCardYachtId = Utils.decode(req.body.comentCardYachtId);
+        const file = req.file;
+        const fieldMapping = {
+            'startDate': 'startDate',
+            'endDate': 'endDate',
+        };
+
+        const workbook = XLSX.readFile(file.path);
+        const sheet_name_list = workbook.SheetNames;
+        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheet_name_list[0]], {
+            cellDates: true
+        });
+        const mappedData = jsonData.map(row => {
+            const mappedRow = {};
+
+            for (const [excelField, modelField] of Object.entries(fieldMapping)) {
+                const value = row[excelField];
+
+                if (value instanceof Date) {
+                    mappedRow[modelField] = dayjs(value).format('YYYY-MM-DD'); // ✅ formato base de datos
+                } else {
+                    // Si por alguna razón llega como texto (ej. "20/06/2025"), lo parseas también
+                    mappedRow[modelField] = dayjs(value, 'DD/MM/YYYY').format('YYYY-MM-DD');
+                }
+            }
+
+            mappedRow.comentCardYachtId = data.comentCardYachtId;
+            return mappedRow;
+        });
+        console.log(mappedData);
+        console.log(jsonData[0].startDate, typeof jsonData[0].startDate);
+        // await ComentCardService.createManyLink(mappedData);
+        // res.status(200).json({ data: 'resource created successfully' });
+    } catch (error) {
+
+        res.status(400).json(error.message);
+    }
+}
+
 const deleteCardYacht = async (req, res) => {
     try {
         const id = Utils.decode(req.params.card_id);
@@ -180,8 +233,8 @@ const getComentCardByDates = async (req, res) => {
 const respondComentCard = async (req, res) => {
     try {
         const cometCardQr = Utils.decode(req.params.comet_card_qr);
-        const { answers, cabin, name } = req.body;
-        const passenger = { name, cabin, cometCardQr };
+        const { answers, cabin, name, readPolitics } = req.body;
+        const passenger = { name, cabin, readPolitics, cometCardQr };
         const responsesToInsert = answers
             .map((answer, index) => {
                 if (answer !== null && answer !== undefined && answer !== '') {
@@ -194,8 +247,8 @@ const respondComentCard = async (req, res) => {
             })
             .filter(Boolean); // elimina los nulls
 
-         await ComentCardService.respondComentCard({ responsesToInsert, passenger });
-         res.status(200).json({ data: 'resource created successfully' });
+        await ComentCardService.respondComentCard({ responsesToInsert, passenger });
+        res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
         res.status(400).json(error.message);
     }
@@ -214,6 +267,7 @@ const ComentCardController = {
     getAllComentCardsForLink,
     createCardYacht,
     createLink,
+    createManyLink,
     deleteCardYacht,
     getComentCardByQr,
     getComentCardByDates,
