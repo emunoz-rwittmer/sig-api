@@ -138,7 +138,7 @@ const createStaff = async (req, res) => {
             res.status(200).json({ data: 'resource created successfully' });
         }
     } catch (error) {
-        
+        console.log(error)
         res.status(400).json(error.message);
     }
 }
