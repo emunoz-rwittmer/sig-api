@@ -35,7 +35,7 @@ class RegulationService {
                 include: [
                     {
                         model: Staff,
-                        as:'staff',
+                        as: 'staff',
                         attributes: ['first_name', 'last_name', 'email', 'cell_phone', 'roleId', 'departamentId', 'positionId', 'active'],
                         include: [
                             {
@@ -59,8 +59,9 @@ class RegulationService {
                                 as: 'staff_position',
                                 attributes: ['id', 'name'],
                             }],
-                    }
-                ]
+                    }   
+                ],
+                order: [[{ model: Staff, as: 'staff' }, 'name', 'ASC']]
             });
 
             return result;
