@@ -46,7 +46,8 @@ class RegulationService {
                                         {
                                             model: Regulation,
                                             as: 'regulation',
-                                            attributes: ['id', 'name']
+                                            attributes: ['id', 'name'],
+                                            where: { companyId }
                                         }
                                     ]
                             },
