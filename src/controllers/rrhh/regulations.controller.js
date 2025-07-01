@@ -17,6 +17,22 @@ const getAllRegulations = async (req, res) => {
     }
 }
 
+const getAllStaffsRegulations = async (req, res) => {
+    try {
+        const companyId = Utils.decode(req.params.company_id)
+        const result = await RegulationService.getAllStaffsRegulations(companyId);
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+            });
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        console.log(error)
+        res.status(400).json(error.message)
+    }
+}
+
 const getRegulation = async (req, res) => {
     try {
         const companyId = Utils.decode(req.params.company_id);
@@ -77,6 +93,7 @@ const deleteRegulation = async (req, res) => {
 
 const RegulationController = {
     getAllRegulations,
+    getAllStaffsRegulations,
     getRegulation,
     createRegulation,
     updateRegulation,

@@ -45,6 +45,7 @@ const ComentCardYacht = require('./operations/comentCard/cardYacht.models');
 const ComentCardQR = require('./operations/comentCard/cardQR.models');
 const StaffCompany = require('./catalogs/staffCompany.models');
 const Regulation = require('./rrhh/regulation.models');
+const ReadRegulation = require('./rrhh/readRegulation.models');
 
 const initModels = () => {
 
@@ -75,6 +76,12 @@ const initModels = () => {
     //rrhh
     Company.hasMany(Regulation, { as: "reglamentos", foreignKey: "company_id" });
     Regulation.belongsTo(Company, { as: "companie", foreignKey: "company_id" });
+
+    Staff.hasMany(ReadRegulation, { as: "aceptacion_reglamentos", foreignKey: "staff_id" });
+    ReadRegulation.belongsTo(Staff, { as: "colaborador", foreignKey: "staff_id" });
+
+    Regulation.hasMany(ReadRegulation, { as: "reglamentos", foreignKey: "regulation_id" });
+    ReadRegulation.belongsTo(Regulation, { as: "reglamento", foreignKey: "regulation_id" });
 
     //operations
     FormEstructure.belongsTo(Form, { as: "form_questions", foreignKey: "form_id" });
