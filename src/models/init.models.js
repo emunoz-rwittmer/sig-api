@@ -73,15 +73,16 @@ const initModels = () => {
 
     Form.belongsTo(Positions, { as: "position_form", foreignKey: "position_id" });
     Positions.hasMany(Form, { as: 'positions', foreignKey: 'position_id' });
+
     //rrhh
-    Company.hasMany(Regulation, { as: "reglamentos", foreignKey: "company_id" });
-    Regulation.belongsTo(Company, { as: "companie", foreignKey: "company_id" });
+    Company.hasMany(Regulation, { as: "regulations", foreignKey: "company_id" });
+    Regulation.belongsTo(Company, { as: "company", foreignKey: "company_id" });
 
-    Staff.hasMany(ReadRegulation, { as: "aceptacion_reglamentos", foreignKey: "staff_id" });
-    ReadRegulation.belongsTo(Staff, { as: "colaborador", foreignKey: "staff_id" });
+    Staff.hasMany(ReadRegulation, { as: "regulation_reads", foreignKey: "staff_id" });
+    ReadRegulation.belongsTo(Staff, { as: "staff", foreignKey: "staff_id" });
 
-    Regulation.hasMany(ReadRegulation, { as: "reglamentos", foreignKey: "regulation_id" });
-    ReadRegulation.belongsTo(Regulation, { as: "reglamento", foreignKey: "regulation_id" });
+    Regulation.hasMany(ReadRegulation, { as: "reads", foreignKey: "regulation_id" });
+    ReadRegulation.belongsTo(Regulation, { as: "regulation", foreignKey: "regulation_id" });
 
     //operations
     FormEstructure.belongsTo(Form, { as: "form_questions", foreignKey: "form_id" });

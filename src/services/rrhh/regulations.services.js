@@ -40,12 +40,12 @@ class RegulationService {
                         include: [
                             {
                                 model: ReadRegulation,
-                                as: 'aceptacion_reglamentos',
+                                as: 'regulation_reads',
                                 include:
                                     [
                                         {
                                             model: Regulation,
-                                            as: 'reglamento',
+                                            as: 'regulation',
                                             attributes: ['id', 'name']
                                         }
                                     ]
@@ -61,7 +61,8 @@ class RegulationService {
                             }],
                     }   
                 ],
-                order: [[{ model: Staff, as: 'staff' }, 'last_name', 'ASC']]
+                order: [[{ model: Staff, as: 'staff' }, 'last_name', 'ASC']],
+                distinct: true // <-- esto es importante
             });
 
             return result;
