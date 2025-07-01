@@ -61,7 +61,7 @@ class RegulationService {
                             }],
                     }   
                 ],
-                order: [[{ model: Staff, as: 'staff' }, 'name', 'ASC']]
+                order: [[{ model: Staff, as: 'staff' }, 'last_name', 'ASC']]
             });
 
             return result;
