@@ -15,19 +15,23 @@ app.use(express.json({ limit: '50mb' }));
 app.use(morgan('tiny'));
 
 // linea para servir IMG o PDF
-app.use('/api/uploads', express.static(path.join(__dirname, '../uploads')));  
-// linea para descargar archivos
+app.use('/api/uploads', express.static(path.join(__dirname, '../uploads'), {
+    setHeaders: (res) => {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Content-Type', 'application/pdf');
+    }
+}));
 
 db.authenticate()
-.then(() => console.log('base de datos autenticada'))
-.catch((error) => console.log(error));
+    .then(() => console.log('base de datos autenticada'))
+    .catch((error) => console.log(error));
 
 initModels();
 initMongoBd();
 
-db.sync({force: false})
-.then(() => console.log('Base de datos sincronizada'))
-.catch((error) => console.log(error));
+db.sync({ force: false })
+    .then(() => console.log('Base de datos sincronizada'))
+    .catch((error) => console.log(error));
 
 routerApi(app);
 

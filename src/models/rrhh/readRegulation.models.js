@@ -17,7 +17,7 @@ const ReadRegulation = db.define('read_regulation', {
         allowNull: false,
         field: 'regulation_id'
     },
-    reed: {
+    read: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
     },

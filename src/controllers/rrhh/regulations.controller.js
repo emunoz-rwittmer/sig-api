@@ -17,6 +17,36 @@ const getAllRegulations = async (req, res) => {
     }
 }
 
+const getRegulationStaffById = async (req, res) => {
+    try {
+        const regulationId = Utils.decode(req.params.regulation_id)
+        console.log(regulationId)
+        const result = await RegulationService.getRegulationStaffById(regulationId);
+        result.dataValues.id = Utils.encode(result.dataValues.id);
+        res.status(200).json(result);
+    } catch (error) {
+                    console.log(error)
+
+        res.status(400).json(error.message)
+    }
+}
+
+const getAllRegulationsBystaff = async (req, res) => {
+    try {
+        const staffId = Utils.decode(req.params.staff_id)
+        const result = await RegulationService.getAllRegulationsBystaff(staffId);
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+                x.dataValues.regulation.dataValues.id = Utils.encode(x.dataValues.regulation.dataValues.id);
+            });
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(400).json(error.message)
+    }
+}
+
 const getAllStaffsRegulations = async (req, res) => {
     try {
         const companyId = Utils.decode(req.params.company_id)
@@ -86,17 +116,31 @@ const deleteRegulation = async (req, res) => {
         });
         res.status(200).json({ data: 'resource deleted successfully' })
     } catch (error) {
-        
+
+        res.status(400).json(error.message);
+    }
+}
+
+const readAceptRegulation = async (req, res) => {
+    try {
+        const regulationId = Utils.decode(req.params.regulation_id);
+        await RegulationService.readAceptRegulation(regulationId)
+        res.status(200).json({ data: 'Registro actualizado correctamente' })
+    } catch (error) {
+console.log(error)
         res.status(400).json(error.message);
     }
 }
 
 const RegulationController = {
     getAllRegulations,
+    getRegulationStaffById,
+    getAllRegulationsBystaff,
     getAllStaffsRegulations,
     getRegulation,
     createRegulation,
     updateRegulation,
-    deleteRegulation
+    deleteRegulation,
+    readAceptRegulation
 }
 module.exports = RegulationController

@@ -28,6 +28,48 @@ class RegulationService {
         }
     }
 
+    static async getRegulationStaffById(id) {
+        try {
+            const result = await ReadRegulation.findOne({
+                where: { id },
+                attributes: ['id', 'read'],
+                include:
+                    [
+                        {
+                            model: Regulation,
+                            as: 'regulation',
+                            attributes: ['id', 'name', 'file'],
+                        }
+                    ]
+            });
+
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async getAllRegulationsBystaff(staffId) {
+        try {
+            const result = await ReadRegulation.findAll({
+                where: { staffId },
+                attributes: ['id', 'read'],
+                include:
+                    [
+                        {
+                            model: Regulation,
+                            as: 'regulation',
+                            attributes: ['id', 'name', 'file'],
+                        }
+                    ]
+            });
+
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     static async getAllStaffsRegulations(companyId) {
         try {
             const result = await StaffCompany.findAll({
@@ -60,7 +102,7 @@ class RegulationService {
                                 as: 'staff_position',
                                 attributes: ['id', 'name'],
                             }],
-                    }   
+                    }
                 ],
                 order: [[{ model: Staff, as: 'staff' }, 'last_name', 'ASC']],
                 distinct: true // <-- esto es importante
@@ -106,6 +148,18 @@ class RegulationService {
     static async delete(id) {
         try {
             const result = await Regulation.destroy(id);
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async readAceptRegulation(id) {
+        try {
+            const result = await ReadRegulation.update(
+                { read: true },
+                { where: { id } }
+            );
             return result;
         } catch (error) {
             throw error;
