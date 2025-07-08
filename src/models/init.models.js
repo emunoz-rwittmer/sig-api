@@ -47,6 +47,7 @@ const StaffCompany = require('./catalogs/staffCompany.models');
 const Regulation = require('./rrhh/regulation.models');
 const ReadRegulation = require('./rrhh/readRegulation.models');
 const Trading = require('./rrhh/trading.models');
+const Format = require('./rrhh/format.models');
 
 const initModels = () => {
 
@@ -54,7 +55,8 @@ const initModels = () => {
     Consecutivo,
     Question,
     HouseRule,
-    Trading
+    Trading,
+    Format
     
     Users.belongsTo(Roles, { as: "user_rol", foreignKey: "role_id" });
     Roles.hasMany(Users, { as: "rol_user", foreignKey: "role_id" });
