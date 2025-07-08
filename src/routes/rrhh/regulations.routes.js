@@ -8,7 +8,7 @@ router.get('/:company_id', RegulationController.getAllRegulations);
 router.get('/:company_id/staffs', RegulationController.getAllStaffsRegulations);
 router.get('/staff/:staff_id', RegulationController.getAllRegulationsBystaff);
 router.post('/createRegulation', uploadPdfFile, RegulationController.createRegulation);
-router.put('/updateRegulation/:company_id', uploadPdfFile, RegulationController.updateRegulation);
+router.put('/updateRegulation/:regulation_id', uploadPdfFile, RegulationController.updateRegulation);
 router.delete('/:company_id', RegulationController.deleteRegulation);
 
 //READ REGULATIONS

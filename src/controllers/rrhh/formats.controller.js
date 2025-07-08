@@ -67,6 +67,79 @@ const deleteFormat = async (req, res) => {
     }
 }
 
+//DOCTOR
+
+const getAllDoctorFormats = async (req, res) => {
+    try {
+        const result = await FormatService.getAllDoctorFormats();
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+            });
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(400).json(error.message)
+    }
+}
+
+const getDoctorFormat = async (req, res) => {
+    try {
+        const formatId = Utils.decode(req.params.format_id);
+        const result = await FormatService.getDoctorFormat(formatId);
+        if (result instanceof Object) {
+            result.id = Utils.encode(result.id);
+        }
+        console.log(result)
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(400).json(error.message)
+    }
+}
+
+const createDoctorFormat = async (req, res) => {
+    try {
+        const data = req.body;
+        data.file = `/uploads/pdfs/${req.file.filename}`
+        const result = await FormatService.createDoctorFormat(data);
+        if (result) {
+            res.status(200).json({ data: 'resource created successfully' });
+        }
+    } catch (error) {
+        res.status(400).json(error.message);
+    }
+}
+
+const updateDoctorFormat = async (req, res) => {
+    try {
+        const formatId = Utils.decode(req.params.format_id);
+        const data = req.body;
+        if (req.file) {
+            data.file = `/uploads/pdfs/${req.file.filename}`
+        }
+        await FormatService.updateDoctorFormat(data, {
+            where: { id: formatId },
+        });
+        res.status(200).json({ data: 'resource updated successfully' });
+    } catch (error) {
+        res.status(400).json(error.message);
+    }
+}
+
+const deleteDoctorFormat = async (req, res) => {
+    try {
+        const formatId = Utils.decode(req.params.format_id);
+        await FormatService.deleteDoctorFormat({
+            where: { id: formatId }
+        });
+        res.status(200).json({ data: 'resource deleted successfully' })
+    } catch (error) {
+
+        res.status(400).json(error.message);
+    }
+}
+
+
 
 const FormatController = {
     getAllFormats,
@@ -74,5 +147,10 @@ const FormatController = {
     createFormat,
     updateFormat,
     deleteFormat,
+    getAllDoctorFormats,
+    getDoctorFormat,
+    createDoctorFormat,
+    updateDoctorFormat,
+    deleteDoctorFormat,
 }
 module.exports = FormatController

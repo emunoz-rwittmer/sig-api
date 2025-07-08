@@ -1,4 +1,5 @@
 
+const DoctorFormat = require('../../models/rrhh/doctorFormat.models');
 const Format = require('../../models/rrhh/format.models');
 
 class FormatService {
@@ -48,6 +49,60 @@ class FormatService {
     static async delete(id) {
         try {
             const result = await Format.destroy(id);
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    //doctor format
+
+    static async getAllDoctorFormats() {
+        try {
+            const result = await DoctorFormat.findAll({
+                attributes: ['id', 'name', 'file'],
+            });
+
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async getDoctorFormat(id) {
+        try {
+            const result = await DoctorFormat.findOne({
+                where: { id },
+                attributes: ['id', 'name', 'file']
+            });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async createDoctorFormat(data) {
+        try {
+            const result = await DoctorFormat.create(data);
+            return result;
+        } catch (error) {
+            throw error;
+
+        }
+    }
+
+    static async updateDoctorFormat(data, id) {
+        try {
+            const result = await DoctorFormat.update(data, id);
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async deleteDoctorFormat(id) {
+        try {
+            const result = await DoctorFormat.destroy(id);
             return result;
         } catch (error) {
             throw error;

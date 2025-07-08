@@ -48,6 +48,7 @@ const Regulation = require('./rrhh/regulation.models');
 const ReadRegulation = require('./rrhh/readRegulation.models');
 const Trading = require('./rrhh/trading.models');
 const Format = require('./rrhh/format.models');
+const DoctorFormat = require('./rrhh/doctorFormat.models');
 
 const initModels = () => {
 
@@ -56,7 +57,8 @@ const initModels = () => {
     Question,
     HouseRule,
     Trading,
-    Format
+    Format,
+    DoctorFormat
     
     Users.belongsTo(Roles, { as: "user_rol", foreignKey: "role_id" });
     Roles.hasMany(Users, { as: "rol_user", foreignKey: "role_id" });

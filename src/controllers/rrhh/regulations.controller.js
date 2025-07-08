@@ -20,13 +20,10 @@ const getAllRegulations = async (req, res) => {
 const getRegulationStaffById = async (req, res) => {
     try {
         const regulationId = Utils.decode(req.params.regulation_id)
-        console.log(regulationId)
         const result = await RegulationService.getRegulationStaffById(regulationId);
         result.dataValues.id = Utils.encode(result.dataValues.id);
         res.status(200).json(result);
     } catch (error) {
-                    console.log(error)
-
         res.status(400).json(error.message)
     }
 }
@@ -94,13 +91,14 @@ const createRegulation = async (req, res) => {
 
 const updateRegulation = async (req, res) => {
     try {
-        const companyId = Utils.decode(req.params.company_id);
-        const company = req.body;
-        if (req.files.length > 0) {
-            company.logo = `/uploads/companies/${req.files[0].filename}`
+        const regulationId = Utils.decode(req.params.regulation_id);
+        const data = req.body;
+        data.companyId = Utils.decode(data.companyId)
+        if (req.file) {
+            data.file = `/uploads/pdfs/${req.file.filename}`
         }
-        const result = await RegulationService.updateRegulation(company, {
-            where: { id: companyId },
+        const result = await RegulationService.updateRegulation(data, {
+            where: { id: regulationId },
         });
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {

@@ -157,7 +157,6 @@ const switchConfirguration = async (req, res) => {
 
         const configurationId = req.params.configuration_id;
         const data = req.body
-        console.log(req.body)
         const result = await ProductService.switchConfirguration(data, {
             where: { id: configurationId }
         });
