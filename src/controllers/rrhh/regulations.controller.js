@@ -87,8 +87,6 @@ const createRegulation = async (req, res) => {
     }
 }
 
-
-
 const updateRegulation = async (req, res) => {
     try {
         const regulationId = Utils.decode(req.params.regulation_id);

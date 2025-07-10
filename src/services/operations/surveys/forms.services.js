@@ -9,6 +9,7 @@ class FormService {
     static async getAll() {
         try {
             const result = await Form.findAll({
+                where:{active: true},
                 attributes: ['id', 'title', 'active', 'createdAt'],
                 include: [{
                     model: Positions,

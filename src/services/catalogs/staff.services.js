@@ -7,6 +7,7 @@ const { Op } = require("sequelize");
 const Roles = require('../../models/catalogs/roles.models');
 const Company = require('../../models/catalogs/company.models');
 const StaffCompany = require('../../models/catalogs/staffCompany.models');
+const { model } = require('mongoose');
 
 class Staffervice {
     static async getAll() {
@@ -241,7 +242,7 @@ class Staffervice {
 
             const result = await Staff.findAll({
                 where,
-                attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone','active'],
+                attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
                 order: [
                     ['last_name', 'ASC']
                 ],
@@ -278,19 +279,31 @@ class Staffervice {
             const result = await Staff.findOne({
                 where: { id },
                 attributes: ['first_name', 'last_name', 'email', 'cell_phone', 'roleId', 'departamentId', 'positionId', 'active'],
-                include: [{
-                    model: Departaments,
-                    as: 'staff_departament',
-                    attributes: ['id', 'name'],
-                }, {
-                    model: Roles,
-                    as: 'rol',
-                    attributes: ['id', 'name'],
-                }, {
-                    model: Positions,
-                    as: 'staff_position',
-                    attributes: ['id', 'name'],
-                }],
+                include: [
+                    {
+                        model: StaffCompany,
+                        as: 'companies',
+                        attributes: ['id'],
+                        include: [
+                           { model: Company,
+                            as: 'company',
+                            attributes: ['name']
+                           }
+                        ]
+                    },
+                    {
+                        model: Departaments,
+                        as: 'staff_departament',
+                        attributes: ['id', 'name'],
+                    }, {
+                        model: Roles,
+                        as: 'rol',
+                        attributes: ['id', 'name'],
+                    }, {
+                        model: Positions,
+                        as: 'staff_position',
+                        attributes: ['id', 'name'],
+                    }],
             });
 
             return result;
