@@ -1,5 +1,10 @@
+const Staffervice = require('../../services/catalogs/staff.services');
 const FormatService = require('../../services/rrhh/formats.services');
+const { generateAndSavePDF } = require('../../services/rrhh/pdfService');
+const { sendEmailNewOrder, sendEmailNuevaSolicitud } = require('../../utils/mailer');
 const Utils = require('../../utils/Utils');
+const fs = require('fs');
+const path = require('path');
 
 const getAllFormats = async (req, res) => {
     try {
@@ -22,7 +27,6 @@ const getFormat = async (req, res) => {
         if (result instanceof Object) {
             result.id = Utils.encode(result.id);
         }
-        console.log(result)
         res.status(200).json(result);
     } catch (error) {
         res.status(400).json(error.message)
@@ -90,7 +94,6 @@ const getDoctorFormat = async (req, res) => {
         if (result instanceof Object) {
             result.id = Utils.encode(result.id);
         }
-        console.log(result)
         res.status(200).json(result);
     } catch (error) {
         res.status(400).json(error.message)
@@ -139,6 +142,66 @@ const deleteDoctorFormat = async (req, res) => {
     }
 }
 
+//REQUEST STAFS
+
+const getAllFormatsByStaff = async (req, res) => {
+    try {
+        const staffId = Utils.decode(req.params.staff_id);
+        const result = await FormatService.getAllFormatsByStaff(staffId);
+        if (result instanceof Object) {
+            result.id = Utils.encode(result.id);
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(400).json(error.message)
+    }
+}
+
+const createRequesForStaff = async (req, res) => {
+    try {
+        const formatId = Utils.decode(req.params.format_id);
+        const staffId = Utils.decode(req.params.staff_id);
+        const data = req.body;
+
+        const staff = await Staffervice.getStaffById(staffId);
+        const fomrat = await FormatService.getFormatById(formatId);
+
+        const staffFullName = `${staff.dataValues.first_name}_${staff.dataValues.last_name}`.replace(/\s+/g, '_');
+        const stafftDir = path.join(__dirname, '../../../uploads/staffs', staffFullName);
+
+        if (!fs.existsSync(stafftDir)) {
+            fs.mkdirSync(stafftDir, { recursive: true });
+        }
+
+        const dataMail = {
+            staff: `${staff.dataValues.first_name} ${staff.dataValues.last_name}`,
+            formato: fomrat.dataValues.name
+        };
+
+        const fileName = `${dataMail.formato}-${dataMail.staff}.pdf`.replace(/\s+/g, '_');
+        const filePath = path.join(stafftDir, fileName);
+
+        await generateAndSavePDF(data.contenido, filePath, data);
+
+        const relativePath = path.relative(path.join(__dirname, '../../../'), filePath);
+        const fileData = fs.readFileSync(filePath).toString('base64');
+
+        data.name = fomrat.dataValues.name;
+        data.formatId = formatId;
+        data.staffId = staffId;
+        data.file = relativePath;
+
+        const result = await FormatService.createRequesForStaff(data);
+        if (result) {
+            sendEmailNuevaSolicitud(dataMail, fileName, fileData);
+            res.status(200).json({ data: 'resource created successfully' });
+        }
+    } catch (error) {
+        console.log(error)
+        res.status(400).json(error.message);
+    }
+}
+
 
 
 const FormatController = {
@@ -152,5 +215,8 @@ const FormatController = {
     createDoctorFormat,
     updateDoctorFormat,
     deleteDoctorFormat,
+    getAllFormatsByStaff,
+    createRequesForStaff
+
 }
 module.exports = FormatController

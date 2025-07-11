@@ -13,7 +13,7 @@ class Staffervice {
     static async getAll() {
         try {
             const result = await Staff.findAll({
-                attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
+                attributes: ['id','first_name', 'last_name', 'email','ci_staff', 'cell_phone','date_entry', 'active'],
                 order: [
                     ['last_name', 'ASC']
                 ],
@@ -278,7 +278,7 @@ class Staffervice {
         try {
             const result = await Staff.findOne({
                 where: { id },
-                attributes: ['first_name', 'last_name', 'email', 'cell_phone', 'roleId', 'departamentId', 'positionId', 'active'],
+                attributes: ['first_name', 'last_name', 'email','ci_staff', 'cell_phone','date_entry', 'roleId', 'departamentId', 'positionId', 'active'],
                 include: [
                     {
                         model: StaffCompany,

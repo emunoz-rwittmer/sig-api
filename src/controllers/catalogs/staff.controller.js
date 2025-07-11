@@ -15,7 +15,7 @@ const getAllStaffs = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        
+
         res.status(400).json(error.message)
     }
 }
@@ -36,7 +36,7 @@ const getStaffsByFilters = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        
+
         res.status(400).json(error.message)
     }
 }
@@ -52,7 +52,7 @@ const getEvaluators = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        
+
         res.status(400).json(error.message)
     }
 }
@@ -71,7 +71,7 @@ const getEvaluatorsByFilters = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        
+
         res.status(400).json(error.message)
     }
 }
@@ -87,7 +87,7 @@ const getEvaluateds = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        
+
         res.status(400).json(error.message)
     }
 }
@@ -104,7 +104,7 @@ const getEvaluatedsByFilters = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        
+
         res.status(400).json(error.message)
     }
 }
@@ -129,7 +129,7 @@ const createStaff = async (req, res) => {
     try {
         const staff = req.body;
         const passwordGenerate = Utils.getPasswordRandom();
-        staff.roleId = Utils.decode(req.body.roleId);
+        if (staff.roleId) staff.roleId = Utils.decode(req.body.roleId);
         staff.departamentId = Utils.decode(req.body.departamentId);
         staff.positionId = Utils.decode(req.body.positionId);
         staff.password = passwordGenerate
@@ -147,7 +147,8 @@ const updateStaff = async (req, res) => {
     try {
         const staffId = Utils.decode(req.params.staff_id);
         const staff = req.body;
-        staff.roleId = Utils.decode(req.body.roleId);
+        console.log(staff)
+        if (staff.roleId) staff.roleId = Utils.decode(req.body.roleId);
         staff.departamentId = Utils.decode(req.body.departamentId);
         staff.positionId = Utils.decode(req.body.positionId);
         const result = await StaffService.updateStaff(staff, {
@@ -165,7 +166,7 @@ const deleteStaff = async (req, res) => {
         const result = await StaffService.delete(staffId);
         res.status(200).json({ data: result })
     } catch (error) {
-        
+
         res.status(400).json(error.message);
     }
 }

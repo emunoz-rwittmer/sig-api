@@ -17,6 +17,10 @@ router.post('/doctor', uploadPdfFile, FormatController.createDoctorFormat);
 router.put('/doctor/:format_id', uploadPdfFile, FormatController.updateDoctorFormat);
 router.delete('/doctor/:format_id', FormatController.deleteDoctorFormat);
 
+// REQUEST STAFFS
+router.get('/request/:staff_id', FormatController.getAllFormatsByStaff);
+router.post('/create_request/format/:format_id/staff/:staff_id', FormatController.createRequesForStaff);
+
 
 
 module.exports = router;

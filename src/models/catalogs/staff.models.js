@@ -18,6 +18,11 @@ const Staff= db.define('staff',{
         allowNull: false,
         field:"last_name",
     },
+    ciStaff: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field:"ci_staff",
+    },
     email: {
         type: DataTypes.STRING(50),
         unique: true,
@@ -30,6 +35,11 @@ const Staff= db.define('staff',{
         type: DataTypes.STRING,
         allowNull: false,
         field:"cell_phone",
+    },
+     dateEntry: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field:"date_entry",
     },
     password: {
         type: DataTypes.STRING,

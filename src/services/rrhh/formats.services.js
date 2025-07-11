@@ -1,6 +1,7 @@
 
 const DoctorFormat = require('../../models/rrhh/doctorFormat.models');
 const Format = require('../../models/rrhh/format.models');
+const RequestStaffs = require('../../models/rrhh/requestStaffs.models');
 
 class FormatService {
     static async getAll() {
@@ -106,6 +107,30 @@ class FormatService {
             return result;
         } catch (error) {
             throw error;
+        }
+    }
+
+    //request staffs
+
+    static async getAllFormatsByStaff(staffId) {
+        try {
+            const result = await RequestStaffs.findAll({
+                where: { staffId },
+            });
+
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+     static async createRequesForStaff(data) {
+        try {
+            const result = await RequestStaffs.create(data);
+            return result;
+        } catch (error) {
+            throw error;
+
         }
     }
 

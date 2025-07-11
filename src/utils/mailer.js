@@ -1,6 +1,7 @@
 const Mails = require('../utils/mails');
 const MailsConfirmation = require('./mailsOfConfirmation');
 const MailsOrder = require('./mailsOrder');
+const MailsSolicitudes = require('./mailsSolicitudes');
 require('dotenv').config();
 
 const sendEmail = (user, passwordGenerated, action, userCopy, bodyMail) => {
@@ -113,10 +114,42 @@ const sendDispatchEmail = (action, content) => {
         })
 }
 
+const sendEmailNuevaSolicitud = (dataMail, fileName, filePath) => {
+
+    const sgMail = require('@sendgrid/mail')
+    const htmlFirmaContrato = MailsSolicitudes.htmlNuevaSolicitud(dataMail);
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY)
+    const msg = {
+        to: 'belen@rwittmer.com', // Change to your recipient
+        cc: 'edison@tiptoptravel.ec', // Change to your recipient
+        from: 'notify-sig@rwittmer.com', // Change to your verified sender
+        subject: 'Solicitud recibida',
+        html: htmlFirmaContrato,
+        attachments: [
+            {
+                content: filePath, // contenido en base64
+                filename: fileName,
+                type: 'application/pdf',
+                disposition: 'attachment',
+            },
+        ],
+    }
+    sgMail
+        .send(msg)
+        .then(() => {
+            console.log('Email sent')
+        })
+        .catch((error) => {
+            console.log(error)
+            //throw new Error('Error al enviar el correo de confirmación', error);
+        })
+}
+
 module.exports = {
     sendEmail,
     sendEmailNewOrder,
     sendConfirmationEmail,
     sendDispatchEmail,
-    sendEmailNewRequest
+    sendEmailNewRequest,
+    sendEmailNuevaSolicitud
 };
