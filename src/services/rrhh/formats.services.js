@@ -112,10 +112,22 @@ class FormatService {
 
     //request staffs
 
-    static async getAllFormatsByStaff(staffId) {
+    static async getAllFormatsByStaff(formatId, staffId) {
         try {
             const result = await RequestStaffs.findAll({
-                where: { staffId },
+                where: { formatId, staffId }
+            });
+
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+        static async getRequestById(requestId) {
+        try {
+            const result = await RequestStaffs.findOne({
+                where: { id: requestId }
             });
 
             return result;

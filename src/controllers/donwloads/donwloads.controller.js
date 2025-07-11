@@ -47,10 +47,33 @@ const downloadFormato = async (req, res) => {
     }
 };
 
+const downloadSolicitud = async (req, res) => {
+    try {
+        const requestId = Utils.decode(req.params.request_id);
+        const format = await FormatService.getRequestById(requestId);
+        const relativePath = format.dataValues.file; 
+
+        if (!relativePath) {
+            return res.status(404).json({ message: 'El formato no tiene archivo asociado' });
+        }
+
+        const absolutePath = path.join(__dirname, '../../../', relativePath);
+        res.download(absolutePath, (err) => {
+            if (err) {
+                console.log(err)
+                res.status(500).send('Error al descargar el archivo');
+            }
+        });
+    } catch (error) {
+        res.status(400).json(error.message);
+    }
+};
+
 
 const DonwloadController = {
     downloadReglamento,
-    downloadFormato
+    downloadFormato,
+    downloadSolicitud
 }
 
 module.exports = DonwloadController 

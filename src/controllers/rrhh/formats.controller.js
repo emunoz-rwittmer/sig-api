@@ -146,10 +146,13 @@ const deleteDoctorFormat = async (req, res) => {
 
 const getAllFormatsByStaff = async (req, res) => {
     try {
+        const formatId = Utils.decode(req.params.format_id);
         const staffId = Utils.decode(req.params.staff_id);
-        const result = await FormatService.getAllFormatsByStaff(staffId);
-        if (result instanceof Object) {
-            result.id = Utils.encode(result.id);
+        const result = await FormatService.getAllFormatsByStaff(formatId, staffId);
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+            });
         }
         res.status(200).json(result);
     } catch (error) {
