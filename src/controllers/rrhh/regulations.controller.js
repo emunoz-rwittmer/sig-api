@@ -1,6 +1,8 @@
 const utils = require('excel4node/distribution/lib/utils');
 const RegulationService = require('../../services/rrhh/regulations.services');
 const Utils = require('../../utils/Utils');
+const { sendEmailNuevaSolicitud, sendEmailConfirmacion } = require('../../utils/mailer');
+const Staffervice = require('../../services/catalogs/staff.services');
 
 const getAllRegulations = async (req, res) => {
     try {
@@ -120,10 +122,17 @@ const deleteRegulation = async (req, res) => {
 const readAceptRegulation = async (req, res) => {
     try {
         const regulationId = Utils.decode(req.params.regulation_id);
-        await RegulationService.readAceptRegulation(regulationId)
-        res.status(200).json({ data: 'Registro actualizado correctamente' })
+        const result = await RegulationService.readAceptRegulation(regulationId);
+        const staff = await Staffervice.getStaffById(result.dataValues.staffId);
+        const regulation = await RegulationService.getRegulationById(result.dataValues.regulationId);
+        const dataMail = {
+            staff: `${staff.dataValues.first_name} ${staff.dataValues.last_name}`,
+            reglamento: regulation.dataValues.name
+        };
+        sendEmailConfirmacion(dataMail);
+        res.status(200).json({ data: 'resource updated successfully' })
     } catch (error) {
-console.log(error)
+        console.log(error)
         res.status(400).json(error.message);
     }
 }

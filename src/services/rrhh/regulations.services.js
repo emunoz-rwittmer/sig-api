@@ -1,3 +1,4 @@
+const { mode } = require('mathjs');
 const Company = require('../../models/catalogs/company.models');
 const Departaments = require('../../models/catalogs/departament.models');
 const Positions = require('../../models/catalogs/positions.models');
@@ -60,6 +61,15 @@ class RegulationService {
                             model: Regulation,
                             as: 'regulation',
                             attributes: ['id', 'name', 'file'],
+                            include:
+                                [
+                                    {
+                                        model: Company,
+                                        as: 'company',
+                                        attributes: ['name']
+                                    }
+                                ]
+
                         }
                     ]
             });
@@ -118,7 +128,7 @@ class RegulationService {
         try {
             const result = await Regulation.findOne({
                 where: { id },
-                attributes: ['id', 'file']
+                attributes: ['id', 'name', 'file']
             });
             return result;
         } catch (error) {
@@ -156,10 +166,10 @@ class RegulationService {
 
     static async readAceptRegulation(id) {
         try {
-            const result = await ReadRegulation.update(
-                { read: true },
-                { where: { id } }
-            );
+            const result = await ReadRegulation.findOne({ where: { id } });
+            if (result) {
+                result.update({ read: true })
+            }
             return result;
         } catch (error) {
             throw error;

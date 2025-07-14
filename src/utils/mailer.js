@@ -120,7 +120,7 @@ const sendEmailNuevaSolicitud = (dataMail, fileName, filePath) => {
     const htmlFirmaContrato = MailsSolicitudes.htmlNuevaSolicitud(dataMail);
     sgMail.setApiKey(process.env.SENDGRID_API_KEY)
     const msg = {
-        to: 'edison@tiptoptravel.ec', // Change to your recipient
+        to: 'belen@rwittmer.com', // Change to your recipient
         from: 'notify-sig@rwittmer.com', // Change to your verified sender
         subject: 'Solicitud recibida',
         html: htmlFirmaContrato,
@@ -143,11 +143,33 @@ const sendEmailNuevaSolicitud = (dataMail, fileName, filePath) => {
         })
 }
 
+const sendEmailConfirmacion = (dataMail) => {
+
+    const sgMail = require('@sendgrid/mail')
+    const htmlFirmaContrato = MailsSolicitudes.htmlConfirmacionLectura(dataMail);
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY)
+    const msg = {
+        to: 'belen@rwittmer.com', // Change to your recipient
+        from: 'notify-sig@rwittmer.com', // Change to your verified sender
+        subject: 'Confirmación de lectura',
+        html: htmlFirmaContrato,
+    }
+    sgMail
+        .send(msg)
+        .then(() => {
+            console.log('Email sent')
+        })
+        .catch((error) => {
+            console.log(error)
+        })
+}
+
 module.exports = {
     sendEmail,
     sendEmailNewOrder,
     sendConfirmationEmail,
     sendDispatchEmail,
     sendEmailNewRequest,
-    sendEmailNuevaSolicitud
+    sendEmailNuevaSolicitud,
+    sendEmailConfirmacion
 };
