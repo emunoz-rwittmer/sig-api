@@ -128,6 +128,7 @@ const getStaff = async (req, res) => {
 const createStaff = async (req, res) => {
     try {
         const staff = req.body;
+        console.log(staff)
         const passwordGenerate = Utils.getPasswordRandom();
         if (staff.roleId) staff.roleId = Utils.decode(req.body.roleId);
         staff.departamentId = Utils.decode(req.body.departamentId);
@@ -156,6 +157,7 @@ const updateStaff = async (req, res) => {
         });
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
+        console.log(error)
         res.status(400).json(error.message);
     }
 }
