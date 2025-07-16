@@ -2,8 +2,8 @@ const db = require('../../utils/database');
 const { DataTypes } = require('sequelize');
 const bcrypt = require('bcrypt');
 
-const Staff= db.define('staff',{
-    id:{
+const Staff = db.define('staff', {
+    id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true,
@@ -11,35 +11,35 @@ const Staff= db.define('staff',{
     firstName: {
         type: DataTypes.STRING,
         allowNull: false,
-        field:"first_name",
+        field: "first_name",
     },
     lastName: {
         type: DataTypes.STRING,
         allowNull: false,
-        field:"last_name",
+        field: "last_name",
     },
     ciStaff: {
         type: DataTypes.STRING,
         allowNull: true,
-        field:"ci_staff",
+        field: "ci_staff",
     },
     email: {
         type: DataTypes.STRING(50),
         unique: true,
         allowNull: false,
-        validate:{
+        validate: {
             isEmail: true,
         }
     },
     cellPhone: {
         type: DataTypes.STRING,
         allowNull: false,
-        field:"cell_phone",
+        field: "cell_phone",
     },
-     dateEntry: {
+    dateEntry: {
         type: DataTypes.DATE,
         allowNull: true,
-        field:"date_entry",
+        field: "date_entry",
     },
     password: {
         type: DataTypes.STRING,
@@ -52,23 +52,27 @@ const Staff= db.define('staff',{
     roleId: {
         type: DataTypes.INTEGER,
         allowNull: true,
-        field:"role_id",
+        field: "role_id",
+    },
+    description: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
     },
     departamentId: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        field:"departament_id",
-    }, 
+        field: "departament_id",
+    },
     positionId: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        field:"position_id",
-    }, 
+        field: "position_id",
+    },
     changePassword: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
     },
-},{
+}, {
     hooks: {
         beforeCreate: (user, options) => {
             const { password } = user;
