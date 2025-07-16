@@ -128,7 +128,6 @@ const getStaff = async (req, res) => {
 const createStaff = async (req, res) => {
     try {
         const staff = req.body;
-        console.log(staff)
         const passwordGenerate = Utils.getPasswordRandom();
         if (staff.roleId) staff.roleId = Utils.decode(req.body.roleId);
         staff.departamentId = Utils.decode(req.body.departamentId);
@@ -148,7 +147,6 @@ const updateStaff = async (req, res) => {
     try {
         const staffId = Utils.decode(req.params.staff_id);
         const staff = req.body;
-        console.log(staff)
         if (staff.roleId) staff.roleId = Utils.decode(req.body.roleId);
         staff.departamentId = Utils.decode(req.body.departamentId);
         staff.positionId = Utils.decode(req.body.positionId);
