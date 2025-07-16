@@ -115,7 +115,7 @@ const getStaff = async (req, res) => {
         const result = await StaffService.getStaffById(staffId);
         if (result instanceof Object) {
             result.id = Utils.encode(result.id);
-            result.roleId = Utils.encode(result.roleId);
+            if(result.roleId)result.roleId = Utils.encode(result.roleId);
             result.departamentId = Utils.encode(result.departamentId);
             result.positionId = Utils.encode(result.positionId);
         }
