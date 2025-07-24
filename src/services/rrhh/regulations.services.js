@@ -6,6 +6,7 @@ const Staff = require('../../models/catalogs/staff.models');
 const StaffCompany = require('../../models/catalogs/staffCompany.models');
 const ReadRegulation = require('../../models/rrhh/readRegulation.models');
 const Regulation = require('../../models/rrhh/regulation.models');
+const db = require('../../utils/database');
 
 class RegulationService {
     static async getAll(companyId) {
@@ -137,14 +138,37 @@ class RegulationService {
     }
 
     static async createRegulation(data) {
+        const transaction = await db.transaction();
         try {
-            const result = await Regulation.create(data);
+            const result = await Regulation.create(data, { transaction });
+
+            const staffCompany = await StaffCompany.findAll({
+                where: { companyId: data.companyId },
+                include: [{
+                    model: Staff,
+                    as: 'staff',
+                    attributes: ['id'],
+                }],
+            });
+
+            if (result && staffCompany.length > 0) {
+                const readRegulations = staffCompany.map(staff => ({
+                    staffId: staff.id,
+                    regulationId: result.id,
+                    read: false,
+                }));
+
+                await ReadRegulation.bulkCreate(readRegulations, { transaction });
+            }
+
+            await transaction.commit();
             return result;
         } catch (error) {
+            await transaction.rollback();
             throw error;
-
         }
     }
+
 
     static async updateRegulation(data, id) {
         try {
@@ -156,13 +180,28 @@ class RegulationService {
     }
 
     static async delete(id) {
+        const transaction = await db.transaction();
         try {
-            const result = await Regulation.destroy(id);
+
+            await ReadRegulation.destroy({
+                where: { regulationId: id },
+                transaction
+            });
+
+            const result = await Regulation.destroy({
+                where: { id },
+                transaction
+            });
+
+            await transaction.commit();
             return result;
         } catch (error) {
+            console.error('Error deleting regulation:', error);
+            await transaction.rollback();
             throw error;
         }
     }
+
 
     static async readAceptRegulation(id) {
         try {

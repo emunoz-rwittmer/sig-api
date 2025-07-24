@@ -108,10 +108,8 @@ const updateRegulation = async (req, res) => {
 
 const deleteRegulation = async (req, res) => {
     try {
-        const companyId = Utils.decode(req.params.company_id);
-        const result = await RegulationService.delete({
-            where: { id: companyId }
-        });
+        const regulationId = Utils.decode(req.params.company_id);
+        await RegulationService.delete(regulationId);
         res.status(200).json({ data: 'resource deleted successfully' })
     } catch (error) {
 
