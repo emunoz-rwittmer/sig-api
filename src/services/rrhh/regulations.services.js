@@ -153,7 +153,7 @@ class RegulationService {
 
             if (result && staffCompany.length > 0) {
                 const readRegulations = staffCompany.map(staff => ({
-                    staffId: staff.id,
+                    staffId: staff.staff.id,
                     regulationId: result.id,
                     read: false,
                 }));
