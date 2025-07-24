@@ -164,6 +164,7 @@ class RegulationService {
             await transaction.commit();
             return result;
         } catch (error) {
+            console.error('Error creating regulation:', error);
             await transaction.rollback();
             throw error;
         }
@@ -196,7 +197,6 @@ class RegulationService {
             await transaction.commit();
             return result;
         } catch (error) {
-            console.error('Error deleting regulation:', error);
             await transaction.rollback();
             throw error;
         }
