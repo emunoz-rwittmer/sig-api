@@ -155,14 +155,16 @@ class Staffervice {
                 model: StaffCompany,
                 as: 'companies',
                 attributes: ['id'],
+                required: !!yachtId, // si hay filtro de yate, que sea INNER JOIN
                 include: [{
                     model: Company,
                     as: 'company',
+                    required: !!yachtId,
                     include: [{
                         model: Yachts,
                         as: 'yacht',
                         required: !!yachtId,
-                        ...(yachtId && { where: { id: yachtId } }) // aquí va el filtro por yachtId
+                        ...(yachtId && { where: { id: yachtId } })
                     }]
                 }]
             };
@@ -243,14 +245,16 @@ class Staffervice {
                 model: StaffCompany,
                 as: 'companies',
                 attributes: ['id'],
+                required: !!yachtId, // si hay filtro de yate, que sea INNER JOIN
                 include: [{
                     model: Company,
                     as: 'company',
+                    required: !!yachtId,
                     include: [{
                         model: Yachts,
                         as: 'yacht',
                         required: !!yachtId,
-                        ...(yachtId && { where: { id: yachtId } }) // aquí va el filtro por yachtId
+                        ...(yachtId && { where: { id: yachtId } })
                     }]
                 }]
             };
