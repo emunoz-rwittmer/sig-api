@@ -2,7 +2,6 @@ const jwt = require('jsonwebtoken');
 const tokenModel = require('../models/mongoModels/Token.models');
 const auth = require("../utils/auth");
 const Utils = require('../utils/Utils');
-const UserService = require('../services/catalogs/users.services');
 require('dotenv').config();
 
 

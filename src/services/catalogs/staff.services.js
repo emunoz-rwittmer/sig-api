@@ -13,7 +13,7 @@ class Staffervice {
     static async getAll() {
         try {
             const result = await Staff.findAll({
-                attributes: ['id','first_name', 'last_name', 'email','ci_staff', 'cell_phone','date_entry', 'active'],
+                attributes: ['id', 'first_name', 'last_name', 'email', 'ci_staff', 'cell_phone', 'date_entry', 'active'],
                 order: [
                     ['last_name', 'ASC']
                 ],
@@ -86,12 +86,17 @@ class Staffervice {
                     ['last_name', 'ASC']
                 ],
                 include: [{
-                    model: StaffYacht,
-                    as: 'yachts',
+                    model: StaffCompany,
+                    as: 'companies',
                     attributes: ['id'],
                     include: [{
-                        model: Yachts,
-                        as: 'yacht_staff'
+                        model: Company,
+                        as: 'company',
+                        include: [{
+                            model: Yachts,
+                            as: 'yacht',
+                            ...(yachtId && { where: { id: yachtId } }) // aquí va el filtro por yachtId
+                        }]
                     }]
                 }, {
                     model: Departaments,
@@ -134,7 +139,7 @@ class Staffervice {
 
     static async getEvaluatorsByFilters(search, yachtId, departamentId, positionId) {
         try {
-            const where = { active: true }
+            const where = { active: true };
 
             if (departamentId) {
                 where.departamentId = departamentId;
@@ -147,28 +152,32 @@ class Staffervice {
             }
 
             const yachtInclude = {
-                model: StaffYacht,
-                as: 'yachts',
+                model: StaffCompany,
+                as: 'companies',
                 attributes: ['id'],
                 include: [{
-                    model: Yachts,
-                    as: 'yacht_staff'
+                    model: Company,
+                    as: 'company',
+                    include: [{
+                        model: Yachts,
+                        as: 'yacht',
+                        ...(yachtId && { where: { id: yachtId } }) // aquí va el filtro por yachtId
+                    }]
                 }]
             };
-
-            if (yachtId) {
-                yachtInclude.where = { yachtId: yachtId };
-            }
 
             const result = await Staff.findAll({
                 where,
                 attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
                 order: [['last_name', 'ASC']],
-                include: [{
-                    model: Positions,
-                    as: 'staff_position',
-                    attributes: ['id', 'name'],
-                }, yachtInclude]
+                include: [
+                    {
+                        model: Positions,
+                        as: 'staff_position',
+                        attributes: ['id', 'name'],
+                    },
+                    yachtInclude
+                ]
             });
 
             return result;
@@ -176,6 +185,7 @@ class Staffervice {
             throw error;
         }
     }
+
 
     static async getEvaluatorsById(arrayIds) {
         try {
@@ -227,18 +237,21 @@ class Staffervice {
             }
 
             const yachtInclude = {
-                model: StaffYacht,
-                as: 'yachts',
+                model: StaffCompany,
+                as: 'companies',
                 attributes: ['id'],
                 include: [{
-                    model: Yachts,
-                    as: 'yacht_staff'
+                    model: Company,
+                    as: 'company',
+                    include: [{
+                        model: Yachts,
+                        as: 'yacht',
+                        ...(yachtId && { where: { id: yachtId } }) // aquí va el filtro por yachtId
+                    }]
                 }]
             };
 
-            if (yachtId) {
-                yachtInclude.where = { yachtId: yachtId };
-            }
+
 
             const result = await Staff.findAll({
                 where,
@@ -250,7 +263,9 @@ class Staffervice {
                     model: Positions,
                     as: 'staff_position',
                     attributes: ['id', 'name'],
-                }, yachtInclude]
+                },
+                    yachtInclude
+                ]
             });
             return result;
         } catch (error) {
@@ -278,17 +293,18 @@ class Staffervice {
         try {
             const result = await Staff.findOne({
                 where: { id },
-                attributes: ['first_name', 'last_name', 'email','ci_staff', 'cell_phone','date_entry', 'description', 'roleId', 'departamentId', 'positionId', 'active'],
+                attributes: ['first_name', 'last_name', 'email', 'ci_staff', 'cell_phone', 'date_entry', 'description', 'roleId', 'departamentId', 'positionId', 'active'],
                 include: [
                     {
                         model: StaffCompany,
                         as: 'companies',
                         attributes: ['id'],
                         include: [
-                           { model: Company,
-                            as: 'company',
-                            attributes: ['name']
-                           }
+                            {
+                                model: Company,
+                                as: 'company',
+                                attributes: ['name']
+                            }
                         ]
                     },
                     {
