@@ -166,6 +166,8 @@ class Staffervice {
                 }]
             };
 
+            console.log('getEvaluatorsByFilters', yachtInclude)
+
             const result = await Staff.findAll({
                 where,
                 attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
@@ -251,6 +253,7 @@ class Staffervice {
                 }]
             };
 
+            console.log('getEvaluatedsByFilters', yachtInclude)
 
 
             const result = await Staff.findAll({
