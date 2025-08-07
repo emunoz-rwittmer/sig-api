@@ -161,6 +161,7 @@ class Staffervice {
                     include: [{
                         model: Yachts,
                         as: 'yacht',
+                        required: !!yachtId,
                         ...(yachtId && { where: { id: yachtId } }) // aquí va el filtro por yachtId
                     }]
                 }]
@@ -248,6 +249,7 @@ class Staffervice {
                     include: [{
                         model: Yachts,
                         as: 'yacht',
+                        required: !!yachtId,
                         ...(yachtId && { where: { id: yachtId } }) // aquí va el filtro por yachtId
                     }]
                 }]
