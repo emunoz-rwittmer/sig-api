@@ -8,6 +8,7 @@ require('dotenv').config();
 async function generateAndSavePDF(htmlContent, filePath, result) {
 
   const compania = await CompanyService.getCompanyByName(result.company)
+  const logoHtml = `<img src="${process.env.URL_CAPTAINS + "/api/uploads/companies/firma_rrhh.png"}" alt="signature" style="width:300px;" />`;
   const logoUrl = compania.logo || '';  // ajusta según cómo te llegue la ruta o URL
 
   const contenidoHTML = htmlContent
@@ -16,6 +17,8 @@ async function generateAndSavePDF(htmlContent, filePath, result) {
     .replace('{fecha_vuelo_uno}', `Fecha: ${result.dateFlightOne}`)
     .replace('{vuelo_dos}', `Ruta: ${result.flightTwo}`)
     .replace('{fecha_vuelo_dos}', `Fecha: ${result.dateFlightTwo}`)
+    .replace('{firma_rrhh}', logoHtml)
+
 
   const browser = await puppeteer.launch({
     headless: 'new',
