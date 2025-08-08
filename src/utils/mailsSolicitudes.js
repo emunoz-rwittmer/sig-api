@@ -154,7 +154,7 @@ class MailsSolicitudes {
                   <h2>${result.reglamento}</h2>
                   <p>Hola, Belen</p>
                   <div class="body-container">
-                    <p>Has recibido la confirmaición de lectura para ${result.reglamento}</p>
+                    <p>Has recibido la confirmación de lectura para ${result.reglamento}</p>
                     <p>de parte de ${result.staff}</p>
                   </div>
                   <div class="footer">
