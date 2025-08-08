@@ -312,7 +312,7 @@ class Staffervice {
                             {
                                 model: Company,
                                 as: 'company',
-                                attributes: ['name']
+                                attributes: ['name', 'logo']
                             }
                         ]
                     },

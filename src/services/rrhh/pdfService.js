@@ -2,9 +2,13 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs/promises');
 const path = require('path');
+const CompanyService = require('../catalogs/company.services');
 require('dotenv').config();
 
 async function generateAndSavePDF(htmlContent, filePath, result) {
+
+  const compania = await CompanyService.getCompanyByName(result.company)
+  const logoUrl = compania.logo || '';  // ajusta según cómo te llegue la ruta o URL
 
   const contenidoHTML = htmlContent
     .replace('{compania}', result.company)
@@ -40,6 +44,9 @@ async function generateAndSavePDF(htmlContent, filePath, result) {
         </style>
       </head>
       <body>
+      <div class="logo-container">
+        <img src="${process.env.URL_CAPTAINS + "/api" + logoUrl}" alt="Logo ${result.company}" />
+      </div>
         ${contenidoHTML}
       </body>
     </html>
