@@ -28,7 +28,7 @@ async function generateAndSavePDF(htmlContent, filePath, result) {
       <head>
         <style>
           body { font-family: Arial, sans-serif; padding: 10px 20px 20px; }
-          .logo-container { text-align: center; margin-bottom: 20px; }
+          .logo-container { text-align: right; margin-bottom: 5px; }
           .logo-container img { width: 300px; }
           .footer-logo {
             position: fixed;
