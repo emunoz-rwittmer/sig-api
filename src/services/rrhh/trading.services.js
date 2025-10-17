@@ -5,7 +5,7 @@ class TradingService {
     static async getAll() {
         try {
             const result = await Trading.findAll({
-                attributes: ['id', 'name', 'url'],
+                attributes: ['id', 'name', 'url', 'type'],
             });
 
             return result;
@@ -18,7 +18,7 @@ class TradingService {
         try {
             const result = await Trading.findOne({
                 where: { id },
-                attributes: ['id', 'file']
+                attributes: ['id', 'url', 'type']
             });
             return result;
         } catch (error) {

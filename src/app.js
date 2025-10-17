@@ -24,7 +24,7 @@ db.authenticate()
 initModels();
 initMongoBd();
 
-db.sync({ force: false })
+db.sync({ alter: false })
     .then(() => console.log('Base de datos sincronizada'))
     .catch((error) => console.log(error));
 

@@ -49,11 +49,15 @@ const ReadRegulation = require('./rrhh/readRegulation.models');
 const Trading = require('./rrhh/trading.models');
 const Format = require('./rrhh/format.models');
 const DoctorFormat = require('./rrhh/doctorFormat.models');
+const Guide = require('./operations/referralGuides/guides.models');
+const itemsGuide = require('./operations/referralGuides/itemsGuides.models');
+const ConsecutivoGuias = require('./catalogs/consecutivoGuias.model');
 
 const initModels = () => {
 
     //catalogs
     Consecutivo,
+    ConsecutivoGuias,
     Question,
     HouseRule,
     Trading,
@@ -113,7 +117,6 @@ const initModels = () => {
 
     Yacht.hasMany(HeaderAnswer, { as: 'yacht_header', foreignKey: 'yacht_id' });
 
-
     //coment cards
 
     ComentCardRespond.hasMany(ComentCardAnswers, { as: 'respuestas', foreignKey: "respuesta_coment_card_id", onDelete: "CASCADE" });
@@ -150,6 +153,10 @@ const initModels = () => {
     Order.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
     Order.hasMany(itemsOrder, { foreignKey: 'order_id', as: 'orderItems' });
     itemsOrder.belongsTo(Order, { foreignKey: 'order_id', as: 'order' });
+
+    Guide.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
+    Guide.hasMany(itemsGuide, { foreignKey: 'guide_id', as: 'details' });
+    itemsGuide.belongsTo(Guide, { foreignKey: 'guide_id', as: 'guide' });
 
     Order.belongsTo(Staff, { foreignKey: 'user_id', as: 'responsible' });
     Staff.hasMany(Order, { foreignKey: 'user_id', as: 'orders' });
@@ -216,7 +223,7 @@ const initModels = () => {
 
     Impact
     Levels,
-        Strategy
+    Strategy
 
 }
 

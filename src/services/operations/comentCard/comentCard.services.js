@@ -167,6 +167,11 @@ class ComentCardService {
                         as: 'yate',
                         attributes: ['id', 'name']
                     },
+                    {
+                        model: ComentCardQR,
+                        as: 'links_acceso',
+                        attributes: ['id']
+                    },
 
                 ]
             });
@@ -344,9 +349,9 @@ class ComentCardService {
                 where: {
                     comentCardYachtId,
                     startDate: { [Op.lte]: date },
-                    endtDate: { [Op.gte]: date }
+                    endDate: { [Op.gte]: date }
                 },
-                attributes: ['accessLink', 'startDate', 'endtDate'],
+                attributes: ['accessLink', 'startDate', 'endDate'],
                 include: [
                     {
                         model: ComentCardYacht,

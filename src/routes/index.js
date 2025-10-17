@@ -29,7 +29,7 @@ const levelRoutes = require('./operations/indicators/levels.routes');
 const processRoutes = require('./operations/indicators/proces.routes');
 const startegryRoutes = require('./operations/indicators/strategy.routes');
 const comentCardRoutes = require("./operations/comentCard/comentCard.routes");
-
+const guidesRoutes = require('./operations/referralGuides/guides.routes');
 //Report
 const reportRoutes = require("./reports/reports.routes");
 const downloadsRoutes = require("./donwloads/donwloads.routes");
@@ -60,6 +60,7 @@ const routerApi = (app) => {
   app.use("/api/requests", authJwt.verifyToken, yachtRequestRoutes);
   app.use("/api/products", authJwt.verifyToken, productsRoutes);
   app.use("/api/registers", authJwt.verifyToken, registerRoutes);
+  app.use("/api/guides", authJwt.verifyToken, guidesRoutes);
   //INDICATORS
   app.use("/api/indicators", authJwt.verifyToken, indicatorsRoutes);
   app.use("/api/probabilities", authJwt.verifyToken, probabilityRoutes);

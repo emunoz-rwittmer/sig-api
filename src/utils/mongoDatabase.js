@@ -5,10 +5,7 @@ const initMongoBd = () => {
     const password = process.env.DB_PASSWORD_MONGO;
     const database = process.env.DB_NAME_MONGO;
     const mongoose = require('mongoose');
-    mongoose.connect(`mongodb://${user}:${password}@${host}/${database}?authMechanism=DEFAULT&authSource=admin`, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    });
+    mongoose.connect(`mongodb://${user}:${password}@${host}/${database}?authMechanism=DEFAULT&authSource=admin`);
 }
 
 module.exports = initMongoBd;

@@ -31,6 +31,7 @@ const getTrading = async (req, res) => {
 const createTrading = async (req, res) => {
     try {
         const data = req.body;
+        if(req.file) data.url = `/uploads/pdfs/${req.file.filename}`
         const result = await TradingService.createTrading(data);
         if (result) {
             res.status(200).json({ data: 'resource created successfully' });
