@@ -211,6 +211,7 @@ class EvaluationService {
                     {
                         model: Yacht,
                         as: "header_yacht",
+                        required: true,
                         attributes: ['id', 'name'],
                     },
                     {
