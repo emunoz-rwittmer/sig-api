@@ -57,13 +57,13 @@ const initModels = () => {
 
     //catalogs
     Consecutivo,
-    ConsecutivoGuias,
-    Question,
-    HouseRule,
-    Trading,
-    Format,
-    DoctorFormat
-    
+        ConsecutivoGuias,
+        Question,
+        HouseRule,
+        Trading,
+        Format,
+        DoctorFormat
+
     Users.belongsTo(Roles, { as: "user_rol", foreignKey: "role_id" });
     Roles.hasMany(Users, { as: "rol_user", foreignKey: "role_id" });
     Staff.belongsTo(Roles, { as: "rol", foreignKey: "role_id" });
@@ -107,15 +107,19 @@ const initModels = () => {
     FormAnswer.belongsTo(HeaderAnswer, { as: 'header_aswer', foreignKey: 'header_answer_id' });
 
     FormAnswer.belongsTo(EstructureQuestion, { as: 'aswer_question', foreignKey: 'estructure_question_id' });
-    HeaderAnswer.belongsTo(Staff, { as: 'header_evalutor', foreignKey: 'evaluator_id' });
 
+    HeaderAnswer.belongsTo(Staff, { as: 'header_evaluator', foreignKey: 'evaluator_id' });
     Staff.hasMany(HeaderAnswer, { as: 'evaluator_header', foreignKey: 'evaluator_id' });
+
     HeaderAnswer.belongsTo(Staff, { as: 'header_evaluted', foreignKey: 'evaluated_id' });
-
     Staff.hasMany(HeaderAnswer, { as: 'evaluated_header', foreignKey: 'evaluated_id' });
-    HeaderAnswer.belongsTo(Yacht, { as: 'header_yacht', foreignKey: 'yacht_id' });
 
+    HeaderAnswer.belongsTo(Yacht, { as: 'header_yacht', foreignKey: 'yacht_id' });
     Yacht.hasMany(HeaderAnswer, { as: 'yacht_header', foreignKey: 'yacht_id' });
+
+    //state
+    HeaderAnswer.belongsTo(StatusEvaluation, { as: 'state', foreignKey: 'state_id' });
+    StatusEvaluation.hasMany(HeaderAnswer, { as: "header_state", foreignKey: "state_id" });
 
     //coment cards
 
@@ -137,10 +141,6 @@ const initModels = () => {
 
     ComentCardQR.hasMany(ComentCardRespond, { as: 'respuestas_coment_card', foreignKey: 'card_qr_id', onDelete: "CASCADE" });
     ComentCardRespond.belongsTo(ComentCardQR, { as: 'coment_card', foreignKey: 'card_qr_id' });
-
-    //state
-    HeaderAnswer.belongsTo(StatusEvaluation, { as: 'state', foreignKey: 'state_id' });
-    StatusEvaluation.hasMany(HeaderAnswer, { as: "header_state", foreignKey: "state_id" });
 
     //INVENTORY RELATIONS
     Company.hasOne(Yacht, { foreignKey: 'company_id', as: 'yacht' });
@@ -223,7 +223,7 @@ const initModels = () => {
 
     Impact
     Levels,
-    Strategy
+        Strategy
 
 }
 

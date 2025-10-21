@@ -192,47 +192,78 @@ class EvaluationService {
 
     static async getEvaluationsByYacht(yachtId, startDate, endDate) {
         try {
-            const result = await StaffYacht.findAll({
-                where: { 
-                    yachtId, 
-                    staffId: { [Op.ne]: null }
-                },
+            
+            const where = {};
+
+            if (yachtId && yachtId !== "undefined" && yachtId !== "null") {
+                where.yachtId = yachtId;
+            }
+
+            if ((startDate && (startDate !== "undefined" && startDate !== 'null')) && (endDate && (endDate !== "undefined" && endDate !== 'null'))) {
+                where.createdAt = {
+                    [Op.between]: [new Date(startDate), new Date(endDate)]
+                };
+            }
+
+            const result = await HeaderAnswer.findAll({
+                where: where,
                 include: [
                     {
+                        model: Yacht,
+                        as: "header_yacht",
+                        attributes: ['id', 'name'],
+                    },
+                    {
+                        model: Form,
+                        as: "header_form",
+                        attributes: ['id', 'title'],
+                    },
+                    {
                         model: Staff,
-                        as: "staff_yacht",
-                        required: true, // ← esto te asegura que no sea null
-                        attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
+                        as: "header_evaluted", // 👈 evaluado
+                        required: true,
+                        attributes: ['id', 'first_name', 'last_name'],
                         include: [
                             {
                                 model: Positions,
                                 as: 'staff_position',
                                 attributes: ['id', 'name'],
                             },
-                            {
-                                model: HeaderAnswer,
-                                as: 'evaluated_header',
-                                attributes: ['id', 'evaluatedId'],
-                                where: {
-                                    createdAt: {
-                                        [Op.between]: [startDate, endDate],
-                                    },
-                                },                     
-                                include: [
-                                    {
-                                        model: FormAnswer,
-                                        as: 'answer_header',
-                                        attributes: ['id', 'answer'],
-                                    },        
-                                ]       
-                             },
-
                         ]
-                    }
+                    },
+                    {
+                        model: Staff,
+                        as: "header_evaluator", // 👈 evaluador
+                        required: true,
+                        attributes: ['id', 'first_name', 'last_name'],
+                        include: [
+                            {
+                                model: Positions,
+                                as: 'staff_position',
+                                attributes: ['id', 'name'],
+                            },
+                        ]
+                    },
+                    {
+                        model: FormAnswer,
+                        as: 'answer_header',
+                        attributes: ['id', 'answer'],
+                        include: [{
+                            model: EstructureQuestion,
+                            as: 'aswer_question',
+                            attributes: ['id', 'pregunta'],
+                        }]
+                    },
+                    {
+                        model: StatusEvaluation,
+                        as: "state",
+                        attributes: ['id', 'state'],
+                    },
                 ],
             })
             return result;
         } catch (error) {
+            console.log(error)
             throw error;
         }
     }

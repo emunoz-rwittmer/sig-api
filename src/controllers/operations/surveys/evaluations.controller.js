@@ -83,7 +83,7 @@ const respondEvaluation = async (req, res) => {
     try {
         const evaluationId = Utils.decode(req.body.evaluation_id)
         const evaluation = req.body
-        const result = await EvaluationService.createAnswers(evaluationId, evaluation);
+        await EvaluationService.createAnswers(evaluationId, evaluation);
         const response = await EvaluationService.updateStatusHeaderAnswers(evaluationId)
         if (response) {
             res.status(200).json({ data: 'resource created successfully' });
@@ -101,47 +101,9 @@ const getReportingByYacht = async (req, res) => {
         const yachtId = Utils.decode(req.params.yacht_id);
         const startDate = req.query.startDate;
         const endDate = req.query.endDate;
-        const yacht = await YachtService.getYachtById(yachtId)
-        const evaluations = await EvaluationService.getEvaluationsByYacht(yachtId, startDate, endDate)
-
-        if (evaluations instanceof Array) {
-            let sumaPromediosIndividuales = 0;
-            let cantidadConEvaluaciones = 0;
-
-            evaluations.forEach((x) => {
-                const evaluaciones = x.dataValues.staff_yacht?.evaluated_header || [];
-                const totalEvaluaciones = evaluaciones.length;
-                let sumaPromediosPorEvaluacion = 0;
-                evaluaciones.forEach(evaluacion => {
-                    const respuestas = evaluacion.answer_header || [];
-        
-                    const respuestasValidas = respuestas.filter(respuesta =>
-                        Utils.asignarPuntaje(respuesta.answer) 
-                    );
-        
-                    if (respuestasValidas.length > 0) {
-                        const suma = respuestasValidas.reduce((acc, r) => acc + Utils.asignarPuntaje(r.answer), 0);
-                        const promedioEvaluacion = suma / respuestasValidas.length;
-                        sumaPromediosPorEvaluacion += promedioEvaluacion;
-                    }
-                });
-
-                const promedioEmpleado = totalEvaluaciones > 0
-                    ? (sumaPromediosPorEvaluacion / totalEvaluaciones)
-                    : 0;
-
-                x.dataValues.total_evaluaciones = totalEvaluaciones;
-                x.dataValues.promedio = promedioEmpleado.toFixed(2);
-
-                if (totalEvaluaciones > 0) {
-                    sumaPromediosIndividuales += promedioEmpleado;
-                    cantidadConEvaluaciones++;
-                }
-            });
-        }
-        res.status(200).json({ yacht, evaluations });
+        const result = await EvaluationService.getEvaluationsByYacht(yachtId, startDate, endDate)
+        res.status(200).json(result);
     } catch (error) {
-console.log(error)
         res.status(400).json(error.message)
     }
 }
