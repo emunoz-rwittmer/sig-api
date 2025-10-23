@@ -10,15 +10,12 @@ const login = async (req, res) => {
     try {
         const { email, password } = req.body;
         if (!email) {
-            console.log('aaa')
             res.status(400).json({ data: 'Not email provided' });
         }
         if (!password) {
-            console.log('eee')
             res.status(400).json({ data: 'Not password provided' });
         }
         const result = await AuthService.login({ email, password });
-        console.log(result)
         if (result.isValid) {
             if (result.user.active) {
                 const { id, firstName, lastName, email } = result.user;
@@ -41,7 +38,6 @@ const login = async (req, res) => {
                 res.status(400).json({ data: 'disabled user' })
             }
         } else {
-             console.log(result)
             res.status(400).json({ data: 'user or password incorrect' })
         }
     } catch (error) {
