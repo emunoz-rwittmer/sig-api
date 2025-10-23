@@ -102,11 +102,11 @@ class EvaluationService {
                     attributes: ['name'],
                 }, {
                     model: Staff,
-                    as: "header_evalutor",
+                    as: "header_evaluator",
                     attributes: ['firstName', 'lastName'],
                 }, {
                     model: Staff,
-                    as: "header_evalutor",
+                    as: "header_evaluted",
                     attributes: ['firstName', 'lastName'],
                 }, {
                     model: StatusEvaluation,
