@@ -30,7 +30,7 @@ class Utils {
 
   static generateAccessToken(data) {
     const token = jwt.sign(data, process.env.JWT_SECRET, {
-      expiresIn: "1m",
+      expiresIn: "10h",
       algorithm: "HS512",
     });
     return token;
