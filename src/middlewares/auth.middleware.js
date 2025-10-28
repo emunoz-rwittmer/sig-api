@@ -1,6 +1,5 @@
 const jwt = require('jsonwebtoken');
 const tokenModel = require('../models/mongoModels/Token.models');
-const auth = require("../utils/auth");
 const Utils = require('../utils/Utils');
 require('dotenv').config();
 
@@ -24,12 +23,12 @@ const verifyToken = async (req, res, next) => {
         try {
             const sessionData = await tokenModel.findOne({ userId, sessionId });
             if (!sessionData) {
-                return res.send({ code: 498, data: "Invalid session" });
+                return res.status(498).json({ data: 'Invalid session' });
             }
 
-            const refreshDecoded = jwt.verify(String(sessionData.refreshtoken), process.env.JWT_REFRESH_SECRET);
+            const refreshDecoded = jwt.verify(sessionData.refreshtoken, process.env.JWT_REFRESH_SECRET, { algorithm: 'H5512' });
             const newAccessToken = Utils.generateAccessToken({
-                id: refreshDecoded.user_id,
+                id: refreshDecoded.id,
                 firstName: refreshDecoded.firstName,
                 lastName: refreshDecoded.lastName,
                 email: refreshDecoded.email,
