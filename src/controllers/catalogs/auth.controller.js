@@ -22,6 +22,7 @@ const login = async (req, res) => {
                 const userData = { id, firstName, lastName, email };
                 userData.id = Utils.encode(userData.id);
                 userData.rol = result.user.user_rol?.name;
+                const sessioId = Utils.getSessionRandom();
                 const token = await Utils.generateAccessToken(userData);
                 const refreshToken = await Utils.generateRefreshToken(userData);
                 userData.token = token;
@@ -29,7 +30,7 @@ const login = async (req, res) => {
                 const newToken = new tokenModel({
                     user: firstName + " " + lastName,
                     userId: Utils.encode(id),
-                    accessToken: token,
+                    sessionId: sessioId,
                     refreshtoken: refreshToken
                 });
                 newToken.save();
@@ -62,6 +63,7 @@ const loginUsers = async (req, res) => {
                 const userData = { id, firstName, lastName, email };
                 userData.id = Utils.encode(userData.id);
                 userData.rol = result.user.rol?.name
+                const sessioId = Utils.getSessionRandom();
                 const token = await Utils.generateAccessToken(userData);
                 const refreshToken = await Utils.generateRefreshToken(userData);
                 userData.token = token;
@@ -69,7 +71,7 @@ const loginUsers = async (req, res) => {
                 const newToken = new tokenModel({
                     user: firstName + " " + lastName,
                     userId: Utils.encode(id),
-                    accessToken: token,
+                    sessionId: sessioId,
                     refreshtoken: refreshToken
                 });
                 newToken.save();
@@ -81,7 +83,6 @@ const loginUsers = async (req, res) => {
             res.status(400).json({ data: 'user or password incorrect' })
         }
     } catch (error) {
-        
         res.status(400).json({ data: 'somethign wrong' })
     }
 }
@@ -105,7 +106,7 @@ const upgradePassword = async (req, res) => {
 
         return res.status(200).json({ data: 'password updated successfully' });
     } catch (error) {
-        
+
         res.status(400).json(error.message);
     }
 }
@@ -144,7 +145,7 @@ const forgotPassword = async (req, res) => {
             }
         }
     } catch (error) {
-        
+
         res.status(400).json(error.message);
     }
 }

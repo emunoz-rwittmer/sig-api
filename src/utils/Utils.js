@@ -30,7 +30,7 @@ class Utils {
 
   static generateAccessToken(data) {
     const token = jwt.sign(data, process.env.JWT_SECRET, {
-      expiresIn: "55m",
+      expiresIn: "5m",
       algorithm: "HS512",
     });
     return token;
@@ -42,6 +42,18 @@ class Utils {
       algorithm: "HS512",
     });
     return token;
+  }
+
+  static getSessionRandom() {
+    const characters = "ABCDEFGHJKMNOPQRSTUVWXYZabcdefghjkmnopqrstuvwxyz!%?+{}1234567890";
+    const length = 6;
+    let randomString = "";
+
+    for (let i = 0; i < length; i++) {
+      const randomNum = Math.floor(Math.random() * characters.length);
+      randomString += characters[randomNum];
+    }
+    return randomString;
   }
 
   static formatDateToLocal(date) {

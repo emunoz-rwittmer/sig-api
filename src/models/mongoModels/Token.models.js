@@ -4,7 +4,7 @@ const Schema = mongoose.Schema;
 const tokenSchema = new Schema({
   user: String,
   userId: String,
-  accessToken: String,
+  sessionId: String,
   refreshtoken: String
 });
 
