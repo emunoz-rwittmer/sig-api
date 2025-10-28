@@ -30,7 +30,7 @@ class Utils {
 
   static generateAccessToken(data) {
     const token = jwt.sign(data, process.env.JWT_SECRET, {
-      expiresIn: "5m",
+      expiresIn: "1m",
       algorithm: "HS512",
     });
     return token;
@@ -65,9 +65,14 @@ class Utils {
   }
 
   static asignarPuntaje(respuesta) {
-    const match = respuesta.match(/\((\d)\)/);
-    if (match) {
-      return Number(match[1]);
+    const matchParentesis = respuesta.match(/\((\d+)\)/);
+    if (matchParentesis) {
+      return Number(matchParentesis[1]);
+    }
+
+    const matchAntesParentesis = respuesta.match(/(\d+)\s*\(/);
+    if (matchAntesParentesis) {
+      return Number(matchAntesParentesis[1]);
     }
 
     const puntajes = {
@@ -84,7 +89,9 @@ class Utils {
       }
     }
 
+    // Si no coincide con nada, devuelve 0
     return 0;
   }
+
 }
 module.exports = Utils;

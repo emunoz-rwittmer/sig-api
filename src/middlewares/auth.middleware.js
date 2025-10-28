@@ -19,23 +19,25 @@ const verifyToken = async (req, res, next) => {
         return next();
     } catch (err) {
         const decodedExpired = jwt.decode(token);
-        const userId = decodedExpired?.user_id;
+        const userId = decodedExpired?.id;
         const sessionId = decodedExpired?.sessionId;
-
         try {
             const sessionData = await tokenModel.findOne({ userId, sessionId });
-
             if (!sessionData) {
                 return res.send({ code: 498, data: "Invalid session" });
             }
 
             const refreshDecoded = jwt.verify(String(sessionData.refreshtoken), process.env.JWT_REFRESH_SECRET);
             const newAccessToken = Utils.generateAccessToken({
-                user_id: refreshDecoded.user_id,
-                user_name: refreshDecoded.user_name,
+                id: refreshDecoded.user_id,
+                firstName: refreshDecoded.firstName,
+                lastName: refreshDecoded.lastName,
+                email: refreshDecoded.email,
+                rol: refreshDecoded.rol,
                 sessionId: refreshDecoded.sessionId,
             });
-            res.status(202).json({ token: newAccessToken.accessToken });
+
+            res.status(202).json({ token: newAccessToken });
         } catch (refreshErr) {
             await tokenModel.deleteOne({ userId, sessionId }).exec();
             return res.status(498).json({ data: 'unauthorized' });

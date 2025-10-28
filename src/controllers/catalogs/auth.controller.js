@@ -19,14 +19,21 @@ const login = async (req, res) => {
         if (result.isValid) {
             if (result.user.active) {
                 const { id, firstName, lastName, email } = result.user;
-                const userData = { id, firstName, lastName, email };
+                const sessioId = Utils.getSessionRandom();
+                const userData = { 
+                    id, firstName, lastName, email 
+                };
+
                 userData.id = Utils.encode(userData.id);
                 userData.rol = result.user.user_rol?.name;
-                const sessioId = Utils.getSessionRandom();
+                userData.sessionId = sessioId;
+
                 const token = await Utils.generateAccessToken(userData);
                 const refreshToken = await Utils.generateRefreshToken(userData);
+
                 userData.token = token;
                 userData.changePassword = result.user.changePassword
+
                 const newToken = new tokenModel({
                     user: firstName + " " + lastName,
                     userId: Utils.encode(id),
