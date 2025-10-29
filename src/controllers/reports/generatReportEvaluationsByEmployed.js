@@ -111,7 +111,7 @@ const generatReportEvaluationsByEmployed = async (req, res) => {
             ws.cell(14 + index, 1).string(formatDateToLocal(evaluation.createdAt) || "Sin asignar");
             ws.cell(14 + index, 2).string(evaluation.header_yacht.name || "Sin asignar");
             ws.cell(14 + index, 3).string(reportingEvaluationsByCrewState.crew?.first_name+" "+reportingEvaluationsByCrewState.crew?.last_name || "Sin  asignar");
-            ws.cell(14 + index, 4).string(evaluation.header_evalutor?.firstName + " " + evaluation.header_evalutor?.lastName || "Sin  asignar");
+            ws.cell(14 + index, 4).string(evaluation.header_evaluator?.firstName + " " + evaluation.header_evaluator?.lastName || "Sin  asignar");
             ws.cell(14 + index, 5).string(evaluation.state.state || "Sin  asignar");
             ws.cell(14 + index, 6).string(evaluation.promedio.toString() || "Sin  asignar");
         });

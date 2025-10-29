@@ -4,6 +4,7 @@ const { generateStockExcel } = require("./generateStockExcel");
 const { generateTransactionsExcel } = require('./generateTransactionsExcel');
 const { generateGeneralReportEvaluations } = require("./generateGeneralReportEvaluations");
 const { generatReportEvaluationsByEmployed } = require("./generatReportEvaluationsByEmployed");
+const { generateReportComentCards } = require("./generateReportComentCards");
 
 const excelReports = {
     generateRequestExcel,
@@ -11,6 +12,7 @@ const excelReports = {
     generateStockExcel,
     generateTransactionsExcel,
     generateGeneralReportEvaluations,
-    generatReportEvaluationsByEmployed
+    generatReportEvaluationsByEmployed,
+    generateReportComentCards
 }
 module.exports = excelReports

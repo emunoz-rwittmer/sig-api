@@ -233,6 +233,18 @@ const respondComentCard = async (req, res) => {
     }
 }
 
+const getReportingByYacht = async (req, res) => {
+    try {
+        const yachtId = Utils.decode(req.params.yacht_id);
+        const startDate = req.query.startDate;
+        const endDate = req.query.endDate;
+        const result = await ComentCardService.getReportingByYacht(yachtId, startDate, endDate);
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(400).json(error.message)
+    }
+}
+
 
 
 const ComentCardController = {
@@ -250,6 +262,7 @@ const ComentCardController = {
     deleteCardYacht,
     getComentCardByQr,
     getComentCardByDates,
+    getReportingByYacht,
     respondComentCard
 }
 module.exports = ComentCardController

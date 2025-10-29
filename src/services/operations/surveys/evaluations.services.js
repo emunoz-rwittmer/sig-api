@@ -342,7 +342,7 @@ class EvaluationService {
                 attributes: ['id', 'stateId', 'updatedAt', 'createdAt'],
                 include: [{
                     model: Staff,
-                    as: "header_evalutor",
+                    as: "header_evaluator",
                     attributes: ['firstName', 'lastName'],
                     include: [
                         {

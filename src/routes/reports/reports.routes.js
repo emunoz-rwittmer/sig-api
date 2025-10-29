@@ -10,5 +10,6 @@ router.get('/request/:request_id', excelReports.generateRequestExcel);
 router.get('/evaluations/generalReport/:yacht_id', excelReports.generateGeneralReportEvaluations);
 router.post('/evaluations/reportByEmployed', excelReports.generatReportEvaluationsByEmployed);
 
+router.get('/comentCards/generateReport', excelReports.generateReportComentCards);
 
 module.exports = router;

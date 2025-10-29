@@ -410,6 +410,66 @@ class ComentCardService {
         }
     }
 
+    static async getReportingByYacht(yachtId, startDate, endDate) {
+        try {
+
+            const whereYacht = {};
+            if (yachtId && yachtId !== "undefined" && yachtId !== "null") {
+                whereYacht.yachtId = yachtId;
+            }
+
+            const whereDates = {};
+            if ((startDate && (startDate !== "undefined" && startDate !== 'null')) && (endDate && (endDate !== "undefined" && endDate !== 'null'))) {
+                whereDates.startDate = {
+                    [Op.between]: [new Date(startDate), new Date(endDate)]
+                };
+            }
+
+            const result = await ComentCardRespond.findAll({
+                include: [
+                    {
+                        model: ComentCardQR,
+                        as: "coment_card",
+                        //where: whereDates,
+                        required: true,
+                        attributes: ['id', 'startDate', 'endDate'],
+                        include: [
+                            {
+                                model: ComentCardYacht,
+                                as: "card_yacht",
+                                required: true,
+                                //where: whereYacht,
+                                include: [
+                                    {
+                                        model: Yacht,
+                                        as: "yate",
+                                        required: true,
+                                        attributes: ['name'],
+                                    }]
+                            },]
+                    },
+                    {
+                        model: ComentCardAnswers,
+                        as: "respuestas",
+                        required: true,
+                        attributes: ['id', 'answer'],
+                        include: [
+                            {
+                                model: ComentCardQuestions,
+                                as: "pregunta",
+                                required: true,
+                                attributes: ['id', 'text'],
+                            },]
+                    },
+                ],
+            })
+            return result;
+        } catch (error) {
+            console.log(error)
+            throw error;
+        }
+    }
+
 
 }
 
