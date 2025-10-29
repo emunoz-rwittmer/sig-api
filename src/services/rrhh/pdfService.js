@@ -12,6 +12,7 @@ async function generateAndSavePDF(htmlContent, filePath, result) {
   const logoUrl = compania.logo || '';  // ajusta según cómo te llegue la ruta o URL
 
   const contenidoHTML = htmlContent
+    .replace('{valor_numero}', result.company)
     .replace('{compania}', result.company)
     .replace('{vuelo_uno}', `Ruta: ${result.flightOne}`)
     .replace('{fecha_vuelo_uno}', `Fecha: ${result.dateFlightOne}`)

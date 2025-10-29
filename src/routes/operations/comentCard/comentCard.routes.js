@@ -12,7 +12,7 @@ router.put('/updateComentCard/:card_id', authJwt.verifyToken, ComentCardControll
 router.delete('/:card_id', authJwt.verifyToken, ComentCardController.deleteComentCard);
 
 //COMMENTCARD YACHT
-router.get('/cards_yachts/yachts', authJwt.verifyToken, ComentCardController.getYachtsWithComentCard);
+router.get('/:card_id/cards_yachts/yachts', authJwt.verifyToken, ComentCardController.getYachtsWithComentCard);
 router.get('/access_links/relation/:card_yacht_id', ComentCardController.getAllAccessLinks);
 router.get('/coment_cards_link/:link_id', ComentCardController.getAllComentCardsForLink);
 router.post('/createCardYacht/:card_id', authJwt.verifyToken, ComentCardController.createCardYacht);

@@ -157,9 +157,10 @@ class ComentCardService {
     }
 
     // COMMENT CARD YACHT
-    static async getYachtsWithComentCard() {
+    static async getYachtsWithComentCard(cardId) {
         try {
             const result = await ComentCardYacht.findAll({
+                where: { cardId },
                 attributes: ['id', 'createdAt'],
                 include: [
                     {
@@ -276,30 +277,34 @@ class ComentCardService {
         }
     }
 
-    // static async createManyLink(data) {
-    //     const transaction = await db.transaction();
-    //     try {
-    //         await Promise.all(preguntas.map((pregunta) =>
-    //             ComentCardQuestions.create({
-    //                 comentCardId: result.id,
-    //                 text: pregunta.text,
-    //                 puntuacion: pregunta.puntuacion,
-    //                 type: pregunta.type,
-    //                 opciones: pregunta.opciones.map((opcion) => opcion)
-    //             }, { transaction })
-    //         ));
+    static async createManyLink(data) {
+        const transaction = await db.transaction();
+        try {
+            const createdRecords = [];
 
-    //         const result = await ComentCardQR.create(data, { transaction });
-    //         const id = Utils.encode(result.dataValues.id);
-    //         const accessLink = `${process.env.URL_CAPTAINS}/coment_card/${id}`; // Cambia a tu estructura de URL
-    //         await result.update({ accessLink: accessLink }, { transaction });
-    //         await transaction.commit();
-    //         return result;
-    //     } catch (error) {
-    //         await transaction.rollback();
-    //         throw error;
-    //     }
-    // }
+            for (const item of data) {
+                const created = await ComentCardQR.create(item, { transaction });
+
+                const encodedId = Utils.encode(created.id);
+                const accessLink = `${process.env.URL_CAPTAINS}/coment_card/${encodedId}`;
+
+                await ComentCardQR.update(
+                    { accessLink },
+                    { where: { id: created.id }, transaction }
+                );
+
+                createdRecords.push({ ...created.toJSON(), accessLink });
+            }
+
+            await transaction.commit();
+            return createdRecords;
+        } catch (error) {
+            await transaction.rollback();
+            console.error("❌ Error en createManyLink:", error);
+            throw error;
+        }
+    }
+
 
     static async deleteCardYacht(id) {
         try {

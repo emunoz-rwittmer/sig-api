@@ -75,7 +75,8 @@ const deleteComentCard = async (req, res) => {
 
 const getYachtsWithComentCard = async (req, res) => {
     try {
-        const result = await ComentCardService.getYachtsWithComentCard();
+        const cardId = Utils.decode(req.params.card_id);
+        const result = await ComentCardService.getYachtsWithComentCard(cardId);
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
@@ -142,18 +143,8 @@ const createLink = async (req, res) => {
 }
 
 const createManyLink = async (req, res) => {
-    // try {
-    //     const data = req.body
-    //     data.comentCardYachtId = Utils.decode(req.body.comentCardYachtId);
-    //     await ComentCardService.createManyLink(data);
-    //     res.status(200).json({ data: 'resource created successfully' });
-    // } catch (error) {
-    //     res.status(400).json(error.message);
-    // }
-
     try {
-        const data = req.body;
-        data.comentCardYachtId = Utils.decode(req.body.comentCardYachtId);
+        const comentCardYachtId = Utils.decode(req.body.comentCardYachtId);
         const file = req.file;
         const fieldMapping = {
             'startDate': 'startDate',
@@ -162,30 +153,18 @@ const createManyLink = async (req, res) => {
 
         const workbook = XLSX.readFile(file.path);
         const sheet_name_list = workbook.SheetNames;
-        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheet_name_list[0]], {
-            cellDates: true
-        });
+        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheet_name_list[0]]);
         const mappedData = jsonData.map(row => {
             const mappedRow = {};
-
             for (const [excelField, modelField] of Object.entries(fieldMapping)) {
-                const value = row[excelField];
-
-                if (value instanceof Date) {
-                    mappedRow[modelField] = dayjs(value).format('YYYY-MM-DD'); // ✅ formato base de datos
-                } else {
-                    // Si por alguna razón llega como texto (ej. "20/06/2025"), lo parseas también
-                    mappedRow[modelField] = dayjs(value, 'DD/MM/YYYY').format('YYYY-MM-DD');
-                }
+                mappedRow[modelField] = row[excelField];
             }
-
-            mappedRow.comentCardYachtId = data.comentCardYachtId;
+            mappedRow.comentCardYachtId = comentCardYachtId;
             return mappedRow;
         });
-        console.log(mappedData);
-        console.log(jsonData[0].startDate, typeof jsonData[0].startDate);
-        // await ComentCardService.createManyLink(mappedData);
-        // res.status(200).json({ data: 'resource created successfully' });
+
+        await ComentCardService.createManyLink(mappedData);
+        res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
 
         res.status(400).json(error.message);
