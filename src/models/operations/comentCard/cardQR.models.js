@@ -19,6 +19,10 @@ const ComentCardQR = db.define('coment_card_qr', {
         allowNull: true,
         field: 'access_link',
     },
+    name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
     startDate: {
         type: DataTypes.DATE,
         allowNull: false,

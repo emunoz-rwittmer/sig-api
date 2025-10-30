@@ -55,8 +55,8 @@ const Staff = db.define('staff', {
         field: "role_id",
     },
     description: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
+        type: DataTypes.STRING,
+        allowNull: true,
     },
     departamentId: {
         type: DataTypes.INTEGER,

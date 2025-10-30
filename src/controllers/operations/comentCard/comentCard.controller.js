@@ -147,6 +147,7 @@ const createManyLink = async (req, res) => {
         const comentCardYachtId = Utils.decode(req.body.comentCardYachtId);
         const file = req.file;
         const fieldMapping = {
+            'name': 'name',
             'startDate': 'startDate',
             'endDate': 'endDate',
         };

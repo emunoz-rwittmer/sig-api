@@ -189,6 +189,7 @@ class ComentCardService {
                 attributes: [
                     'id',
                     'access_link',
+                    'name',
                     'start_date',
                     'end_date',
                     'createdAt',
@@ -204,6 +205,7 @@ class ComentCardService {
                 group: ['id'],
                 order: [['start_date', 'DESC']],
             });
+
             return result;
         } catch (error) {
             throw error;
