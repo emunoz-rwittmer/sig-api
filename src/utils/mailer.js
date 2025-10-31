@@ -164,6 +164,34 @@ const sendEmailConfirmacion = (dataMail) => {
         })
 }
 
+const sendEmailGuiaRemisionCreada = (dataMail, fileName, filePath) => {
+    const sgMail = require('@sendgrid/mail')
+    const html = MailsSolicitudes.htmlGuiaRemisionCreada(dataMail);
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY)
+    const msg = {
+        to: 'edison@tiptoptravel.ec', // Change to your recipient
+        from: 'notify-sig@rwittmer.com', // Change to your verified sender
+        subject: 'Confirmación de guía de remisión',
+        html: html,
+        attachments: [
+            {
+                content: filePath, // contenido en base64
+                filename: fileName,
+                type: 'application/pdf',
+                disposition: 'attachment',
+            },
+        ],
+    }
+    sgMail
+        .send(msg)
+        .then(() => {
+            console.log('Email sent')
+        })
+        .catch((error) => {
+            console.log(error)
+        })
+}
+
 module.exports = {
     sendEmail,
     sendEmailNewOrder,
@@ -171,5 +199,6 @@ module.exports = {
     sendDispatchEmail,
     sendEmailNewRequest,
     sendEmailNuevaSolicitud,
-    sendEmailConfirmacion
+    sendEmailConfirmacion,
+    sendEmailGuiaRemisionCreada
 };

@@ -51,9 +51,10 @@ class GuideService {
             }));
 
             await itemsGuide.bulkCreate(details, { transaction });
-
+            await transaction.commit();
             return result;
         } catch (error) {
+            await transaction.rollback();
             throw error;
 
         }

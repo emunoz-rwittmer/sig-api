@@ -68,6 +68,10 @@ const Guide = db.define('Guide', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  file: {
+    type: DataTypes.TEXT,
+    allowNull: false,
+  },
 });
 
 module.exports = Guide;

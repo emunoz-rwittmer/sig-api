@@ -149,7 +149,6 @@ class TransactionService {
 
         } catch (error) {
             await transaction.rollback();
-            console.log(error)
             throw new Error(`Error en la transacción: ${error.message}`);
         }
     }

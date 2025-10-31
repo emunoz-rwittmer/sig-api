@@ -1,7 +1,12 @@
 const Consecutivo = require('../../../models/catalogs/consecutivo.model');
 const ConsecutivoGuias = require('../../../models/catalogs/consecutivoGuias.model');
+const CompanyService = require('../../../services/catalogs/company.services');
 const GuideService = require('../../../services/operations/referralGuides/guides.services');
+const { generateRemisionPDF } = require('../../../services/operations/referralGuides/pdfService');
+const { sendEmailGuiaRemisionCreada } = require('../../../utils/mailer');
 const Utils = require('../../../utils/Utils');
+const fs = require('fs');
+const path = require('path');
 
 const getGuidesByCompany = async (req, res) => {
     try {
@@ -10,7 +15,6 @@ const getGuidesByCompany = async (req, res) => {
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
-                //x.dataValues.responsible.dataValues.id = Utils.encode(x.dataValues.responsible.dataValues.id);
             });
         }
         res.status(200).json(result);
@@ -23,27 +27,52 @@ const createGuide = async (req, res) => {
     try {
         const data = req.body;
         const companyId = Utils.decode(req.params.company_id);
-        const [consecutivo, created] = await ConsecutivoGuias.findOrCreate({
+
+        const [consecutivo] = await ConsecutivoGuias.findOrCreate({
             where: { companyId },
             defaults: { valor: 1, companyId },
         });
 
         const formattedCounter = `000-${consecutivo.valor.toString().padStart(3, '0')}`;
-        await ConsecutivoGuias.update({ valor: consecutivo.valor + 1 }, { where: { companyId } });
+        await ConsecutivoGuias.update(
+            { valor: consecutivo.valor + 1 },
+            { where: { companyId } }
+        );
 
-        data.companyId = companyId
-        data.counter = formattedCounter
+        data.companyId = companyId;
+        data.counter = formattedCounter;
 
-        console.log(data)
+        const company = await CompanyService.getCompanyById(companyId);
+        const folderName = company.name.replace(/\s+/g, '_');
+        const folderPath = path.join(__dirname, '../../../../uploads/pdfs/guides', folderName);
+
+        if (!fs.existsSync(folderPath)) {
+            fs.mkdirSync(folderPath, { recursive: true });
+        }
+
+        const fileName = `guia_remision_${data.counter}.pdf`;
+        const filePath = path.join(folderPath, fileName);
+
+        await generateRemisionPDF(company, data, filePath);
+
+        const documentPath = '/' + path.relative(path.join(__dirname, '../../../../'), filePath).replace(/\\/g, '/');
+        const fileData = fs.readFileSync(filePath).toString('base64');
+
+        data.file = documentPath;
 
         await GuideService.createGuide(data);
-        res.status(200).json({ data: 'resource created successfully' });
+        const dataMail = {
+            counter: data.counter,
+            company: company.name
+        };
+        sendEmailGuiaRemisionCreada(dataMail, fileName, fileData);
 
+        res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
         console.log(error)
-        res.status(400).json(error.message);
+        res.status(400).json({ error: error.message });
     }
-}
+};
 
 const updateGuide = async (req, res) => {
     try {
