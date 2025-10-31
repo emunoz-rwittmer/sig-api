@@ -26,6 +26,10 @@ class GuideService {
                 where: { id },
                 include: [
                     {
+                        model: itemsGuide,
+                        as: 'details',
+                    },
+                    {
                         model: Company,
                         as: 'company',
                     }]

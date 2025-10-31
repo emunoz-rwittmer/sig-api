@@ -23,6 +23,17 @@ const getGuidesByCompany = async (req, res) => {
     }
 }
 
+const getGuideById = async (req, res) => {
+    try {
+        const guideId = Utils.decode(req.params.guide_id);
+        const result = await GuideService.getGuideById(guideId);
+        result.id = Utils.encode(result.id);
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(400).json(error.message)
+    }
+}
+
 const createGuide = async (req, res) => {
     try {
         const data = req.body;
@@ -126,6 +137,7 @@ const updateGuide = async (req, res) => {
 const GuideController = {
 
     getGuidesByCompany,
+    getGuideById,
     createGuide,
     updateGuide,
     //deleteGuide,

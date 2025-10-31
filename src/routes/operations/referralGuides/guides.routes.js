@@ -4,7 +4,7 @@ const GuideController  = require ('../../../controllers/operations/referralGuide
 const router = Router();
 
 router.get('/:company_id/all',GuideController.getGuidesByCompany);
-router.get('/:guide_id',GuideController.getGuidesByCompany);
+router.get('/:guide_id',GuideController.getGuideById);
 router.post('/:company_id',  GuideController.createGuide);
 //router.put('/:guide_id', GuideController.updateStatusGuide);
 
