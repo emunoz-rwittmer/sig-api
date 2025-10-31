@@ -5,7 +5,6 @@ const db = require('../../../utils/database');
 
 
 class GuideService {
-
     static async getGuidesByCompany(companyId) {
         try {
             const result = await Guide.findAll({

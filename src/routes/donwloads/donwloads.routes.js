@@ -4,6 +4,7 @@ const DonwloadController  = require ('../../controllers/donwloads/donwloads.cont
 const router = Router();
 
 router.get('/:rule_id/download', DonwloadController.downloadReglamento);
+router.get('/guide/:guide_id/download', DonwloadController.downloadGuiaRemision);
 router.get('/doctor_format/:format_id/download', DonwloadController.downloadFormato);
 router.get('/staff/request/:request_id/download', DonwloadController.downloadSolicitud);
 
