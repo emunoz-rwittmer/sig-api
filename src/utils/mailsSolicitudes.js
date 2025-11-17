@@ -69,7 +69,7 @@ class MailsSolicitudes {
                   <h2>${result.formato}</h2>
                   <p>Hola, Belen</p>
                   <div class="body-container">
-                    <p>Has resibido una ${result.formato}</p>
+                    <p>Has recibido una ${result.formato}</p>
                     <p>de ${result.staff}</p>
                   </div>
                    <div class="body-container">
