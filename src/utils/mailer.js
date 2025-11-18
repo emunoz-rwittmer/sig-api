@@ -114,24 +114,17 @@ const sendDispatchEmail = (action, content) => {
         })
 }
 
-const sendEmailNuevaSolicitud = (dataMail, fileName, filePath) => {
+const sendEmailNuevaSolicitud = (dataMail, adjuntos) => {
 
     const sgMail = require('@sendgrid/mail')
     const htmlFirmaContrato = MailsSolicitudes.htmlNuevaSolicitud(dataMail);
     sgMail.setApiKey(process.env.SENDGRID_API_KEY)
     const msg = {
-        to: 'belen@rwittmer.com', // Change to your recipient
+        to: 'edison@tiptoptravel.ec', // Change to your recipient
         from: 'notify-sig@rwittmer.com', // Change to your verified sender
         subject: 'Solicitud recibida',
         html: htmlFirmaContrato,
-        attachments: [
-            {
-                content: filePath, // contenido en base64
-                filename: fileName,
-                type: 'application/pdf',
-                disposition: 'attachment',
-            },
-        ],
+        attachments: adjuntos,
     }
     sgMail
         .send(msg)

@@ -164,6 +164,7 @@ const createRequesForStaff = async (req, res) => {
     try {
         const formatId = Utils.decode(req.params.format_id);
         const staffId = Utils.decode(req.params.staff_id);
+        const file = req.file; // puede ser undefined
         const data = req.body;
 
         const staff = await Staffervice.getStaffById(staffId);
@@ -194,9 +195,28 @@ const createRequesForStaff = async (req, res) => {
         data.staffId = staffId;
         data.file = relativePath;
 
+        const attachments = [
+            {
+                content: fileData, // contenido en base64
+                filename: fileName,
+                type: 'application/pdf',
+                disposition: 'attachment',
+            },
+        ]
+
+        if (file) {
+            const fileBase64 = file.buffer.toString('base64');
+            attachments.push({
+                content: fileBase64,
+                filename: file.originalname,
+                disposition: 'attachment',
+                type: file.mimetype,
+            });
+        }
+
         const result = await FormatService.createRequesForStaff(data);
         if (result) {
-            sendEmailNuevaSolicitud(dataMail, fileName, fileData);
+            sendEmailNuevaSolicitud(dataMail, attachments);
             res.status(200).json({ data: 'resource created successfully' });
         }
     } catch (error) {
