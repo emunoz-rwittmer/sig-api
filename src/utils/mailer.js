@@ -120,7 +120,7 @@ const sendEmailNuevaSolicitud = (dataMail, adjuntos) => {
     const htmlFirmaContrato = MailsSolicitudes.htmlNuevaSolicitud(dataMail);
     sgMail.setApiKey(process.env.SENDGRID_API_KEY)
     const msg = {
-        to: 'edison@tiptoptravel.ec', // Change to your recipient
+        to: 'belen@rwittmer.com', // Change to your recipient
         from: 'notify-sig@rwittmer.com', // Change to your verified sender
         subject: 'Solicitud recibida',
         html: htmlFirmaContrato,
