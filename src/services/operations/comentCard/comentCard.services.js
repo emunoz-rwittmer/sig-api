@@ -357,7 +357,7 @@ class ComentCardService {
                     comentCardYachtId,
                     [Op.and]: [
                         Sequelize.where(
-                            Sequelize.literal(`DATE_ADD(startDate, INTERVAL 1 DAY)`),
+                            Sequelize.literal(`DATE_ADD(start_date, INTERVAL 1 DAY)`),
                             { [Op.lte]: date }
                         ),
                         { endDate: { [Op.gte]: date } }
