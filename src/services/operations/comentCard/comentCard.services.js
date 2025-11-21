@@ -351,15 +351,19 @@ class ComentCardService {
 
     static async getComentCardByDates(comentCardYachtId, toDay) {
         const date = new Date(toDay);
+        date.setUTCHours(0, 0, 0, 0); // para evitar desfases de zona
+
         try {
             const result = await ComentCardQR.findOne({
                 where: {
                     comentCardYachtId,
                     [Op.and]: [
+                        // startDate + 1 día <= today
                         Sequelize.where(
                             Sequelize.literal(`DATE_ADD(start_date, INTERVAL 1 DAY)`),
                             { [Op.lte]: date }
                         ),
+                        // endDate >= today
                         { endDate: { [Op.gte]: date } }
                     ]
                 },
@@ -377,12 +381,14 @@ class ComentCardService {
                     },
                 ]
             });
+
             return result;
         } catch (error) {
-            console.log(error)
+            console.log(error);
             throw error;
         }
     }
+
 
     static async respondComentCard(info) {
         const { responsesToInsert, passenger } = info;
