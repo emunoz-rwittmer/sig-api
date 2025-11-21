@@ -1,4 +1,4 @@
-const { fn, col, Op } = require('sequelize');
+const { fn, col, Op, Sequelize } = require('sequelize');
 const Yacht = require('../../../models/catalogs/yacht.models');
 const ComentCardQR = require('../../../models/operations/comentCard/cardQR.models');
 const ComentCardYacht = require('../../../models/operations/comentCard/cardYacht.models');
