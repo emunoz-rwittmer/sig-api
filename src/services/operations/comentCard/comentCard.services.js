@@ -355,8 +355,13 @@ class ComentCardService {
             const result = await ComentCardQR.findOne({
                 where: {
                     comentCardYachtId,
-                    startDate: { [Op.lte]: date },
-                    endDate: { [Op.gte]: date }
+                    [Op.and]: [
+                        Sequelize.where(
+                            Sequelize.literal(`DATE_ADD(startDate, INTERVAL 1 DAY)`),
+                            { [Op.lte]: date }
+                        ),
+                        { endDate: { [Op.gte]: date } }
+                    ]
                 },
                 attributes: ['accessLink', 'startDate', 'endDate'],
                 include: [
