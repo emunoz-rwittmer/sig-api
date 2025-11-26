@@ -358,12 +358,10 @@ class ComentCardService {
                 where: {
                     comentCardYachtId,
                     [Op.and]: [
-                        // startDate + 1 día <= today
                         Sequelize.where(
                             Sequelize.literal(`DATE_ADD(start_date, INTERVAL 1 DAY)`),
                             { [Op.lte]: date }
                         ),
-                        // endDate >= today
                         { endDate: { [Op.gte]: date } }
                     ]
                 },

@@ -52,6 +52,7 @@ const DoctorFormat = require('./rrhh/doctorFormat.models');
 const Guide = require('./operations/referralGuides/guides.models');
 const itemsGuide = require('./operations/referralGuides/itemsGuides.models');
 const ConsecutivoGuias = require('./catalogs/consecutivoGuias.model');
+const ShipmentDates = require('./operations/surveys/shipmentDates.models');
 
 const initModels = () => {
 
@@ -66,15 +67,19 @@ const initModels = () => {
 
     Users.belongsTo(Roles, { as: "user_rol", foreignKey: "role_id" });
     Roles.hasMany(Users, { as: "rol_user", foreignKey: "role_id" });
+
     Staff.belongsTo(Roles, { as: "rol", foreignKey: "role_id" });
     Roles.hasMany(Staff, { as: "staffs", foreignKey: "role_id" });
+
     Staff.belongsTo(Positions, { as: "staff_position", foreignKey: "position_id" });
     Positions.hasMany(Staff, { as: "position_staff", foreignKey: "position_id" });
+
     Staff.belongsTo(Departaments, { as: "staff_departament", foreignKey: "departament_id" });
     Departaments.hasMany(Staff, { as: "departament_staff", foreignKey: "departament_id" });
 
     StaffCompany.belongsTo(Staff, { as: "staff", foreignKey: "staff_id" });
     StaffCompany.belongsTo(Company, { as: "company", foreignKey: "company_id" });
+    StaffCompany.hasMany(ShipmentDates, { as: "embarques", foreignKey: "staff_company_id" });
     Staff.hasMany(StaffCompany, { as: 'companies', foreignKey: 'staff_id' });
     Company.hasMany(StaffCompany, { as: 'personal', foreignKey: 'company_id' });
 
@@ -223,7 +228,7 @@ const initModels = () => {
 
     Impact
     Levels,
-        Strategy
+    Strategy
 
 }
 
