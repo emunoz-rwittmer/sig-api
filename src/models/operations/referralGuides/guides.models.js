@@ -28,45 +28,45 @@ const Guide = db.define('Guide', {
   },
   sale: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false,
+    defaultValue: true,
   },
   buy: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false,
+    defaultValue: true,
   },
   other: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false,
+    defaultValue: true,
   },
   from: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   to: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   addressee: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
     field: 'destinatario',
   },
   addresseeRuc: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
     field: 'destinatarioRuc'
   },
   carrier: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   carrierRuc: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   carrierLicence: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   file: {
     type: DataTypes.TEXT,
