@@ -441,7 +441,7 @@ class ComentCardService {
                     {
                         model: ComentCardQR,
                         as: "coment_card",
-                        //where: whereDates,
+                        where: whereDates,
                         required: true,
                         attributes: ['id', 'startDate', 'endDate'],
                         include: [
@@ -449,7 +449,7 @@ class ComentCardService {
                                 model: ComentCardYacht,
                                 as: "card_yacht",
                                 required: true,
-                                //where: whereYacht,
+                                where: whereYacht,
                                 include: [
                                     {
                                         model: Yacht,
@@ -476,7 +476,6 @@ class ComentCardService {
             })
             return result;
         } catch (error) {
-            console.log(error)
             throw error;
         }
     }

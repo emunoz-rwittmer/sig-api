@@ -41,10 +41,10 @@ exports.generateRemisionPDF = async (company, data, filePath) => {
     .text('GUÍA DE REMISIÓN', rightX, startY + 20, { align: 'center', width: 160 })
     .fontSize(14)
     .text(`Nº ${data.counter || ''}`, rightX, startY + 38, { align: 'center', width: 160 })
-    .fontSize(9)
-    .text('AUT. SRI. # 1119086046', rightX, startY + 60, { align: 'center', width: 160 })
-    .fontSize(7)
-    .text('OBLIGADO A LLEVAR CONTABILIDAD', rightX, startY + 72, { align: 'center', width: 160 });
+    // .fontSize(9)
+    // .text('AUT. SRI. # 1119086046', rightX, startY + 60, { align: 'center', width: 160 })
+    // .fontSize(7)
+    // .text('OBLIGADO A LLEVAR CONTABILIDAD', rightX, startY + 72, { align: 'center', width: 160 });
 
   // === FECHAS DE TRASLADO ===
   doc.moveDown(2);
