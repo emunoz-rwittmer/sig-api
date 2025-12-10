@@ -3,14 +3,14 @@ const MailsConfirmation = require('./mailsOfConfirmation');
 const MailsOrder = require('./mailsOrder');
 const MailsSolicitudes = require('./mailsSolicitudes');
 require('dotenv').config();
+const sgMail = require('@sendgrid/mail');
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const sendEmail = (user, passwordGenerated, action, userCopy, bodyMail) => {
-    const sgMail = require('@sendgrid/mail')
     const htmlContentNewUser = Mails.htmlNewUser(user, passwordGenerated)
     const htmlContentForgotPassword = Mails.htmlForgotPassword(user, passwordGenerated)
     const htmlContentNewEvaluations = Mails.htmlContentNewEvaluations(user.dataValues)
     const htmlContentRetoalimentationEvaluation = Mails.htmlContentRetoalimentationEvaluation(bodyMail)
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY)
     const msg = {
         to: user.email, // Change to your recipient
         from: 'notify-sig@rwittmer.com', // Change to your verified sender
@@ -33,9 +33,7 @@ const sendEmail = (user, passwordGenerated, action, userCopy, bodyMail) => {
 }
 
 const sendEmailNewOrder = (companyName) => {
-    const sgMail = require('@sendgrid/mail')
     const htmlContentNewOrder = MailsOrder.htmlNewOrder(companyName)
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY)
     const msg = {
         to: 'edwin@rwittmer.com', // Change to your recipient
         from: 'notify-sig@rwittmer.com', // Change to your verified sender
@@ -54,9 +52,7 @@ const sendEmailNewOrder = (companyName) => {
 }
 
 const sendEmailNewRequest = (companyName) => {
-    const sgMail = require('@sendgrid/mail')
     const htmlContentNewRequest = MailsOrder.htmlNewRequest(companyName)
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY)
     const msg = {
         to: 'fabian@rwittmer.com', // Change to your recipient
         from: 'notify-sig@rwittmer.com', // Change to your verified sender
@@ -75,9 +71,7 @@ const sendEmailNewRequest = (companyName) => {
 }
 
 const sendConfirmationEmail = (action, companyName, user) => {
-    const sgMail = require('@sendgrid/mail')
     const htmlContentNewOrder = MailsConfirmation.htmlConfirmationOrder(action, companyName, user.dataValues)
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY)
     const msg = {
         to: user.email, // Change to your recipient
         from: 'notify-sig@rwittmer.com', // Change to your verified sender
@@ -95,9 +89,7 @@ const sendConfirmationEmail = (action, companyName, user) => {
 }
 
 const sendDispatchEmail = (action, content) => {
-    const sgMail = require('@sendgrid/mail')
     const htmlDispatch = MailsConfirmation.htmlDispatch(action, content.dataValues)
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY)
     const msg = {
         to: content.responsible.email, // Change to your recipient
         from: 'notify-sig@rwittmer.com', // Change to your verified sender
@@ -114,33 +106,33 @@ const sendDispatchEmail = (action, content) => {
         })
 }
 
-const sendEmailNuevaSolicitud = (dataMail, adjuntos) => {
+const sendEmailNuevaSolicitud = async (formatId, dataMail, adjuntos) => {
+    try {
+        const htmlFirmaContrato = MailsSolicitudes.htmlNuevaSolicitud(dataMail);
 
-    const sgMail = require('@sendgrid/mail')
-    const htmlFirmaContrato = MailsSolicitudes.htmlNuevaSolicitud(dataMail);
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY)
-    const msg = {
-        to: 'belen@rwittmer.com', // Change to your recipient
-        from: 'notify-sig@rwittmer.com', // Change to your verified sender
-        subject: 'Solicitud recibida',
-        html: htmlFirmaContrato,
-        attachments: adjuntos,
+        const msg = {
+            to: 'belen@rwittmer.com',
+            from: 'notify-sig@rwittmer.com',
+            subject: 'Solicitud recibida',
+            html: htmlFirmaContrato,
+            attachments: adjuntos,
+        };
+
+        if (formatId === 1 || formatId === 2) {
+            msg.cc = 'javier@tiptoptravel.ec';
+        }
+
+        await sgMail.send(msg);
+        console.log('Email sent');
+
+    } catch (error) {
+        console.error('Error enviando correo:', error);
     }
-    sgMail
-        .send(msg)
-        .then(() => {
-            console.log('Email sent')
-        })
-        .catch((error) => {
-            console.log(error)
-        })
-}
+};
 
 const sendEmailConfirmacion = (dataMail) => {
 
-    const sgMail = require('@sendgrid/mail')
     const htmlFirmaContrato = MailsSolicitudes.htmlConfirmacionLectura(dataMail);
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY)
     const msg = {
         to: 'belen@rwittmer.com', // Change to your recipient
         from: 'notify-sig@rwittmer.com', // Change to your verified sender
@@ -158,9 +150,7 @@ const sendEmailConfirmacion = (dataMail) => {
 }
 
 const sendEmailGuiaRemisionCreada = (dataMail, fileName, filePath) => {
-    const sgMail = require('@sendgrid/mail')
     const html = MailsSolicitudes.htmlGuiaRemisionCreada(dataMail);
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY)
     const msg = {
         to: 'edison@tiptoptravel.ec', // Change to your recipient
         from: 'notify-sig@rwittmer.com', // Change to your verified sender

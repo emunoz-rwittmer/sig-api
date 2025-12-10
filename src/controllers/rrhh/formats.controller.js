@@ -216,7 +216,7 @@ const createRequesForStaff = async (req, res) => {
 
         const result = await FormatService.createRequesForStaff(data);
         if (result) {
-            sendEmailNuevaSolicitud(dataMail, attachments);
+            sendEmailNuevaSolicitud(formatId, dataMail, attachments);
             res.status(200).json({ data: 'resource created successfully' });
         }
     } catch (error) {
