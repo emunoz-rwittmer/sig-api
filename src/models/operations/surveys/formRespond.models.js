@@ -1,7 +1,7 @@
 const db = require('../../../utils/database');
 const { DataTypes } = require('sequelize');
 
-const HeaderAnswer = db.define('headerAnswer', {
+const FormRespond = db.define('form_respond', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -22,15 +22,15 @@ const HeaderAnswer = db.define('headerAnswer', {
     defaultValue: 1,
     field: 'state_id'
   },
-  evaluatorId: {
+  evaluator: {
     type: DataTypes.STRING,
     allowNull: true,
-    field: 'evaluator_id'
+    field: 'evaluator'
   },
-  evaluatedId: {
+  evaluated: {
     type: DataTypes.STRING,
     allowNull: true,
-    field: 'evaluated_id'
+    field: 'evaluated'
   },
   expirationDate: {
     type: DataTypes.DATE,
@@ -38,4 +38,4 @@ const HeaderAnswer = db.define('headerAnswer', {
   },
 });
 
-module.exports = HeaderAnswer;
+module.exports = FormRespond;

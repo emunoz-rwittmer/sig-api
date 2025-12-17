@@ -36,16 +36,13 @@ const getComentCard = async (req, res) => {
 
 const createComentCard = async (req, res) => {
     try {
-        data = req.body;
-        console.log(req.body)
+        const data = req.body;
         await ComentCardService.createComentCard(data);
         res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
         res.status(400).json(error.message);
     }
 }
-
-
 
 const updateComentCard = async (req, res) => {
     try {

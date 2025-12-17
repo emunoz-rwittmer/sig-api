@@ -9,11 +9,7 @@ const StaffYacht = require('./catalogs/staffYacht.models')
 const Question = require('./operations/surveys/question.models');
 const HouseRule = require('./catalogs/houseRule.models');
 const Form = require('./operations/surveys/form.models');
-const FormEstructure = require('./operations/surveys/formEstructure.models');
-const EstructureQuestion = require('./operations/surveys/estructureQuestion.models');
-const FormAnswer = require('./operations/surveys/formAnswer.models');
-const HeaderAnswer = require('./operations/surveys/headerAnwer.models');
-const StatusEvaluation = require('./operations/surveys/statusEvaluations.models');
+
 // Invetory Models
 const Order = require('./operations/orders/order.models');
 const itemsOrder = require('./operations/orders/itemsOrder.models');
@@ -53,6 +49,9 @@ const Guide = require('./operations/referralGuides/guides.models');
 const itemsGuide = require('./operations/referralGuides/itemsGuides.models');
 const ConsecutivoGuias = require('./catalogs/consecutivoGuias.model');
 const ShipmentDates = require('./operations/surveys/shipmentDates.models');
+const FormRespond = require('./operations/surveys/formRespond.models');
+const FormAnswers = require('./operations/surveys/formAnswers.models');
+const FormQuestion = require('./operations/surveys/formQuestion.models');
 
 const initModels = () => {
 
@@ -87,9 +86,6 @@ const initModels = () => {
     StaffYacht.belongsTo(Yacht, { as: "yacht_staff", foreignKey: "yacht_id" });
     Staff.hasMany(StaffYacht, { as: 'yachts', foreignKey: 'staff_id' });
 
-    Form.belongsTo(Positions, { as: "position_form", foreignKey: "position_id" });
-    Positions.hasMany(Form, { as: 'positions', foreignKey: 'position_id' });
-
     //rrhh
     Company.hasMany(Regulation, { as: "regulations", foreignKey: "company_id" });
     Regulation.belongsTo(Company, { as: "company", foreignKey: "company_id" });
@@ -100,34 +96,24 @@ const initModels = () => {
     Regulation.hasMany(ReadRegulation, { as: "reads", foreignKey: "regulation_id" });
     ReadRegulation.belongsTo(Regulation, { as: "regulation", foreignKey: "regulation_id" });
 
-    //operations
-    FormEstructure.belongsTo(Form, { as: "form_questions", foreignKey: "form_id" });
-    FormEstructure.belongsTo(EstructureQuestion, { as: "questions_estucture", foreignKey: "estructure_question_id" });
-    Form.hasMany(FormEstructure, { as: 'form_estructure', foreignKey: 'form_id' });
-    //Anwers
-    HeaderAnswer.belongsTo(Form, { as: "header_form", foreignKey: "form_id" });
-    Form.hasMany(HeaderAnswer, { as: 'form_header', foreignKey: 'form_id' });
 
-    HeaderAnswer.hasMany(FormAnswer, { as: 'answer_header', foreignKey: 'header_answer_id' });
-    FormAnswer.belongsTo(HeaderAnswer, { as: 'header_aswer', foreignKey: 'header_answer_id' });
+    //Evaluations
+    Form.belongsTo(Positions, { as: "position_form", foreignKey: "position_id" });
+    Positions.hasMany(Form, { as: 'positions', foreignKey: 'position_id' });
 
-    FormAnswer.belongsTo(EstructureQuestion, { as: 'aswer_question', foreignKey: 'estructure_question_id' });
+    FormRespond.hasMany(FormAnswers, { as: 'respuestas', foreignKey: "respuesta_form_id", onDelete: "CASCADE" });
+    FormAnswers.belongsTo(FormRespond, { as: 'respuesta_formulario', foreignKey: "respuesta_form_id" });
 
-    HeaderAnswer.belongsTo(Staff, { as: 'header_evaluator', foreignKey: 'evaluator_id' });
-    Staff.hasMany(HeaderAnswer, { as: 'evaluator_header', foreignKey: 'evaluator_id' });
+    FormQuestion.hasOne(FormAnswers, { as: 'respuesta', foreignKey: "pregunta_id", onDelete: "CASCADE" });
+    FormAnswers.belongsTo(FormQuestion, { as: 'pregunta', foreignKey: "pregunta_id" });
 
-    HeaderAnswer.belongsTo(Staff, { as: 'header_evaluted', foreignKey: 'evaluated_id' });
-    Staff.hasMany(HeaderAnswer, { as: 'evaluated_header', foreignKey: 'evaluated_id' });
+    Form.hasMany(FormQuestion, { as: 'preguntas', foreignKey: "form_id", onDelete: "CASCADE" });
+    FormQuestion.belongsTo(Form, { as: 'formulario', foreignKey: "form_id" });
 
-    HeaderAnswer.belongsTo(Yacht, { as: 'header_yacht', foreignKey: 'yacht_id' });
-    Yacht.hasMany(HeaderAnswer, { as: 'yacht_header', foreignKey: 'yacht_id' });
-
-    //state
-    HeaderAnswer.belongsTo(StatusEvaluation, { as: 'state', foreignKey: 'state_id' });
-    StatusEvaluation.hasMany(HeaderAnswer, { as: "header_state", foreignKey: "state_id" });
+    FormRespond.belongsTo(Yacht, { as: 'yate', foreignKey: 'yacht_id' });
+    Yacht.hasMany(FormRespond, { as: 'evaluations', foreignKey: 'yacht_id' });
 
     //coment cards
-
     ComentCardRespond.hasMany(ComentCardAnswers, { as: 'respuestas', foreignKey: "respuesta_coment_card_id", onDelete: "CASCADE" });
     ComentCardAnswers.belongsTo(ComentCardRespond, { as: 'respuesta_formulario', foreignKey: "respuesta_coment_card_id" });
 

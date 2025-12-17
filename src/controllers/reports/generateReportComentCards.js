@@ -23,25 +23,97 @@ const generateReportComentCards = async (req, res) => {
             return res.status(400).json("No hay registros.");
         }
 
+        const COLORS = {
+            primary: '1F4E79',   // azul corporativo
+            secondary: 'D9E1F2', // azul claro
+            headerText: 'FFFFFF',
+            border: 'B4C6E7',
+            zebra: 'FFFFFF',
+        };
+
         const titleStyle = wb.createStyle({
-            alignment: { horizontal: "center" },
-            font: { color: "000000", size: 15 },
+            font: {
+                bold: true,
+                size: 18,
+                color: COLORS.primary,
+            },
+            alignment: {
+                horizontal: 'left',
+                vertical: 'center',
+            },
+        });
+
+        const subtitleStyle = wb.createStyle({
+            font: {
+                size: 11,
+                color: '333333',
+            },
+            alignment: {
+                horizontal: 'left',
+            },
         });
 
         const headerStyle = wb.createStyle({
-            font: { bold: true, color: "#ffffff" },
-            alignment: { wrapText: true, horizontal: "center" },
-            fill: { type: "pattern", patternType: "solid", fgColor: "2C70BB" },
+            font: {
+                bold: true,
+                color: COLORS.headerText,
+                size: 11,
+            },
+            alignment: {
+                horizontal: 'center',
+                vertical: 'center',
+                wrapText: true,
+            },
+            fill: {
+                type: 'pattern',
+                patternType: 'solid',
+                fgColor: COLORS.primary,
+            },
+            border: {
+                left: { style: 'thin', color: COLORS.border },
+                right: { style: 'thin', color: COLORS.border },
+                top: { style: 'thin', color: COLORS.border },
+                bottom: { style: 'thin', color: COLORS.border },
+            },
         });
 
         const infoStyle = wb.createStyle({
-            font: { color: "#000000" },
+            font: { size: 10, color: '000000' },
+            alignment: {
+                vertical: 'center',
+                wrapText: true,
+            },
+            border: {
+                left: { style: 'thin', color: COLORS.border },
+                right: { style: 'thin', color: COLORS.border },
+                top: { style: 'thin', color: COLORS.border },
+                bottom: { style: 'thin', color: COLORS.border },
+            },
+        });
+
+        const infoZebraStyle = wb.createStyle({
+            font: { size: 10, color: '000000' },
+            alignment: {
+                vertical: 'center',
+                wrapText: true,
+            },
+            fill: {
+                type: 'pattern',
+                patternType: 'solid',
+                fgColor: COLORS.zebra,
+            },
+            border: {
+                left: { style: 'thin', color: COLORS.border },
+                right: { style: 'thin', color: COLORS.border },
+                top: { style: 'thin', color: COLORS.border },
+                bottom: { style: 'thin', color: COLORS.border },
+            },
         });
 
         const allQuestions = [];
         result.forEach(entry => {
             (entry.respuestas || []).forEach(f => {
-                const question = { id: f.pregunta?.id, title: f.pregunta?.text };
+                const question = { id: f.pregunta?.id, title: f.pregunta?.title };
                 if (question.id && !allQuestions.some(q => q.id === question.id)) {
                     allQuestions.push(question);
                 }
@@ -49,16 +121,16 @@ const generateReportComentCards = async (req, res) => {
         });
 
         const baseHeaders = [
-            "ID	",
-            "Fecha contestación",
+            "Cogigo Crucero",
             "Yate",
             "Pasajero",
             "Cabina",
+            "Fecha contestación",
             "Fecha inicio crucero",
             "Fecha fin crucero",
         ];
 
-        const defaultWidths = [10, 25, 30, 35, 10, 25, 25];
+        const defaultWidths = [10, 25, 30, 10, 25, 25, 25];
         defaultWidths.forEach((w, i) => ws.column(i + 1).setWidth(w));
 
         baseHeaders.slice(7).forEach((_, i) => {
@@ -96,13 +168,23 @@ const generateReportComentCards = async (req, res) => {
             },
         });
 
-        ws.cell(5, 1, 5, 3, true).string('REPORTE GENERAL').style(titleStyle);
-        ws.cell(6, 1, 6, 3, true).string(fechaFormateada(fechaActual)).style(titleStyle);
+        ws.cell(5, 1, 5, baseHeaders.length + allQuestions.length, true)
+            .string('REPORTE GENERAL DE COMMENT CARDS')
+            .style(titleStyle);
+
+        ws.cell(6, 1, 6, baseHeaders.length + allQuestions.length, true)
+            .string(fechaFormateada(fechaActual))
+            .style(subtitleStyle);
 
         if (startDate && endDate) {
-            ws.cell(7, 1, 7, 3, true).string(`RAGO DE FECHAS: ${formatDateToLocal(startDate) + " a " + formatDateToLocal(endDate) || 'Sin rangos definidos'}`)
+            ws.cell(7, 1, 7, baseHeaders.length + allQuestions.length, true)
+                .string(`RANGO DE FECHAS: ${formatDateToLocal(startDate)} a ${formatDateToLocal(endDate)}`)
+                .style(subtitleStyle);
         }
-        ws.cell(8, 1, 9, 3, true).string(`COMMENT CARDS: ${result.length}`)
+
+        ws.cell(8, 1, 8, baseHeaders.length + allQuestions.length, true)
+            .string(`TOTAL COMMENT CARDS: ${result.length}`)
+            .style(subtitleStyle);
 
         baseHeaders.forEach((h, i) => {
             ws.cell(10, i + 1).string(h).style(headerStyle);
@@ -110,22 +192,23 @@ const generateReportComentCards = async (req, res) => {
 
         result.forEach((item, idx) => {
             const row = 11 + idx;
-            const id = item.id || "";
-            const fecha_contestacion = formatDateToLocal(item.createdAt) || "";
+            const style = idx % 2 === 0 ? infoZebraStyle : infoStyle;
+            const id = item.coment_card?.code || "";
             const yate = item.coment_card.card_yacht.yate?.name || "";
             const pasajero = item.fullName || "";
             const cabina = item.cabin || "";
+            const fecha_contestacion = formatDateToLocal(item.createdAt) || "";
             const startDate = formatDateToLocal(item.coment_card?.startDate) || "";
             const endDate = formatDateToLocal(item.coment_card?.endDate) || "";
 
             // Datos base
-            ws.cell(row, 1).number(id).style(infoStyle);
-            ws.cell(row, 2).string(fecha_contestacion).style(infoStyle);
-            ws.cell(row, 3).string(yate).style(infoStyle);
-            ws.cell(row, 4).string(pasajero).style(infoStyle);
-            ws.cell(row, 5).number(cabina).style(infoStyle);
-            ws.cell(row, 6).string(startDate).style(infoStyle);
-            ws.cell(row, 7).string(endDate).style(infoStyle);
+            ws.cell(row, 1).string(id).style(style);
+            ws.cell(row, 2).string(yate).style(style);
+            ws.cell(row, 3).string(pasajero).style(style);
+            ws.cell(row, 4).number(cabina).style(style);
+            ws.cell(row, 5).string(fecha_contestacion).style(style);
+            ws.cell(row, 6).string(startDate).style(style);
+            ws.cell(row, 7).string(endDate).style(style);
 
 
             // === RESPUESTAS DINÁMICAS ===
@@ -136,9 +219,9 @@ const generateReportComentCards = async (req, res) => {
                 const respuesta = respuestaObj ? respuestaObj.answer : "Sin respuesta";
 
                 if (typeof respuesta === "number") {
-                    ws.cell(row, col).number(respuesta).style(infoStyle);
+                    ws.cell(row, col).number(respuesta).style(style);
                 } else {
-                    ws.cell(row, col).string(String(respuesta)).style(infoStyle);
+                    ws.cell(row, col).string(String(respuesta)).style(style);
                 }
             });
 

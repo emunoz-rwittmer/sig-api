@@ -1,29 +1,30 @@
 const db = require('../../../utils/database');
 const { DataTypes } = require('sequelize');
 
-const FormAnswer = db.define('formAnswer', {
+const FormAnswers = db.define('form_answers', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
   },
-  headerAnswerId: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    field: 'header_answer_id'
-  },
-  estructureQuestionId: {
+  respuestaId: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    field: 'estructure_question_id'
+    field: "respuesta_form_id",
+  },
+  questionId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    field: 'pregunta_id'
   },
   answer: {
-    type: DataTypes.STRING(300),
-    allowNull: true,
+    type: DataTypes.STRING,
+    allowNull: false,
+    field: 'respuesta'
   },
   description: {
     type: DataTypes.JSON
   }
 });
 
-module.exports = FormAnswer;
+module.exports = FormAnswers;

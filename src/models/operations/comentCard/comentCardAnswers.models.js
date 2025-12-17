@@ -2,7 +2,6 @@ const db = require('../../../utils/database');
 const { DataTypes } = require('sequelize');
 
 const ComentCardAnswers = db.define('coment_card_answers', {
-
     id: {
         primaryKey: true,
         type: DataTypes.INTEGER,

@@ -77,7 +77,6 @@ class ComentCardService {
 
                 return {
                     ...pregunta,
-                    rateId: result.id,
                     comentCardId: result.id,
                     opciones
                 };
@@ -383,7 +382,6 @@ class ComentCardService {
         }
     }
 
-
     static async respondComentCard(info) {
         const { responsesToInsert, passenger } = info;
         const transaction = await db.transaction();
@@ -439,7 +437,7 @@ class ComentCardService {
                         as: "coment_card",
                         where: whereDates,
                         required: true,
-                        attributes: ['id', 'startDate', 'endDate'],
+                        attributes: ['code', 'name','startDate', 'endDate'],
                         include: [
                             {
                                 model: ComentCardYacht,

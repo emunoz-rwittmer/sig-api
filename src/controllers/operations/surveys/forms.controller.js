@@ -80,34 +80,23 @@ const getFormAllNecesary = async (req, res) => {
 
 const createForm = async (req, res) => {
     try {
-        const positionId = Utils.decode(req.body.data.positionId)
-        const form = req.body;
-        form.data.positionId = positionId
-        const newForm = await FormService.createForm(form.data);
-        if (newForm) {
-            const newEstructure = await FormService.createEstructureQuestion(newForm.id, form.preguntas)
-            res.status(200).json({ data: 'resource created successfully' });
-        }
+        const { preguntas, data } = req.body;
+        data.positionId = Utils.decode(data.positionId)
+        await FormService.createForm({ preguntas, data });
+        res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
         res.status(400).json(error.message);
     }
 }
 
-
-
 const updateForm = async (req, res) => {
     try {
-        const positionId = Utils.decode(req.body.data.positionId)
+
         const formId = Utils.decode(req.params.form_id);
-        const form = req.body;
-        form.data.positionId = positionId
-        const result = await FormService.updateForm(form.data, {
-            where: { id: formId },
-        });
-        if (result) {
-            const updateEstructure = await FormService.updateEstructureQuestion(form.preguntas, formId)
-            res.status(200).json({ data: 'resource updated successfully' });
-        }
+        const { preguntas, data } = req.body;
+        if (data.positionId) data.positionId = Utils.decode(req.body.positionId)
+        await FormService.updateForm({ preguntas, data, formId });
+        res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
         res.status(400).json(error.message);
     }
@@ -116,24 +105,20 @@ const updateForm = async (req, res) => {
 const deleteForm = async (req, res) => {
     try {
         const formId = Utils.decode(req.params.form_id);
-        const result = await FormService.delete({
+        await FormService.delete({
             where: { id: formId }
         });
         res.status(200).json({ data: 'resource deleted successfully' })
     } catch (error) {
-
         res.status(400).json(error.message);
     }
 }
 
 const deleteQuestionForm = async (req, res) => {
     try {
-        const formId = Utils.decode(req.params.form_id);
         const questionId = req.params.question_id;
-        const result = await FormService.deleteQuestionForm(formId, questionId);
-        if (result) {
-            res.status(200).json({ data: 'resource deleted successfully' })
-        }
+        await FormService.deleteQuestionForm(questionId);
+        res.status(200).json({ data: 'resource deleted successfully' })
     } catch (error) {
         res.status(400).json(error.message);
     }

@@ -1,16 +1,15 @@
 const Form = require('../../../models/operations/surveys/form.models');
-const EstructureQuestion = require("../../../models/operations/surveys/estructureQuestion.models");
-const FormEstructure = require("../../../models/operations/surveys/formEstructure.models");
-const HeaderAnswer = require('../../../models/operations/surveys/headerAnwer.models')
+const FormQuestion = require("../../../models/operations/surveys/formQuestion.models");
+const FormRespond = require('../../../models/operations/surveys/formRespond.models')
 const Positions = require('../../../models/catalogs/positions.models');
-
+const db = require('../../../utils/database');
 
 class FormService {
     static async getAll() {
         try {
             const result = await Form.findAll({
-                where:{active: true},
-                attributes: ['id', 'title', 'active', 'createdAt'],
+                where: { active: true },
+                attributes: ['id', 'name', 'active', 'createdAt'],
                 include: [{
                     model: Positions,
                     as: 'position_form',
@@ -27,15 +26,10 @@ class FormService {
         try {
             const result = await Form.findOne({
                 where: { id },
-                attributes: ['id', 'title', 'positionId', 'active', 'createdAt'],
+                attributes: ['id', 'name', 'positionId', 'active', 'createdAt'],
                 include: [{
-                    model: FormEstructure,
-                    as: "form_estructure",
-                    attributes: ['id'],
-                    include: [{
-                        model: EstructureQuestion,
-                        as: "questions_estucture",
-                    }]
+                    model: FormQuestion,
+                    as: "preguntas",
                 }]
             });
             return result;
@@ -44,73 +38,86 @@ class FormService {
         }
     }
 
-    static async createForm(form) {
+    static async createForm(info) {
+         const { preguntas = [], data } = info;
+        const transaction = await db.transaction();
         try {
-            const result = await Form.create(form);
+            const result = await Form.create(data, { transaction });
+
+            if (!result) {
+                throw new Error('No se pudo crear formulario');
+            }
+
+            const questions = preguntas.map(pregunta => {
+                const opciones = Array.isArray(pregunta.options)
+                    ? pregunta.options
+                    : [];
+
+                return {
+                    ...pregunta,
+                    formId: result.id,
+                    opciones
+                };
+            });
+
+            await FormQuestion.bulkCreate(questions, { transaction });
+
+            await transaction.commit();
             return result;
         } catch (error) {
-            throw error;
-
+            await transaction.rollback();
+            throw new Error(error.message);
         }
     }
 
-    static async createEstructureQuestion(formId, estructure) {
-        try {
-            const newEstructure = []
-            estructure.forEach(item => {
-                const result = EstructureQuestion.create({
-                    pregunta: item.pregunta,
-                    tipoRespuesta: item.tipoRespuesta,
-                    opciones: item.opciones.map((opcion) => opcion)
-                })
-                    .then(res => {
-                        const formEstructure = FormEstructure.create({
-                            formId,
-                            estructureQuestionId: res.id
-                        })
-                        return formEstructure
-                    })
-            });
-        } catch (error) {
-            throw error;
+    static async updateForm(info) {
+        const { preguntas = [], data, formId } = info;
+        const transaction = await db.transaction();
 
-        }
-    }
-
-    static async updateEstructureQuestion(estructure, formId) {
         try {
-            estructure.forEach(item => {
-                if (item.questionId) {
-                    const updateEstructure = EstructureQuestion.update(item,
-                        {
-                            where: { id: item.questionId }
-                        })
+            await Form.update(
+                data,
+                {
+                    where: { id: formId },
+                    transaction,
                 }
-                if (!item.questionId) {
-                    const result = EstructureQuestion.create({
-                        pregunta: item.pregunta,
-                        tipoRespuesta: item.tipoRespuesta,
-                        opciones: item.opciones.map((opcion) => opcion)
-                    })
-                        .then(res => {
-                            const formEstructure = FormEstructure.create({
-                                formId,
-                                estructureQuestionId: res.id
-                            })
-                        })
-                }
-                return "Is Ok"
-            });
-        } catch (error) {
-            throw error;
-        }
-    }
+            );
 
-    static async updateForm(form, id) {
-        try {
-            const result = await Form.update(form, id);
-            return result;
+            if (preguntas && Array.isArray(preguntas)) {
+                await Promise.all(
+                    preguntas.map(async (pregunta) => {
+                        const opciones = Array.isArray(pregunta.options)
+                            ? pregunta.options
+                            : [];
+
+                        const payload = {
+                            title: pregunta.title,
+                            type: pregunta.type,
+                            required: pregunta.required,
+                            opciones,
+                            formId: formId,
+                        };
+
+                        if (!pregunta.id) {
+                            console.log('estoy aqwui')
+                            return FormQuestion.create(payload, { transaction });
+                        }
+
+                        return FormQuestion.update(
+                            payload,
+                            {
+                                where: { id: pregunta.id },
+                                transaction,
+                            }
+                        );
+                    })
+                );
+            }
+
+            await transaction.commit();
+            return true;
         } catch (error) {
+            await transaction.rollback();
             throw error;
         }
     }
@@ -124,25 +131,23 @@ class FormService {
         }
     }
 
-    static async deleteQuestionForm(formId, questionId) {
+    static async deleteQuestionForm(questionId) {
+        console.log(questionId)
         try {
-            const formEstructure = await FormEstructure.destroy({
-                where: { formId, estructureQuestionId: questionId }
-            })
-            const questionEstrure = await EstructureQuestion.destroy({
+            const result = await FormQuestion.destroy({
                 where: { id: questionId }
             })
-            return { formEstructure, questionEstrure };
+            return result;
         } catch (error) {
             throw error;
         }
     }
 
-    static async createHeaderAnswer(data) {
+    static async createFormRespond(data) {
         try {
             const results = await Promise.all(data.evaluated.map(async (evaluado) => {
                 const resultTwo = await Promise.all(data.evaluator.map(async (evaluador) => {
-                    const result = await HeaderAnswer.create({
+                    const result = await FormRespond.create({
                         yachtId: data.yachtId ? data.yachtId : null,
                         formId: data.formId,
                         stateId: 1,
@@ -157,7 +162,7 @@ class FormService {
 
             return results
         } catch (error) {
-            
+
             throw error;
         }
     }

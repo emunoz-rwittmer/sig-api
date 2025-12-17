@@ -83,7 +83,7 @@ const respondEvaluation = async (req, res) => {
     try {
         const evaluationId = Utils.decode(req.body.evaluation_id)
         const evaluation = req.body
-        await EvaluationService.createAnswers(evaluationId, evaluation);
+        await EvaluationService.respondEvaluation(evaluationId, evaluation);
         const response = await EvaluationService.updateStatusHeaderAnswers(evaluationId)
         if (response) {
             res.status(200).json({ data: 'resource created successfully' });

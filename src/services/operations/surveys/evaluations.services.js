@@ -1,20 +1,18 @@
 const Form = require('../../../models/operations/surveys/form.models');
-const EstructureQuestion = require("../../../models/operations/surveys/estructureQuestion.models");
-const FormEstructure = require("../../../models/operations/surveys/formEstructure.models");
-const HeaderAnswer = require('../../../models/operations/surveys/headerAnwer.models')
-const FormAnswer = require('../../../models/operations/surveys/formAnswer.models');
+const FormQuestion = require("../../../models/operations/surveys/formQuestion.models");
+const FormRespond = require('../../../models/operations/surveys/formRespond.models')
+const FormAnswers = require('../../../models/operations/surveys/formAnswers.models');
 const Yacht = require('../../../models/catalogs/yacht.models');
-const { Op, where } = require('sequelize');
 const Staff = require('../../../models/catalogs/staff.models');
 const Departaments = require('../../../models/catalogs/departament.models');
 const Positions = require('../../../models/catalogs/positions.models');
 const StaffYacht = require('../../../models/catalogs/staffYacht.models');
-const StatusEvaluation = require('../../../models/operations/surveys/statusEvaluations.models');
+const { Op, where } = require('sequelize');
 
 class EvaluationService {
     static async getEvaluationsByUser(evaluatorId) {
         try {
-            const result = await HeaderAnswer.findAll({
+            const result = await FormRespond.findAll({
                 where: { evaluatorId, stateId: 1 },
                 attributes: ['id', 'formId', 'expirationDate', 'createdAt'],
                 include: [{
@@ -50,15 +48,10 @@ class EvaluationService {
         try {
             const result = await Form.findOne({
                 where: { id },
-                attributes: ['id', 'title', 'active', 'people', 'createdAt'],
+                attributes: ['id', 'name', 'active', 'createdAt'],
                 include: [{
-                    model: FormEstructure,
-                    as: "form_estructure",
-                    attributes: ['id'],
-                    include: [{
-                        model: EstructureQuestion,
-                        as: "questions_estucture",
-                    }]
+                    model: FormQuestion,
+                    as: "preguntas",
                 }]
             });
             return result;
@@ -85,7 +78,7 @@ class EvaluationService {
                 evaluatedInclude.where = { positionId: positionId };
             }
 
-            const result = await HeaderAnswer.findAll({
+            const result = await FormRespond.findAll({
                 where: {
                     createdAt: {
                         [Op.between]: [startDate, endDate]
@@ -108,10 +101,6 @@ class EvaluationService {
                     model: Staff,
                     as: "header_evaluted",
                     attributes: ['firstName', 'lastName'],
-                }, {
-                    model: StatusEvaluation,
-                    as: "state",
-                    attributes: ['id', 'state'],
                 }, evaluatedInclude
                 ]
             });
@@ -122,11 +111,11 @@ class EvaluationService {
         }
     }
 
-    static async createAnswers(evaluationId, evaluation) {
+    static async respondEvaluation(evaluationId, evaluation) {
         try {
             const falta = evaluation.falta
             Object.entries(evaluation.respuestas).forEach(([numeroPregunta, answer]) => {
-                FormAnswer.create({
+                FormAnswers.create({
                     headerAnswerId: evaluationId,
                     estructureQuestionId: parseInt(numeroPregunta),
                     answer,
@@ -143,9 +132,9 @@ class EvaluationService {
         }
     }
 
-    static async updateStatusHeaderAnswers(id) {
+    static async updateStatusFormResponds(id) {
         try {
-            const result = await HeaderAnswer.update(
+            const result = await FormRespond.update(
                 { stateId: 2 },
                 { where: { id } });
             return result
@@ -156,7 +145,7 @@ class EvaluationService {
 
     static async updateEvaluation(id) {
         try {
-            const result = await HeaderAnswer.update(
+            const result = await FormRespond.update(
                 { stateId: 3 },
                 { where: { id, stateId: 1 } });
             return result
@@ -193,7 +182,7 @@ class EvaluationService {
 
     static async getEvaluationsByYacht(yachtId, startDate, endDate) {
         try {
-            
+
             const where = {};
 
             if (yachtId && yachtId !== "undefined" && yachtId !== "null") {
@@ -206,7 +195,7 @@ class EvaluationService {
                 };
             }
 
-            const result = await HeaderAnswer.findAll({
+            const result = await FormRespond.findAll({
                 where: where,
                 include: [
                     {
@@ -247,11 +236,11 @@ class EvaluationService {
                         ]
                     },
                     {
-                        model: FormAnswer,
+                        model: FormAnswers,
                         as: 'answer_header',
                         attributes: ['id', 'answer'],
                         include: [{
-                            model: EstructureQuestion,
+                            model: FormQuestion,
                             as: 'aswer_question',
                             attributes: ['id', 'pregunta'],
                         }]
@@ -272,7 +261,7 @@ class EvaluationService {
 
     static async getEvaluationsByDepartament(departamentId, startDate, endDate) {
         try {
-            const result = await HeaderAnswer.findAll({
+            const result = await FormRespond.findAll({
                 where: {
                     createdAt: {
                         [Op.between]: [new Date(startDate), new Date(endDate)]
@@ -287,7 +276,7 @@ class EvaluationService {
                         where: { departamentId }
                     },
                     {
-                        model: FormAnswer,
+                        model: FormAnswers,
                         as: 'answer_header'
                     }
                 ],
@@ -337,7 +326,7 @@ class EvaluationService {
                 whereClause.yachtId = yachtId;
             }
 
-            const result = await HeaderAnswer.findAll({
+            const result = await FormRespond.findAll({
                 where: whereClause,
                 attributes: ['id', 'stateId', 'updatedAt', 'createdAt'],
                 include: [{
@@ -364,10 +353,10 @@ class EvaluationService {
                     as: "header_yacht",
                     attributes: ['name'],
                 }, {
-                    model: FormAnswer,
+                    model: FormAnswers,
                     as: 'answer_header',
                     include: [{
-                        model: EstructureQuestion,
+                        model: FormQuestion,
                         as: 'aswer_question',
                         attributes: ['pregunta'],
                     }]
@@ -383,7 +372,7 @@ class EvaluationService {
 
     static async delete(id) {
         try {
-            const result = await HeaderAnswer.destroy(id);
+            const result = await FormRespond.destroy(id);
             return result;
         } catch (error) {
             throw error;

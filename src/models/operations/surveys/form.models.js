@@ -7,7 +7,7 @@ const Form = db.define('form', {
     primaryKey: true,
     autoIncrement: true,
   },
-  title: {
+  name: {
     type: DataTypes.STRING,
     allowNull: false
   },
