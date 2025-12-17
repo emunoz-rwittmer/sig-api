@@ -36,8 +36,9 @@ const getComentCard = async (req, res) => {
 
 const createComentCard = async (req, res) => {
     try {
-        const { preguntas, data } = req.body;
-        await ComentCardService.createComentCard({ preguntas, data });
+        data = req.body;
+        console.log(req.body)
+        await ComentCardService.createComentCard(data);
         res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
         res.status(400).json(error.message);
@@ -49,11 +50,12 @@ const createComentCard = async (req, res) => {
 const updateComentCard = async (req, res) => {
     try {
         const formId = Utils.decode(req.params.card_id);
-        const { preguntas, data } = req.body;
-        await ComentCardService.updateComentCard({ preguntas, data, formId });
+        const { preguntas, name } = req.body;
+        await ComentCardService.updateComentCard({ preguntas, name, formId });
 
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
+        console.log(error)
         res.status(400).json(error.message);
     }
 }

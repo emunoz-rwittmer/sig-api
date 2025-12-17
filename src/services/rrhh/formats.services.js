@@ -7,7 +7,7 @@ class FormatService {
     static async getAll() {
         try {
             const result = await Format.findAll({
-                attributes: ['id', 'name', 'content'],
+                attributes: ['id', 'name', 'content', 'createdAt'],
             });
 
             return result;
@@ -20,7 +20,7 @@ class FormatService {
         try {
             const result = await Format.findOne({
                 where: { id },
-                attributes: ['id', 'name', 'content']
+                attributes: ['id', 'name', 'content', 'createdAt']
             });
             return result;
         } catch (error) {
@@ -61,7 +61,7 @@ class FormatService {
     static async getAllDoctorFormats() {
         try {
             const result = await DoctorFormat.findAll({
-                attributes: ['id', 'name', 'file'],
+                attributes: ['id', 'name', 'file','createdAt'],
             });
 
             return result;
@@ -74,7 +74,7 @@ class FormatService {
         try {
             const result = await DoctorFormat.findOne({
                 where: { id },
-                attributes: ['id', 'name', 'file']
+                attributes: ['id', 'name', 'file','createdAt']
             });
             return result;
         } catch (error) {

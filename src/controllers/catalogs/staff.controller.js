@@ -115,7 +115,7 @@ const getStaff = async (req, res) => {
         const result = await StaffService.getStaffById(staffId);
         if (result instanceof Object) {
             result.id = Utils.encode(result.id);
-            if(result.roleId)result.roleId = Utils.encode(result.roleId);
+            if (result.roleId) result.roleId = Utils.encode(result.roleId);
             result.departamentId = Utils.encode(result.departamentId);
             result.positionId = Utils.encode(result.positionId);
         }
@@ -129,10 +129,11 @@ const createStaff = async (req, res) => {
     try {
         const staff = req.body;
         const passwordGenerate = Utils.getPasswordRandom();
-        if (staff.roleId) staff.roleId = Utils.decode(req.body.roleId);
+        staff.roleId = staff.roleId ? Utils.decode(staff.roleId) : null;
         staff.departamentId = Utils.decode(req.body.departamentId);
         staff.positionId = Utils.decode(req.body.positionId);
         staff.password = passwordGenerate
+
         const result = await StaffService.createStaff(staff);
         if (result) {
             res.status(200).json({ data: 'resource created successfully' });

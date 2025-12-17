@@ -13,7 +13,11 @@ class RegulationService {
         try {
             const result = await Regulation.findAll({
                 where: { companyId },
-                attributes: ['id', 'name', 'file'],
+                attributes: ['id', 'name', 'file', 'createdAt'],
+                include:[{
+                    model: ReadRegulation,
+                    as:'reads'
+                }]
             });
 
             const count = await StaffCompany.count({
@@ -129,7 +133,7 @@ class RegulationService {
         try {
             const result = await Regulation.findOne({
                 where: { id },
-                attributes: ['id', 'name', 'file']
+                attributes: ['id', 'name', 'file', 'createdAt']
             });
             return result;
         } catch (error) {

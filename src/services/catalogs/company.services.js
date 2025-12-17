@@ -1,10 +1,15 @@
 const Company = require('../../models/catalogs/company.models');
+const StaffCompany = require('../../models/catalogs/staffCompany.models');
 
 class CompanyService {
     static async getAll() {
         try {
             const result = await Company.findAll({
-                attributes: ['id', 'name', 'ruc', 'adress', 'logo', 'active']
+                attributes: ['id', 'name', 'ruc', 'adress', 'logo', 'active'],
+                include: [{
+                    model: StaffCompany,
+                    as: 'personal'
+                }]
             });
             return result;
         } catch (error) {

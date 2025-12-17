@@ -14,7 +14,7 @@ const ComentCardQuestions = db.define('coment_card_questions', {
         allowNull: false,
         field: 'coment_card_id'
     },
-    text: {
+    title: {
         type: DataTypes.TEXT,
         allowNull: false,
     },
@@ -22,12 +22,21 @@ const ComentCardQuestions = db.define('coment_card_questions', {
         type: DataTypes.STRING,
         allowNull: false,
     },
-    puntuacion: {
+    required: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+    },
+    scaleMin: {
         type: DataTypes.INTEGER,
         allowNull: true,
     },
-    opciones: {
-        type: DataTypes.JSON // Almacena opciones como un JSON
+    scaleMax: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+    },
+    options: {
+        type: DataTypes.JSON, // Almacena opciones como un JSON
+        field: 'opciones'
     }
 
 });

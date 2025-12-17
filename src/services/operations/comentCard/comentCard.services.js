@@ -42,7 +42,6 @@ class ComentCardService {
                     {
                         model: ComentCardQuestions,
                         as: 'preguntas',
-                        attributes: ['id', 'text', 'puntuacion', 'type', 'opciones']
                     },
                     {
                         model: ComentCardYacht,
@@ -62,8 +61,7 @@ class ComentCardService {
         }
     }
 
-    static async createComentCard(info) {
-        const { preguntas, data } = info;
+    static async createComentCard(data) {
         const transaction = await db.transaction();
         try {
             const result = await ComentCard.create(data, { transaction });
@@ -72,80 +70,77 @@ class ComentCardService {
                 throw new Error('No se pudo crear coment card');
             }
 
-            await Promise.all(preguntas.map((pregunta) =>
-                ComentCardQuestions.create({
+            const questions = data.preguntas.map(pregunta => {
+                const opciones = Array.isArray(pregunta.options)
+                    ? pregunta.options
+                    : [];
+
+                return {
+                    ...pregunta,
+                    rateId: result.id,
                     comentCardId: result.id,
-                    text: pregunta.text,
-                    puntuacion: pregunta.puntuacion,
-                    type: pregunta.type,
-                    opciones: pregunta.opciones.map((opcion) => opcion)
-                }, { transaction })
-            ));
+                    opciones
+                };
+            });
+
+            await ComentCardQuestions.bulkCreate(questions, { transaction });
 
             await transaction.commit();
             return result;
         } catch (error) {
-            console.log(error)
             await transaction.rollback();
             throw new Error(error.message);
         }
     }
 
     static async updateComentCard(info) {
-        const { preguntas, data, formId } = info;
+        const { preguntas = [], name, formId } = info;
         const transaction = await db.transaction();
 
         try {
-            const result = await ComentCard.update(
-                data,
+            await ComentCard.update(
+                { name },
                 {
                     where: { id: formId },
                     transaction,
                 }
             );
 
-            if (result[0] === 0) {
-                throw new Error('No se pudo actualizar coment card');
-            }
-
-            // 👇 IMPORTANTE: map con async
             await Promise.all(
                 preguntas.map(async (pregunta) => {
-                    const isNew = !pregunta.id || pregunta.id === '';
+                    const opciones = Array.isArray(pregunta.options)
+                        ? pregunta.options
+                        : [];
 
-                    if (isNew) {
-                        await ComentCardQuestions.create({
-                            comentCardId: formId,
-                            text: pregunta.text,
-                            puntuacion: pregunta.puntuacion,
-                            type: pregunta.type,
-                            opciones: pregunta.opciones.map((opcion) => opcion)
-                        }, { transaction });
-                    } else {
-                        await ComentCardQuestions.update(
-                            {
-                                text: pregunta.text,
-                                puntuacion: pregunta.puntuacion,
-                                type: pregunta.type,
-                                opciones: pregunta.opciones.map((opcion) => opcion)
-                            },
-                            {
-                                where: { id: pregunta.id },
-                                transaction,
-                            }
-                        );
+                    const payload = {
+                        title: pregunta.title,
+                        type: pregunta.type,
+                        required: pregunta.required,
+                        opciones,
+                        comentCardId: formId,
+                    };
+
+                    if (!pregunta.id) {
+                        return ComentCardQuestions.create(payload, { transaction });
                     }
+
+                    return ComentCardQuestions.update(
+                        payload,
+                        {
+                            where: { id: pregunta.id },
+                            transaction,
+                        }
+                    );
                 })
             );
-
             await transaction.commit();
-            return result;
+            return true;
         } catch (error) {
-            console.log(error);
             await transaction.rollback();
             throw error;
         }
     }
+
 
     static async delete(id) {
         try {
@@ -189,6 +184,7 @@ class ComentCardService {
                 attributes: [
                     'id',
                     'access_link',
+                    'code',
                     'name',
                     'start_date',
                     'end_date',
@@ -203,7 +199,7 @@ class ComentCardService {
                     },
                 ],
                 group: ['id'],
-                order: [['start_date', 'DESC']],
+                order: [['start_date', 'ASC']],
             });
 
             return result;
@@ -231,7 +227,7 @@ class ComentCardService {
                         include: [
                             {
                                 model: ComentCardQuestions,
-                                attributes: ['id', 'text'],
+                                attributes: ['id', 'title'],
                                 as: 'pregunta',
                             },
                         ],
@@ -334,7 +330,7 @@ class ComentCardService {
                             include: [{
                                 model: ComentCardQuestions,
                                 as: 'preguntas',
-                                attributes: ['id', 'text', 'puntuacion', 'type', 'opciones']
+                                attributes: ['id', 'title', 'type', 'required', 'scaleMin', 'scaleMax', 'options']
                             }]
                         }]
                     },
@@ -469,7 +465,7 @@ class ComentCardService {
                                 model: ComentCardQuestions,
                                 as: "pregunta",
                                 required: true,
-                                attributes: ['id', 'text'],
+                                attributes: ['id', 'title'],
                             },]
                     },
                 ],
