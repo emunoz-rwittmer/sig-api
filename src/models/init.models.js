@@ -113,6 +113,12 @@ const initModels = () => {
     FormRespond.belongsTo(Yacht, { as: 'yate', foreignKey: 'yacht_id' });
     Yacht.hasMany(FormRespond, { as: 'evaluations', foreignKey: 'yacht_id' });
 
+    FormRespond.belongsTo(Staff, { as: "evaluador", foreignKey: "evaluator_id" });
+    Staff.hasMany(FormRespond, { as: "evaluaciones_evaluador", foreignKey: "evaluator_id" });
+
+    FormRespond.belongsTo(Staff, { as: "evaluado", foreignKey: "evaluated_id" });
+    Staff.hasMany(FormRespond, { as: "evaluaciones_evaluado", foreignKey: "evaluated_id" });
+
     //coment cards
     ComentCardRespond.hasMany(ComentCardAnswers, { as: 'respuestas', foreignKey: "respuesta_coment_card_id", onDelete: "CASCADE" });
     ComentCardAnswers.belongsTo(ComentCardRespond, { as: 'respuesta_formulario', foreignKey: "respuesta_coment_card_id" });
@@ -214,7 +220,7 @@ const initModels = () => {
 
     Impact
     Levels,
-    Strategy
+        Strategy
 
 }
 

@@ -39,7 +39,7 @@ class FormService {
     }
 
     static async createForm(info) {
-         const { preguntas = [], data } = info;
+        const { preguntas = [], data } = info;
         const transaction = await db.transaction();
         try {
             const result = await Form.create(data, { transaction });
@@ -132,7 +132,6 @@ class FormService {
     }
 
     static async deleteQuestionForm(questionId) {
-        console.log(questionId)
         try {
             const result = await FormQuestion.destroy({
                 where: { id: questionId }
@@ -144,29 +143,35 @@ class FormService {
     }
 
     static async createFormRespond(data) {
-        try {
-            const results = await Promise.all(data.evaluated.map(async (evaluado) => {
-                const resultTwo = await Promise.all(data.evaluator.map(async (evaluador) => {
-                    const result = await FormRespond.create({
-                        yachtId: data.yachtId ? data.yachtId : null,
-                        formId: data.formId,
-                        stateId: 1,
-                        evaluatorId: evaluador,
-                        evaluatedId: evaluado,
-                        expirationDate: data.expirationDate
-                    });
-                    return result;
-                }))
-                return resultTwo;
-            }));
+        const {
+            yachtId = null,
+            formId,
+            evaluator = [],
+            evaluated = [],
+            expirationDate
+        } = data;
 
-            return results
-        } catch (error) {
-
-            throw error;
+        if (!formId || !evaluator.length || !evaluated.length) {
+            throw new Error('Datos incompletos para enviar evaluacion ');
         }
-    }
 
+        const payload = [];
+
+        for (const evaluatedId of evaluated) {
+            for (const evaluatorId of evaluator) {
+                payload.push({
+                    yachtId,
+                    formId,
+                    state: 'Pendiente',
+                    evaluatorId,
+                    evaluatedId,
+                    expirationDate
+                });
+            }
+        }
+
+        return await FormRespond.bulkCreate(payload);
+    }
 }
 
 module.exports = FormService;

@@ -139,9 +139,14 @@ class Staffervice {
 
     static async getEvaluatorsByFilters(search, yachtId, departamentId, positionId) {
         try {
+
+            console.log(search, yachtId, departamentId, positionId)
+
+
             const where = { active: true };
 
             if (departamentId) {
+                console.log('estoy qui')
                 where.departamentId = departamentId;
             }
 
@@ -243,7 +248,7 @@ class Staffervice {
                 model: StaffCompany,
                 as: 'companies',
                 attributes: ['id'],
-                required: !!yachtId, // si hay filtro de yate, que sea INNER JOIN
+                required: !!yachtId,
                 include: [{
                     model: Company,
                     as: 'company',

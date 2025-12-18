@@ -132,11 +132,9 @@ const sendEvaluation = async (req, res) => {
         data.evaluator = data.evaluator.map(id => Utils.decode(id))
         data.evaluated = data.evaluated.map(id => Utils.decode(id))
         data.expirationDate = expirationDate;
-        const result = await FormService.createHeaderAnswer(data);
-        if (result instanceof Array) {
-            res.status(200).json({ data: 'evaluation send successfully' })
-        }
-
+        console.log(data)
+        await FormService.createFormRespond(data);
+        res.status(200).json({ data: 'evaluation send successfully' })
     } catch (error) {
         res.status(400).json(error.message);
     }

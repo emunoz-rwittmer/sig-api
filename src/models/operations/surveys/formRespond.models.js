@@ -17,20 +17,19 @@ const FormRespond = db.define('form_respond', {
     allowNull: false,
     field: 'form_id'
   },
-  stateId: {
-    type: DataTypes.INTEGER,
-    defaultValue: 1,
-    field: 'state_id'
-  },
-  evaluator: {
+  state: {
     type: DataTypes.STRING,
     allowNull: true,
-    field: 'evaluator'
   },
-  evaluated: {
+  evaluatorId: {
     type: DataTypes.STRING,
     allowNull: true,
-    field: 'evaluated'
+    field: 'evaluator_id'
+  },
+  evaluatedId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'evaluated_id'
   },
   expirationDate: {
     type: DataTypes.DATE,

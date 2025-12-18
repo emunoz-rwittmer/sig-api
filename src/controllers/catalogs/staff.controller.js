@@ -64,11 +64,9 @@ const getEvaluatorsByFilters = async (req, res) => {
         const departamentId = req.query.departamentId
         const positionId = req.query.positionId
         const result = await StaffService.getEvaluatorsByFilters(search, yachtId, departamentId, positionId);
-        if (result instanceof Array) {
-            result.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
-            });
-        }
+        result.map((x) => {
+            x.dataValues.id = Utils.encode(x.dataValues.id);
+        });
         res.status(200).json(result);
     } catch (error) {
 
