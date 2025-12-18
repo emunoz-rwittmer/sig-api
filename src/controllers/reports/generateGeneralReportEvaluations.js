@@ -52,8 +52,8 @@ const generateGeneralReportEvaluations = async (req, res) => {
         // // === MAPEO DE FORMULARIOS Y PREGUNTAS ===
         const allQuestions = [];
         result.forEach(entry => {
-            (entry.answer_header || []).forEach(f => {
-                const question = { id: f.aswer_question?.id, title: f.aswer_question?.pregunta };
+            (entry.respuestas || []).forEach(f => {
+                const question = { id: f.pregunta?.id, title: f.pregunta?.title };
                 if (question.id && !allQuestions.some(q => q.id === question.id)) {
                     allQuestions.push(question);
                 }
@@ -136,10 +136,10 @@ const generateGeneralReportEvaluations = async (req, res) => {
         result.forEach((item, idx) => {
             const row = 11 + idx; // Fila donde empieza la data
             const formulario = item.header_form?.title || "Sin Datos";
-            const evaluador = `${item.header_evaluator.dataValues?.first_name || ""} ${item.header_evaluator.dataValues?.last_name || ""}`;
-            const evaluado = `${item.header_evaluted.dataValues?.first_name || ""} ${item.header_evaluted.dataValues?.last_name || ""}`;
-            const cargo = item.header_evaluted?.staff_position.name || "Sin Datos";
-            const yate = item.header_yacht?.name || "Sin Datos";
+            const evaluador = `${item.evaluador.dataValues?.first_name || ""} ${item.evaluador.dataValues?.last_name || ""}`;
+            const evaluado = `${item.evaluado.dataValues?.first_name || ""} ${item.evaluado.dataValues?.last_name || ""}`;
+            const cargo = item.evaluado?.staff_position.name || "Sin Datos";
+            const yate = item.yate?.name || "Sin Datos";
             const fecha = formatDateToLocal(item.updatedAt) || "Sin Datos";
             const estado = item.state.state || "Sin Datos";
 
