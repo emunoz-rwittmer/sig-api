@@ -63,17 +63,6 @@ class EvaluationService {
     static async getEvaluationsToDay(startDate, endDate, positionId) {
         try {
 
-            const evaluatedInclude = {
-                model: Staff,
-                as: "header_evaluted",
-                attributes: ['firstName', 'lastName'],
-                include: [{
-                    model: Positions,
-                    as: 'staff_position',
-                    attributes: ['name'],
-                }]
-            }
-
             if (positionId) {
                 evaluatedInclude.where = { positionId: positionId };
             }
@@ -84,24 +73,30 @@ class EvaluationService {
                         [Op.between]: [startDate, endDate]
                     }
                 },
-                attributes: ['id', 'formId', 'expirationDate', 'createdAt'],
+                attributes: ['id', 'formId', 'state','expirationDate', 'createdAt'],
                 include: [{
                     model: Form,
-                    as: "header_form",
-                    attributes: ['title'],
+                    as: "formulario",
+                    attributes: ['name'],
                 }, {
                     model: Yacht,
-                    as: "header_yacht",
+                    as: "yate",
                     attributes: ['name'],
                 }, {
                     model: Staff,
-                    as: "header_evaluator",
+                    as: "evaluador",
                     attributes: ['firstName', 'lastName'],
                 }, {
                     model: Staff,
-                    as: "header_evaluted",
+                    as: "evaluado",
                     attributes: ['firstName', 'lastName'],
-                }, evaluatedInclude
+                    include: [{
+                        model: Positions,
+                        as: 'staff_position',
+                        attributes: ['name'],
+                    }]
+                },
+
                 ]
             });
             return result;
@@ -200,20 +195,20 @@ class EvaluationService {
                 include: [
                     {
                         model: Yacht,
-                        as: "header_yacht",
+                        as: "yate",
                         //required: true,
                         attributes: ['id', 'name'],
                     },
                     {
                         model: Form,
-                        as: "header_form",
-                        attributes: ['id', 'title'],
+                        as: "formulario",
+                        attributes: ['id', 'name'],
                     },
                     {
                         model: Staff,
-                        as: "header_evaluted", // 👈 evaluado
+                        as: "evaluado", // 👈 evaluado
                         required: true,
-                        attributes: ['id', 'first_name', 'last_name'],
+                        attributes: ['id', 'firstName', 'lastName'],
                         include: [
                             {
                                 model: Positions,
@@ -224,9 +219,9 @@ class EvaluationService {
                     },
                     {
                         model: Staff,
-                        as: "header_evaluator", // 👈 evaluador
+                        as: "evaluador", // 👈 evaluador
                         required: true,
-                        attributes: ['id', 'first_name', 'last_name'],
+                        attributes: ['id', 'firstName', 'lastName'],
                         include: [
                             {
                                 model: Positions,
@@ -237,18 +232,13 @@ class EvaluationService {
                     },
                     {
                         model: FormAnswers,
-                        as: 'answer_header',
+                        as: 'respuestas',
                         attributes: ['id', 'answer'],
                         include: [{
                             model: FormQuestion,
-                            as: 'aswer_question',
-                            attributes: ['id', 'pregunta'],
+                            as: 'pregunta',
+                            attributes: ['id', 'title'],
                         }]
-                    },
-                    {
-                        model: StatusEvaluation,
-                        as: "state",
-                        attributes: ['id', 'state'],
                     },
                 ],
             })

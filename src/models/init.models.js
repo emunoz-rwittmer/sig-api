@@ -101,6 +101,9 @@ const initModels = () => {
     Form.belongsTo(Positions, { as: "position_form", foreignKey: "position_id" });
     Positions.hasMany(Form, { as: 'positions', foreignKey: 'position_id' });
 
+    Form.hasMany(FormRespond, { as: 'respuestas', foreignKey: 'form_id', onDelete: "CASCADE" });
+    FormRespond.belongsTo(Form, { as: 'formulario', foreignKey: 'form_id' });
+
     FormRespond.hasMany(FormAnswers, { as: 'respuestas', foreignKey: "respuesta_form_id", onDelete: "CASCADE" });
     FormAnswers.belongsTo(FormRespond, { as: 'respuesta_formulario', foreignKey: "respuesta_form_id" });
 
