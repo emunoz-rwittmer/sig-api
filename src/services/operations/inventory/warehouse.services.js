@@ -3,10 +3,8 @@ const Warehouse = require('../../../models/catalogs/wareHouse.models');
 const Stock = require('../../../models/operations/inventory/stock.models');
 const Transaction = require('../../../models/operations/inventory/transaction.models');
 const Product = require('../../../models/operations/orders/product.models');
-const productCalculations = require('../../../models/operations/orders/productCalculations.models');
 const itemsRequest = require('../../../models/operations/yachtRequest/itemsRequest.models');
 const LaundryYacht = require('../../../models/operations/yachtRequest/laundryYacht');
-const PlacesYacht = require('../../../models/operations/yachtRequest/placesYacht');
 const Request = require('../../../models/operations/yachtRequest/request.models');
 const Utils = require('../../../utils/Utils');
 const { Sequelize, Op, where } = require("sequelize");
@@ -100,11 +98,11 @@ class WarehouseService {
                     model: Product,
                     as: 'product',
                     attributes: ['id', 'name', 'sku'],
-                    include: [{
-                        model: PlacesYacht,
-                        as: 'configurations',
-                        attributes: ['name'],
-                    }],
+                    // include: [{
+                    //     model: PlacesYacht,
+                    //     as: 'configurations',
+                    //     attributes: ['name'],
+                    // }],
                 },
                 {
                     model: Company,
@@ -290,26 +288,26 @@ class WarehouseService {
             const result = await itemsRequest.findAll({
                 where: { requestId },
                 attributes: ['id', 'stock', 'order', 'quantity'],
-                include: [{
-                    model: PlacesYacht,
-                    as: 'placeYacht',
-                    attributes: ['name'],
-                    include: [{
-                        model: Product,
-                        as: 'product',
-                        attributes: ['id', 'name'],
-                    }, {
-                        model: productCalculations,
-                        as: 'configuration',
-                        attributes: [
-                            'sixteenPax',
-                            'eighteenPax',
-                            'twentyPax',
-                            'twentyTwoPax',
-                            'twentyFourPax',
-                        ]
-                    }]
-                }],
+                // include: [{
+                //     model: PlacesYacht,
+                //     as: 'placeYacht',
+                //     attributes: ['name'],
+                //     include: [{
+                //         model: Product,
+                //         as: 'product',
+                //         attributes: ['id', 'name'],
+                //     }, {
+                //         model: productCalculations,
+                //         as: 'configuration',
+                //         attributes: [
+                //             'sixteenPax',
+                //             'eighteenPax',
+                //             'twentyPax',
+                //             'twentyTwoPax',
+                //             'twentyFourPax',
+                //         ]
+                //     }]
+                // }],
             });
             return result;
         } catch (error) {

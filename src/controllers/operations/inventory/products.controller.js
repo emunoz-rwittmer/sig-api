@@ -11,7 +11,7 @@ const findProduct = async (req, res) => {
             res.status(400).json(`Producto no encontrado para sku: ${sku}`)
         }
     } catch (error) {
-        
+
         res.status(400).json(error.message)
     }
 }
@@ -69,7 +69,7 @@ const createProduct = async (req, res) => {
             res.status(200).json({ data: 'resource created successfully' });
         }
     } catch (error) {
-        
+
         res.status(400).json(error.message);
     }
 }
@@ -94,7 +94,7 @@ const deleteProduct = async (req, res) => {
         const result = await ProductService.delete(productId);
         res.status(200).json({ data: result })
     } catch (error) {
-        
+
         res.status(400).json(error.message);
     }
 }
@@ -102,52 +102,25 @@ const deleteProduct = async (req, res) => {
 
 const createConfiguration = async (req, res) => {
     try {
-        const { name, group, productId, sixteenPax, eighteenPax, twentyPax, twentyTwoPax, twentyFourPax } = req.body;
-        const placeYacht = {
-            name,
-            group,
-            productId: Utils.decode(productId)
-        }
-        const configuration = {
-            sixteenPax: sixteenPax === '' ? 0 : parseInt(sixteenPax),
-            eighteenPax: eighteenPax === '' ? 0 : parseInt(eighteenPax),
-            twentyPax: twentyPax === '' ? 0 : parseInt(twentyPax),
-            twentyTwoPax: twentyTwoPax === '' ? 0 : parseInt(twentyTwoPax),
-            twentyFourPax: twentyFourPax === '' ? 0 : parseInt(twentyFourPax)
-        }
-        const result = await ProductService.createConfiguration({ placeYacht, configuration });
-        if (result) {
-            res.status(200).json({ data: result.message });
-        }
+        const data = req.body;
+        data.productId = Utils.decode(req.body.productId)
+        await ProductService.createConfiguration(data);
+        res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
-        
+        console.log(error)
         res.status(400).json(error.message);
     }
 }
 
 const updateConfiguration = async (req, res) => {
     try {
-        const placeYachtId = req.params.configuration_id;
-        const { name, group, configurationId, sixteenPax, eighteenPax, twentyPax, twentyTwoPax, twentyFourPax } = req.body;
-        const placeYacht = {
-            id: parseInt(placeYachtId),
-            name,
-            group
-        }
-        const configuration = {
-            id: configurationId,
-            sixteenPax: sixteenPax === '' ? 0 : parseInt(sixteenPax),
-            eighteenPax: eighteenPax === '' ? 0 : parseInt(eighteenPax),
-            twentyPax: twentyPax === '' ? 0 : parseInt(twentyPax),
-            twentyTwoPax: twentyTwoPax === '' ? 0 : parseInt(twentyTwoPax),
-            twentyFourPax: twentyFourPax === '' ? 0 : parseInt(twentyFourPax)
-        }
+        const configurationId = req.params.configuration_id;
+        const data = req.body;
+        await ProductService.updateConfiguration(configurationId, data);
+        res.status(200).json({ data: 'resource updated successfully' });
 
-        const result = await ProductService.updateConfiguration({ placeYacht, configuration });
-        if (result) {
-            res.status(200).json({ data: result.message });
-        }
     } catch (error) {
+        console.log(error)
         res.status(400).json(error.message);
     }
 }
@@ -170,12 +143,9 @@ const switchConfirguration = async (req, res) => {
 
 const deleteConfiguration = async (req, res) => {
     try {
-        const placeYachtId = req.params.placeYacht_id;
         const configurationId = req.params.configuration_id;
-        const result = await ProductService.deleteConfiguration({ placeYachtId, configurationId });
-        if (result) {
-            res.status(200).json({ data: result.message });
-        }
+        const result = await ProductService.deleteConfiguration(configurationId);
+        res.status(200).json({ data:'resource deleted successfully' });
     } catch (error) {
         res.status(400).json(error.message);
     }

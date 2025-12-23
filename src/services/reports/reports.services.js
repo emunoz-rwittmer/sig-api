@@ -8,7 +8,6 @@ const Order = require('../../models/operations/orders/order.models');
 const Product = require("../../models/operations/orders/product.models");
 const Request = require("../../models/operations/yachtRequest/request.models");
 const itemsRequest = require("../../models/operations/yachtRequest/itemsRequest.models");
-const PlacesYacht = require("../../models/operations/yachtRequest/placesYacht");
 
 class ReportService {
     static async getOrderReport(id) {
@@ -91,16 +90,16 @@ class ReportService {
                     model:itemsRequest,
                     as: 'requestItems',
                     attributes: ['stock', 'order', 'quantity'],
-                    include: [{
-                        model: PlacesYacht,
-                        as: 'placeYacht',
-                        attributes: ['name'],
-                        include: [{
-                            model: Product,
-                            as: 'product',
-                            attributes: ['id', 'name'],
-                        }]
-                    }],
+                    // include: [{
+                    //     model: PlacesYacht,
+                    //     as: 'placeYacht',
+                    //     attributes: ['name'],
+                    //     include: [{
+                    //         model: Product,
+                    //         as: 'product',
+                    //         attributes: ['id', 'name'],
+                    //     }]
+                    // }],
                 }]
             });
             return result;

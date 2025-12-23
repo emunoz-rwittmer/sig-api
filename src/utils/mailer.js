@@ -119,11 +119,10 @@ const sendEmailNuevaSolicitud = async (formatId, dataMail, adjuntos) => {
         };
 
         if (formatId === 1 || formatId === 2) {
-            msg.cc = 'javier@tiptoptravel.ec';
+            msg.cc = 'javier@tiptoptravel.ec', 'mirian@rwittmer.com','marjuri@rwittmer.com';
         }
 
         await sgMail.send(msg);
-        console.log('Email sent');
 
     } catch (error) {
         console.error('Error enviando correo:', error);

@@ -1,8 +1,7 @@
 const Product = require('../../../models/operations/orders/product.models');
-const productCalculations = require('../../../models/operations/orders/productCalculations.models');
 const LaundryYacht = require('../../../models/operations/yachtRequest/laundryYacht');
-const PlacesYacht = require('../../../models/operations/yachtRequest/placesYacht');
 const db = require('../../../utils/database');
+const ProductConfiguration = require('../../../models/operations/inventory/productConfiguration');
 
 class ProductService {
     static async findProduct(sku) {
@@ -19,7 +18,7 @@ class ProductService {
             const result = await Product.findAll({
                 attributes: ['id', 'name', 'sku'],
                 include: [{
-                    model: PlacesYacht,
+                    model: ProductConfiguration,
                     as: 'configurations',
                     attributes: ['name'],
                 }],
@@ -28,44 +27,34 @@ class ProductService {
             });
             return result;
         } catch (error) {
-            
+
             throw error;
         }
     }
 
     static async getProductsWithConfigurations(type) {
         try {
-            const result = await PlacesYacht.findAll({
-                where: { group: type, active: true},
+            const result = await ProductConfiguration.findAll({
+                where: { group: type, active: true },
                 attributes: ['id', 'name'],
                 include: [{
                     model: Product,
                     as: 'product',
                     attributes: ['id', 'name'],
-                    include:[{
+                    include: [{
                         model: LaundryYacht,
                         as: 'wineries',
-                        attributes: ['id','warehouseId']
+                        attributes: ['id', 'warehouseId']
                     }]
-                }, {
-                    model: productCalculations,
-                    as: 'configuration',
-                    attributes: [
-                        'sixteenPax',
-                        'eighteenPax',
-                        'twentyPax',
-                        'twentyTwoPax',
-                        'twentyFourPax',
-                    ]
                 }],
                 order: [
-                    ['name', 'ASC'], // Orden para PlacesYacht
+                    ['name', 'ASC'], // Orden para ProductConfiguration
                     [{ model: Product, as: 'product' }, 'name', 'ASC'] // Orden para el modelo incluido Product
                 ]
             });
             return result;
         } catch (error) {
-            
+
             throw error;
         }
     }
@@ -76,21 +65,8 @@ class ProductService {
                 where: { id },
                 attributes: ['id', 'name', 'sku'],
                 include: [{
-                    model: PlacesYacht,
+                    model: ProductConfiguration,
                     as: 'configurations',
-                    attributes: ['id', 'name', 'group', 'active'],
-                    include: [{
-                        model: productCalculations,
-                        as: 'configuration',
-                        attributes: [
-                            'id',
-                            'sixteenPax',
-                            'eighteenPax',
-                            'twentyPax',
-                            'twentyTwoPax',
-                            'twentyFourPax',
-                        ]
-                    }]
                 }],
             });
             return result;
@@ -101,13 +77,14 @@ class ProductService {
 
     static async createProduct(productData) {
         try {
-            const existingProduct = await Product.findOne({
+            const result = await Product.findOne({
                 where: { sku: productData.sku }
             });
 
-            if (existingProduct) {
-                throw { message: `El producto con el SKU: ${productData.sku} ya existe` };
+            if (result) {
+                throw new Error(`El producto con el SKU: ${productData.sku} ya existe`);
             }
+
             const newProduct = await Product.create(productData);
             return newProduct;
 
@@ -139,47 +116,27 @@ class ProductService {
         }
     }
 
-    static async createConfiguration(transactionData) {
-        const { placeYacht, configuration } = transactionData;
-        const transaction = await db.transaction();
+    static async createConfiguration(data) {
         try {
-            const newConfiguration = await productCalculations.create(configuration, { transaction })
-            await PlacesYacht.create({
-                ...placeYacht,
-                configurationId: newConfiguration.id
-            },
-                { transaction })
-
-            await transaction.commit();
-            return {
-                message: 'resource created successfully',
-            };
+            const result = await ProductConfiguration.create(data)
+            return result
         } catch (error) {
-            await transaction.rollback();
             throw error;
         }
     }
 
-    static async updateConfiguration(transactionData) {
-        const { placeYacht, configuration } = transactionData;
-        const transaction = await db.transaction();
+    static async updateConfiguration(configurationId, data) {
         try {
-            await productCalculations.update(configuration, { where: { id: configuration.id } }, { transaction })
-            await PlacesYacht.update(placeYacht, { where: { id: placeYacht.id } }, { transaction })
-
-            await transaction.commit();
-            return {
-                message: 'resource updated successfully',
-            };
+            const result = await ProductConfiguration.update(data, { where: { id: configurationId } })
+            return result
         } catch (error) {
-            await transaction.rollback();
             throw error;
         }
     }
 
     static async switchConfirguration(data, id) {
         try {
-            const result = await PlacesYacht.update(data, id);
+            const result = await ProductConfiguration.update(data, id);
             return result;
         } catch (error) {
             throw error;
@@ -187,19 +144,13 @@ class ProductService {
     }
 
 
-    static async deleteConfiguration(transactionData) {
-        const { placeYachtId, configurationId } = transactionData;
-        const transaction = await db.transaction();
+    static async deleteConfiguration(configurationId) {
         try {
-            await productCalculations.destroy({ where: { id: configurationId } }, { transaction })
-            await PlacesYacht.destroy({ where: { id: placeYachtId } }, { transaction })
-
-            await transaction.commit();
-            return {
-                message: 'resource deleted successfully',
-            };
+            const result = await ProductConfiguration.destroy({
+                where: { id: configurationId }
+            });
+            return result
         } catch (error) {
-            await transaction.rollback();
             throw error;
         }
     }
