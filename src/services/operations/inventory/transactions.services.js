@@ -9,74 +9,107 @@ const Register = require('../../../models/operations/inventory/register.models')
 const { where } = require('sequelize');
 
 class TransactionService {
-    static async productEntryInWarehouse(productData, stockData, transactionData) {
-        const transaction = await db.transaction();
+
+    static async productEntryInWarehouse(productData, stockData, transactionData, orderItemId) {
+        const t = await db.transaction();
 
         try {
-            let product = await Product.findOne({ where: { sku: productData.sku }, transaction });
-            if (product) {
-                const whereCondition = {
-                    productId: product.id,
-                    warehouseId: stockData.warehouseId,
-                    ...(stockData.companyId && { companyId: stockData.companyId })  // Agrega companyId solo si existe
-                };
 
-                const [stock, created] = await Stock.findOrCreate({
-                    where: whereCondition,
-                    defaults: { ...stockData, productId: product.id },
-                    transaction
-                });
+            const quantity = Number(stockData.quantity);
 
-                if (!created) {
-                    await stock.update(
-                        { quantity: db.literal(`quantity + ${stockData.quantity}`) },
-                        { transaction }
-                    );
-                }
+            if (!Number.isFinite(quantity) || quantity <= 0) {
+                throw new Error('Invalid quantity');
+            }
 
-                await Transaction.create(
-                    {
-                        ...transactionData,
-                        productId: product.id,
-                    },
-                    { transaction }
+            let product = await Product.findOne({
+                where: { sku: productData.sku },
+                transaction: t,
+                lock: t.LOCK.UPDATE
+            });
+
+            if (!product) {
+                product = await Product.create(productData, { transaction: t });
+            }
+
+            const whereStock = {
+                productId: product.id,
+                warehouseId: stockData.warehouseId,
+                ...(stockData.companyId && { companyId: stockData.companyId })
+            };
+
+            let stock = await Stock.findOne({
+                where: whereStock,
+                transaction: t,
+                lock: t.LOCK.UPDATE
+            });
+
+            if (stock) {
+                await stock.update(
+                    { quantity: stock.quantity + quantity },
+                    { transaction: t }
                 );
-
-                await transaction.commit();
-
-                return {
-                    message: 'stock update and transaction register',
-
-                };
             } else {
-                const newProduct = await Product.create(productData, { transaction });
-
                 await Stock.create(
                     {
                         ...stockData,
-                        productId: newProduct.id,
+                        quantity,
+                        productId: product.id
                     },
-                    { transaction }
+                    { transaction: t }
                 );
-
-                await Transaction.create(
-                    {
-                        ...transactionData,
-                        productId: newProduct.id,
-                    },
-                    { transaction }
-                );
-
-                await transaction.commit();
-                return {
-                    message: 'product, stock and transaction created',
-                };
             }
+
+            const existsTransaction = await Transaction.findOne({
+                where: { referenceId: transactionData.referenceId },
+                transaction: t
+            });
+
+            if (existsTransaction) {
+                throw new Error('Duplicate transaction');
+            }
+
+            await Transaction.create(
+                {
+                    ...transactionData,
+                    productId: product.id,
+                    quantity
+                },
+                { transaction: t }
+            );
+
+            const orderItem = await itemsOrder.findOne({
+                where: { id: orderItemId },
+                transaction: t,
+                lock: t.LOCK.UPDATE
+            });
+
+            if (!orderItem) {
+                throw new Error('Order item not found');
+            }
+
+            await orderItem.update(
+                {
+                    status: 'ingresado',
+                    quantity
+                },
+                { transaction: t }
+            );
+
+            await t.commit();
+
+            return {
+                message: product
+                    ? 'stock update and transaction register'
+                    : 'product, stock and transaction created',
+                orderItemId
+            };
+
         } catch (error) {
-            await transaction.rollback();
+            await t.rollback();
             throw error;
         }
     }
+
 
     static async transactionWarehouse(transactionData) {
         const { products, warehouseFromId, warehouseToId, userId, companyId, formattedCounter } = transactionData;

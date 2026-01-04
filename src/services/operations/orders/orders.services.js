@@ -48,7 +48,7 @@ class OrderService {
                     attributes: ['id', 'firstName', 'lastName']
                 }],
                 group: ['id'],
-                order:[['createdAt', 'DESC']]
+                order: [['createdAt', 'DESC']]
             });
             return result;
         } catch (error) {
@@ -106,7 +106,7 @@ class OrderService {
             }));
             return results;
         } catch (error) {
-            
+
             throw error;
         }
     }
@@ -125,11 +125,19 @@ class OrderService {
 
     static async getItemsByOrder(orderId) {
         try {
-            const result = await itemsOrder.findAll({
-                where: { orderId },
-                attributes: ['id', 'sku', 'product', 'quantity', 'originalQuantity', 'status'],
-                order: [['product', 'ASC']]
-                
+
+            const result = await Order.findOne({
+                where: { id: orderId },
+                include: [{
+                    model: itemsOrder,
+                    as: 'orderItems',
+                    attributes: ['id', 'sku', 'product', 'quantity', 'originalQuantity', 'status'],
+                },
+                {
+                    model: Company,
+                    as: 'company',
+                    attributes: ['name']
+                },]
             });
             return result;
         } catch (error) {
@@ -140,21 +148,6 @@ class OrderService {
     static async createItemsOfOrder(items) {
         try {
             const result = await itemsOrder.bulkCreate(items);
-            return result;
-        } catch (error) {
-            throw error;
-
-        }
-    }
-
-    static async updateStatusAndQuantityItemOfOrder(id, quantity) {
-        try {
-            const result = await itemsOrder.update({
-                status: 'ingresado',
-                quantity
-            }, {
-                where: { id }
-            });
             return result;
         } catch (error) {
             throw error;

@@ -10,7 +10,12 @@ const Transaction = db.define('transaction', {
   registerId: {
     type: DataTypes.STRING,
     allowNull: true,
-    field:'register_id'
+    field: 'register_id'
+  },
+  referenceId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'reference_id'
   },
   type: {
     type: DataTypes.STRING,

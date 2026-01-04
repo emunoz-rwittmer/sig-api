@@ -1,48 +1,57 @@
 const axios = require('axios');
 const TransactionService = require('../../../services/operations/inventory/transactions.services');
-const OrderService = require('../../../services/operations/orders/orders.services');
 const Utils = require('../../../utils/Utils');
 const WarehouseService = require('../../../services/operations/inventory/warehouse.services');
-const { sendConfirmationEmail, sendEmailNewRequest } = require('../../../utils/mailer');
 const Staffervice = require('../../../services/catalogs/staff.services');
-const path = require('path');
-const fs = require('fs');
 const CompanyService = require('../../../services/catalogs/company.services');
 const Consecutivo = require('../../../models/catalogs/consecutivo.model');
 
 const productEntryInWarehouse = async (req, res) => {
     try {
-        const warehouseId = parseInt(req.params.warehouse_id);
-        const data = req.body;
+        const warehouseId = Number(req.params.warehouse_id);
+        const { id: orderItemId, product, sku, quantity, company_id, user } = req.body;
+
+        if (!warehouseId || !orderItemId) {
+            return res.status(400).json({ message: 'Invalid warehouse or order item' });
+        }
+
+        const parsedQuantity = Number(quantity);
+        if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
+            return res.status(400).json({ message: 'Invalid quantity' });
+        }
 
         const productData = {
-            name: data.product,
-            sku: data.sku.replace(/^0+/, '')
-        }
+            name: product,
+            sku: sku.replace(/^0+/, '')
+        };
 
         const stockData = {
             warehouseId,
-            quantity: parseInt(data.quantity),
-            companyId: Utils.decode(data.company_id)
-        }
+            quantity: parsedQuantity,
+            companyId: Utils.decode(company_id)
+        };
 
         const transactionData = {
             type: 'Entrada',
             warehouseToId: warehouseId,
-            quantity: parseInt(data.quantity),
-            userId: Utils.decode(data.user)
-        }
+            quantity: parsedQuantity,
+            userId: Utils.decode(user),
+            referenceId: `ORDER_ITEM_${orderItemId}`
+        };
 
-        const result = await TransactionService.productEntryInWarehouse(productData, stockData, transactionData);
-        if (result) {
-            await OrderService.updateStatusAndQuantityItemOfOrder(Utils.decode(data.id), data.quantity)
-            res.status(200).json({ data: result.message });
-        }
+        const result = await TransactionService.productEntryInWarehouse(
+            productData,
+            stockData,
+            transactionData,
+            orderItemId
+        );
+
+        res.status(200).json({ data: result.message });
+
     } catch (error) {
-
         res.status(400).json(error.message)
     }
-}
+};
 
 const transactionWarehouse = async (req, res) => {
     try {
@@ -159,12 +168,12 @@ const printRegister = async (req, res) => {
         })
 
         const result = await axios.post('http://190.12.15.164:5859/print/transactions', { products, userName, company, formattedCounter })
-        
+
         if (result.status === 200) {
             res.status(200).json({ data: 'Transacción completada correctamente.' });
         } else {
             res.status(400).json({ data: 'Error al imprimir el registro.' });
-        }    
+        }
 
     } catch (error) {
         res.status(400).json(error.message);
