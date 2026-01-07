@@ -9,7 +9,7 @@ const Consecutivo = require('../../../models/catalogs/consecutivo.model');
 const productEntryInWarehouse = async (req, res) => {
     try {
         const warehouseId = Number(req.params.warehouse_id);
-        const { id: orderItemId, product, sku, quantity, company_id, user } = req.body;
+        const { id: orderItemId, product, sku, quantity, companyId, user } = req.body;
 
         if (!warehouseId || !orderItemId) {
             return res.status(400).json({ message: 'Invalid warehouse or order item' });
@@ -28,7 +28,7 @@ const productEntryInWarehouse = async (req, res) => {
         const stockData = {
             warehouseId,
             quantity: parsedQuantity,
-            companyId: Utils.decode(company_id)
+            companyId
         };
 
         const transactionData = {

@@ -1,54 +1,27 @@
-const Staff = require('../../../models/catalogs/staff.models');
-const Users = require('../../../models/catalogs/user.models');
-const Yachts = require('../../../models/catalogs/yacht.models');
-const itemsOrder = require('../../../models/operations/orders/itemsOrder.models');
-const Order = require('../../../models/operations/orders/order.models');
 const { Sequelize, Op, where } = require("sequelize");
+const Order = require('../../../models/operations/orders/order.models');
+const itemsOrder = require('../../../models/operations/orders/itemsOrder.models');
+const Staff = require('../../../models/catalogs/staff.models');
 const Utils = require('../../../utils/Utils');
 const Company = require('../../../models/catalogs/company.models');
-
-
+const db = require("../../../utils/database");
 
 class OrderService {
-    static async getAllCompaniesWhitOrders() {
-        try {
-            const result = await Company.findAll({
-                attributes: [
-                    'id', 'name', 'logo', 'ruc',
-                    [Sequelize.fn('COUNT', Sequelize.col('orders.id')), 'ordersCount']
-                ],
-                include: [{
-                    model: Order,
-                    as: 'orders',
-                    attributes: []
-                }],
-                group: ['id']
-            });
-            return result;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    static async getOrdersByCompany(companyId) {
+    static async getAllOrders() {
         try {
             const result = await Order.findAll({
-                where: { companyId },
-                attributes: [
-                    'id', 'name', 'status', 'guide', 'createdAt',
-                    [Sequelize.fn('COUNT', Sequelize.col('orderItems.id')), 'itemsCount']
-                ],
                 include: [{
+                    model: Company,
+                    as: 'company',
+                }, {
                     model: itemsOrder,
                     as: 'orderItems',
-                    attributes: []
                 }, {
                     model: Staff,
                     as: 'responsible',
                     attributes: ['id', 'firstName', 'lastName']
                 }],
-                group: ['id'],
-                order: [['createdAt', 'DESC']]
+                order:[['createdAt', 'DESC']]
             });
             return result;
         } catch (error) {
@@ -56,74 +29,7 @@ class OrderService {
         }
     }
 
-    static async getOrderById(id) {
-        try {
-            const result = await Order.findOne({
-                where: { id },
-                attributes: [
-                    'id', 'name', 'status', 'guide', 'createdAt',
-                ],
-                include: [
-                    {
-                        model: Company,
-                        as: 'company',
-                        attributes: ['name']
-                    },
-                    {
-                        model: Staff,
-                        as: 'responsible',
-                        attributes: ['firstName', 'lastName', 'email']
-                    }],
-            });
-            return result;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    static async createOrder(order) {
-        try {
-            const result = await Order.create(order);
-            return result;
-        } catch (error) {
-            throw error;
-
-        }
-    }
-
-    static async updateOrder(data) {
-        try {
-            const results = await Promise.all(data.map(async (item) => {
-                const result = await itemsOrder.update({
-                    product: item.product,
-                    quantity: item.quantity,
-                    originalQuantity: item.originalQuantity,
-                },
-                    {
-                        where: { id: Utils.decode(item.id) }
-                    });
-                return result;
-            }));
-            return results;
-        } catch (error) {
-
-            throw error;
-        }
-    }
-
-    static async updateStatusOrder(data, id) {
-        try {
-            const result = await Order.update(data, id);
-            return result;
-        } catch (error) {
-            throw error;
-
-        }
-    }
-
-    // Items by orders
-
-    static async getItemsByOrder(orderId) {
+    static async getOrderById(orderId) {
         try {
 
             const result = await Order.findOne({
@@ -145,15 +51,39 @@ class OrderService {
         }
     }
 
-    static async createItemsOfOrder(items) {
+    static async createOrder(order, items) {
+        const transaction = await db.transaction();
+
         try {
-            const result = await itemsOrder.bulkCreate(items);
+            const result = await Order.create(order, { transaction });
+
+            const productsOrder = items.map(item => ({
+                ...item,
+                orderId: result.id,
+                status: 'en espera',
+            }));
+
+            await itemsOrder.bulkCreate(productsOrder, { transaction });
+
+            await transaction.commit();
+            return result;
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
+    }
+
+    static async updateOrder(data, id) {
+        try {
+            const result = await Order.update(data, id);
             return result;
         } catch (error) {
             throw error;
 
         }
     }
+
+    // Items by orders
 
     static async deleteItem(itemId) {
         try {

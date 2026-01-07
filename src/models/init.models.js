@@ -146,9 +146,6 @@ const initModels = () => {
     Yacht.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
     Yacht.hasOne(Warehouse, { foreignKey: 'yacht_id', as: 'warehouse' });
 
-    Warehouse.belongsTo(Yacht, { foreignKey: 'yacht_id', as: 'yacht' });
-    Company.hasMany(Order, { foreignKey: 'company_id', as: 'orders' });
-
     Order.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
     Order.hasMany(itemsOrder, { foreignKey: 'order_id', as: 'orderItems' });
     itemsOrder.belongsTo(Order, { foreignKey: 'order_id', as: 'order' });
@@ -160,8 +157,19 @@ const initModels = () => {
     Order.belongsTo(Staff, { foreignKey: 'user_id', as: 'responsible' });
     Staff.hasMany(Order, { foreignKey: 'user_id', as: 'orders' });
 
+    //WAREHOUSE
+    Warehouse.belongsTo(Yacht, { foreignKey: 'yacht_id', as: 'yacht' });
+    Company.hasMany(Order, { foreignKey: 'company_id', as: 'orders' });
+
     Warehouse.hasMany(Stock, { foreignKey: 'warehouse_id', as: 'stocks' });
     Stock.belongsTo(Warehouse, { foreignKey: 'warehouse_id', as: 'warehouse' });
+
+    Staff.hasMany(Transaction, { foreignKey: 'user_id', as: 'transactions' });
+    Warehouse.hasMany(Transaction, { foreignKey: 'warehouse_from_id', as: 'outgoingTransactions' });// Bodega de origen
+    Transaction.belongsTo(Warehouse, { foreignKey: 'warehouse_from_id', as: 'warehouseFrom' });
+
+    Warehouse.hasMany(Transaction, { foreignKey: 'warehouse_to_id', as: 'incomingTransactions' }); // Bodega de destino
+    Transaction.belongsTo(Warehouse, { foreignKey: 'warehouse_to_id', as: 'warehouseTo' });
 
     Product.hasMany(Stock, { foreignKey: 'product_id', as: 'stocks' });
     Stock.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
@@ -182,12 +190,6 @@ const initModels = () => {
     Staff.hasMany(Register, { foreignKey: 'user_id', as: 'registros' });
     Register.belongsTo(Staff, { foreignKey: 'user_id', as: 'responsable' });
 
-    Staff.hasMany(Transaction, { foreignKey: 'user_id', as: 'transactions' });
-    Warehouse.hasMany(Transaction, { foreignKey: 'warehouse_from_id', as: 'outgoingTransactions' });// Bodega de origen
-    Transaction.belongsTo(Warehouse, { foreignKey: 'warehouse_from_id', as: 'warehouseFrom' });
-    Warehouse.hasMany(Transaction, { foreignKey: 'warehouse_to_id', as: 'incomingTransactions' }); // Bodega de destino
-    Transaction.belongsTo(Warehouse, { foreignKey: 'warehouse_to_id', as: 'warehouseTo' });
-
     Product.hasMany(ProductConfiguration, { as: 'configurations', foreignKey: 'product_id' });
     ProductConfiguration.belongsTo(Product, { as: "product", foreignKey: "product_id" });
 
@@ -196,8 +198,8 @@ const initModels = () => {
     Product.hasMany(LaundryYacht, { as: 'wineries', foreignKey: 'product_id' });
 
     Warehouse.hasMany(Request, { foreignKey: 'warehouse_id', as: 'requests' });
-
     Request.belongsTo(Warehouse, { foreignKey: 'warehouse_id', as: 'warehouse' });
+    
     Request.hasMany(itemsRequest, { foreignKey: 'request_id', as: 'requestItems' });
     itemsRequest.belongsTo(Request, { foreignKey: 'request_id', as: 'request' });
 
@@ -221,7 +223,7 @@ const initModels = () => {
 
     Impact
     Levels,
-        Strategy
+    Strategy
 
 }
 

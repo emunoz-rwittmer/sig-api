@@ -2,15 +2,16 @@ const OrderService = require('../../../services/operations/orders/orders.service
 const Utils = require('../../../utils/Utils');
 const CompanyService = require('../../../services/catalogs/company.services');
 const XLSX = require('xlsx');
-const { sendEmailNewOrder, sendConfirmationEmail, sendDispatchOrderEmail, sendDispatchEmail } = require('../../../utils/mailer');
+const { sendEmailNewOrder, sendConfirmationEmail, sendDispatchEmail } = require('../../../utils/mailer');
 const Staffervice = require('../../../services/catalogs/staff.services');
 
-const getAllCompaniesWhitOrders = async (req, res) => {
+const getAllOrders = async (req, res) => {
     try {
-        const result = await OrderService.getAllCompaniesWhitOrders();
+        const result = await OrderService.getAllOrders();
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
+                x.dataValues.companyId = Utils.encode(x.dataValues.companyId);
             });
         }
         res.status(200).json(result);
@@ -19,200 +20,70 @@ const getAllCompaniesWhitOrders = async (req, res) => {
     }
 }
 
-const getOrdersByCompany = async (req, res) => {
+const getOrderById = async (req, res) => {
     try {
-        const companyId = Utils.decode(req.params.company_id);
-        const company = await CompanyService.getCompanyById(companyId);
-        if (company instanceof Array) {
-            company.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
-            });
+        const orderId = Utils.decode(req.params.order_id);
+        const result = await OrderService.getOrderById(orderId)
+        if (result instanceof Object) {
+            result.id = Utils.encode(result.id);
         }
-        const result = await OrderService.getOrdersByCompany(companyId);
-        if (result instanceof Array) {
-            result.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
-                //x.dataValues.responsible.dataValues.id = Utils.encode(x.dataValues.responsible.dataValues.id);
-            });
-        }
-        res.status(200).json({ company, result });
+        res.status(200).json(result);
     } catch (error) {
+
         res.status(400).json(error.message)
-    }
-}
-
-const uploadOrder = async (req, res) => {
-    try {
-        const data = req.body;
-        data.companyId = Utils.decode(data.companyId)
-        data.userId = Utils.decode(data.userId)
-        const result = await OrderService.createOrder(data);
-        const orderId = result.id;
-        const file = req.file;
-        if (result) {
-            const fieldMapping = {
-                'sku': 'sku',
-                'product': 'product',
-                'quantity': 'quantity',
-                'originalQuantity': 'originalQuantity',
-            };
-
-            const workbook = XLSX.readFile(file.path);
-            const sheet_name_list = workbook.SheetNames;
-            const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheet_name_list[0]]);
-            const mappedData = jsonData.map(row => {
-                const mappedRow = {};
-                for (const [excelField, modelField] of Object.entries(fieldMapping)) {
-                    mappedRow[modelField] = row[excelField];
-                }
-                mappedRow.orderId = orderId;
-                mappedRow.status = 'en espera';
-                return mappedRow;
-            });
-            const result = await OrderService.createItemsOfOrder(mappedData);
-            if (result) {
-                const company = await CompanyService.getCompanyById(data.companyId)
-                const staff = await Staffervice.getStaffById(data.userId)
-                action = 'pedido'
-                sendEmailNewOrder(company.name);
-                sendConfirmationEmail(action, company.name, staff)
-                res.status(200).json({ data: 'resource created successfully' });
-            }
-        }
-    } catch (error) {
-        
-        res.status(400).json(error.message);
     }
 }
 
 const createOrder = async (req, res) => {
     try {
         const data = req.body;
-        const order = {
-            companyId: Utils.decode(data.companyId),
-            userId: Utils.decode(data.userId),
-            name: data.name,
-            status: data.status
-        }
+        data.companyId = Utils.decode(data.companyId)
+        data.userId = Utils.decode(data.userId)
 
-        const result = await OrderService.createOrder(order);
-        const orderId = result.id;
+        const file = req.file;
+        const fieldMapping = {
+            'sku': 'sku',
+            'product': 'product',
+            'quantity': 'quantity',
+            'originalQuantity': 'originalQuantity',
+        };
 
-        const products = data.product;
-        const quantitys = data.quantity;
-        const originalQuantitys = data.originalQuantity;
-        const statusItems = data.statusItems;
-        const items = []
-
-        for (let i = 0; i < products.length; i++) {
-            const product = products[i];
-            const quantity = quantitys[i];
-            const originalQuantity = originalQuantitys[i];
-            const statusI = statusItems[i];
-            const item = {
-                product,
-                quantity,
-                originalQuantity,
-                status: statusI,
-                orderId
+        const workbook = XLSX.readFile(file.path);
+        const sheet_name_list = workbook.SheetNames;
+        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheet_name_list[0]]);
+        const mappedData = jsonData.map(row => {
+            const mappedRow = {};
+            for (const [excelField, modelField] of Object.entries(fieldMapping)) {
+                mappedRow[modelField] = row[excelField];
             }
-            items.push(item)
-        }
 
-        if (result) {
-            const result = await OrderService.createItemsOfOrder(items);
-            if (result) {
-                res.status(200).json({ data: 'resource created successfully' });
-            }
-        }
+            return mappedRow;
+        });
 
+        await OrderService.createOrder(data, mappedData);
+
+        const company = await CompanyService.getCompanyById(data.companyId)
+        const staff = await Staffervice.getStaffById(data.userId)
+        action = 'pedido'
+        sendEmailNewOrder(company.name);
+        sendConfirmationEmail(action, company.name, staff)
+        res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
-        
         res.status(400).json(error.message);
     }
 }
 
 const updateOrder = async (req, res) => {
     try {
-
-        const { body, params } = req;
-
-        const ids = body.id;
-        const products = body.product;
-        const quantitys = body.quantity;
-        const originalQuantitys = body.originalQuantity;
-
-        const items = []
-        for (let i = 0; i < ids.length; i++) {
-            const id = ids[i];
-            const product = products[i];
-            const quantity = quantitys[i];
-            const originalQuantity = originalQuantitys[i];
-            const item = {
-                id,
-                product,
-                quantity,
-                originalQuantity,
-            }
-            items.push(item)
-        }
-
-        const itemsUpdate = items.filter(item => item.id !== "");
-        const result = await OrderService.updateOrder(itemsUpdate);
-
-        const newItems = items.filter(item => item.id === "");
-        if (newItems.length > 0) {
-            const orderId = Utils.decode(params.order_id);
-            const itemsCreate = newItems.map(({ id, ...rest }) => ({
-                ...rest,
-                orderId: orderId
-            }));
-            await OrderService.createItemsOfOrder(itemsCreate);
-        }
-
-        if (result) {
-            res.status(200).json({ data: 'resource created successfully' });
-        }
-
-    } catch (error) {
-        
-        res.status(400).json(error.message);
-    }
-}
-
-const updateStatusOrder = async (req, res) => {
-    try {
         const orderId = Utils.decode(req.params.order_id);
         const data = req.body
-        const order = await OrderService.getOrderById(orderId)
-        const result = await OrderService.updateStatusOrder(data, {
+        await OrderService.updateOrder(data, {
             where: { id: orderId }
         });
-        if (result) {
-            if(data.status === 'Distribuido') {
-                const action = 'pedido'
-                sendDispatchEmail(action, order)
-            }
-            res.status(200).json({ data: 'resource updated successfully' });
-        }
-    } catch (error) {
-        
-        res.status(400).json(error.message)
-    }
-}
 
-const getItemsByOrder = async (req, res) => {
-    try {
-        const orderId = Utils.decode(req.params.order_id);
-        const result = await OrderService.getItemsByOrder(orderId)
-        if (result instanceof Array) {
-            result.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
-            });
-        }
-        res.status(200).json(result);
+        res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        
+
         res.status(400).json(error.message)
     }
 }
@@ -227,16 +98,11 @@ const deleteItem = async (req, res) => {
     }
 }
 
-
-
 const OrderController = {
-    getAllCompaniesWhitOrders,
-    getOrdersByCompany,
-    uploadOrder,
+    getAllOrders,
+    getOrderById,
     createOrder,
-    updateStatusOrder,
     updateOrder,
-    getItemsByOrder,
     deleteItem
 }
 module.exports = OrderController

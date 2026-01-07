@@ -107,9 +107,9 @@ class WarehouseService {
                 {
                     model: Company,
                     as: 'company',
-                    attributes: ['id','name'],
+                    attributes: ['id', 'name'],
                 }
-            ],
+                ],
                 order: [[{ model: Product, as: 'product' }, 'name', 'ASC']]
             });
             return result;
@@ -259,55 +259,39 @@ class WarehouseService {
 
     static async getRequestToWareHouse(warehouseId, group) {
         try {
-            const result = await Request.findAll({
-                where: { warehouseId, group },
-                attributes: [
-                    'id', 'name', 'status', 'createdAt',
-                    [Sequelize.fn('COUNT', Sequelize.col('requestItems.id')), 'itemsCount']
-                ],
+            const result = await Warehouse.findOne({
+                where: { id: warehouseId },
+                attributes: ['id', 'name'],
                 include: [{
-                    model: itemsRequest,
-                    as: 'requestItems',
-                    attributes: []
-                }, {
-                    model: Staff,
-                    as: 'responsible',
-                    attributes: ['id', 'firstName', 'lastName']
+                    model: Request,
+                    as: 'requests',
+                    where: { group },
+                    include: [{
+                        model: itemsRequest,
+                        as: 'requestItems',
+                    }, {
+                        model: Staff,
+                        as: 'responsible',
+                        attributes: ['id', 'firstName', 'lastName']
+                    }]
                 }],
-                group: ['id'],
-                order:[['createdAt', 'DESC']]
+                order: [
+                    [{ model: Request, as: 'requests' }, 'createdAt', 'DESC']
+                ]
             });
+
             return result;
         } catch (error) {
             throw error;
         }
     }
 
+
     static async getItemsToRequest(requestId) {
         try {
             const result = await itemsRequest.findAll({
                 where: { requestId },
                 attributes: ['id', 'stock', 'order', 'quantity'],
-                // include: [{
-                //     model: PlacesYacht,
-                //     as: 'placeYacht',
-                //     attributes: ['name'],
-                //     include: [{
-                //         model: Product,
-                //         as: 'product',
-                //         attributes: ['id', 'name'],
-                //     }, {
-                //         model: productCalculations,
-                //         as: 'configuration',
-                //         attributes: [
-                //             'sixteenPax',
-                //             'eighteenPax',
-                //             'twentyPax',
-                //             'twentyTwoPax',
-                //             'twentyFourPax',
-                //         ]
-                //     }]
-                // }],
             });
             return result;
         } catch (error) {
@@ -324,13 +308,13 @@ class WarehouseService {
                 products.map(async (product) => {
 
                     const lastValue = await Transaction.findOne({
-                        where: { 
-                            productId: product.product_id, 
-                            warehouseFromId: 2,  
-                            warehouseToId: warehouseId 
+                        where: {
+                            productId: product.product_id,
+                            warehouseFromId: 2,
+                            warehouseToId: warehouseId
                         },
                         order: [['createdAt', 'DESC']],
-                        transaction, 
+                        transaction,
                     });
 
                     await Transaction.create({
@@ -343,8 +327,8 @@ class WarehouseService {
                     }, { transaction });
 
                     const stockToInstance = await Stock.findOne({
-                         where: { productId: product.product_id, warehouseId: 2 },
-                         transaction,
+                        where: { productId: product.product_id, warehouseId: 2 },
+                        transaction,
                     });
 
                     stockToInstance.quantity += parseInt(lastValue.quantity);
@@ -353,9 +337,9 @@ class WarehouseService {
                     const stockToIWarehose = await Stock.findOne({
                         where: { productId: product.product_id, warehouseId: warehouseId },
                         transaction,
-                   });
-                   stockToIWarehose.quantity -= parseInt(lastValue.quantity);
-                   await stockToIWarehose.save({ transaction });
+                    });
+                    stockToIWarehose.quantity -= parseInt(lastValue.quantity);
+                    await stockToIWarehose.save({ transaction });
                 })
             );
 

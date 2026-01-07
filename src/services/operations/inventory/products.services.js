@@ -36,7 +36,7 @@ class ProductService {
         try {
             const result = await ProductConfiguration.findAll({
                 where: { group: type, active: true },
-                attributes: ['id', 'name'],
+                //attributes: ['id', 'name'],
                 include: [{
                     model: Product,
                     as: 'product',

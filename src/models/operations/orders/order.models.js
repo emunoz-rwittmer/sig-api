@@ -20,7 +20,6 @@ const Order = db.define('Order', {
     type: DataTypes.INTEGER,
     allowNull: false,
     field: 'user_id'
-
   },
   status: {
     type: DataTypes.STRING,

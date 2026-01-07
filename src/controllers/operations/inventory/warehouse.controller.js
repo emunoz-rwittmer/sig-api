@@ -80,17 +80,15 @@ const getRequestToWareHouse = async (req, res) => {
     try {
         const warehouseId = Utils.decode(req.params.warehouse_id);
         const group = req.params.type
-        const warehouse = await WarehouseService.getWarehouseById(warehouseId);
-        if (warehouse instanceof Object) {
-            warehouse.dataValues.id = Utils.encode(warehouse.dataValues.id);
-        }
+
         const result = await WarehouseService.getRequestToWareHouse(warehouseId, group);
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
+                x.dataValues.warehouseId = Utils.encode(x.dataValues.warehouseId);
             });
         }
-        res.status(200).json({ warehouse, result });
+        res.status(200).json(result);
     } catch (error) {
         res.status(400).json(error.message)
     }
