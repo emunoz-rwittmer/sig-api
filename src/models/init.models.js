@@ -190,7 +190,7 @@ const initModels = () => {
     Staff.hasMany(Register, { foreignKey: 'user_id', as: 'registros' });
     Register.belongsTo(Staff, { foreignKey: 'user_id', as: 'responsable' });
 
-    Product.hasMany(ProductConfiguration, { as: 'configurations', foreignKey: 'product_id' });
+    Product.hasMany(ProductConfiguration, { as: 'configurations', foreignKey: 'product_id', onDelete: "CASCADE" });
     ProductConfiguration.belongsTo(Product, { as: "product", foreignKey: "product_id" });
 
     LaundryYacht.belongsTo(Product, { as: "product", foreignKey: "product_id" });
@@ -199,7 +199,7 @@ const initModels = () => {
 
     Warehouse.hasMany(Request, { foreignKey: 'warehouse_id', as: 'requests' });
     Request.belongsTo(Warehouse, { foreignKey: 'warehouse_id', as: 'warehouse' });
-    
+
     Request.hasMany(itemsRequest, { foreignKey: 'request_id', as: 'requestItems' });
     itemsRequest.belongsTo(Request, { foreignKey: 'request_id', as: 'request' });
 
@@ -223,7 +223,7 @@ const initModels = () => {
 
     Impact
     Levels,
-    Strategy
+        Strategy
 
 }
 

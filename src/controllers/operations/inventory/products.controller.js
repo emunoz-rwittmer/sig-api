@@ -47,6 +47,22 @@ const getProductsWithConfigurations = async (req, res) => {
     }
 }
 
+const getProductsByWarehouse = async (req, res) => {
+    try {
+        const warehouseId = Utils.decode(req.params.warehouse_id)
+        const result = await ProductService.getProductsByWarehouse(warehouseId);
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.companyId = Utils.encode(x.companyId);
+            });
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        console.log(error)
+        res.status(400).json(error.message)
+    }
+}
+
 const getProduct = async (req, res) => {
     try {
         const productId = Utils.decode(req.params.product_id);
@@ -79,9 +95,7 @@ const updateProduct = async (req, res) => {
         const productId = Utils.decode(req.params.product_id);
         const product = req.body;
         product.sku = product.sku.replace(/^0+/, '');
-        const result = await ProductService.updateProduct(product, {
-            where: { id: productId },
-        });
+        await ProductService.updateProduct(product, productId);
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
         res.status(400).json(error.message);
@@ -145,7 +159,7 @@ const deleteConfiguration = async (req, res) => {
     try {
         const configurationId = req.params.configuration_id;
         const result = await ProductService.deleteConfiguration(configurationId);
-        res.status(200).json({ data:'resource deleted successfully' });
+        res.status(200).json({ data: 'resource deleted successfully' });
     } catch (error) {
         res.status(400).json(error.message);
     }
@@ -158,6 +172,7 @@ const ProductController = {
     deleteProduct,
     findProduct,
     getProductsWithConfigurations,
+    getProductsByWarehouse,
     createConfiguration,
     updateConfiguration,
     switchConfirguration,
