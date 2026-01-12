@@ -244,40 +244,10 @@ class ProductService {
         }
     }
 
-    static async createConfiguration(data) {
-        try {
-            const result = await ProductConfiguration.create(data)
-            return result
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    static async updateConfiguration(configurationId, data) {
-        try {
-            const result = await ProductConfiguration.update(data, { where: { id: configurationId } })
-            return result
-        } catch (error) {
-            throw error;
-        }
-    }
-
     static async switchConfirguration(data, id) {
         try {
             const result = await ProductConfiguration.update(data, id);
             return result;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-
-    static async deleteConfiguration(configurationId) {
-        try {
-            const result = await ProductConfiguration.destroy({
-                where: { id: configurationId }
-            });
-            return result
         } catch (error) {
             throw error;
         }

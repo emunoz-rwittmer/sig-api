@@ -21,7 +21,7 @@ const Warehouse= db.define('warehouse',{
     },
     currentStock: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
         field: 'current_stock'
     },
 });

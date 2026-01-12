@@ -112,7 +112,6 @@ class TransactionService {
 
     static async transactionWarehouse(transactionData) {
         const { products, warehouseFromId, warehouseToId, userId, companyId, formattedCounter } = transactionData;
-        console.log(products, warehouseFromId, warehouseToId, userId, companyId, formattedCounter)
         const transaction = await db.transaction();
 
         try {

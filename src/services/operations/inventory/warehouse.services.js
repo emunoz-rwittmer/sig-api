@@ -32,6 +32,42 @@ class WarehouseService {
         }
     }
 
+    static async createWarehouse(data) {
+        try {
+            const result = await Warehouse.create(data);
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+
+    static async updateWarehouse(data, id) {
+        try {
+            const result = await Warehouse.update(data, {
+                where: { id },
+            });
+            return result
+        } catch (error) {
+            console.log(error)
+            throw error;
+        }
+    }
+
+
+    static async deleteWarehouse(id) {
+        try {
+            const result = await Warehouse.destroy({
+                where: { id }
+            });
+            if (result) {
+                return 'resource deleted successfully'
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
+
     static async getAllWarehousesTypeYacht() {
         try {
             const result = await Warehouse.findAll({
@@ -156,36 +192,6 @@ class WarehouseService {
             });
             return result;
         } catch (error) {
-            throw error;
-        }
-    }
-
-    static async createWarehouse(Warehouse) {
-        try {
-            const result = await Warehouse.create(Warehouse);
-            return result;
-        } catch (error) {
-            throw error;
-
-        }
-    }
-
-    static async updateWarehouse(data) {
-        try {
-            const results = await Promise.all(data.map(async (item) => {
-                const result = await itemsWarehouse.update({
-                    product: item.product,
-                    quantity: item.quantity,
-                    originalQuantity: item.originalQuantity,
-                },
-                    {
-                        where: { id: Utils.decode(item.id) }
-                    });
-                return result;
-            }));
-            return results;
-        } catch (error) {
-
             throw error;
         }
     }

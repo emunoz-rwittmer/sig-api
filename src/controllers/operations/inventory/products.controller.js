@@ -114,30 +114,7 @@ const deleteProduct = async (req, res) => {
 }
 
 
-const createConfiguration = async (req, res) => {
-    try {
-        const data = req.body;
-        data.productId = Utils.decode(req.body.productId)
-        await ProductService.createConfiguration(data);
-        res.status(200).json({ data: 'resource created successfully' });
-    } catch (error) {
-        console.log(error)
-        res.status(400).json(error.message);
-    }
-}
 
-const updateConfiguration = async (req, res) => {
-    try {
-        const configurationId = req.params.configuration_id;
-        const data = req.body;
-        await ProductService.updateConfiguration(configurationId, data);
-        res.status(200).json({ data: 'resource updated successfully' });
-
-    } catch (error) {
-        console.log(error)
-        res.status(400).json(error.message);
-    }
-}
 
 const switchConfirguration = async (req, res) => {
     try {
@@ -155,15 +132,6 @@ const switchConfirguration = async (req, res) => {
     }
 }
 
-const deleteConfiguration = async (req, res) => {
-    try {
-        const configurationId = req.params.configuration_id;
-        const result = await ProductService.deleteConfiguration(configurationId);
-        res.status(200).json({ data: 'resource deleted successfully' });
-    } catch (error) {
-        res.status(400).json(error.message);
-    }
-}
 const ProductController = {
     getProducts,
     getProduct,
@@ -173,9 +141,6 @@ const ProductController = {
     findProduct,
     getProductsWithConfigurations,
     getProductsByWarehouse,
-    createConfiguration,
-    updateConfiguration,
     switchConfirguration,
-    deleteConfiguration
 }
 module.exports = ProductController

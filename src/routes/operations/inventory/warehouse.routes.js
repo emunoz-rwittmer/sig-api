@@ -3,6 +3,10 @@ const WarehouseController  = require ('../../../controllers/operations/inventory
 const router = Router();
 
 router.get('/',WarehouseController.getAllWarehouses);
+router.post('/', WarehouseController.createWarehouse);
+router.put('/:warehouse_id', WarehouseController.updateWarehouse);
+router.delete('/:warehouse_id', WarehouseController.deleteWarehouse);
+
 router.get('/typeYacht',WarehouseController.getAllWarehousesTypeYacht);
 router.get('/stockInWareHouse/:warehouse_id',WarehouseController.getStockInWarehouse);
 router.get('/:warehouse_id/transactions',WarehouseController.getTransactionsWarehouse);
