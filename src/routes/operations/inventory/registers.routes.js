@@ -8,7 +8,7 @@ router.get('/', RegisterController.getAllRegisters);
 // router.post('/incomeProductsInWarehouse', RegisterController.incomeProductsInWarehouse);
 // router.put('/updateStatusItem/:item_id', RegisterController.updateStatusItem);
 // // Yacht request 
-// router.post('/createRequestWarehouse', RegisterController.createRequestWarehouse);
+// router.post('/createRequestWarehouse', RegisterController.0);
 
 
 

@@ -9,9 +9,5 @@ router.post('/incomeProductsInWarehouse', TransactionController.incomeProductsIn
 router.put('/updateStatusItem/:item_id', TransactionController.updateStatusItem);
 router.post('/incomeProductsRegister', TransactionController.incomeProductsRegister);
 router.put('/printRegister', TransactionController.printRegister);
-// Yacht request 
-router.post('/createRequestWarehouse', TransactionController.createRequestWarehouse);
-
-
 
 module.exports = router;

@@ -180,45 +180,6 @@ const printRegister = async (req, res) => {
     }
 }
 
-//yacht recuest 
-
-const createRequestWarehouse = async (req, res) => {
-    try {
-        const { products, name, status, group } = req.body;
-        products.map(product => {
-            product.placeYachtId = product.productId
-            product.stock = product.stock === '' ? 0 : product.stock
-            product.order = product.order === '' ? 0 : product.order
-
-        })
-        const warehouseId = Utils.decode(req.body.warehouseId)
-        const userId = Utils.decode(req.body.userId)
-        const requestData = {
-            warehouseId,
-            userId,
-            name,
-            group,
-            status
-        }
-
-        const result = await TransactionService.createRequestWarehouse({
-            products,
-            requestData
-        });
-
-        const company = await WarehouseService.getWarehouseById(warehouseId)
-        const staff = await Staffervice.getStaffById(userId)
-        action = 'requerimiento'
-        // sendEmailNewRequest(company.name);
-        // sendConfirmationEmail(action, company.name, staff)
-
-        res.status(200).json({ data: result.message });
-    } catch (error) {
-
-        res.status(400).json(error.message);
-    }
-}
-
 const TransactionController = {
     productEntryInWarehouse,
     transactionWarehouse,
@@ -226,6 +187,5 @@ const TransactionController = {
     incomeProductsRegister,
     printRegister,
     updateStatusItem,
-    createRequestWarehouse
 }
 module.exports = TransactionController

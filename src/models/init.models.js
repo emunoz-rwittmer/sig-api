@@ -18,7 +18,6 @@ const Stock = require('./operations/inventory/stock.models');
 const Product = require('./operations/orders/product.models');
 const Transaction = require('./operations/inventory/transaction.models');
 const Request = require('./operations/yachtRequest/request.models');
-const itemsRequest = require('./operations/yachtRequest/itemsRequest.models');
 const LaundryYacht = require('./operations/yachtRequest/laundryYacht');
 // Manameng Indicators
 const Indicator = require('./operations/indicators/indicator.models');
@@ -51,11 +50,12 @@ const FormRespond = require('./operations/surveys/formRespond.models');
 const FormAnswers = require('./operations/surveys/formAnswers.models');
 const FormQuestion = require('./operations/surveys/formQuestion.models');
 const ProductConfiguration = require('./operations/inventory/productConfiguration');
+const RequestItems = require('./operations/yachtRequest/requestItems.models');
 
 const initModels = () => {
 
     //catalogs
-    Consecutivo,
+        Consecutivo,
         ConsecutivoGuias,
         Question,
         HouseRule,
@@ -200,12 +200,12 @@ const initModels = () => {
     Warehouse.hasMany(Request, { foreignKey: 'warehouse_id', as: 'requests' });
     Request.belongsTo(Warehouse, { foreignKey: 'warehouse_id', as: 'warehouse' });
 
-    Request.hasMany(itemsRequest, { foreignKey: 'request_id', as: 'requestItems' });
-    itemsRequest.belongsTo(Request, { foreignKey: 'request_id', as: 'request' });
+    Request.hasMany(RequestItems, { foreignKey: 'request_id', as: 'requestItems' });
+    RequestItems.belongsTo(Request, { foreignKey: 'request_id', as: 'request' });
 
     Request.belongsTo(Staff, { foreignKey: 'user_id', as: 'responsible' });
     Staff.hasMany(Request, { foreignKey: 'user_id', as: 'request' });
-    itemsRequest.belongsTo(ProductConfiguration, { foreignKey: 'placeYachtId', as: 'configuracion' });
+    RequestItems.belongsTo(ProductConfiguration, { foreignKey: 'configuration_id', as: 'configuracion' });
 
     // INDICATOR
     Process.hasMany(Indicator, { as: "indicadores", foreignKey: "departament_id" });

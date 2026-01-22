@@ -7,7 +7,7 @@ const itemsOrder = require("../../models/operations/orders/itemsOrder.models");
 const Order = require('../../models/operations/orders/order.models');
 const Product = require("../../models/operations/orders/product.models");
 const Request = require("../../models/operations/yachtRequest/request.models");
-const itemsRequest = require("../../models/operations/yachtRequest/itemsRequest.models");
+const requestItems = require("../../models/operations/yachtRequest/requestItems.models");
 
 class ReportService {
     static async getOrderReport(id) {
@@ -87,7 +87,7 @@ class ReportService {
                     as: 'responsible',
                     attributes: ['firstName', 'lastName']
                 },{
-                    model:itemsRequest,
+                    model:requestItems,
                     as: 'requestItems',
                     attributes: ['stock', 'order', 'quantity'],
                     // include: [{

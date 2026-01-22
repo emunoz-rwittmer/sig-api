@@ -3,9 +3,12 @@ const YachtRequestController  = require ('../../../controllers/operations/yachtR
 
 const router = Router();
 
-router.put('/updateRequest/:request_id', YachtRequestController.updateRequest);
+router.get('/',YachtRequestController.getAllRequests);
+router.get('/:request_id',YachtRequestController.getRequestById);
+router.post('/', YachtRequestController.createRequest);
+router.put('/:request_id', YachtRequestController.updateRequest);
 
-//ITEMS ORDER
+router.put('/updateRequest/:request_id', YachtRequestController.updateRequest);
 router.put('/updateQuantityItemRequest', YachtRequestController.updateQuantityItemRequest);
 
 

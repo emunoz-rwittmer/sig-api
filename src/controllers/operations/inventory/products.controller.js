@@ -32,8 +32,7 @@ const getProducts = async (req, res) => {
 
 const getProductsWithConfigurations = async (req, res) => {
     try {
-        const type = req.params.type
-        const result = await ProductService.getProductsWithConfigurations(type);
+        const result = await ProductService.getProductsWithConfigurations();
         if (result instanceof Array) {
             result.map((x) => {
                 x.product.wineries.map(warehose => {

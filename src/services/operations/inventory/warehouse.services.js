@@ -3,7 +3,7 @@ const Warehouse = require('../../../models/catalogs/wareHouse.models');
 const Stock = require('../../../models/operations/inventory/stock.models');
 const Transaction = require('../../../models/operations/inventory/transaction.models');
 const Product = require('../../../models/operations/orders/product.models');
-const itemsRequest = require('../../../models/operations/yachtRequest/itemsRequest.models');
+const requestItems = require('../../../models/operations/yachtRequest/requestItems.models');
 const LaundryYacht = require('../../../models/operations/yachtRequest/laundryYacht');
 const Request = require('../../../models/operations/yachtRequest/request.models');
 const Utils = require('../../../utils/Utils');
@@ -273,7 +273,7 @@ class WarehouseService {
                     as: 'requests',
                     where: { group },
                     include: [{
-                        model: itemsRequest,
+                        model: requestItems,
                         as: 'requestItems',
                     }, {
                         model: Staff,
@@ -295,7 +295,7 @@ class WarehouseService {
 
     static async getItemsToRequest(requestId) {
         try {
-            const result = await itemsRequest.findAll({
+            const result = await requestItems.findAll({
                 where: { requestId },
                 attributes: ['id', 'stock', 'order', 'quantity'],
             });

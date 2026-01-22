@@ -1,7 +1,7 @@
 const db = require('../../../utils/database');
 const { DataTypes } = require('sequelize');
 
-const itemsRequest = db.define('itemsRequest', {
+const RequestItems = db.define('request_items', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -12,10 +12,10 @@ const itemsRequest = db.define('itemsRequest', {
     allowNull: false,
     field: 'request_id'
   },
-  placeYachtId: {
+  configurationId: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    field: 'placeYacht_id'
+    field: 'configuration_id'
   },
   stock: {
     type: DataTypes.INTEGER,
@@ -31,4 +31,4 @@ const itemsRequest = db.define('itemsRequest', {
   },
 });
 
-module.exports = itemsRequest;
+module.exports = RequestItems;
