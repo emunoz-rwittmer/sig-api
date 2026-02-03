@@ -9,8 +9,12 @@ const getAllStaffs = async (req, res) => {
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
-                x.dataValues.staff_departament.dataValues.id = Utils.encode(x.dataValues.staff_departament.dataValues.id);
-                x.dataValues.staff_position.dataValues.id = Utils.encode(x.dataValues.staff_position.dataValues.id);
+                x.dataValues.departamentId = Utils.encode(x.dataValues.departamentId);
+                x.dataValues.positionId = Utils.encode(x.dataValues.positionId);
+                x.dataValues.roleId = Utils.encode(x.dataValues.roleId);
+                x.dataValues.companies.map(com => {
+                    com.company.dataValues.id = Utils.encode(com.company.dataValues.id);
+                })
             });
         }
         res.status(200).json(result);
@@ -29,7 +33,7 @@ const getStaffsByFilters = async (req, res) => {
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
-                x.dataValues.staff_departament.dataValues.id = Utils.encode(x.dataValues.staff_departament.dataValues.id);
+                x.dataValues.id = Utils.encode(x.dataValues.staff_departament.dataValues.id);
                 x.dataValues.staff_position.dataValues.id = Utils.encode(x.dataValues.staff_position.dataValues.id);
 
             });
@@ -130,14 +134,12 @@ const createStaff = async (req, res) => {
         staff.roleId = staff.roleId ? Utils.decode(staff.roleId) : null;
         staff.departamentId = Utils.decode(req.body.departamentId);
         staff.positionId = Utils.decode(req.body.positionId);
+        if (staff.companyId?.length) staff.companyId = staff.companyId.map(x => Utils.decode(x));
         staff.password = passwordGenerate
+        await StaffService.createStaff(staff);
+        res.status(200).json({ data: 'resource created successfully' });
 
-        const result = await StaffService.createStaff(staff);
-        if (result) {
-            res.status(200).json({ data: 'resource created successfully' });
-        }
     } catch (error) {
-        console.log(error)
         res.status(400).json(error.message);
     }
 }
@@ -146,15 +148,14 @@ const updateStaff = async (req, res) => {
     try {
         const staffId = Utils.decode(req.params.staff_id);
         const staff = req.body;
-        if (staff.roleId) staff.roleId = Utils.decode(req.body.roleId);
+        staff.id = staffId;
+        staff.roleId = staff.roleId ? Utils.decode(staff.roleId) : null;
         staff.departamentId = Utils.decode(req.body.departamentId);
         staff.positionId = Utils.decode(req.body.positionId);
-        const result = await StaffService.updateStaff(staff, {
-            where: { id: staffId },
-        });
+        if (staff.companyId?.length) staff.companyId = staff.companyId.map(x => Utils.decode(x));
+        await StaffService.updateStaff(staff, staffId);
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        console.log(error)
         res.status(400).json(error.message);
     }
 }
@@ -170,91 +171,6 @@ const deleteStaff = async (req, res) => {
     }
 }
 
-// Staff - Yacht
-
-const getAllYachts = async (req, res) => {
-    try {
-        const staffId = Utils.decode(req.params.staff_id)
-        const result = await StaffService.getAllYachts(staffId);
-        if (result instanceof Object) {
-            result.id = Utils.encode(result.id);
-            result.yacht_id = Utils.encode(result.yacht_id);
-        }
-        res.status(200).json(result);
-    } catch (error) {
-        res.status(400).json(error.message);
-    }
-}
-
-const assingYacht = async (req, res) => {
-    try {
-        const data = {};
-        data.staffId = Utils.decode(req.params.staff_id)
-        data.yachtId = Utils.decode(req.body.yachti_id)
-        const result = await StaffService.assingYacht(data);
-        if (result) {
-            res.status(200).json({ data: 'resource created successfully' });
-        }
-    } catch (error) {
-        res.status(400).json(error.message);
-    }
-}
-
-const deleteYacht = async (req, res) => {
-    try {
-        const yachtId = req.params.id;
-        const result = await StaffService.deleteYacht({
-            where: { id: yachtId }
-        });
-        res.status(200).json({ data: 'resource deleted successfully' })
-    } catch (error) {
-        res.status(400).json(error.message);
-    }
-}
-
-// Staff - Company
-
-const getAllCompanies = async (req, res) => {
-    try {
-        const staffId = Utils.decode(req.params.staff_id)
-        const result = await StaffService.getAllCompanies(staffId);
-        if (result instanceof Object) {
-            result.id = Utils.encode(result.id);
-            result.company_id = Utils.encode(result.company_id);
-        }
-        res.status(200).json(result);
-    } catch (error) {
-        res.status(400).json(error.message);
-    }
-}
-
-const assingCompany = async (req, res) => {
-    try {
-        const data = {};
-        data.staffId = Utils.decode(req.params.staff_id)
-        data.companyId = Utils.decode(req.body.company_id)
-        const result = await StaffService.assingCompany(data);
-        if (result) {
-            res.status(200).json({ data: 'resource created successfully' });
-        }
-    } catch (error) {
-        console.log(error.message)
-        res.status(400).json(error.message);
-    }
-}
-
-const deleteCompany = async (req, res) => {
-    try {
-        const id = req.params.id;
-        await StaffService.deleteCompany({
-            where: { id }
-        });
-        res.status(200).json({ data: 'resource deleted successfully' })
-    } catch (error) {
-        res.status(400).json(error.message);
-    }
-}
-
 const StaffController = {
     getAllStaffs,
     getStaffsByFilters,
@@ -266,11 +182,5 @@ const StaffController = {
     createStaff,
     updateStaff,
     deleteStaff,
-    getAllYachts,
-    assingYacht,
-    deleteYacht,
-    getAllCompanies,
-    assingCompany,
-    deleteCompany
 }
 module.exports = StaffController

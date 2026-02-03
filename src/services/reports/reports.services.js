@@ -3,7 +3,7 @@ const Company = require("../../models/catalogs/company.models");
 const Staff = require("../../models/catalogs/staff.models");
 const Warehouse = require("../../models/catalogs/wareHouse.models");
 const Transaction = require("../../models/operations/inventory/transaction.models");
-const itemsOrder = require("../../models/operations/orders/itemsOrder.models");
+const orderItems = require("../../models/operations/orders/orderItems.models");
 const Order = require('../../models/operations/orders/order.models');
 const Product = require("../../models/operations/orders/product.models");
 const Request = require("../../models/operations/yachtRequest/request.models");
@@ -24,7 +24,7 @@ class ReportService {
                     as: 'responsible',
                     attributes: ['firstName', 'lastName']
                 },{
-                    model:itemsOrder,
+                    model:orderItems,
                     as: 'orderItems',
                     attributes: ['product', 'quantity', 'status']
                 }]

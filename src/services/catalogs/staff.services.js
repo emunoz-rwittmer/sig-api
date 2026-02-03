@@ -2,52 +2,43 @@ const Staff = require('../../models/catalogs/staff.models');
 const Yachts = require('../../models/catalogs/yacht.models');
 const Positions = require('../../models/catalogs/positions.models');
 const Departaments = require('../../models/catalogs/departament.models')
-const StaffYacht = require('../../models/catalogs/staffYacht.models');
 const { Op } = require("sequelize");
 const Roles = require('../../models/catalogs/roles.models');
 const Company = require('../../models/catalogs/company.models');
 const StaffCompany = require('../../models/catalogs/staffCompany.models');
 const { model } = require('mongoose');
+const db = require('../../utils/database');
 
 class Staffervice {
     static async getAll() {
         try {
             const result = await Staff.findAll({
-                attributes: ['id', 'first_name', 'last_name', 'email', 'ci_staff', 'cell_phone', 'date_entry', 'active'],
                 order: [
                     ['last_name', 'ASC']
                 ],
-                include: [{
-                    model: StaffYacht,
-                    as: 'yachts',
-                    attributes: ['id'],
-                    include: [{
-                        model: Yachts,
-                        as: 'yacht_staff'
-                    }]
-                },
-                {
-                    model: StaffCompany,
-                    as: 'companies',
-                    attributes: ['id'],
-                    include: [{
-                        model: Company,
-                        as: 'company',
+                include: [
+                    {
+                        model: StaffCompany,
+                        as: 'companies',
+                        attributes: ['id'],
                         include: [{
-                            model: Yachts,
-                            as: 'yacht'
+                            model: Company,
+                            as: 'company',
+                            include: [{
+                                model: Yachts,
+                                as: 'yacht'
+                            }]
                         }]
-                    }]
-                },
-                {
-                    model: Departaments,
-                    as: 'staff_departament',
-                    attributes: ['id', 'name'],
-                }, {
-                    model: Positions,
-                    as: 'staff_position',
-                    attributes: ['id', 'name'],
-                }],
+                    },
+                    {
+                        model: Departaments,
+                        as: 'staff_departament',
+                        attributes: ['id', 'name'],
+                    }, {
+                        model: Positions,
+                        as: 'staff_position',
+                        attributes: ['id', 'name'],
+                    }],
             });
             return result;
         } catch (error) {
@@ -337,113 +328,71 @@ class Staffervice {
         }
     }
 
-    static async createStaff(staff) {
+    static async createStaff(staffData) {
+        const transaction = await db.transaction();
+
         try {
-            const result = await Staff.create(staff);
-            return result;
+            const { companyId, ...staff } = staffData;
+
+            const newStaff = await Staff.create(staff, { transaction });
+
+            if (companyId?.length) {
+                const relations = companyId.map(company => ({
+                    staffId: newStaff.id,
+                    companyId: company
+                }));
+
+                await StaffCompany.bulkCreate(relations, { transaction });
+            }
+
+            await transaction.commit();
+            return newStaff;
+
         } catch (error) {
-
+            await transaction.rollback();
             throw error;
-
         }
     }
 
-    static async updateStaff(staff, id) {
+    static async updateStaff(staffData, id) {
+        const transaction = await db.transaction();
+
         try {
-            const result = await Staff.update(staff, id);
-            return result;
+            const { companyId, ...staff } = staffData;
+
+            await Staff.update(staff, {
+                where: { id },
+                transaction
+            });
+
+            await StaffCompany.destroy({
+                where: { staffId: id },
+                transaction
+            });
+
+            if (companyId?.length) {
+                const relations = companyId.map(company => ({
+                    staffId: id,
+                    companyId: company
+                }));
+
+                await StaffCompany.bulkCreate(relations, { transaction });
+            }
+
+            await transaction.commit();
+            return true;
         } catch (error) {
+            await transaction.rollback();
             throw error;
         }
     }
+
 
     static async delete(staffId) {
         try {
-            const relations = await StaffYacht.destroy({
-                where: { staffId }
-            });
-            const result = await Staff.destroy({
-                where: { id: staffId }
-            });
-            if (relations || result) {
-                return 'resource deleted successfully'
-            }
-        } catch (error) {
-            throw error;
-        }
-    }
+            await Staff.destroy({ where: { id: staffId } });
+            return 'resource deleted successfully'
 
-    // Staff - YACHT 
-
-    static async getAllYachts(id) {
-        try {
-            const result = await StaffYacht.findAll({
-                where: { staffId: id },
-                attributes: ['id'],
-                include: {
-                    model: Yachts,
-                    as: 'yacht_staff',
-                    attributes: ['name'],
-                }
-            });
-            return result;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    static async assingYacht(data) {
-        try {
-            const result = await StaffYacht.create(data);
-            return result;
-        } catch (error) {
-            throw error;
-
-        }
-    }
-
-    static async deleteYacht(id) {
-        try {
-            const result = await StaffYacht.destroy(id);
-            return result;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    // Staff - COMPANIES 
-
-    static async getAllCompanies(id) {
-        try {
-            const result = await StaffCompany.findAll({
-                where: { staffId: id },
-                attributes: ['id'],
-                include: {
-                    model: Company,
-                    as: 'company',
-                    attributes: ['name'],
-                }
-            });
-            return result;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    static async assingCompany(data) {
-        try {
-            const result = await StaffCompany.create(data);
-            return result;
-        } catch (error) {
-            throw error;
-
-        }
-    }
-
-    static async deleteCompany(id) {
-        try {
-            const result = await StaffCompany.destroy(id);
-            return result;
         } catch (error) {
             throw error;
         }

@@ -1,4 +1,4 @@
-const itemsGuide = require('../../../models/operations/referralGuides/itemsGuides.models');
+const guideItems = require('../../../models/operations/referralGuides/guideItems.models');
 const Guide = require('../../../models/operations/referralGuides/guides.models');
 const Company = require('../../../models/catalogs/company.models');
 const db = require('../../../utils/database');
@@ -10,7 +10,7 @@ class GuideService {
             const result = await Guide.findAll({
                 where: { companyId },
                 include: [{
-                    model: itemsGuide,
+                    model: guideItems,
                     as: 'details',
                 }]
             });
@@ -26,7 +26,7 @@ class GuideService {
                 where: { id },
                 include: [
                     {
-                        model: itemsGuide,
+                        model: guideItems,
                         as: 'details',
                     },
                     {
@@ -53,7 +53,7 @@ class GuideService {
                 guideId: result.id
             }));
 
-            await itemsGuide.bulkCreate(details, { transaction });
+            await guideItems.bulkCreate(details, { transaction });
             await transaction.commit();
             return result;
         } catch (error) {
@@ -66,7 +66,7 @@ class GuideService {
     static async updateGuide(data) {
         try {
             const results = await Promise.all(data.map(async (item) => {
-                const result = await itemsGuide.update({
+                const result = await guideItems.update({
                     product: item.product,
                     quantity: item.quantity,
                     originalQuantity: item.originalQuantity,
@@ -85,7 +85,7 @@ class GuideService {
 
     static async deleteItem(itemId) {
         try {
-            const result = await itemsGuide.destroy({
+            const result = await guideItems.destroy({
                 where: { id: itemId }
             });
             if (result) {

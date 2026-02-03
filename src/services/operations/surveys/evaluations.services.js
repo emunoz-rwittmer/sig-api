@@ -6,7 +6,6 @@ const Yacht = require('../../../models/catalogs/yacht.models');
 const Staff = require('../../../models/catalogs/staff.models');
 const Departaments = require('../../../models/catalogs/departament.models');
 const Positions = require('../../../models/catalogs/positions.models');
-const StaffYacht = require('../../../models/catalogs/staffYacht.models');
 const { Op, where } = require('sequelize');
 
 class EvaluationService {
@@ -150,30 +149,6 @@ class EvaluationService {
     }
 
     //REPORTING EVALUATIONS
-
-    static async getReportingByYacht(yachtId) {
-        try {
-            const result = await StaffYacht.findAll({
-                where: { yachtId },
-                attributes: ['id'],
-                include: [{
-                    model: Staff,
-                    as: "staff_yacht",
-                    attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
-                    include: [
-                        {
-                            model: Positions,
-                            as: 'staff_position',
-                            attributes: ['id', 'name'],
-                        }
-                    ]
-                }]
-            });
-            return result;
-        } catch (error) {
-            throw error;
-        }
-    }
 
     static async getEvaluationsByYacht(yachtId, startDate, endDate) {
         try {

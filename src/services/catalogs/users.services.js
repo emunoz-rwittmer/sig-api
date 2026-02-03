@@ -8,7 +8,7 @@ class UserService {
     static async getAll() {
         try {
             const result = await Users.findAll({
-                attributes: ['id','first_name','last_name','email','active'],
+                attributes: ['id', 'firstName', 'lastName', 'email', 'active', 'roleId'],
                 include: {
                     model: Roles,
                     as: 'user_rol',
@@ -36,7 +36,7 @@ class UserService {
         try {
             const result = await Users.findOne({
                 where: { id },
-                attributes: ['first_name','last_name','email','active','role_id'],
+                attributes: ['first_name', 'last_name', 'email', 'active', 'role_id'],
                 include: {
                     model: Roles,
                     as: 'user_rol',
@@ -56,16 +56,16 @@ class UserService {
             return result;
         } catch (error) {
             throw error;
-         
+
         }
     }
 
     static async updateUser(user, id) {
         try {
-            const result = await Users.update(user,id);
+            const result = await Users.update(user, id);
             return result;
         } catch (error) {
-            throw error;  
+            throw error;
         }
     }
 
@@ -79,4 +79,4 @@ class UserService {
     }
 }
 
-module.exports =  UserService;
+module.exports = UserService;

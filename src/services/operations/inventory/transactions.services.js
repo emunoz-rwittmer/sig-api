@@ -2,9 +2,7 @@ const Product = require('../../../models/operations/orders/product.models');
 const Stock = require('../../../models/operations/inventory/stock.models');
 const Transaction = require('../../../models/operations/inventory/transaction.models');
 const db = require('../../../utils/database');
-const Request = require('../../../models/operations/yachtRequest/request.models');
-const requestItems = require('../../../models/operations/yachtRequest/requestItems.models');
-const itemsOrder = require('../../../models/operations/orders/itemsOrder.models');
+const orderItems = require('../../../models/operations/orders/orderItems.models');
 const Register = require('../../../models/operations/inventory/register.models');
 const { where } = require('sequelize');
 
@@ -77,7 +75,7 @@ class TransactionService {
                 { transaction: t }
             );
 
-            const orderItem = await itemsOrder.findOne({
+            const orderItem = await orderItems.findOne({
                 where: { id: orderItemId },
                 transaction: t,
                 lock: t.LOCK.UPDATE
@@ -244,7 +242,7 @@ class TransactionService {
 
     static async updateStatusItem(data, id) {
         try {
-            const result = await itemsOrder.update(data, id);
+            const result = await orderItems.update(data, id);
             return result;
         } catch (error) {
             throw error;

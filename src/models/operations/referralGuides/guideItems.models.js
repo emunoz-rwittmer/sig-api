@@ -1,7 +1,7 @@
 const db = require('../../../utils/database');
 const { DataTypes } = require('sequelize');
 
-const itemsGuide = db.define('itemsGuide', {
+const guideItems = db.define('guide_items', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -22,4 +22,4 @@ const itemsGuide = db.define('itemsGuide', {
   },
 });
 
-module.exports = itemsGuide;
+module.exports = guideItems;

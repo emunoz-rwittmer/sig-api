@@ -5,14 +5,13 @@ const Departaments = require('./catalogs/departament.models');
 const Yacht = require('./catalogs/yacht.models');
 const Company = require('./catalogs/company.models');
 const Staff = require('./catalogs/staff.models');
-const StaffYacht = require('./catalogs/staffYacht.models')
 const Question = require('./operations/surveys/question.models');
 const HouseRule = require('./catalogs/houseRule.models');
 const Form = require('./operations/surveys/form.models');
 
 // Invetory Models
 const Order = require('./operations/orders/order.models');
-const itemsOrder = require('./operations/orders/itemsOrder.models');
+const orderItems = require('./operations/orders/orderItems.models');
 const Warehouse = require('./catalogs/wareHouse.models');
 const Stock = require('./operations/inventory/stock.models');
 const Product = require('./operations/orders/product.models');
@@ -43,7 +42,7 @@ const Trading = require('./rrhh/trading.models');
 const Format = require('./rrhh/format.models');
 const DoctorFormat = require('./rrhh/doctorFormat.models');
 const Guide = require('./operations/referralGuides/guides.models');
-const itemsGuide = require('./operations/referralGuides/itemsGuides.models');
+const guideItems = require('./operations/referralGuides/guideItems.models');
 const ConsecutivoGuias = require('./catalogs/consecutivoGuias.model');
 const ShipmentDates = require('./operations/surveys/shipmentDates.models');
 const FormRespond = require('./operations/surveys/formRespond.models');
@@ -55,7 +54,7 @@ const RequestItems = require('./operations/yachtRequest/requestItems.models');
 const initModels = () => {
 
     //catalogs
-        Consecutivo,
+    Consecutivo,
         ConsecutivoGuias,
         Question,
         HouseRule,
@@ -69,21 +68,19 @@ const initModels = () => {
     Staff.belongsTo(Roles, { as: "rol", foreignKey: "role_id" });
     Roles.hasMany(Staff, { as: "staffs", foreignKey: "role_id" });
 
-    Staff.belongsTo(Positions, { as: "staff_position", foreignKey: "position_id" });
+    Staff.belongsTo(Positions, { as: "staff_position", foreignKey: "position_id"});
     Positions.hasMany(Staff, { as: "position_staff", foreignKey: "position_id" });
 
     Staff.belongsTo(Departaments, { as: "staff_departament", foreignKey: "departament_id" });
     Departaments.hasMany(Staff, { as: "departament_staff", foreignKey: "departament_id" });
 
-    StaffCompany.belongsTo(Staff, { as: "staff", foreignKey: "staff_id" });
-    StaffCompany.belongsTo(Company, { as: "company", foreignKey: "company_id" });
-    StaffCompany.hasMany(ShipmentDates, { as: "embarques", foreignKey: "staff_company_id" });
+    StaffCompany.belongsTo(Staff, { as: "staff", foreignKey: "staff_id", onDelete: 'CASCADE' });
+    StaffCompany.belongsTo(Company, { as: "company", foreignKey: "company_id", onDelete: 'CASCADE' });
+    StaffCompany.hasMany(ShipmentDates, { as: "embarques", foreignKey: "staff_company_id", onDelete: 'CASCADE'});
+
     Staff.hasMany(StaffCompany, { as: 'companies', foreignKey: 'staff_id' });
     Company.hasMany(StaffCompany, { as: 'personal', foreignKey: 'company_id' });
 
-    StaffYacht.belongsTo(Staff, { as: "staff_yacht", foreignKey: "staff_id" });
-    StaffYacht.belongsTo(Yacht, { as: "yacht_staff", foreignKey: "yacht_id" });
-    Staff.hasMany(StaffYacht, { as: 'yachts', foreignKey: 'staff_id' });
 
     //rrhh
     Company.hasMany(Regulation, { as: "regulations", foreignKey: "company_id" });
@@ -147,12 +144,12 @@ const initModels = () => {
     Yacht.hasOne(Warehouse, { foreignKey: 'yacht_id', as: 'warehouse' });
 
     Order.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
-    Order.hasMany(itemsOrder, { foreignKey: 'order_id', as: 'orderItems' });
-    itemsOrder.belongsTo(Order, { foreignKey: 'order_id', as: 'order' });
+    Order.hasMany(orderItems, { foreignKey: 'order_id', as: 'orderItems' });
+    orderItems.belongsTo(Order, { foreignKey: 'order_id', as: 'order' });
 
     Guide.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
-    Guide.hasMany(itemsGuide, { foreignKey: 'guide_id', as: 'details' });
-    itemsGuide.belongsTo(Guide, { foreignKey: 'guide_id', as: 'guide' });
+    Guide.hasMany(guideItems, { foreignKey: 'guide_id', as: 'details' });
+    guideItems.belongsTo(Guide, { foreignKey: 'guide_id', as: 'guide' });
 
     Order.belongsTo(Staff, { foreignKey: 'user_id', as: 'responsible' });
     Staff.hasMany(Order, { foreignKey: 'user_id', as: 'orders' });

@@ -9,6 +9,7 @@ const getAllUsers = async (req, res) => {
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
+                x.dataValues.roleId = Utils.encode(x.dataValues.roleId);
             });
         }
         res.status(200).json(result);
@@ -55,12 +56,14 @@ const updateUser = async (req, res) => {
     try {
         const userId = Utils.decode(req.params.user_id);
         const user = req.body;
+        delete user.id
         user.roleId = Utils.decode(req.body.roleId);
-        const result = await UserService.updateUser(user, {
+        await UserService.updateUser(user, {
             where: { id: userId },
         });
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
+        console.log(error)
         res.status(400).json(error.message);
     }
 }

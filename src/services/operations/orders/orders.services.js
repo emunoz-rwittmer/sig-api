@@ -1,6 +1,6 @@
 const { Sequelize, Op, where } = require("sequelize");
 const Order = require('../../../models/operations/orders/order.models');
-const itemsOrder = require('../../../models/operations/orders/itemsOrder.models');
+const orderItems = require('../../../models/operations/orders/orderItems.models');
 const Staff = require('../../../models/catalogs/staff.models');
 const Utils = require('../../../utils/Utils');
 const Company = require('../../../models/catalogs/company.models');
@@ -14,7 +14,7 @@ class OrderService {
                     model: Company,
                     as: 'company',
                 }, {
-                    model: itemsOrder,
+                    model: orderItems,
                     as: 'orderItems',
                 }, {
                     model: Staff,
@@ -35,7 +35,7 @@ class OrderService {
             const result = await Order.findOne({
                 where: { id: orderId },
                 include: [{
-                    model: itemsOrder,
+                    model: orderItems,
                     as: 'orderItems',
                     attributes: ['id', 'sku', 'product', 'quantity', 'originalQuantity', 'status'],
                 },
@@ -63,7 +63,7 @@ class OrderService {
                 status: 'en espera',
             }));
 
-            await itemsOrder.bulkCreate(productsOrder, { transaction });
+            await orderItems.bulkCreate(productsOrder, { transaction });
 
             await transaction.commit();
             return result;
@@ -87,7 +87,7 @@ class OrderService {
 
     static async deleteItem(itemId) {
         try {
-            const result = await itemsOrder.destroy({
+            const result = await orderItems.destroy({
                 where: { id: itemId }
             });
             if (result) {

@@ -68,6 +68,38 @@ const Staff = db.define('staff', {
         allowNull: false,
         field: "position_id",
     },
+    parentFirstName: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: "parent_first_name",
+    },
+    parenLastName: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: "parent_last_name",
+    },
+    parentRelation: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: "parent_relation",
+    },
+    parentEmail: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+        validate: {
+            isEmail: true,
+        }
+    },
+    parentPhone: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: "parent_phone",
+    },
+    parentAddress: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: "parent_address",
+    },
     changePassword: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
