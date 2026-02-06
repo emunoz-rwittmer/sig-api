@@ -11,7 +11,7 @@ const storage = multer.diskStorage({
       folder = req.query.file;
     } else if (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
       file.mimetype === 'application/vnd.ms-excel') {
-      folder = '/excel';
+      folder = req.query.file || '/excel';
     }
     const uploadPath = path.join(__dirname, '..', '../uploads', folder);
     cb(null, uploadPath);
