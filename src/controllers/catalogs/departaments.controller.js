@@ -58,7 +58,8 @@ const updateDepartament = async (req, res) => {
     try {
         const departamentId = Utils.decode(req.params.departament_id);
         const departament = req.body;
-        const result = await DepartamentService.updateDepartament(departament, {
+        delete departament.id
+        await DepartamentService.updateDepartament(departament, {
             where: { id: departamentId },
         });
         res.status(200).json({ data: 'resource updated successfully' });

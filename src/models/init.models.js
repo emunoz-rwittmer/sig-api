@@ -50,6 +50,9 @@ const FormAnswers = require('./operations/surveys/formAnswers.models');
 const FormQuestion = require('./operations/surveys/formQuestion.models');
 const ProductConfiguration = require('./operations/inventory/productConfiguration');
 const RequestItems = require('./operations/yachtRequest/requestItems.models');
+const StaffDocumentation = require('./catalogs/staffDocumentation.models');
+const Documentation = require('./catalogs/documentation.models');
+const DocumentationPosition = require('./catalogs/documentationPosition.models');
 
 const initModels = () => {
 
@@ -68,18 +71,26 @@ const initModels = () => {
     Staff.belongsTo(Roles, { as: "rol", foreignKey: "role_id" });
     Roles.hasMany(Staff, { as: "staffs", foreignKey: "role_id" });
 
-    Staff.belongsTo(Positions, { as: "staff_position", foreignKey: "position_id"});
+    Staff.belongsTo(Positions, { as: "staff_position", foreignKey: "position_id" });
     Positions.hasMany(Staff, { as: "position_staff", foreignKey: "position_id" });
 
     Staff.belongsTo(Departaments, { as: "staff_departament", foreignKey: "departament_id" });
     Departaments.hasMany(Staff, { as: "departament_staff", foreignKey: "departament_id" });
 
-    StaffCompany.belongsTo(Staff, { as: "staff", foreignKey: "staff_id", onDelete: 'CASCADE' });
-    StaffCompany.belongsTo(Company, { as: "company", foreignKey: "company_id", onDelete: 'CASCADE' });
-    StaffCompany.hasMany(ShipmentDates, { as: "embarques", foreignKey: "staff_company_id", onDelete: 'CASCADE'});
 
-    Staff.hasMany(StaffCompany, { as: 'companies', foreignKey: 'staff_id' });
-    Company.hasMany(StaffCompany, { as: 'personal', foreignKey: 'company_id' });
+    DocumentationPosition.belongsTo(Documentation, { as: "document", foreignKey: "document_id" });
+    DocumentationPosition.belongsTo(Positions, { as: "position", foreignKey: "position_id" });
+    Documentation.hasMany(DocumentationPosition, { as: "positions", foreignKey: "document_id", onDelete: 'CASCADE', hooks: true });
+
+    StaffDocumentation.belongsTo(Staff, { as: "staff", foreignKey: "staff_id" });
+    StaffDocumentation.belongsTo(Documentation, { as: "document", foreignKey: "document_id" });
+    Staff.hasMany(StaffDocumentation, { as: "staff_documentation", foreignKey: "staff_id", onDelete: 'CASCADE', hooks: true });
+
+    StaffCompany.belongsTo(Staff, { as: "staff", foreignKey: "staff_id" });
+    StaffCompany.belongsTo(Company, { as: "company", foreignKey: "company_id" });
+    StaffCompany.hasMany(ShipmentDates, { as: "embarques", foreignKey: "staff_company_id", onDelete: 'CASCADE', hooks: true });
+    Staff.hasMany(StaffCompany, { as: 'companies', foreignKey: 'staff_id', onDelete: 'CASCADE', hooks: true });
+    Company.hasMany(StaffCompany, { as: 'personal', foreignKey: 'company_id', onDelete: 'CASCADE', hooks: true });
 
 
     //rrhh

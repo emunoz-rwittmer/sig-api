@@ -36,7 +36,7 @@ const createPosition = async (req, res) => {
             res.status(200).json({ data: 'resource created successfully' });
         }
     } catch (error) {
-        
+
         res.status(400).json(error.message);
     }
 }
@@ -45,7 +45,8 @@ const updatePosition = async (req, res) => {
     try {
         const positionId = Utils.decode(req.params.position_id);
         const position = req.body;
-        const result = await PositionService.updatePosition(position, {
+        delete position.id
+        await PositionService.updatePosition(position, {
             where: { id: positionId },
         });
         res.status(200).json({ data: 'resource updated successfully' });
@@ -60,7 +61,7 @@ const deletePosition = async (req, res) => {
         const result = await PositionService.delete(positionId);
         res.status(200).json({ data: result })
     } catch (error) {
-        
+
         res.status(400).json(error.message);
     }
 }

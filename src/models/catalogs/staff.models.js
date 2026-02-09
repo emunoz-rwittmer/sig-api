@@ -68,6 +68,11 @@ const Staff = db.define('staff', {
         allowNull: false,
         field: "position_id",
     },
+    salary: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true,
+        defaultValue: 0
+    },
     parentFirstName: {
         type: DataTypes.STRING,
         allowNull: true,
