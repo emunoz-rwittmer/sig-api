@@ -37,7 +37,7 @@ const ComentCardYacht = require('./operations/comentCard/cardYacht.models');
 const ComentCardQR = require('./operations/comentCard/cardQR.models');
 const StaffCompany = require('./catalogs/staffCompany.models');
 const Regulation = require('./rrhh/regulation.models');
-const ReadRegulation = require('./rrhh/readRegulation.models');
+const StaffReadRegulation = require('./rrhh/readRegulation.models');
 const Trading = require('./rrhh/trading.models');
 const Format = require('./rrhh/format.models');
 const DoctorFormat = require('./rrhh/doctorFormat.models');
@@ -97,11 +97,11 @@ const initModels = () => {
     Company.hasMany(Regulation, { as: "regulations", foreignKey: "company_id" });
     Regulation.belongsTo(Company, { as: "company", foreignKey: "company_id" });
 
-    Staff.hasMany(ReadRegulation, { as: "regulation_reads", foreignKey: "staff_id" });
-    ReadRegulation.belongsTo(Staff, { as: "staff", foreignKey: "staff_id" });
+    Staff.hasMany(StaffReadRegulation, { as: "regulation_reads", foreignKey: "staff_id" });
+    StaffReadRegulation.belongsTo(Staff, { as: "staff", foreignKey: "staff_id" });
 
-    Regulation.hasMany(ReadRegulation, { as: "reads", foreignKey: "regulation_id" });
-    ReadRegulation.belongsTo(Regulation, { as: "regulation", foreignKey: "regulation_id" });
+    Regulation.hasMany(StaffReadRegulation, { as: "reads", foreignKey: "regulation_id" });
+    StaffReadRegulation.belongsTo(Regulation, { as: "regulation", foreignKey: "regulation_id" });
 
 
     //Evaluations

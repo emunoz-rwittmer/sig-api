@@ -8,6 +8,9 @@ const Company = require('../../models/catalogs/company.models');
 const StaffCompany = require('../../models/catalogs/staffCompany.models');
 const { model } = require('mongoose');
 const db = require('../../utils/database');
+const Regulation = require('../../models/rrhh/regulation.models');
+const { forEach } = require('mathjs');
+const StaffReadRegulation = require('../../models/rrhh/readRegulation.models');
 
 class Staffervice {
     static async getAll() {
@@ -332,17 +335,33 @@ class Staffervice {
         const transaction = await db.transaction();
 
         try {
-            const { companyId, ...staff } = staffData;
+            const { companyId = [], ...staff } = staffData;
 
             const newStaff = await Staff.create(staff, { transaction });
 
-            if (companyId?.length) {
+            if (companyId.length) {
+
                 const relations = companyId.map(company => ({
                     staffId: newStaff.id,
                     companyId: company
                 }));
 
                 await StaffCompany.bulkCreate(relations, { transaction });
+
+                const regulations = await Regulation.findAll({
+                    where: { companyId },
+                    transaction
+                });
+
+                if (regulations.length) {
+                    const readRegulations = regulations.map(reg => ({
+                        staffId: newStaff.id,
+                        regulationId: reg.id,
+                        read: false,
+                    }));
+
+                    await StaffReadRegulation.bulkCreate(readRegulations, { transaction });
+                }
             }
 
             await transaction.commit();

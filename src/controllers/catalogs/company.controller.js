@@ -41,8 +41,6 @@ const createCompany = async (req, res) => {
     }
 }
 
-
-
 const updateCompany = async (req, res) => {
     try {
         const companyId = Utils.decode(req.params.company_id);
@@ -50,7 +48,7 @@ const updateCompany = async (req, res) => {
         if (req.files.length > 0) {
             company.logo = `/uploads/companies/${req.files[0].filename}`
         }
-        const result = await CompanyService.updateCompany(company, {
+        await CompanyService.updateCompany(company, {
             where: { id: companyId },
         });
         res.status(200).json({ data: 'resource updated successfully' });

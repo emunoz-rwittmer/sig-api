@@ -7,6 +7,7 @@ const getAllYachts = async (req, res) => {
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
+                x.dataValues.companyId = Utils.encode(x.dataValues.companyId);
             });
         }
         res.status(200).json(result);
@@ -33,23 +34,21 @@ const createYacht = async (req, res) => {
     try {
         const yacht = req.body;
         yacht.companyId = Utils.decode(yacht.companyId)
-        const result = await YachtService.createYacht(yacht);
-        if (result) {
-            res.status(200).json({ data: 'resource created successfully' });
-        }
+        await YachtService.createYacht(yacht);
+
+        res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
         res.status(400).json(error.message);
     }
 }
 
-
-
 const updateYacht = async (req, res) => {
     try {
         const yachtId = Utils.decode(req.params.yacht_id);
         const yacht = req.body;
+        delete yacht.id
         yacht.companyId = Utils.decode(yacht.companyId)
-        const result = await YachtService.updateYacht(yacht, {
+        await YachtService.updateYacht(yacht, {
             where: { id: yachtId },
         });
         res.status(200).json({ data: 'resource updated successfully' });
@@ -61,12 +60,12 @@ const updateYacht = async (req, res) => {
 const deleteYacht = async (req, res) => {
     try {
         const yachtId = Utils.decode(req.params.yacht_id);
-        const result = await YachtService.delete({
+        await YachtService.delete({
             where: { id: yachtId }
         });
         res.status(200).json({ data: 'resource deleted successfully' })
     } catch (error) {
-        
+
         res.status(400).json(error.message);
     }
 }

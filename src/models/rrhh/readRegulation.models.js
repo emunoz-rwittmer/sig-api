@@ -1,7 +1,7 @@
 const db = require('../../utils/database');
 const { DataTypes } = require('sequelize');
 
-const ReadRegulation = db.define('read_regulation', {
+const StaffReadRegulation = db.define('staff_read_regulation', {
     id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
@@ -23,4 +23,4 @@ const ReadRegulation = db.define('read_regulation', {
     },
 });
 
-module.exports = ReadRegulation;
+module.exports = StaffReadRegulation;

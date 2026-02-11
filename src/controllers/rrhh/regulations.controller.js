@@ -1,8 +1,7 @@
-const utils = require('excel4node/distribution/lib/utils');
 const RegulationService = require('../../services/rrhh/regulations.services');
 const Utils = require('../../utils/Utils');
-const { sendEmailNuevaSolicitud, sendEmailConfirmacion } = require('../../utils/mailer');
 const Staffervice = require('../../services/catalogs/staff.services');
+const { sendEmailConfirmacion } = require('../../utils/mailer');
 
 const getAllRegulations = async (req, res) => {
     try {

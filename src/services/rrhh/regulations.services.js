@@ -4,7 +4,7 @@ const Departaments = require('../../models/catalogs/departament.models');
 const Positions = require('../../models/catalogs/positions.models');
 const Staff = require('../../models/catalogs/staff.models');
 const StaffCompany = require('../../models/catalogs/staffCompany.models');
-const ReadRegulation = require('../../models/rrhh/readRegulation.models');
+const StaffReadRegulation = require('../../models/rrhh/readRegulation.models');
 const Regulation = require('../../models/rrhh/regulation.models');
 const db = require('../../utils/database');
 
@@ -15,7 +15,7 @@ class RegulationService {
                 where: { companyId },
                 attributes: ['id', 'name', 'file', 'createdAt'],
                 include:[{
-                    model: ReadRegulation,
+                    model: StaffReadRegulation,
                     as:'reads'
                 }]
             });
@@ -36,7 +36,7 @@ class RegulationService {
 
     static async getRegulationStaffById(id) {
         try {
-            const result = await ReadRegulation.findOne({
+            const result = await StaffReadRegulation.findOne({
                 where: { id },
                 attributes: ['id', 'read'],
                 include:
@@ -57,7 +57,7 @@ class RegulationService {
 
     static async getAllRegulationsBystaff(staffId) {
         try {
-            const result = await ReadRegulation.findAll({
+            const result = await StaffReadRegulation.findAll({
                 where: { staffId },
                 attributes: ['id', 'read'],
                 include:
@@ -96,7 +96,7 @@ class RegulationService {
                         attributes: ['first_name', 'last_name', 'email', 'cell_phone', 'roleId', 'departamentId', 'positionId', 'active'],
                         include: [
                             {
-                                model: ReadRegulation,
+                                model: StaffReadRegulation,
                                 as: 'regulation_reads',
                                 include:
                                     [
@@ -148,21 +148,16 @@ class RegulationService {
 
             const staffCompany = await StaffCompany.findAll({
                 where: { companyId: data.companyId },
-                include: [{
-                    model: Staff,
-                    as: 'staff',
-                    attributes: ['id'],
-                }],
             });
 
             if (result && staffCompany.length > 0) {
                 const readRegulations = staffCompany.map(staff => ({
-                    staffId: staff.staff.id,
+                    staffId: staff.staffId,
                     regulationId: result.id,
                     read: false,
                 }));
 
-                await ReadRegulation.bulkCreate(readRegulations, { transaction });
+                await StaffReadRegulation.bulkCreate(readRegulations, { transaction });
             }
 
             await transaction.commit();
@@ -188,7 +183,7 @@ class RegulationService {
         const transaction = await db.transaction();
         try {
 
-            await ReadRegulation.destroy({
+            await StaffReadRegulation.destroy({
                 where: { regulationId: id },
                 transaction
             });
@@ -209,7 +204,7 @@ class RegulationService {
 
     static async readAceptRegulation(id) {
         try {
-            const result = await ReadRegulation.findOne({ where: { id } });
+            const result = await StaffReadRegulation.findOne({ where: { id } });
             if (result) {
                 result.update({ read: true })
             }

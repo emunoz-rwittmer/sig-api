@@ -9,7 +9,7 @@ const Yacht= db.define('yacht',{
     },
     warehouseId: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
         field: 'warehouse_id'
     },
     companyId: {
