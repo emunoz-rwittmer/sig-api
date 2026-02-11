@@ -1,7 +1,7 @@
 const Staffervice = require('../../services/catalogs/staff.services');
 const FormatService = require('../../services/rrhh/formats.services');
 const { generateAndSavePDF } = require('../../services/rrhh/pdfService');
-const { sendEmailNewOrder, sendEmailNuevaSolicitud } = require('../../utils/mailer');
+const { sendEmailNuevaSolicitud } = require('../../utils/mailer');
 const Utils = require('../../utils/Utils');
 const fs = require('fs');
 const path = require('path');
@@ -49,7 +49,11 @@ const updateFormat = async (req, res) => {
     try {
         const formatId = Utils.decode(req.params.format_id);
         const data = req.body;
-        await FormatService.updateFormat(data, {
+        delete data.id;
+        await FormatService.updateFormat(
+            {...data,
+               companies: data.companies.map(reg => reg) 
+            }, {
             where: { id: formatId },
         });
         res.status(200).json({ data: 'resource updated successfully' });
@@ -104,6 +108,7 @@ const createDoctorFormat = async (req, res) => {
     try {
         const data = req.body;
         data.file = `/uploads/pdfs/${req.file.filename}`
+        data.companies = JSON.parse(data.companies);
         const result = await FormatService.createDoctorFormat(data);
         if (result) {
             res.status(200).json({ data: 'resource created successfully' });
@@ -120,7 +125,10 @@ const updateDoctorFormat = async (req, res) => {
         if (req.file) {
             data.file = `/uploads/pdfs/${req.file.filename}`
         }
-        await FormatService.updateDoctorFormat(data, {
+        await FormatService.updateDoctorFormat(
+            {...data,
+               companies: JSON.parse(data.companies) 
+            }, {
             where: { id: formatId },
         });
         res.status(200).json({ data: 'resource updated successfully' });

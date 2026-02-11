@@ -7,7 +7,7 @@ class FormatService {
     static async getAll() {
         try {
             const result = await Format.findAll({
-                attributes: ['id', 'name', 'content', 'createdAt'],
+                attributes: ['id', 'name', 'content', 'companies', 'createdAt'],
             });
 
             return result;
@@ -20,7 +20,7 @@ class FormatService {
         try {
             const result = await Format.findOne({
                 where: { id },
-                attributes: ['id', 'name', 'content', 'createdAt']
+                attributes: ['id', 'name', 'content', 'companies', 'createdAt']
             });
             return result;
         } catch (error) {
@@ -61,7 +61,7 @@ class FormatService {
     static async getAllDoctorFormats() {
         try {
             const result = await DoctorFormat.findAll({
-                attributes: ['id', 'name', 'file','createdAt'],
+                attributes: ['id', 'name', 'file', 'companies', 'createdAt'],
             });
 
             return result;
@@ -74,7 +74,7 @@ class FormatService {
         try {
             const result = await DoctorFormat.findOne({
                 where: { id },
-                attributes: ['id', 'name', 'file','createdAt']
+                attributes: ['id', 'name', 'file', 'companies', 'createdAt']
             });
             return result;
         } catch (error) {
@@ -124,7 +124,7 @@ class FormatService {
         }
     }
 
-        static async getRequestById(requestId) {
+    static async getRequestById(requestId) {
         try {
             const result = await RequestStaffs.findOne({
                 where: { id: requestId }
@@ -136,7 +136,7 @@ class FormatService {
         }
     }
 
-     static async createRequesForStaff(data) {
+    static async createRequesForStaff(data) {
         try {
             const result = await RequestStaffs.create(data);
             return result;

@@ -14,6 +14,10 @@ const Format = db.define('format', {
     content: {
         type: DataTypes.TEXT,
         allowNull: true,
+    },
+    companies: {
+        type: DataTypes.JSON,
+        allowNull: true,
     }
 });
 

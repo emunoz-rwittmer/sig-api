@@ -14,6 +14,10 @@ const DoctorFormat = db.define('doctor_format', {
     file: {
         type: DataTypes.TEXT,
         allowNull: true,
+    },
+     companies: {
+        type: DataTypes.JSON,
+        allowNull: true,
     }
 });
 
