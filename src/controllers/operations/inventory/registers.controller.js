@@ -1,6 +1,4 @@
-const axios = require('axios');
 const RegisterService = require('../../../services/operations/inventory/registers.services');
-
 
 const getAllRegisters = async (req, res) => {
     try {

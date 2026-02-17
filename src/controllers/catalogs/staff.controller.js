@@ -1,6 +1,6 @@
 const StaffService = require('../../services/catalogs/staff.services');
 const Utils = require('../../utils/Utils');
-const sendEmail = require('../../utils/mailer');
+const sendEmail = require('../../mails/mailer');
 const bcrypt = require("bcrypt");
 
 const getAllStaffs = async (req, res) => {

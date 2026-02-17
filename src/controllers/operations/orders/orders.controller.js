@@ -2,7 +2,7 @@ const OrderService = require('../../../services/operations/orders/orders.service
 const Utils = require('../../../utils/Utils');
 const CompanyService = require('../../../services/catalogs/company.services');
 const XLSX = require('xlsx');
-const { sendEmailNewOrder, sendConfirmationEmail, sendDispatchEmail } = require('../../../utils/mailer');
+const { sendEmailNewOrder, sendConfirmationEmail, sendDispatchEmail } = require('../../../mails/mailer');
 const Staffervice = require('../../../services/catalogs/staff.services');
 
 const getAllOrders = async (req, res) => {

@@ -14,16 +14,15 @@ require('dotenv').config();
 class ComentCardService {
     static async getAll() {
         try {
-            const result = await ComentCard.findAll({
-                attributes: ['id', 'name', 'createdAt'],
+            const result = await ComentCardYacht.findAll({
                 include: [
                     {
-                        model: ComentCardYacht,
-                        as: 'yates',
-                        include: [{
-                            model: Yacht,
-                            as: 'yate'
-                        }]
+                        model: ComentCard,
+                        as: 'coment_card',
+                    },
+                     {
+                        model: Yacht,
+                        as: 'yate',
                     }
                 ]
             });

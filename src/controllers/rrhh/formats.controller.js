@@ -1,7 +1,7 @@
 const Staffervice = require('../../services/catalogs/staff.services');
 const FormatService = require('../../services/rrhh/formats.services');
 const { generateAndSavePDF } = require('../../services/rrhh/pdfService');
-const { sendEmailNuevaSolicitud } = require('../../utils/mailer');
+const { sendEmailNuevaSolicitud } = require('../../mails/mailer');
 const Utils = require('../../utils/Utils');
 const fs = require('fs');
 const path = require('path');

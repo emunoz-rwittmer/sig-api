@@ -5,7 +5,7 @@ const YachtService = require('../../../services/catalogs/yachts.services');
 const Staffervice = require('../../../services/catalogs/staff.services');
 const Utils = require('../../../utils/Utils');
 const bcrypt = require('bcrypt');
-const { sendEmail } = require('../../../utils/mailer');
+const { sendEmail } = require('../../../mails/mailer');
 const moment = require('moment');
 const UserService = require('../../../services/catalogs/users.services');
 

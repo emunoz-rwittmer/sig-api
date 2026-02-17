@@ -1,8 +1,6 @@
 const axios = require('axios');
 const TransactionService = require('../../../services/operations/inventory/transactions.services');
 const Utils = require('../../../utils/Utils');
-const WarehouseService = require('../../../services/operations/inventory/warehouse.services');
-const Staffervice = require('../../../services/catalogs/staff.services');
 const CompanyService = require('../../../services/catalogs/company.services');
 const Consecutivo = require('../../../models/catalogs/consecutivo.model');
 

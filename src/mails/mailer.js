@@ -1,4 +1,4 @@
-const Mails = require('../utils/mails');
+const Mails = require('./mails');
 const MailsConfirmation = require('./mailsOfConfirmation');
 const MailsOrder = require('./mailsOrder');
 const MailsSolicitudes = require('./mailsSolicitudes');

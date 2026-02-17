@@ -1,7 +1,7 @@
 const RegulationService = require('../../services/rrhh/regulations.services');
 const Utils = require('../../utils/Utils');
 const Staffervice = require('../../services/catalogs/staff.services');
-const { sendEmailConfirmacion } = require('../../utils/mailer');
+const { sendEmailConfirmacion } = require('../../mails/mailer');
 
 const getAllRegulations = async (req, res) => {
     try {

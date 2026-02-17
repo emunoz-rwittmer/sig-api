@@ -1,6 +1,6 @@
 const RoleService = require('../../services/catalogs/roles.services');
 const Utils = require('../../utils/Utils');
-const transporter = require('../../utils/mailer');
+const transporter = require('../../mails/mailer');
 const bcrypt = require("bcrypt");
 
 const getRoles = async (req, res) => {

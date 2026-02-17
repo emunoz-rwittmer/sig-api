@@ -4,9 +4,9 @@ const morgan = require('morgan');
 const initMongoBd = require('./utils/mongoDatabase');
 const initModels = require('./models/init.models');
 const routerApi = require('./routes');
-
 const path = require('path');
 const db = require('./utils/database');
+require('./utils/cronJobs');
 
 const app = express();
 

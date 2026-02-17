@@ -10,6 +10,8 @@ const getAllComentCards = async (req, res) => {
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
+                x.dataValues.cardId = Utils.encode(x.dataValues.cardId);
+                x.dataValues.yachtId = Utils.encode(x.dataValues.yachtId);
             });
         }
         res.status(200).json(result);

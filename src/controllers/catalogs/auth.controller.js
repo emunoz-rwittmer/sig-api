@@ -3,7 +3,7 @@ const UserService = require('../../services/catalogs/users.services');
 const Utils = require('../../utils/Utils');
 const tokenModel = require('../../models/mongoModels/Token.models');
 const bcrypt = require('bcrypt');
-const { sendEmail } = require('../../utils/mailer');
+const { sendEmail } = require('../../mails/mailer');
 const Staffervice = require('../../services/catalogs/staff.services');
 
 const login = async (req, res) => {
