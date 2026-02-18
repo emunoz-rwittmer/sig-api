@@ -1,4 +1,4 @@
-const { fn, col, Op, Sequelize } = require('sequelize');
+const { Op, Sequelize } = require('sequelize');
 const Yacht = require('../../../models/catalogs/yacht.models');
 const ComentCardQR = require('../../../models/operations/comentCard/cardQR.models');
 const ComentCardYacht = require('../../../models/operations/comentCard/cardYacht.models');
@@ -7,7 +7,6 @@ const ComentCardAnswers = require('../../../models/operations/comentCard/comentC
 const ComentCardQuestions = require('../../../models/operations/comentCard/comentCardQuestions.models');
 const ComentCardRespond = require('../../../models/operations/comentCard/comentCardRespond.models');
 const db = require('../../../utils/database');
-const Utils = require('../../../utils/Utils');
 require('dotenv').config();
 
 
@@ -20,7 +19,7 @@ class ComentCardService {
                         model: ComentCard,
                         as: 'coment_card',
                     },
-                     {
+                    {
                         model: Yacht,
                         as: 'yate',
                     }
@@ -187,17 +186,26 @@ class ComentCardService {
                     'start_date',
                     'end_date',
                     'createdAt',
-                    [fn('COUNT', col('respuestas_coment_card.id')), 'cards_count'],
                 ],
                 include: [
                     {
                         model: ComentCardRespond,
-                        attributes: [], // No traemos las respuestas, solo las contamos
                         as: 'respuestas_coment_card',
+                        include: [
+                            {
+                                model: ComentCardAnswers,
+                                as: 'respuestas',
+                                include: [
+                                    {
+                                        model: ComentCardQuestions,
+                                        as: 'pregunta',
+                                    },
+                                ],
+                            },
+                        ]
                     },
                 ],
-                group: ['id'],
-                order: [['start_date', 'ASC']],
+                order: [['start_date', 'DESC']],
             });
 
             return result;
@@ -249,73 +257,11 @@ class ComentCardService {
         }
     }
 
-    static async createCardYacht(data) {
-        try {
-            const result = await ComentCardYacht.create(data)
-            return result;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    static async createLink(data) {
-        const transaction = await db.transaction();
-        try {
-            const result = await ComentCardQR.create(data, { transaction });
-            const id = Utils.encode(result.dataValues.id);
-            const accessLink = `${process.env.URL_CAPTAINS}/coment_card/${id}`; // Cambia a tu estructura de URL
-            await result.update({ accessLink: accessLink }, { transaction });
-            await transaction.commit();
-            return result;
-        } catch (error) {
-            await transaction.rollback();
-            throw error;
-        }
-    }
-
-    static async createManyLink(data) {
-        const transaction = await db.transaction();
-        try {
-            const createdRecords = [];
-
-            for (const item of data) {
-                const created = await ComentCardQR.create(item, { transaction });
-
-                const encodedId = Utils.encode(created.id);
-                const accessLink = `${process.env.URL_CAPTAINS}/coment_card/${encodedId}`;
-
-                await ComentCardQR.update(
-                    { accessLink },
-                    { where: { id: created.id }, transaction }
-                );
-
-                createdRecords.push({ ...created.toJSON(), accessLink });
-            }
-
-            await transaction.commit();
-            return createdRecords;
-        } catch (error) {
-            await transaction.rollback();
-            console.error("❌ Error en createManyLink:", error);
-            throw error;
-        }
-    }
-
-
-    static async deleteCardYacht(id) {
-        try {
-            const result = await ComentCardYacht.destroy(id);
-            return result;
-        } catch (error) {
-            throw error;
-        }
-    }
-
     static async getComentCardByQr(id) {
         try {
             const result = await ComentCardQR.findOne({
                 where: { id },
-                attributes: ['id', 'comentCardYachtId', 'startDate'],
+                //attributes: ['id', 'comentCardYachtId', 'startDate'],
                 include: [
                     {
                         model: ComentCardYacht,
@@ -338,7 +284,6 @@ class ComentCardService {
 
             return result;
         } catch (error) {
-            console.log(error)
             throw error;
         }
     }
@@ -376,7 +321,6 @@ class ComentCardService {
 
             return result;
         } catch (error) {
-            console.log(error);
             throw error;
         }
     }
@@ -408,7 +352,6 @@ class ComentCardService {
             await transaction.commit();
             return result;
         } catch (error) {
-            console.log(error)
             await transaction.rollback();
             throw new Error(error.message);
         }
@@ -436,7 +379,7 @@ class ComentCardService {
                         as: "coment_card",
                         where: whereDates,
                         required: true,
-                        attributes: ['code', 'name','startDate', 'endDate'],
+                        attributes: ['code', 'name', 'startDate', 'endDate'],
                         include: [
                             {
                                 model: ComentCardYacht,

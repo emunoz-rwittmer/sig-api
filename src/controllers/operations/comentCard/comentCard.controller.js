@@ -120,72 +120,6 @@ const getAllComentCardsForLink = async (req, res) => {
     }
 }
 
-const createCardYacht = async (req, res) => {
-    try {
-        const cardId = Utils.decode(req.params.card_id);
-        const yachtId = Utils.decode(req.body.yacht_id);
-
-        await ComentCardService.createCardYacht({ cardId, yachtId });
-        res.status(200).json({ data: 'resource created successfully' });
-    } catch (error) {
-        res.status(400).json(error.message);
-    }
-}
-
-const createLink = async (req, res) => {
-    try {
-        const data = req.body
-        data.comentCardYachtId = Utils.decode(req.body.comentCardYachtId);
-        await ComentCardService.createLink(data);
-        res.status(200).json({ data: 'resource created successfully' });
-    } catch (error) {
-        res.status(400).json(error.message);
-    }
-}
-
-const createManyLink = async (req, res) => {
-    try {
-        const comentCardYachtId = Utils.decode(req.body.comentCardYachtId);
-        const file = req.file;
-        const fieldMapping = {
-            'name': 'name',
-            'startDate': 'startDate',
-            'endDate': 'endDate',
-        };
-
-        const workbook = XLSX.readFile(file.path);
-        const sheet_name_list = workbook.SheetNames;
-        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheet_name_list[0]]);
-        const mappedData = jsonData.map(row => {
-            const mappedRow = {};
-            for (const [excelField, modelField] of Object.entries(fieldMapping)) {
-                mappedRow[modelField] = row[excelField];
-            }
-            mappedRow.comentCardYachtId = comentCardYachtId;
-            return mappedRow;
-        });
-
-        await ComentCardService.createManyLink(mappedData);
-        res.status(200).json({ data: 'resource created successfully' });
-    } catch (error) {
-
-        res.status(400).json(error.message);
-    }
-}
-
-const deleteCardYacht = async (req, res) => {
-    try {
-        const id = Utils.decode(req.params.card_id);
-        await ComentCardService.deleteCardYacht({
-            where: { id }
-        });
-        res.status(200).json({ data: 'resource deleted successfully' })
-    } catch (error) {
-        res.status(400).json(error.message);
-    }
-}
-
-
 //public access link
 const getComentCardByQr = async (req, res) => {
     try {
@@ -258,10 +192,6 @@ const ComentCardController = {
     getYachtsWithComentCard,
     getAllAccessLinks,
     getAllComentCardsForLink,
-    createCardYacht,
-    createLink,
-    createManyLink,
-    deleteCardYacht,
     getComentCardByQr,
     getComentCardByDates,
     getReportingByYacht,

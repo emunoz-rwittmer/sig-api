@@ -19,7 +19,7 @@ const ComentCardAnswers = db.define('coment_card_answers', {
         field:'pregunta_id'
     },
     answer: {
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT,
         allowNull: false,
         field:'respuesta'
     },

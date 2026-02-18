@@ -1,7 +1,6 @@
 const { Router } = require('express');
 const ComentCardController = require('../../../controllers/operations/comentCard/comentCard.controller');
 const authJwt = require('../../../middlewares/auth.middleware');
-const { uploadExcelFile } = require('../../../utils/uploadConfiguration');
 
 const router = Router();
 
@@ -15,11 +14,6 @@ router.delete('/:card_id', authJwt.verifyToken, ComentCardController.deleteComen
 router.get('/:card_id/cards_yachts/yachts', authJwt.verifyToken, ComentCardController.getYachtsWithComentCard);
 router.get('/access_links/relation/:card_yacht_id', ComentCardController.getAllAccessLinks);
 router.get('/coment_cards_link/:link_id', ComentCardController.getAllComentCardsForLink);
-router.post('/createCardYacht/:card_id', authJwt.verifyToken, ComentCardController.createCardYacht);
-router.delete('/delete_card_yacht/:card_id', authJwt.verifyToken, ComentCardController.deleteCardYacht);
-//LINK COMENTCARD
-router.post('/createLink/CardYacht', authJwt.verifyToken, ComentCardController.createLink);
-router.post('/createmanyLink/CardYacht', authJwt.verifyToken, uploadExcelFile, ComentCardController.createManyLink);
 
 //PUBLIC ACCESS LINK
 router.get('/coment_card_by_yacht/dates/:yacht_id', ComentCardController.getComentCardByDates);
