@@ -7,10 +7,10 @@ const FormRespond = db.define('form_respond', {
     primaryKey: true,
     autoIncrement: true,
   },
-  yachtId: {
-    type: DataTypes.INTEGER,
+  company: {
+    type: DataTypes.STRING,
     allowNull: true,
-    field: 'yacht_id'
+    field: 'company'
   },
   formId: {
     type: DataTypes.INTEGER,
@@ -21,15 +21,15 @@ const FormRespond = db.define('form_respond', {
     type: DataTypes.STRING,
     allowNull: true,
   },
-  evaluatorId: {
+  evaluator: {
     type: DataTypes.STRING,
     allowNull: true,
-    field: 'evaluator_id'
+    field: 'evaluator'
   },
-  evaluatedId: {
+  evaluated: {
     type: DataTypes.STRING,
     allowNull: true,
-    field: 'evaluated_id'
+    field: 'evaluated'
   },
   expirationDate: {
     type: DataTypes.DATE,

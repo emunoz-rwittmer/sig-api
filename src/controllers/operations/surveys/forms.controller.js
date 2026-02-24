@@ -137,8 +137,9 @@ const sendEvaluation = async (req, res) => {
         const data = req.body
         const expirationDate = moment().add(3, 'days').toDate();
         data.formId = Utils.decode(req.body.formId);
-        data.evaluator = data.evaluator.map(id => Utils.decode(id))
-        data.evaluated = data.evaluated.map(id => Utils.decode(id))
+        data.companyId = Utils.decode(req.body.companyId);
+        data.evaluatorIds = data.evaluator.map(id => Utils.decode(id))
+        data.evaluatedIds = data.evaluated.map(id => Utils.decode(id))
         data.expirationDate = expirationDate;
         await FormService.createFormRespond(data);
         res.status(200).json({ data: 'evaluation send successfully' })

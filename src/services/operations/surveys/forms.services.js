@@ -1,3 +1,5 @@
+const Company = require('../../../models/catalogs/company.models');
+const Staff = require('../../../models/catalogs/staff.models');
 const Form = require('../../../models/operations/surveys/form.models');
 const FormQuestion = require("../../../models/operations/surveys/formQuestion.models");
 const FormRespond = require('../../../models/operations/surveys/formRespond.models')
@@ -93,7 +95,6 @@ class FormService {
                         };
 
                         if (!pregunta.id) {
-                            console.log('estoy aqwui')
                             return FormQuestion.create(payload, { transaction });
                         }
 
@@ -137,34 +138,87 @@ class FormService {
     }
 
     static async createFormRespond(data) {
-        const {
-            yachtId = null,
-            formId,
-            evaluator = [],
-            evaluated = [],
-            expirationDate
-        } = data;
+        const transaction = await db.transaction();
+        
+        try {
+            const { formId, companyId, evaluatorIds = [], evaluatedIds = [], expirationDate } = data;
 
-        if (!formId || !evaluator.length || !evaluated.length) {
-            throw new Error('Datos incompletos para enviar evaluacion ');
-        }
-
-        const payload = [];
-
-        for (const evaluatedId of evaluated) {
-            for (const evaluatorId of evaluator) {
-                payload.push({
-                    yachtId,
-                    formId,
-                    state: 'Pendiente',
-                    evaluatorId,
-                    evaluatedId,
-                    expirationDate
-                });
+            if (!formId || !companyId || !evaluatorIds.length || !evaluatedIds.length) {
+                throw new Error('Datos incompletos para enviar evaluacion');
             }
-        }
 
-        return await FormRespond.bulkCreate(payload);
+            const form = await Form.findOne({
+                where: { id: formId },
+                transaction
+            });
+
+            if (!form) {
+                throw new Error(`Formulario con ID ${formId} no encontrado`);
+            }
+
+            const [evaluators, evaluateds, company] = await Promise.all([
+                Staff.findAll({
+                    where: { id: evaluatorIds },
+                    attributes: ['id', 'firstName', 'lastName'],
+                    transaction
+                }),
+                Staff.findAll({
+                    where: { id: evaluatedIds },
+                    attributes: ['id', 'firstName', 'lastName'],
+                    transaction
+                }),
+                Company.findOne({
+                    where: { id: companyId },
+                    attributes: ['id', 'name'],
+                    transaction
+                })
+            ]);
+
+            if (evaluators.length !== evaluatorIds.length) {
+                const foundIds = evaluators.map(e => e.id);
+                const missingIds = evaluatorIds.filter(id => !foundIds.includes(id));
+                throw new Error(`Evaluadores no encontrados: ${missingIds.join(', ')}`);
+            }
+
+            if (evaluateds.length !== evaluatedIds.length) {
+                const foundIds = evaluateds.map(e => e.id);
+                const missingIds = evaluatedIds.filter(id => !foundIds.includes(id));
+                throw new Error(`Evaluados no encontrados: ${missingIds.join(', ')}`);
+            }
+
+            if (!company) {
+                throw new Error(`Empresa con ID ${companyId} no encontrada`);
+            }
+
+            const payload = [];
+
+            for (const evaluatedStaff of evaluateds) {
+                const evaluatedFullName = `${evaluatedStaff.lastName} ${evaluatedStaff.firstName}`;
+
+                for (const evaluatorStaff of evaluators) {
+                    const evaluatorFullName = `${evaluatorStaff.lastName} ${evaluatorStaff.firstName}`;
+
+                    payload.push({
+                        formId,
+                        state: 'Pendiente',
+                        company: company.name,
+                        evaluator: evaluatorFullName,
+                        evaluated: evaluatedFullName,
+                        expirationDate
+                    });
+                }
+            }
+
+            const result = await FormRespond.bulkCreate(payload, { transaction });
+
+            await transaction.commit();
+            return result;
+
+        } catch (error) {
+            console.error('Error al crear FormRespond:', error);
+            await transaction.rollback();
+            throw error;
+        }
     }
 }
 
