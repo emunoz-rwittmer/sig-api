@@ -24,31 +24,18 @@ const getAllStaffs = async (req, res) => {
     }
 }
 
-const getStaffsByFilters = async (req, res) => {
-    try {
-        const company = req.query.company
-        const departamentId = Utils.decode(req.query.departamentId)
-        const positionId = Utils.decode(req.query.positionId)
-        const result = await StaffService.getStaffsByFilters(company, departamentId, positionId);
-        if (result instanceof Array) {
-            result.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
-                x.dataValues.id = Utils.encode(x.dataValues.staff_departament.dataValues.id);
-                x.dataValues.staff_position.dataValues.id = Utils.encode(x.dataValues.staff_position.dataValues.id);
-
-            });
-        }
-        res.status(200).json(result);
-    } catch (error) {
-
-        res.status(400).json(error.message)
-    }
-}
-
 const getEvaluators = async (req, res) => {
     try {
-        const search = Utils.decode(req.query.search)
-        const result = await StaffService.getEvaluators(search);
+        const { search } = req.query;
+        const searchArray = search
+            ? search.split(',')
+            : [];
+
+        const decodedArray = searchArray.map(item =>
+            Utils.decode(item)
+        );
+
+        const result = await StaffService.getEvaluators(decodedArray);
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
@@ -63,11 +50,19 @@ const getEvaluators = async (req, res) => {
 
 const getEvaluatorsByFilters = async (req, res) => {
     try {
-        const search = Utils.decode(req.query.search)
-        const yachtId = req.query.yachtId
+        const { search } = req.query;
+        const searchArray = search
+            ? search.split(',')
+            : [];
+
+        const decodedArray = searchArray.map(item =>
+            Utils.decode(item)
+        );
+        const companyId = Utils.decode(req.query.companyId) || null;
         const departamentId = req.query.departamentId
         const positionId = req.query.positionId
-        const result = await StaffService.getEvaluatorsByFilters(search, yachtId, departamentId, positionId);
+
+        const result = await StaffService.getEvaluatorsByFilters(decodedArray, companyId, departamentId, positionId);
         result.map((x) => {
             x.dataValues.id = Utils.encode(x.dataValues.id);
         });
@@ -80,8 +75,16 @@ const getEvaluatorsByFilters = async (req, res) => {
 
 const getEvaluateds = async (req, res) => {
     try {
-        const search = Utils.decode(req.query.search)
-        const result = await StaffService.getEvaluateds(search);
+        const { search } = req.query;
+        const searchArray = search
+            ? search.split(',')
+            : [];
+
+        const decodedArray = searchArray.map(item =>
+            Utils.decode(item)
+        );
+
+        const result = await StaffService.getEvaluateds(decodedArray);
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
@@ -96,9 +99,17 @@ const getEvaluateds = async (req, res) => {
 
 const getEvaluatedsByFilters = async (req, res) => {
     try {
-        const search = Utils.decode(req.query.search)
-        const yachtId = req.query.yachtId
-        const result = await StaffService.getEvaluatedsByFilters(search, yachtId);
+        const { search } = req.query;
+        const searchArray = search
+            ? search.split(',')
+            : [];
+
+        const decodedArray = searchArray.map(item =>
+            Utils.decode(item)
+        );
+
+        const companyId = Utils.decode(req.query.companyId) || null;
+        const result = await StaffService.getEvaluatedsByFilters(decodedArray, companyId);
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
@@ -173,7 +184,6 @@ const deleteStaff = async (req, res) => {
 
 const StaffController = {
     getAllStaffs,
-    getStaffsByFilters,
     getStaff,
     getEvaluators,
     getEvaluatorsByFilters,

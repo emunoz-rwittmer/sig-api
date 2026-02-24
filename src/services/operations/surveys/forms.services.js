@@ -1,7 +1,6 @@
 const Form = require('../../../models/operations/surveys/form.models');
 const FormQuestion = require("../../../models/operations/surveys/formQuestion.models");
 const FormRespond = require('../../../models/operations/surveys/formRespond.models')
-const Positions = require('../../../models/catalogs/positions.models');
 const db = require('../../../utils/database');
 
 class FormService {
@@ -9,12 +8,7 @@ class FormService {
         try {
             const result = await Form.findAll({
                 where: { active: true },
-                attributes: ['id', 'name', 'active', 'createdAt'],
-                include: [{
-                    model: Positions,
-                    as: 'position_form',
-                    attributes: ['name']
-                }]
+                attributes: ['id', 'name', 'active', 'positions', 'createdAt'],
             });
             return result;
         } catch (error) {
@@ -26,7 +20,7 @@ class FormService {
         try {
             const result = await Form.findOne({
                 where: { id },
-                attributes: ['id', 'name', 'positionId', 'active', 'createdAt'],
+                attributes: ['id', 'name', 'active', 'positions', 'createdAt'],
                 include: [{
                     model: FormQuestion,
                     as: "preguntas",

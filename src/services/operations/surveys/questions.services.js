@@ -4,7 +4,8 @@ class QuestionService {
     static async getAll() {
         try {
             const result = await Questions.findAll({
-                attributes: ['id','name','active']
+                attributes: ['id','name','active'],
+                order: [['active', 'DESC']]
             });
             return result;
         } catch (error) {

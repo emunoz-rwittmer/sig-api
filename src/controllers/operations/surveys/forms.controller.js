@@ -8,6 +8,7 @@ const bcrypt = require('bcrypt');
 const { sendEmail } = require('../../../mails/mailer');
 const moment = require('moment');
 const UserService = require('../../../services/catalogs/users.services');
+const CompanyService = require('../../../services/catalogs/company.services');
 
 const getAllForms = async (req, res) => {
     try {
@@ -45,29 +46,36 @@ const getFormAllNecesary = async (req, res) => {
         const form = await FormService.getFormById(formId);
         if (form instanceof Object) {
             form.dataValues.id = Utils.encode(form.dataValues.id);
-            form.dataValues.positionId = Utils.encode(form.dataValues.positionId);
-
         }
+
+        const companies = await CompanyService.getAll();
+        if (companies instanceof Array) {
+            companies.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+            });
+        }
+
         const yachts = await YachtService.getAll();
-        if (result instanceof Array) {
-            result.map((x) => {
+        if (yachts instanceof Array) {
+            yachts.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
             });
         }
         const positions = await PositionService.getAll();
-        if (result instanceof Array) {
-            result.map((x) => {
+        if (positions instanceof Array) {
+            positions.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
             });
         }
         const departaments = await DepartamentService.getAll();
-        if (result instanceof Array) {
-            result.map((x) => {
+        if (departaments instanceof Array) {
+            departaments.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
             });
         }
         result.form = form
         result.yachts = yachts
+        result.companies = companies
         result.positions = positions
         result.departaments = departaments
 

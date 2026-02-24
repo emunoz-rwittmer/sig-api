@@ -11,10 +11,10 @@ const Form = db.define('form', {
     type: DataTypes.STRING,
     allowNull: false
   },
-  positionId: {
-    type: DataTypes.INTEGER,
+  positions: {
+    type: DataTypes.JSON,
     allowNull: false,
-    field: 'position_id'
+    field: 'positions'
   },
   active: {
     type: DataTypes.BOOLEAN,

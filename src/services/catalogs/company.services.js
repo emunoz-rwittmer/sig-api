@@ -1,5 +1,6 @@
 const Company = require('../../models/catalogs/company.models');
 const StaffCompany = require('../../models/catalogs/staffCompany.models');
+const Yacht = require('../../models/catalogs/yacht.models');
 
 class CompanyService {
     static async getAll() {
@@ -9,7 +10,12 @@ class CompanyService {
                 include: [{
                     model: StaffCompany,
                     as: 'personal'
-                }]
+                },
+                {
+                    model: Yacht,
+                    as: 'yacht'
+                }
+                ]
             });
             return result;
         } catch (error) {

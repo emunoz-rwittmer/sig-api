@@ -103,10 +103,27 @@ const initModels = () => {
     Regulation.hasMany(StaffReadRegulation, { as: "reads", foreignKey: "regulation_id" });
     StaffReadRegulation.belongsTo(Regulation, { as: "regulation", foreignKey: "regulation_id" });
 
+    //coment cards
+    ComentCardRespond.hasMany(ComentCardAnswers, { as: 'respuestas', foreignKey: "respuesta_coment_card_id", onDelete: "CASCADE" });
+    ComentCardAnswers.belongsTo(ComentCardRespond, { as: 'respuesta_formulario', foreignKey: "respuesta_coment_card_id" });
+
+    ComentCardQuestions.hasOne(ComentCardAnswers, { as: 'respuesta', foreignKey: "pregunta_id", onDelete: "CASCADE" });
+    ComentCardAnswers.belongsTo(ComentCardQuestions, { as: 'pregunta', foreignKey: "pregunta_id" });
+
+    ComentCard.hasMany(ComentCardQuestions, { as: 'preguntas', foreignKey: "coment_card_id", onDelete: "CASCADE" });
+    ComentCardQuestions.belongsTo(ComentCard, { as: 'coment_card', foreignKey: "coment_card_id" });
+
+    ComentCardYacht.belongsTo(ComentCard, { as: "coment_card", foreignKey: "coment_card_id" });
+    ComentCardYacht.belongsTo(Yacht, { as: "yate", foreignKey: "yacht_id" });
+    ComentCard.hasMany(ComentCardYacht, { as: 'yates', foreignKey: 'coment_card_id' });
+
+    ComentCardYacht.hasMany(ComentCardQR, { as: 'links_acceso', foreignKey: "coment_card_yacht_id", onDelete: "CASCADE" });
+    ComentCardQR.belongsTo(ComentCardYacht, { as: 'card_yacht', foreignKey: "coment_card_yacht_id" });
+
+    ComentCardQR.hasMany(ComentCardRespond, { as: 'respuestas_coment_card', foreignKey: 'card_qr_id', onDelete: "CASCADE" });
+    ComentCardRespond.belongsTo(ComentCardQR, { as: 'coment_card', foreignKey: 'card_qr_id' });
 
     //Evaluations
-    Form.belongsTo(Positions, { as: "position_form", foreignKey: "position_id" });
-    Positions.hasMany(Form, { as: 'positions', foreignKey: 'position_id' });
 
     Form.hasMany(FormRespond, { as: 'respuestas', foreignKey: 'form_id', onDelete: "CASCADE" });
     FormRespond.belongsTo(Form, { as: 'formulario', foreignKey: 'form_id' });
@@ -128,26 +145,6 @@ const initModels = () => {
 
     FormRespond.belongsTo(Staff, { as: "evaluado", foreignKey: "evaluated_id" });
     Staff.hasMany(FormRespond, { as: "evaluaciones_evaluado", foreignKey: "evaluated_id" });
-
-    //coment cards
-    ComentCardRespond.hasMany(ComentCardAnswers, { as: 'respuestas', foreignKey: "respuesta_coment_card_id", onDelete: "CASCADE" });
-    ComentCardAnswers.belongsTo(ComentCardRespond, { as: 'respuesta_formulario', foreignKey: "respuesta_coment_card_id" });
-
-    ComentCardQuestions.hasOne(ComentCardAnswers, { as: 'respuesta', foreignKey: "pregunta_id", onDelete: "CASCADE" });
-    ComentCardAnswers.belongsTo(ComentCardQuestions, { as: 'pregunta', foreignKey: "pregunta_id" });
-
-    ComentCard.hasMany(ComentCardQuestions, { as: 'preguntas', foreignKey: "coment_card_id", onDelete: "CASCADE" });
-    ComentCardQuestions.belongsTo(ComentCard, { as: 'coment_card', foreignKey: "coment_card_id" });
-
-    ComentCardYacht.belongsTo(ComentCard, { as: "coment_card", foreignKey: "coment_card_id" });
-    ComentCardYacht.belongsTo(Yacht, { as: "yate", foreignKey: "yacht_id" });
-    ComentCard.hasMany(ComentCardYacht, { as: 'yates', foreignKey: 'coment_card_id' });
-
-    ComentCardYacht.hasMany(ComentCardQR, { as: 'links_acceso', foreignKey: "coment_card_yacht_id", onDelete: "CASCADE" });
-    ComentCardQR.belongsTo(ComentCardYacht, { as: 'card_yacht', foreignKey: "coment_card_yacht_id" });
-
-    ComentCardQR.hasMany(ComentCardRespond, { as: 'respuestas_coment_card', foreignKey: 'card_qr_id', onDelete: "CASCADE" });
-    ComentCardRespond.belongsTo(ComentCardQR, { as: 'coment_card', foreignKey: 'card_qr_id' });
 
     //INVENTORY RELATIONS
     Company.hasOne(Yacht, { foreignKey: 'company_id', as: 'yacht' });

@@ -46,7 +46,8 @@ const updateQuestion = async (req, res) => {
     try {
         const questionId = Utils.decode(req.params.question_id);
         const question = req.body;
-        const result = await QuestionService.updateQuestion(question, {
+        delete question.id;
+        await QuestionService.updateQuestion(question, {
             where: { id: questionId },
         });
         res.status(200).json({ data: 'resource updated successfully' });
@@ -58,7 +59,7 @@ const updateQuestion = async (req, res) => {
 const deleteQuestion = async (req, res) => {
     try {
         const questionId = Utils.decode(req.params.question_id);
-        const result = await QuestionService.delete({
+        await QuestionService.delete({
             where: { id: questionId }
         });
         res.status(200).json({ data: 'resource deleted successfully' })

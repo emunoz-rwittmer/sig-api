@@ -58,56 +58,6 @@ class Staffervice {
         }
     }
 
-    static async getStaffsByFilters(company, departamentId, positionId) {
-        try {
-
-            const where = {};
-
-            if (company) {
-                where.company = company;
-            }
-            if (departamentId) {
-                where.departamentId = departamentId;
-            }
-            if (positionId) {
-                where.positionId = positionId;
-            }
-
-            const result = await Staff.findAll({
-                where,
-                attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
-                order: [
-                    ['last_name', 'ASC']
-                ],
-                include: [{
-                    model: StaffCompany,
-                    as: 'companies',
-                    attributes: ['id'],
-                    include: [{
-                        model: Company,
-                        as: 'company',
-                        include: [{
-                            model: Yachts,
-                            as: 'yacht',
-                            ...(yachtId && { where: { id: yachtId } }) // aquí va el filtro por yachtId
-                        }]
-                    }]
-                }, {
-                    model: Departaments,
-                    as: 'staff_departament',
-                    attributes: ['id', 'name'],
-                }, {
-                    model: Positions,
-                    as: 'staff_position',
-                    attributes: ['id', 'name'],
-                }],
-            });
-            return result;
-        } catch (error) {
-            throw error;
-        }
-    }
-
     static async getEvaluators(search) {
         try {
             const result = await Staff.findAll({
@@ -131,16 +81,12 @@ class Staffervice {
         }
     }
 
-    static async getEvaluatorsByFilters(search, yachtId, departamentId, positionId) {
+    static async getEvaluatorsByFilters(search, companyId, departamentId, positionId) {
         try {
-
-            console.log(search, yachtId, departamentId, positionId)
-
 
             const where = { active: true };
 
             if (departamentId) {
-                console.log('estoy qui')
                 where.departamentId = departamentId;
             }
 
@@ -154,18 +100,7 @@ class Staffervice {
                 model: StaffCompany,
                 as: 'companies',
                 attributes: ['id'],
-                required: !!yachtId, // si hay filtro de yate, que sea INNER JOIN
-                include: [{
-                    model: Company,
-                    as: 'company',
-                    required: !!yachtId,
-                    include: [{
-                        model: Yachts,
-                        as: 'yacht',
-                        required: !!yachtId,
-                        ...(yachtId && { where: { id: yachtId } })
-                    }]
-                }]
+               ...(companyId && { where: { companyId } })
             };
 
             const result = await Staff.findAll({
@@ -210,7 +145,9 @@ class Staffervice {
         try {
             const result = await Staff.findAll({
                 where: {
-                    positionId: search,
+                    positionId: {
+                        [Op.in]: search
+                    },
                     active: true
                 },
                 attributes: ['id', 'first_name', 'last_name', 'email', 'cell_phone', 'active'],
@@ -229,31 +166,22 @@ class Staffervice {
         }
     }
 
-    static async getEvaluatedsByFilters(positionId, yachtId) {
+    static async getEvaluatedsByFilters(positionId, companyId) {
         try {
 
             const where = { active: true };
 
             if (positionId) {
-                where.positionId = positionId;
+                where.positionId = {
+                    [Op.in]: positionId
+                };
             }
 
             const yachtInclude = {
                 model: StaffCompany,
                 as: 'companies',
                 attributes: ['id'],
-                required: !!yachtId,
-                include: [{
-                    model: Company,
-                    as: 'company',
-                    required: !!yachtId,
-                    include: [{
-                        model: Yachts,
-                        as: 'yacht',
-                        required: !!yachtId,
-                        ...(yachtId && { where: { id: yachtId } })
-                    }]
-                }]
+                ...(companyId && { where: { companyId } })
             };
 
             const result = await Staff.findAll({
