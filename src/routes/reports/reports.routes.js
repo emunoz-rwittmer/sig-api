@@ -7,7 +7,7 @@ router.post('/stockWarehouse', excelReports.generateStockExcel);
 router.get('/transactions/:warehouse_id', excelReports.generateTransactionsExcel);
 router.get('/request/:request_id', excelReports.generateRequestExcel);
 
-router.get('/evaluations/generalReport/:yacht_id', excelReports.generateGeneralReportEvaluations);
+router.get('/evaluations/generalReport/:company_id', excelReports.generateGeneralReportEvaluations);
 router.post('/evaluations/reportByEmployed', excelReports.generatReportEvaluationsByEmployed);
 
 router.get('/comentCards/generateReport/:yacht_id', excelReports.generateReportComentCards);

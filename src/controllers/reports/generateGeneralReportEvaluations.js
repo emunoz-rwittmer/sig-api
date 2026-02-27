@@ -14,11 +14,11 @@ const generateGeneralReportEvaluations = async (req, res) => {
         const wb = new xl.Workbook();
         const ws = wb.addWorksheet("reporte general");
 
-        const yachtId = Utils.decode(req.params.yacht_id);
+        const companyId = req.params.company_id ? Utils.decode(req.params.company_id) : null;
         const startDate = req.query.startDate;
         const endDate = req.query.endDate;
-
-        const result = await EvaluationService.getEvaluationsByYacht(yachtId, startDate, endDate)
+        
+        const result = await EvaluationService.getEvaluationsByCompany(companyId, startDate, endDate)
         if (!result || result.length === 0) {
             return res.status(400).json("No hay registros.");
         }
@@ -60,14 +60,12 @@ const generateGeneralReportEvaluations = async (req, res) => {
             });
         });
 
-        const selectedQuestions = allQuestions.slice(0, 10);
-
         // === ANCHOS DE COLUMNA ===
         const baseHeaders = [
             "Formulario	",
             "Evaluador",
             "Evaluado",
-            "Cargo Evaluado",
+            "Empresa",
             "Yate",
             "Fecha",
             "Estado",
@@ -111,18 +109,21 @@ const generateGeneralReportEvaluations = async (req, res) => {
                 to: {
                     col: 2, // Columna de final
                     colOff: 0, // Desplazamiento horizontal en celdas
-                    row: 5, // Fila de final
+                    row: 6, // Fila de final
                     rowOff: 0, // Desplazamiento vertical en celdas
                 },
             },
         });
 
         //TITULOS
-        ws.cell(3, 1, 3, 3, true).string('REPORTE GENERAL DE DESEMPEÑO').style(titleStyle);
+        ws.cell(4, 1, 4, 4, true).string('REPORTE GENERAL DE DESEMPEÑO').style(titleStyle);
         ws.cell(5, 1, 5, 3, true).string(fechaFormateada(fechaActual)).style(titleStyle);
 
         //SUBTITULOS
-        ws.cell(7, 1, 7, 3, true).string(`RAGO DE FECHAS: ${formatDateToLocal(startDate) + " a " + formatDateToLocal(endDate)}`)
+        if (startDate !== 'null' && endDate !== 'null') {
+            ws.cell(7, 1, 7, 3, true).string(`RAGO DE FECHAS: ${formatDateToLocal(startDate) + " a " + formatDateToLocal(endDate)}`)
+        }
+
         ws.cell(8, 1, 9, 3, true).string(`EVALUACIONES: ${result.length}`)
 
         // === CABECERAS ===
@@ -135,25 +136,25 @@ const generateGeneralReportEvaluations = async (req, res) => {
         // Llenar las filas con los datos
         result.forEach((item, idx) => {
             const row = 11 + idx; // Fila donde empieza la data
-            const formulario = item.header_form?.title || "Sin Datos";
-            const evaluador = `${item.evaluador.dataValues?.first_name || ""} ${item.evaluador.dataValues?.last_name || ""}`;
-            const evaluado = `${item.evaluado.dataValues?.first_name || ""} ${item.evaluado.dataValues?.last_name || ""}`;
-            const cargo = item.evaluado?.staff_position.name || "Sin Datos";
-            const yate = item.yate?.name || "Sin Datos";
+            const formulario = item.formulario?.name || "Sin Datos";
+            const evaluador = item.evaluator;
+            const evaluado = item.evaluated;
+            const empresa = item.empresa?.name || "Sin Datos";
+            const yate = item.empresa.yacht?.name || "N/A";
             const fecha = formatDateToLocal(item.updatedAt) || "Sin Datos";
-            const estado = item.state.state || "Sin Datos";
+            const estado = item.state || "Sin Datos";
 
             // Datos base
             ws.cell(row, 1).string(formulario).style(infoStyle);
             ws.cell(row, 2).string(evaluador).style(infoStyle);
             ws.cell(row, 3).string(evaluado).style(infoStyle);
-            ws.cell(row, 4).string(cargo).style(infoStyle);
+            ws.cell(row, 4).string(empresa).style(infoStyle);
             ws.cell(row, 5).string(yate).style(infoStyle);
             ws.cell(row, 6).string(fecha).style(infoStyle);
             ws.cell(row, 7).string(estado).style(infoStyle);
 
             // Obtén todas las respuestas de la evaluación
-            const respuestas = item.answer_header?.map(r => Utils.asignarPuntaje(r.answer)) || [];
+            const respuestas = item.respuestas?.map(r => Utils.asignarPuntaje(r.answer)) || [];
 
             // Llenar las 10 columnas de respuestas
             for (let i = 0; i < 10; i++) {

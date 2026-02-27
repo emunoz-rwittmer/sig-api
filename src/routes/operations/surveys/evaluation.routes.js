@@ -7,11 +7,11 @@ router.get('/',EvaluationController.getAllEvaluations);
 router.get('/:evaluation_id',EvaluationController.getEvaluation);
 router.get('/evaluationsSent/ToDay',EvaluationController.getEvaluationsToDay);
 //reporting
-router.get('/reportingByYacht/:yacht_id',EvaluationController.getReportingByYacht);
+router.get('/reportingByCompany/:company_id',EvaluationController.getReportingByCompany);
 router.get('/reportingByDepartament/:departament_id',EvaluationController.getReportingByDepartament);
 router.get('/reportingEvaluationsByCrew/:crew_id',EvaluationController.getReportingEvaluationsByCrew);
 //operations
-router.post('/respondEvaluation',EvaluationController.respondEvaluation);
+router.post('/:evaluation_id/respondEvaluation',EvaluationController.respondEvaluation);
 router.delete('/:evaluation_id',EvaluationController.deleteEvaluation);
 
 

@@ -7,8 +7,8 @@ const moment = require('moment');
 
 const getAllEvaluations = async (req, res) => {
     try {
-        const userId = Utils.decode(req.query.user_id);
-        let evaluations = await EvaluationService.getEvaluationsByUser(userId);
+        const { userName } = req.query;
+        let evaluations = await EvaluationService.getEvaluationsByUser(userName);
 
         await Promise.all(
             evaluations.map(async (evaluation) => {
@@ -18,7 +18,7 @@ const getAllEvaluations = async (req, res) => {
             })
         );
 
-        evaluations = await EvaluationService.getEvaluationsByUser(userId);
+        evaluations = await EvaluationService.getEvaluationsByUser(userName);
 
         if (evaluations instanceof Array) {
             evaluations = evaluations.map((x) => {
@@ -36,8 +36,8 @@ const getAllEvaluations = async (req, res) => {
 
 const getEvaluation = async (req, res) => {
     try {
-        const formId = Utils.decode(req.params.form_id);
-        const result = await EvaluationService.getEvaluationById(formId);
+        const evaluationId = Utils.decode(req.params.evaluation_id);
+        const result = await EvaluationService.getEvaluationById(evaluationId);
         if (result instanceof Object) {
             result.dataValues.id = Utils.encode(result.dataValues.id);
         }
@@ -81,13 +81,10 @@ const getEvaluationsToDay = async (req, res) => {
 
 const respondEvaluation = async (req, res) => {
     try {
-        const evaluationId = Utils.decode(req.body.evaluation_id)
-        const evaluation = req.body
-        await EvaluationService.respondEvaluation(evaluationId, evaluation);
-        const response = await EvaluationService.updateStatusHeaderAnswers(evaluationId)
-        if (response) {
-            res.status(200).json({ data: 'resource created successfully' });
-        }
+        const evaluationId = Utils.decode(req.params.evaluation_id)
+        const answers = req.body
+        await EvaluationService.respondEvaluation(evaluationId, answers);
+        res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
 
         res.status(400).json(error.message);
@@ -96,12 +93,19 @@ const respondEvaluation = async (req, res) => {
 
 //EVALUATIONS REPORTING
 
-const getReportingByYacht = async (req, res) => {
+const getReportingByCompany = async (req, res) => {
     try {
-        const yachtId = Utils.decode(req.params.yacht_id);
+        const companyId = Utils.decode(req.params.company_id);
         const startDate = req.query.startDate;
         const endDate = req.query.endDate;
-        const result = await EvaluationService.getEvaluationsByYacht(yachtId, startDate, endDate)
+        const result = await EvaluationService.getEvaluationsByCompany(companyId, startDate, endDate)
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+                x.dataValues.companyId = Utils.encode(x.dataValues.companyId);
+                return x;
+            });
+        }
         res.status(200).json(result);
     } catch (error) {
         res.status(400).json(error.message)
@@ -172,7 +176,7 @@ const EvaluationController = {
     getEvaluation,
     getEvaluationsToDay,
     respondEvaluation,
-    getReportingByYacht,
+    getReportingByCompany,
     getReportingByDepartament,
     getReportingEvaluationsByCrew,
     deleteEvaluation

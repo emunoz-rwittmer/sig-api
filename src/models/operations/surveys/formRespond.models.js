@@ -7,10 +7,10 @@ const FormRespond = db.define('form_respond', {
     primaryKey: true,
     autoIncrement: true,
   },
-  company: {
+  companyId: {
     type: DataTypes.STRING,
     allowNull: true,
-    field: 'company'
+    field: 'company_id'
   },
   formId: {
     type: DataTypes.INTEGER,

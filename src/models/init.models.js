@@ -137,6 +137,9 @@ const initModels = () => {
     Form.hasMany(FormQuestion, { as: 'preguntas', foreignKey: "form_id", onDelete: "CASCADE" });
     FormQuestion.belongsTo(Form, { as: 'formulario', foreignKey: "form_id" });
 
+    Company.hasMany(FormRespond, { as: 'respuestas', foreignKey: 'company_id', onDelete: "CASCADE" });
+    FormRespond.belongsTo(Company, { as: 'empresa', foreignKey: 'company_id' });
+
     //INVENTORY RELATIONS
     Company.hasOne(Yacht, { foreignKey: 'company_id', as: 'yacht' });
     Yacht.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });

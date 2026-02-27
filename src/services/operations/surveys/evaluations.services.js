@@ -7,36 +7,30 @@ const Staff = require('../../../models/catalogs/staff.models');
 const Departaments = require('../../../models/catalogs/departament.models');
 const Positions = require('../../../models/catalogs/positions.models');
 const { Op, where } = require('sequelize');
+const Company = require('../../../models/catalogs/company.models');
+const db = require('../../../utils/database');
 
 class EvaluationService {
-    static async getEvaluationsByUser(evaluatorId) {
+    static async getEvaluationsByUser(evaluator) {
         try {
             const result = await FormRespond.findAll({
-                where: { evaluatorId, stateId: 1 },
-                attributes: ['id', 'formId', 'expirationDate', 'createdAt'],
+                where: { evaluator, state: 'Pendiente' },
                 include: [{
-                    model: Yacht,
-                    as: 'header_yacht',
-                    attributes: ['name'],
-                }, {
                     model: Form,
-                    as: "header_form",
-                    attributes: ['title'],
+                    as: "formulario",
+                    attributes: ['id', 'name', 'positions'],
                 }, {
-                    model: Staff,
-                    as: "header_evaluted",
-                    attributes: ['id', 'firstName', 'lastName'],
+                    model: Company,
+                    as: "empresa",
+                    attributes: ['id', 'name'],
                     include: [{
-                        model: Departaments,
-                        as: 'staff_departament',
-                        attributes: ['id', 'name'],
-                    }, {
-                        model: Positions,
-                        as: 'staff_position',
+                        model: Yacht,
+                        as: 'yacht',
                         attributes: ['id', 'name'],
                     }]
                 }]
             });
+
             return result;
         } catch (error) {
             throw error;
@@ -45,12 +39,15 @@ class EvaluationService {
 
     static async getEvaluationById(id) {
         try {
-            const result = await Form.findOne({
+            const result = await FormRespond.findOne({
                 where: { id },
-                attributes: ['id', 'name', 'active', 'createdAt'],
                 include: [{
-                    model: FormQuestion,
-                    as: "preguntas",
+                    model: Form,
+                    as: "formulario",
+                    include: [{
+                        model: FormQuestion,
+                        as: "preguntas",
+                    }]
                 }]
             });
             return result;
@@ -72,7 +69,7 @@ class EvaluationService {
                         [Op.between]: [startDate, endDate]
                     }
                 },
-                attributes: ['id', 'formId', 'state','expirationDate', 'createdAt'],
+                attributes: ['id', 'formId', 'state', 'expirationDate', 'createdAt'],
                 include: [{
                     model: Form,
                     as: "formulario",
@@ -100,29 +97,32 @@ class EvaluationService {
             });
             return result;
         } catch (error) {
-            console.log(error)
             throw error;
         }
     }
 
-    static async respondEvaluation(evaluationId, evaluation) {
+    static async respondEvaluation(evaluationId, answers) {
+        const t = await db.transaction();
         try {
-            const falta = evaluation.falta
-            Object.entries(evaluation.respuestas).forEach(([numeroPregunta, answer]) => {
-                FormAnswers.create({
-                    headerAnswerId: evaluationId,
-                    estructureQuestionId: parseInt(numeroPregunta),
-                    answer,
-                    description: answer === "Falta leve" || answer === "Falta grave" || answer === "Falta muy grave" ? falta : " "
-                }).then(res => {
-                    return res;
-                }).catch(error => {
-                    throw error;
-                });
-            });
-        } catch (error) {
-            throw error;
+            const answersToCreate = Object.entries(answers).map(([numeroPregunta, answer]) => ({
+                respuestaId: evaluationId,
+                questionId: parseInt(numeroPregunta),
+                answer
+            }));
 
+            const result = await FormAnswers.bulkCreate(answersToCreate, { transaction: t });
+
+            if (result) {
+                await FormRespond.update(
+                    { state: 'Completada' },
+                    { where: { id: evaluationId }, transaction: t }
+                );
+            }
+            await t.commit();
+            return result;
+        } catch (error) {
+            await t.rollback();
+            throw error;
         }
     }
 
@@ -140,8 +140,8 @@ class EvaluationService {
     static async updateEvaluation(id) {
         try {
             const result = await FormRespond.update(
-                { stateId: 3 },
-                { where: { id, stateId: 1 } });
+                { state: 'Caducada' },
+                { where: { id, state: 'Pendiente' } });
             return result
         } catch (error) {
             throw error;
@@ -150,13 +150,13 @@ class EvaluationService {
 
     //REPORTING EVALUATIONS
 
-    static async getEvaluationsByYacht(yachtId, startDate, endDate) {
+    static async getEvaluationsByCompany(companyId, startDate, endDate) {
         try {
 
             const where = {};
 
-            if (yachtId && yachtId !== "undefined" && yachtId !== "null") {
-                where.yachtId = yachtId;
+            if (companyId && companyId !== "undefined" && companyId !== "null") {
+                where.companyId = companyId;
             }
 
             if ((startDate && (startDate !== "undefined" && startDate !== 'null')) && (endDate && (endDate !== "undefined" && endDate !== 'null'))) {
@@ -169,41 +169,19 @@ class EvaluationService {
                 where: where,
                 include: [
                     {
-                        model: Yacht,
-                        as: "yate",
-                        //required: true,
+                        model: Company,
+                        as: "empresa",
                         attributes: ['id', 'name'],
+                        include: [{
+                            model: Yacht,
+                            as: "yacht",
+                            attributes: ['id', 'name'],
+                        }]
                     },
                     {
                         model: Form,
                         as: "formulario",
-                        attributes: ['id', 'name'],
-                    },
-                    {
-                        model: Staff,
-                        as: "evaluado", // 👈 evaluado
-                        required: true,
-                        attributes: ['id', 'firstName', 'lastName'],
-                        include: [
-                            {
-                                model: Positions,
-                                as: 'staff_position',
-                                attributes: ['id', 'name'],
-                            },
-                        ]
-                    },
-                    {
-                        model: Staff,
-                        as: "evaluador", // 👈 evaluador
-                        required: true,
-                        attributes: ['id', 'firstName', 'lastName'],
-                        include: [
-                            {
-                                model: Positions,
-                                as: 'staff_position',
-                                attributes: ['id', 'name'],
-                            },
-                        ]
+                        attributes: ['id', 'name', 'positions'],
                     },
                     {
                         model: FormAnswers,
@@ -216,10 +194,17 @@ class EvaluationService {
                         }]
                     },
                 ],
-            })
+                order: [
+                    [
+                        { model: FormAnswers, as: 'respuestas' },
+                        { model: FormQuestion, as: 'pregunta' },
+                        'id',
+                        'ASC'
+                    ]
+                ]
+            });
             return result;
         } catch (error) {
-            console.log(error)
             throw error;
         }
     }

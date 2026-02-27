@@ -139,7 +139,7 @@ class FormService {
 
     static async createFormRespond(data) {
         const transaction = await db.transaction();
-        
+
         try {
             const { formId, companyId, evaluatorIds = [], evaluatedIds = [], expirationDate } = data;
 
@@ -167,11 +167,6 @@ class FormService {
                     attributes: ['id', 'firstName', 'lastName'],
                     transaction
                 }),
-                Company.findOne({
-                    where: { id: companyId },
-                    attributes: ['id', 'name'],
-                    transaction
-                })
             ]);
 
             if (evaluators.length !== evaluatorIds.length) {
@@ -186,22 +181,18 @@ class FormService {
                 throw new Error(`Evaluados no encontrados: ${missingIds.join(', ')}`);
             }
 
-            if (!company) {
-                throw new Error(`Empresa con ID ${companyId} no encontrada`);
-            }
-
             const payload = [];
 
             for (const evaluatedStaff of evaluateds) {
-                const evaluatedFullName = `${evaluatedStaff.lastName} ${evaluatedStaff.firstName}`;
+                const evaluatedFullName = `${evaluatedStaff.firstName} ${evaluatedStaff.lastName}`;
 
                 for (const evaluatorStaff of evaluators) {
-                    const evaluatorFullName = `${evaluatorStaff.lastName} ${evaluatorStaff.firstName}`;
+                    const evaluatorFullName = `${evaluatorStaff.firstName} ${evaluatorStaff.lastName}`;
 
                     payload.push({
                         formId,
                         state: 'Pendiente',
-                        company: company.name,
+                        companyId,
                         evaluator: evaluatorFullName,
                         evaluated: evaluatedFullName,
                         expirationDate
