@@ -4,7 +4,6 @@ const DepartamentService = require('../../../services/catalogs/departaments.serv
 const YachtService = require('../../../services/catalogs/yachts.services');
 const Staffervice = require('../../../services/catalogs/staff.services');
 const Utils = require('../../../utils/Utils');
-const bcrypt = require('bcrypt');
 const { sendEmail } = require('../../../mails/mailer');
 const moment = require('moment');
 const UserService = require('../../../services/catalogs/users.services');
@@ -135,12 +134,15 @@ const deleteQuestionForm = async (req, res) => {
 const sendEvaluation = async (req, res) => {
     try {
         const data = req.body
-        const expirationDate = moment().add(3, 'days').toDate();
+        const now = moment();
+        const periodWeek = `${now.isoWeekYear()}-W${String(now.isoWeek()).padStart(2, "0")}`;
+        const expirationDate = now.add(3, 'days').toDate();
         data.formId = Utils.decode(req.body.formId);
         data.companyId = Utils.decode(req.body.companyId);
         data.evaluatorIds = data.evaluator.map(id => Utils.decode(id))
         data.evaluatedIds = data.evaluated.map(id => Utils.decode(id))
         data.expirationDate = expirationDate;
+        data.periodWeek = periodWeek
         await FormService.createFormRespond(data);
         res.status(200).json({ data: 'evaluation send successfully' })
     } catch (error) {

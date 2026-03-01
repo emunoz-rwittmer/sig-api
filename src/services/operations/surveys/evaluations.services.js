@@ -56,51 +56,6 @@ class EvaluationService {
         }
     }
 
-    static async getEvaluationsToDay(startDate, endDate, positionId) {
-        try {
-
-            if (positionId) {
-                evaluatedInclude.where = { positionId: positionId };
-            }
-
-            const result = await FormRespond.findAll({
-                where: {
-                    createdAt: {
-                        [Op.between]: [startDate, endDate]
-                    }
-                },
-                attributes: ['id', 'formId', 'state', 'expirationDate', 'createdAt'],
-                include: [{
-                    model: Form,
-                    as: "formulario",
-                    attributes: ['name'],
-                }, {
-                    model: Yacht,
-                    as: "yate",
-                    attributes: ['name'],
-                }, {
-                    model: Staff,
-                    as: "evaluador",
-                    attributes: ['firstName', 'lastName'],
-                }, {
-                    model: Staff,
-                    as: "evaluado",
-                    attributes: ['firstName', 'lastName'],
-                    include: [{
-                        model: Positions,
-                        as: 'staff_position',
-                        attributes: ['name'],
-                    }]
-                },
-
-                ]
-            });
-            return result;
-        } catch (error) {
-            throw error;
-        }
-    }
-
     static async respondEvaluation(evaluationId, answers) {
         const t = await db.transaction();
         try {
@@ -122,17 +77,6 @@ class EvaluationService {
             return result;
         } catch (error) {
             await t.rollback();
-            throw error;
-        }
-    }
-
-    static async updateStatusFormResponds(id) {
-        try {
-            const result = await FormRespond.update(
-                { stateId: 2 },
-                { where: { id } });
-            return result
-        } catch (error) {
             throw error;
         }
     }
@@ -194,14 +138,21 @@ class EvaluationService {
                         }]
                     },
                 ],
+
                 order: [
+                    // 🔥 1️⃣ Ordenar FormRespond
+                    ['createdAt', 'DESC'], // o ASC si prefieres
+
+                    // 🔥 2️⃣ Ordenar FormAnswers por id de pregunta
                     [
                         { model: FormAnswers, as: 'respuestas' },
                         { model: FormQuestion, as: 'pregunta' },
                         'id',
                         'ASC'
                     ]
-                ]
+                ],
+
+                distinct: true
             });
             return result;
         } catch (error) {

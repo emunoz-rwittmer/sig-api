@@ -88,6 +88,7 @@ const initModels = () => {
 
     StaffCompany.belongsTo(Staff, { as: "staff", foreignKey: "staff_id" });
     StaffCompany.belongsTo(Company, { as: "company", foreignKey: "company_id" });
+    ShipmentDates.belongsTo(StaffCompany, { as: "empresa", foreignKey: "staff_company_id" });
     StaffCompany.hasMany(ShipmentDates, { as: "embarques", foreignKey: "staff_company_id", onDelete: 'CASCADE', hooks: true });
     Staff.hasMany(StaffCompany, { as: 'companies', foreignKey: 'staff_id', onDelete: 'CASCADE', hooks: true });
     Company.hasMany(StaffCompany, { as: 'personal', foreignKey: 'company_id', onDelete: 'CASCADE', hooks: true });

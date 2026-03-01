@@ -1,5 +1,22 @@
 const cron = require('node-cron');
 const CronJobs = require('../controllers/cronJobs.controller');
 
-// Domingo 00:00
-cron.schedule('0 0 * * 0', CronJobs.generateWeeklyCruises);
+// Domingo 00:00 crear comentcard de la semana venidera de cada yate
+cron.schedule('0 0 * * 0', async () => {
+    CronJobs.generateWeeklyCruises();
+}, {
+    timezone: "America/Guayaquil"
+});
+// Jueves 00:00 crear evaluaciones para capitanes
+// cron.schedule("0 10 * * 4", async () => {
+//     CronJobs.generateWeeklyEvaluationCaptains();
+// }, {
+//     timezone: "America/Guayaquil"
+// });
+// cron.schedule("* * * * *", async () => {
+//        console.log("Ejecutando prueba cron...");
+
+//     CronJobs.generateWeeklyEvaluationCaptains();
+// }, {
+//     timezone: "America/Guayaquil"
+// });

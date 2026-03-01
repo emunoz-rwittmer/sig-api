@@ -18,7 +18,7 @@ const FormAnswers = db.define('form_answers', {
     field: 'pregunta_id'
   },
   answer: {
-    type: DataTypes.STRING,
+    type: DataTypes.TEXT,
     allowNull: false,
     field: 'respuesta'
   },

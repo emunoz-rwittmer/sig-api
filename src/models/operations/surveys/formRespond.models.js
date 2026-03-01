@@ -35,6 +35,10 @@ const FormRespond = db.define('form_respond', {
     type: DataTypes.DATE,
     allowNull: false,
   },
+  periodWeek: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
 });
 
 module.exports = FormRespond;

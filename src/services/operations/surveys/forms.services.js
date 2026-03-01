@@ -141,7 +141,7 @@ class FormService {
         const transaction = await db.transaction();
 
         try {
-            const { formId, companyId, evaluatorIds = [], evaluatedIds = [], expirationDate } = data;
+            const { formId, companyId, evaluatorIds = [], evaluatedIds = [], expirationDate, periodWeek } = data;
 
             if (!formId || !companyId || !evaluatorIds.length || !evaluatedIds.length) {
                 throw new Error('Datos incompletos para enviar evaluacion');
@@ -156,7 +156,7 @@ class FormService {
                 throw new Error(`Formulario con ID ${formId} no encontrado`);
             }
 
-            const [evaluators, evaluateds, company] = await Promise.all([
+            const [evaluators, evaluateds] = await Promise.all([
                 Staff.findAll({
                     where: { id: evaluatorIds },
                     attributes: ['id', 'firstName', 'lastName'],
@@ -195,7 +195,8 @@ class FormService {
                         companyId,
                         evaluator: evaluatorFullName,
                         evaluated: evaluatedFullName,
-                        expirationDate
+                        expirationDate,
+                        periodWeek
                     });
                 }
             }

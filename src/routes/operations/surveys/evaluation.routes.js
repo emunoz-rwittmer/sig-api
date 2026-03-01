@@ -5,7 +5,6 @@ const router = Router();
 
 router.get('/',EvaluationController.getAllEvaluations);
 router.get('/:evaluation_id',EvaluationController.getEvaluation);
-router.get('/evaluationsSent/ToDay',EvaluationController.getEvaluationsToDay);
 //reporting
 router.get('/reportingByCompany/:company_id',EvaluationController.getReportingByCompany);
 router.get('/reportingByDepartament/:departament_id',EvaluationController.getReportingByDepartament);
