@@ -87,18 +87,31 @@ class Utils {
   }
 
   static asignarPuntaje(respuesta) {
-    const matchParentesis = respuesta.match(/\((\d+)\)/);
-    if (matchParentesis) {
-      return Number(matchParentesis[1]);
+    if (!respuesta || typeof respuesta !== 'string') return 0;
+
+    const texto = respuesta.trim();
+
+    // 1️⃣ Número antes del paréntesis: "Siempre 5 (algo)"
+    const numeroAntesParentesis = texto.match(/(\d+)\s*\(/);
+    if (numeroAntesParentesis) {
+      return Number(numeroAntesParentesis[1]);
     }
 
-    const matchAntesParentesis = respuesta.match(/(\d+)\s*\(/);
-    if (matchAntesParentesis) {
-      return Number(matchAntesParentesis[1]);
+    // 2️⃣ Número dentro del paréntesis: "Siempre (5)"
+    const numeroEnParentesis = texto.match(/\((\d+)\)/);
+    if (numeroEnParentesis) {
+      return Number(numeroEnParentesis[1]);
     }
 
+    // 3️⃣ Cualquier número suelto
+    const numeroGeneral = texto.match(/\b\d+\b/);
+    if (numeroGeneral) {
+      return Number(numeroGeneral[0]);
+    }
+
+    // 4️⃣ Mapeo tradicional
     const puntajes = {
-      5: ['Casi siempre', 'Excelente'],
+      5: ['Casi siempre', 'Excelente', 'Siempre'],
       4: ['Con frecuencia', 'Muy bueno', 'Muy Bueno'],
       3: ['Mas o menos', 'Bueno'],
       2: ['A veces', 'Regular'],
@@ -106,14 +119,13 @@ class Utils {
     };
 
     for (const [puntos, respuestas] of Object.entries(puntajes)) {
-      if (respuestas.includes(respuesta)) {
+      if (respuestas.includes(texto)) {
         return Number(puntos);
       }
     }
 
-    // Si no coincide con nada, devuelve 0
     return 0;
-  }
+  };
 
 }
 module.exports = Utils;

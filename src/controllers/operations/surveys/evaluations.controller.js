@@ -75,6 +75,7 @@ const getReportingByCompany = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
+        console.log(error)
         res.status(400).json(error.message)
     }
 }
@@ -124,7 +125,7 @@ const getReportingEvaluationsByCrew = async (req, res) => {
 const deleteEvaluation = async (req, res) => {
     try {
         const evaluatedId = Utils.decode(req.params.evaluation_id);
-      await EvaluationService.delete({
+        await EvaluationService.delete({
             where: { id: evaluatedId, state: ['Pendiente', 'Caducada'] }
         });
         res.status(200).json({ data: 'resource deleted successfully' })

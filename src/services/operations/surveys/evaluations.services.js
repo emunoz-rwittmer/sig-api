@@ -94,7 +94,7 @@ class EvaluationService {
 
     //REPORTING EVALUATIONS
 
-    static async getEvaluationsByCompany(companyId, startDate, endDate) {
+    static async getEvaluationsByCompany(companyId, startDate, endDate) {  
         try {
 
             const where = {};
@@ -140,10 +140,8 @@ class EvaluationService {
                 ],
 
                 order: [
-                    // 🔥 1️⃣ Ordenar FormRespond
-                    ['createdAt', 'DESC'], // o ASC si prefieres
+                    ['createdAt', 'DESC'], 
 
-                    // 🔥 2️⃣ Ordenar FormAnswers por id de pregunta
                     [
                         { model: FormAnswers, as: 'respuestas' },
                         { model: FormQuestion, as: 'pregunta' },
