@@ -56,7 +56,6 @@ const getAllStaffsRegulations = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        console.log(error)
         res.status(400).json(error.message)
     }
 }
@@ -129,7 +128,6 @@ const readAceptRegulation = async (req, res) => {
         sendEmailConfirmacion(dataMail);
         res.status(200).json({ data: 'resource updated successfully' })
     } catch (error) {
-        console.log(error)
         res.status(400).json(error.message);
     }
 }

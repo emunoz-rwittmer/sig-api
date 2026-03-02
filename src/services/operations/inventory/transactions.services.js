@@ -4,7 +4,6 @@ const Transaction = require('../../../models/operations/inventory/transaction.mo
 const db = require('../../../utils/database');
 const orderItems = require('../../../models/operations/orders/orderItems.models');
 const Register = require('../../../models/operations/inventory/register.models');
-const { where } = require('sequelize');
 
 class TransactionService {
 
@@ -12,11 +11,21 @@ class TransactionService {
         const t = await db.transaction();
 
         try {
-
             const quantity = Number(stockData.quantity);
 
+            // Validar cantidad válida y mayor a 0
             if (!Number.isFinite(quantity) || quantity <= 0) {
-                throw new Error('Invalid quantity');
+                throw new Error('Cantidad debe ser un número mayor a 0');
+            }
+
+            // Validar producto
+            if (!productData || !productData.sku) {
+                throw new Error('Datos de producto inválidos');
+            }
+
+            // Validar almacén
+            if (!stockData || !stockData.warehouseId) {
+                throw new Error('Almacén no especificado');
             }
 
             let product = await Product.findOne({
@@ -42,12 +51,10 @@ class TransactionService {
             });
 
             if (stock) {
-                await stock.update(
-                    { quantity: stock.quantity + quantity },
-                    { transaction: t }
-                );
+                stock.quantity += quantity;
+                await stock.save({ transaction: t });
             } else {
-                await Stock.create(
+                stock = await Stock.create(
                     {
                         ...stockData,
                         quantity,
@@ -57,16 +64,17 @@ class TransactionService {
                 );
             }
 
+            // Validar transacción duplicada
             const existsTransaction = await Transaction.findOne({
                 where: { referenceId: transactionData.referenceId },
                 transaction: t
             });
 
             if (existsTransaction) {
-                throw new Error('Duplicate transaction');
+                throw new Error('Transacción duplicada: referenceId ya existe');
             }
 
-            await Transaction.create(
+            const newTransaction = await Transaction.create(
                 {
                     ...transactionData,
                     productId: product.id,
@@ -82,7 +90,7 @@ class TransactionService {
             });
 
             if (!orderItem) {
-                throw new Error('Order item not found');
+                throw new Error('Elemento de orden no encontrado');
             }
 
             await orderItem.update(
@@ -96,10 +104,11 @@ class TransactionService {
             await t.commit();
 
             return {
-                message: product
-                    ? 'stock update and transaction register'
-                    : 'product, stock and transaction created',
-                orderItemId
+                success: true,
+                message: stock ? 'Stock actualizado y transacción registrada' : 'Producto, stock y transacción creados',
+                orderItemId,
+                productId: product.id,
+                transactionId: newTransaction.id
             };
 
         } catch (error) {
@@ -113,10 +122,24 @@ class TransactionService {
         const transaction = await db.transaction();
 
         try {
+            // Validaciones previas
+            if (!Array.isArray(products) || products.length === 0) {
+                throw new Error('Productos no válidos');
+            }
 
+            if (warehouseFromId === warehouseToId) {
+                throw new Error('El almacén de origen y destino no pueden ser iguales');
+            }
+
+            // Consolidar productos y validar cantidades
             const consolidatedProducts = Object.values(
                 products.reduce((acc, product) => {
                     const quantity = Number(product.quantity);
+
+                    // Validar cantidad válida y mayor a 0
+                    if (!Number.isFinite(quantity) || quantity <= 0) {
+                        return acc; // Ignorar productos con cantidad inválida
+                    }
 
                     if (!acc[product.id]) {
                         acc[product.id] = {
@@ -130,6 +153,11 @@ class TransactionService {
                 }, {})
             );
 
+            // Validar que haya productos válidos después de consolidación
+            if (consolidatedProducts.length === 0) {
+                throw new Error('No hay productos válidos para procesar');
+            }
+
             const totalProducts = consolidatedProducts.reduce(
                 (sum, p) => sum + p.quantity,
                 0
@@ -142,6 +170,7 @@ class TransactionService {
                 products: totalProducts
             }, { transaction });
 
+            // Validar disponibilidad de stock antes de crear transacciones
             for (const product of consolidatedProducts) {
                 const { id: productId, name, quantity } = product;
 
@@ -156,12 +185,29 @@ class TransactionService {
                 });
 
                 if (!stockFrom || stockFrom.quantity < quantity) {
-                    throw new Error(`Stock insuficiente para ${name}`);
+                    throw new Error(`Stock insuficiente para ${name}. Disponible: ${stockFrom?.quantity || 0}, Solicitado: ${quantity}`);
                 }
+            }
 
+            // Procesar transacciones de stock y registros
+            for (const product of consolidatedProducts) {
+                const { id: productId, name, quantity } = product;
+
+                const stockFrom = await Stock.findOne({
+                    where: {
+                        productId,
+                        warehouseId: warehouseFromId,
+                        ...(companyId && { companyId })
+                    },
+                    transaction,
+                    lock: transaction.LOCK.UPDATE
+                });
+
+                // Restar del almacén origen
                 stockFrom.quantity -= quantity;
                 await stockFrom.save({ transaction });
 
+                // Sumar al almacén destino
                 const [stockTo] = await Stock.findOrCreate({
                     where: {
                         productId,
@@ -205,29 +251,47 @@ class TransactionService {
         const transaction = await db.transaction();
 
         try {
+            // Validar que haya productos
+            if (!Array.isArray(products) || products.length === 0) {
+                throw new Error('No hay productos para procesar');
+            }
+
+            // Filtrar productos con cantidad válida (> 0)
+            const validProducts = products.filter(product => {
+                const quantity = Number(product.quantity);
+                return Number.isFinite(quantity) && quantity > 0;
+            });
+
+            if (validProducts.length === 0) {
+                throw new Error('No hay productos válidos con cantidad mayor a 0');
+            }
+
             const transactionResults = await Promise.all(
-                products.map(async (product) => {
+                validProducts.map(async (product) => {
+                    const quantity = Number(product.quantity);
+
                     const whereCondition = {
                         productId: product.id,
                         warehouseId: warehouseToId,
-                        ...(companyId && { companyId: companyId })  // Agrega companyId solo si existe
+                        ...(companyId && { companyId: companyId })
                     };
 
                     const [stockToInstance] = await Stock.findOrCreate({
                         where: whereCondition,
                         defaults: { quantity: 0 },
                         transaction,
+                        lock: transaction.LOCK.UPDATE
                     });
 
-                    stockToInstance.quantity += parseInt(product.quantity);
+                    stockToInstance.quantity += quantity;
                     await stockToInstance.save({ transaction });
 
                     return Transaction.create({
                         productId: product.id,
-                        userId: userId,
-                        warehouseToId: warehouseToId,
-                        quantity: parseInt(product.quantity),
-                        type: 'Entrada',
+                        userId,
+                        warehouseToId,
+                        quantity,
+                        type: 'Entrada'
                     }, { transaction });
                 })
             );
@@ -242,11 +306,24 @@ class TransactionService {
 
     static async updateStatusItem(data, id) {
         try {
+            if (!id) {
+                throw new Error('ID del elemento no especificado');
+            }
             const result = await orderItems.update(data, id);
             return result;
         } catch (error) {
             throw error;
         }
+    }
+
+    /**
+     * Valida y convierte cantidad a número
+     * @param {*} quantity - Cantidad a validar
+     * @returns {boolean} - true si la cantidad es válida y > 0
+     */
+    static validateQuantity(quantity) {
+        const num = Number(quantity);
+        return Number.isFinite(num) && num > 0;
     }
 
     static async incomeProductsRegister(transactionData) {
@@ -255,9 +332,23 @@ class TransactionService {
         const transaction = await db.transaction();
 
         try {
+            // Validar que haya productos
+            if (!Array.isArray(products) || products.length === 0) {
+                throw new Error('No hay productos para procesar');
+            }
 
-            const transactionResults = await Promise.all(products.map(async (product) => {
-                const quantity = product.quantity || 0; // Asegúrate de que quantity tenga un valor numérico
+            // Filtrar productos con cantidad válida (> 0)
+            const validProducts = products.filter(product => {
+                const quantity = Number(product.quantity);
+                return Number.isFinite(quantity) && quantity > 0;
+            });
+
+            if (validProducts.length === 0) {
+                throw new Error('No hay productos válidos con cantidad mayor a 0');
+            }
+
+            const transactionResults = await Promise.all(validProducts.map(async (product) => {
+                const quantity = Number(product.quantity);
 
                 const stockFrom = await Stock.findOne({
                     where: {
@@ -266,10 +357,15 @@ class TransactionService {
                         companyId
                     },
                     transaction,
+                    lock: transaction.LOCK.UPDATE
                 });
 
+                if (!stockFrom) {
+                    throw new Error(`Stock no encontrado para el producto ${product.name} en almacén origen`);
+                }
+
                 if (stockFrom.quantity < quantity) {
-                    throw new Error(`Stock insuficiente para el producto en UIO-GPS: ${product.name}`);
+                    throw new Error(`Stock insuficiente para el producto ${product.name}: Disponible: ${stockFrom.quantity}, Solicitado: ${quantity}`);
                 }
 
                 stockFrom.quantity -= quantity;
@@ -284,35 +380,37 @@ class TransactionService {
                     where: whereToCondition,
                     defaults: { quantity: 0 },
                     transaction,
+                    lock: transaction.LOCK.UPDATE
                 });
 
                 stockToInstance.quantity += quantity;
                 await stockToInstance.save({ transaction });
 
-                await Transaction.create({
+                return await Transaction.create({
                     productId: product.id,
                     userId,
                     warehouseFromId: 9,
                     warehouseToId,
                     quantity,
-                    type: 'Salida',
+                    type: 'Salida'
                 }, { transaction });
-
-                await Register.update(
-                    {
-                        isResived: true,
-                        observations,
-                    },
-                    {
-                        where: { id: registerId },
-                        transaction,
-                    }
-                );
             }));
+
+            // Actualizar registro una sola vez al final
+            await Register.update(
+                {
+                    isResived: true,
+                    observations
+                },
+                {
+                    where: { id: registerId },
+                    transaction
+                }
+            );
+
             await transaction.commit();
             return transactionResults;
         } catch (error) {
-            console.log(error)
             await transaction.rollback();
             throw new Error(error.message);
         }

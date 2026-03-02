@@ -14,9 +14,9 @@ class RegulationService {
             const result = await Regulation.findAll({
                 where: { companyId },
                 attributes: ['id', 'name', 'file', 'createdAt'],
-                include:[{
+                include: [{
                     model: StaffReadRegulation,
-                    as:'reads'
+                    as: 'reads'
                 }]
             });
 
@@ -78,7 +78,6 @@ class RegulationService {
                         }
                     ]
             });
-
             return result;
         } catch (error) {
             throw error;

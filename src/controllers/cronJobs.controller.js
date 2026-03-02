@@ -167,8 +167,6 @@ const generateWeeklyEvaluationCaptains = async () => {
 
             const positionId = Utils.encode(staff.staff_position.id);
 
-            console.log('positionId',positionId)
-
             const forms = await Form.findAll({
                 where: where(
                     fn("JSON_CONTAINS", col("positions"), JSON.stringify(positionId)),
@@ -176,8 +174,6 @@ const generateWeeklyEvaluationCaptains = async () => {
                     1
                 )
             });
-
-             console.log('forms',forms)
 
             for (const form of forms) {
 

@@ -9,9 +9,6 @@ router.post('/', YachtRequestController.createRequest);
 router.put('/:request_id', YachtRequestController.updateRequest);
 
 router.put('/updateRequest/:request_id', YachtRequestController.updateRequest);
-router.put('/updateQuantityItemRequest', YachtRequestController.updateQuantityItemRequest);
-
-
 
 
 

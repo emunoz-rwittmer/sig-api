@@ -3,6 +3,9 @@ const Warehouse = require('../../../models/catalogs/wareHouse.models');
 const requestItems = require('../../../models/operations/yachtRequest/requestItems.models');
 const Request = require('../../../models/operations/yachtRequest/request.models');
 const db = require('../../../utils/database');
+const RequestItems = require('../../../models/operations/yachtRequest/requestItems.models');
+const ProductConfiguration = require('../../../models/operations/inventory/productConfiguration');
+const Product = require('../../../models/operations/orders/product.models');
 
 class RequestService {
     static async getAllRequests() {
@@ -32,10 +35,20 @@ class RequestService {
 
             const result = await Request.findOne({
                 where: { id: requestId },
-                attributes: ['id', 'name', 'status', 'pax', 'cruise', 'supplyDate'],
+                attributes: ['id', 'name', 'warehouseId', 'status', 'pax', 'cruise', 'supplyDate'],
                 include: [{
-                    model: requestItems,
+                    model: RequestItems,
                     as: 'requestItems',
+                    include: [{
+                        model: ProductConfiguration,
+                        as: 'configuracion',
+                        attributes: { exclude: ['createdAt', 'updatedAt'] },
+                        include: [{
+                            model: Product,
+                            as: 'product',
+                            attributes: ['name']
+                        }]
+                    }]
                 },
                 {
                     model: Warehouse,
@@ -76,24 +89,40 @@ class RequestService {
     }
 
     static async updateRequest(data, id) {
-        try {
-            const result = await Request.updateRequest(data, id);
-            return result;
-        } catch (error) {
-            throw error;
 
+        if (data.items && (Array.isArray(data.items) && data.items.length > 0)) {
+            for (const item of data.items) {
+                const quantity = parseInt(item.quantity, 10);
+                if (isNaN(quantity) || quantity < 0) {
+                    throw new Error(`Invalid quantity for item ${item.id}`);
+                }
+            }
         }
-    }
 
-    // Items by orders
+        const transaction = await db.transaction();
 
-    static async updateQuantityItemRequest(data, id) {
         try {
-            const result = await requestItems.update(data, id);
+            const result = await Request.update(data,
+                { where: { id }, transaction });
+
+            // Update items if provided
+            if (data.items && Array.isArray(data.items) && data.items.length > 0) {
+                await Promise.all(
+                    data.items.map((item) => {
+                        const quantity = parseInt(item.quantity, 10);
+                        return requestItems.update(
+                            { quantity },
+                            { where: { id: item.id }, transaction }
+                        );
+                    })
+                );
+            }
+
+            await transaction.commit();
             return result;
         } catch (error) {
+            await transaction.rollback();
             throw error;
-
         }
     }
 }
