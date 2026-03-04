@@ -59,7 +59,7 @@ class RegulationService {
         try {
             const result = await StaffReadRegulation.findAll({
                 where: { staffId },
-                attributes: ['id', 'read'],
+                attributes: ['id', 'read', 'createdAt'],
                 include:
                     [
                         {

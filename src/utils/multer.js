@@ -4,20 +4,29 @@ const path = require('path');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    let folder = ""; // Por ejemplo, 'tiptops' o 'person'
+    let folder = "";
+    
+    // Determinar la carpeta según tipo MIME
     if (file.mimetype.startsWith('image/')) {
-      folder = req.query.file;
+      folder = req.query.file || 'images';
     } else if (file.mimetype === 'application/pdf') {
-      folder = req.query.file;
+      folder = req.query.file || 'pdfs';
     } else if (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
       file.mimetype === 'application/vnd.ms-excel') {
-      folder = req.query.file || '/excel';
+      folder = req.query.file || 'excel';
+    } else {
+      folder = req.query.file || 'files';
     }
+    
     const uploadPath = path.join(__dirname, '..', '../uploads', folder);
     cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
-    cb(null, `${file.originalname}`);
+    // Generar nombre único con timestamp y extensión original
+    const fileExtension = path.extname(file.originalname);
+    const baseName = path.basename(file.originalname, fileExtension);
+    const uniqueFileName = `${baseName}-${Date.now()}${fileExtension}`;
+    cb(null, uniqueFileName);
   },
 });
 
@@ -27,3 +36,4 @@ const upload = multer({
 });
 
 module.exports = upload;
+

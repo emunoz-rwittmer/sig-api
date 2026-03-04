@@ -36,6 +36,11 @@ const Staff = db.define('staff', {
         allowNull: false,
         field: "cell_phone",
     },
+    birthDate: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: "birth_date",
+    },
     dateEntry: {
         type: DataTypes.DATE,
         allowNull: true,
@@ -107,6 +112,14 @@ const Staff = db.define('staff', {
     },
     changePassword: {
         type: DataTypes.BOOLEAN,
+        defaultValue: true,
+    },
+    profile: {
+        type: DataTypes.TEXT,
+        defaultValue: true,
+    },
+    signature: {
+        type: DataTypes.TEXT,
         defaultValue: true,
     },
 }, {

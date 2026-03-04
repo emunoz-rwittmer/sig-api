@@ -7,9 +7,6 @@ const getDocuments = async (req, res) => {
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
-                x.dataValues.positions.map(p => {
-                    p.position.dataValues.id = Utils.encode(p.position.dataValues.id);
-                })
             });
         }
         res.status(200).json(result);
@@ -33,11 +30,14 @@ const getDocument = async (req, res) => {
 
 const createDocument = async (req, res) => {
     try {
-        const document = req.body;
-        if (document.positionId?.length) document.positionId = document.positionId.map(x => Utils.decode(x));
-        await DocumentService.createDocument(document);
-
-        res.status(200).json({ data: 'resource created successfully' });
+        const document = req.body;        
+        // Asegurar que positions sea un array
+        if (!Array.isArray(document.positions)) {
+            document.positions = [document.positions];
+        }
+        
+        const result = await DocumentService.createDocument(document);
+        res.status(200).json({ data: 'resource created successfully', documentId: result.id });
     } catch (error) {
         res.status(400).json(error.message);
     }
@@ -47,12 +47,11 @@ const updateDocument = async (req, res) => {
     try {
         const documentId = Utils.decode(req.params.document_id);
         const document = req.body;
-        delete document.id
-        if (document.positionId?.length) document.positionId = document.positionId.map(x => Utils.decode(x));
+        document.positions = document.positions;
+        delete document.id;
         await DocumentService.updateDocument(document, documentId);
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        console.log(error)
         res.status(400).json(error.message);
     }
 }

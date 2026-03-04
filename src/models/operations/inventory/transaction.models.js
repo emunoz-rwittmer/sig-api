@@ -36,7 +36,6 @@ const Transaction = db.define('transaction', {
     allowNull: true,
     field: 'warehouse_from_id'
   },
-
   warehouseToId: {
     type: DataTypes.INTEGER,
     allowNull: false,

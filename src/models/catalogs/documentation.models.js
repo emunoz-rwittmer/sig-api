@@ -9,9 +9,20 @@ const Documentation = db.define('documentation', {
         autoIncrement: true,
         allowNull: false,
     },
-    
     name: {
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT,
+        allowNull: true,
+    },
+    description: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+    },
+    required: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+    },
+    positions: {
+        type: DataTypes.JSON,
         allowNull: true,
     }
 

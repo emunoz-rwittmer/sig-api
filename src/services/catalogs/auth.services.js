@@ -4,6 +4,8 @@ const Roles = require('../../models/catalogs/roles.models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const Positions = require('../../models/catalogs/positions.models');
+const StaffCompany = require('../../models/catalogs/staffCompany.models');
+const Company = require('../../models/catalogs/company.models');
 
 require('dotenv').config();
 
@@ -39,6 +41,10 @@ class AuthService {
                     model: Roles,
                     as: 'rol',
                     attributes: ['id', 'name'],
+                },{
+                    model: StaffCompany,
+                    as: 'companies',
+                    attributes: ["companyId"],
                 }]
             });
             if (user) {

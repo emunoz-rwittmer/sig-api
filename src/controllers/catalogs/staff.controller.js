@@ -1,7 +1,7 @@
 const StaffService = require('../../services/catalogs/staff.services');
 const Utils = require('../../utils/Utils');
-const sendEmail = require('../../mails/mailer');
-const bcrypt = require("bcrypt");
+const fs = require('fs');
+const path = require('path');
 
 const getAllStaffs = async (req, res) => {
     try {
@@ -13,12 +13,13 @@ const getAllStaffs = async (req, res) => {
                 x.dataValues.positionId = Utils.encode(x.dataValues.positionId);
                 x.dataValues.roleId = Utils.encode(x.dataValues.roleId);
                 x.dataValues.companies.map(com => {
-                    com.company.dataValues.id = Utils.encode(com.company.dataValues.id);
+                    com.dataValues.companyId = Utils.encode(com.dataValues.companyId);
                 })
             });
         }
         res.status(200).json(result);
     } catch (error) {
+        console.log(error)
 
         res.status(400).json(error.message)
     }
@@ -127,10 +128,13 @@ const getStaff = async (req, res) => {
         const staffId = Utils.decode(req.params.staff_id);
         const result = await StaffService.getStaffById(staffId);
         if (result instanceof Object) {
-            result.id = Utils.encode(result.id);
-            if (result.roleId) result.roleId = Utils.encode(result.roleId);
-            result.departamentId = Utils.encode(result.departamentId);
-            result.positionId = Utils.encode(result.positionId);
+            result.dataValues.id = Utils.encode(result.dataValues.id);
+            if (result.dataValues.roleId) result.dataValues.roleId = Utils.encode(result.dataValues.roleId);
+            result.dataValues.departamentId = Utils.encode(result.dataValues.departamentId);
+            result.dataValues.positionId = Utils.encode(result.dataValues.positionId);
+            result.companies = result.companies.map(x => (
+                x.dataValues.companyId = Utils.encode(x.dataValues.companyId)
+            ))
         }
         res.status(200).json(result);
     } catch (error) {
@@ -159,6 +163,7 @@ const updateStaff = async (req, res) => {
     try {
         const staffId = Utils.decode(req.params.staff_id);
         const staff = req.body;
+        console.log(staff)
         staff.id = staffId;
         staff.roleId = staff.roleId ? Utils.decode(staff.roleId) : null;
         staff.departamentId = Utils.decode(req.body.departamentId);
@@ -170,6 +175,122 @@ const updateStaff = async (req, res) => {
         res.status(400).json(error.message);
     }
 }
+
+const uploadImage = async (req, res) => {
+    try {
+        const staffId = Utils.decode(req.params.staff_id);
+        const file = req.file;
+
+        if (!file) {
+            return res.status(400).json({ message: 'No se ha subido ningún archivo' });
+        }
+
+        // Obtener información del staff
+        const staff = await StaffService.getStaffById(staffId);
+        const staffFullName = `${staff.dataValues.firstName}_${staff.dataValues.lastName}`.replace(/\s+/g, '_');
+        const staffDir = path.join(__dirname, '../../../uploads/staffs', staffFullName);
+
+        // Crear la carpeta del staff si no existe
+        if (!fs.existsSync(staffDir)) {
+            fs.mkdirSync(staffDir, { recursive: true });
+        }
+
+        // Obtener el tipo de imagen de body
+        const { type } = req.body;
+        if (!type) {
+            return res.status(400).json({ message: 'El campo "type" es requerido' });
+        }
+
+        // Crear el nombre del archivo con el tipo
+        const fileExtension = path.extname(file.originalname);
+        const fileName = `${type}-${Date.now()}${fileExtension}`.replace(/\s+/g, '_');
+        const newFilePath = path.join(staffDir, fileName);
+
+        // Si multer guardó el archivo en otro lugar, moverlo a la carpeta del staff
+        if (file.path && file.path !== newFilePath) {
+            fs.renameSync(file.path, newFilePath);
+        }
+
+        // Construir la ruta relativa para guardar en BD
+        const relativePath = path.relative(path.join(__dirname, '../../../'), newFilePath).replace(/\\/g, '/');
+
+        // Preparar los datos para actualizar en BD
+        const dataToUpdate = {
+            [type]: `/${relativePath}`
+        };
+
+        // Guardar la ruta en la BD
+        await StaffService.uploadImage(dataToUpdate, staffId);
+
+        res.status(200).json({ data: 'resource updated successfully' });
+    } catch (error) {
+        console.error('Error en uploadImage:', error);
+        res.status(400).json({ message: error.message });
+    }
+}
+
+const uploadStaffDocumentation = async (req, res) => {
+    try {
+        const staffId = Utils.decode(req.params.staff_id);
+        const documents = JSON.parse(req.body.documentsData);
+        const files = req.files;
+
+        if (!files || !files.length) {
+            return res.status(400).json({ message: 'No se ha subido ningún archivo' });
+        }
+
+        const staff = await StaffService.getStaffById(staffId);
+        const staffFullName = `${staff.dataValues.firstName}_${staff.dataValues.lastName}`
+            .replace(/\s+/g, '_');
+
+        const staffDir = path.join(__dirname, '../../../uploads/staffs', staffFullName, 'documentation');
+
+        if (!fs.existsSync(staffDir)) {
+            fs.mkdirSync(staffDir, { recursive: true });
+        }
+
+        const updatedDocuments = [];
+
+        for (let i = 0; i < documents.length; i++) {
+
+            const doc = documents[i];
+            const file = files[i];
+
+            if (!file) {
+                updatedDocuments.push(doc);
+                continue;
+            }
+
+            const fileExtension = path.extname(file.originalname);
+            const fileName = `documentation-${Date.now()}-${i}${fileExtension}`
+                .replace(/\s+/g, '_');
+
+            const newFilePath = path.join(staffDir, fileName);
+
+            if (file.path && file.path !== newFilePath) {
+                fs.renameSync(file.path, newFilePath);
+            }
+
+            const relativePath = path
+                .relative(path.join(__dirname, '../../../'), newFilePath)
+                .replace(/\\/g, '/');
+
+            doc.file = `/${relativePath}`;
+            doc.fileName = file.originalname;
+            doc.fileSize = file.size;
+
+            updatedDocuments.push(doc);
+        }
+
+        await StaffService.uploadStaffDocumentation(updatedDocuments);
+
+        res.status(200).json({ data: 'Documentación guardada exitosamente' });
+
+    } catch (error) {
+        console.error('Error en uploadStaffDocumentation:', error);
+        res.status(400).json({ message: error.message });
+    }
+};
 
 const deleteStaff = async (req, res) => {
     try {
@@ -192,5 +313,7 @@ const StaffController = {
     createStaff,
     updateStaff,
     deleteStaff,
+    uploadImage,
+    uploadStaffDocumentation
 }
 module.exports = StaffController

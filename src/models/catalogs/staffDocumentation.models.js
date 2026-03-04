@@ -1,8 +1,8 @@
 const db = require('../../utils/database');
 const { DataTypes } = require('sequelize');
 
-const StaffDocumentation= db.define('staff_documentation',{
-    id:{
+const StaffDocumentation = db.define('staff_documentation', {
+    id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true,
@@ -10,12 +10,33 @@ const StaffDocumentation= db.define('staff_documentation',{
     staffId: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        field:"staff_id",
+        field: "staff_id",
     },
     documentId: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        field:"document_id",
+        field: "document_id",
+    },
+    status: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
+    file: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+    },
+    fileName: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+    },
+    fileSize: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+    },
+    expiryDate: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        field: "expiry_date",
     },
 });
 

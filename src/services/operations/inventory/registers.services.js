@@ -3,26 +3,24 @@ const Transaction = require('../../../models/operations/inventory/transaction.mo
 const Register = require('../../../models/operations/inventory/register.models');
 const Staff = require('../../../models/catalogs/staff.models');
 const Company = require('../../../models/catalogs/company.models');
+const { Op } = require('sequelize');
 
 class RegisterService {
 
-    static async getAllRegisters(filter) {
+    static async getAllRegisters() {
         try {
 
-            const parsedFilter = filter === 'true' ? true : filter === 'false' ? false : '';
-            const where = {};
-
-            if (filter !== '') {
-                where.isResived = parsedFilter;
-            }
-
             const result = await Register.findAll({
-                where,
+                where: {
+                    companyId: {
+                        [Op.not]: null
+                    }
+                },
                 include: [
                     {
                         model: Company,
                         as: 'empresa',
-                        attributes: ['id','name'],
+                        attributes: ['id', 'name'],
                     },
                     {
                         model: Staff,
@@ -32,7 +30,7 @@ class RegisterService {
                     {
                         model: Transaction,
                         as: 'transactiones',
-                        attributes: ['id', 'quantity' ],
+                        attributes: ['id', 'quantity'],
                         include: [
                             {
                                 model: Product,
@@ -42,6 +40,7 @@ class RegisterService {
                         ],
                     },
                 ],
+                order:[['createdAt','DESC']]
             })
             return result;
         } catch (error) {

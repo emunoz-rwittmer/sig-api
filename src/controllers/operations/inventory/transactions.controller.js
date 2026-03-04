@@ -134,23 +134,23 @@ const updateStatusItem = async (req, res) => {
 
 const incomeProductsRegister = async (req, res) => {
     try {
-        const { products, observations } = req.body;
+        const { transactiones, observations } = req.body;
         const warehouseToId = 2
-        const companyId = req.body.companyId
-        const userId = req.body.userId
-        const registerId = req.body.registerId
+        const companyId = Utils.decode(req.body.companyId);
+        const userId = Utils.decode(req.body.userId);
+        const registerId = Utils.decode(req.body.id);
 
-        const transactions = await TransactionService.incomeProductsRegister({
-            products,
+        await TransactionService.incomeProductsRegister({
+            transactiones,
             warehouseToId,
             companyId,
             userId,
             registerId,
             observations
         });
-        if (transactions) {
-            res.status(200).json({ data: 'Transacción completada correctamente.' });
-        }
+
+        res.status(200).json({ data: 'Transacción completada correctamente.' });
+
     } catch (error) {
         res.status(400).json(error.message);
     }

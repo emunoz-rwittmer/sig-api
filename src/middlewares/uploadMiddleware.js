@@ -1,5 +1,4 @@
 const upload = require('../utils/multer');
-const multer = require('multer');
 
 const uploadMiddleware = (type, fields = []) => (req, res, next) => {
     let multerMiddleware;
@@ -15,16 +14,13 @@ const uploadMiddleware = (type, fields = []) => (req, res, next) => {
     }
 
     multerMiddleware(req, res, function (err) {
-        if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
-            console.log('primer if',err)
-            return res.status(400).json('File size exceeds the limit of 5MB');
-        }
         if (err) {
-            console.log('segundo if',err)
-            return res.status(500).json('File upload error');
+            console.log(err)
+            return res.status(400).json(err.message || 'Error uploading file');
         }
         next();
     });
+
 };
 
 module.exports = uploadMiddleware;

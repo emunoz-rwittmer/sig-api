@@ -327,18 +327,18 @@ class TransactionService {
     }
 
     static async incomeProductsRegister(transactionData) {
-        const { products, warehouseToId, companyId, userId, registerId, observations } = transactionData;
+        const { transactiones, warehouseToId, companyId, userId, registerId, observations } = transactionData;
 
         const transaction = await db.transaction();
 
         try {
             // Validar que haya productos
-            if (!Array.isArray(products) || products.length === 0) {
+            if (!Array.isArray(transactiones) || transactiones.length === 0) {
                 throw new Error('No hay productos para procesar');
             }
 
             // Filtrar productos con cantidad válida (> 0)
-            const validProducts = products.filter(product => {
+            const validProducts = transactiones.filter(product => {
                 const quantity = Number(product.quantity);
                 return Number.isFinite(quantity) && quantity > 0;
             });
@@ -347,13 +347,77 @@ class TransactionService {
                 throw new Error('No hay productos válidos con cantidad mayor a 0');
             }
 
-            const transactionResults = await Promise.all(validProducts.map(async (product) => {
-                const quantity = Number(product.quantity);
+            const transactionResults = await Promise.all(validProducts.map(async (transac) => {
+                const quantity = Number(transac.quantity);
+                let originalTransaction = null;
+                let quantityDifference = 0;
 
+                // Si viene el ID de la transacción original, consultarla y comparar cantidades
+                if (transac.id) {
+                    originalTransaction = await Transaction.findOne({
+                        where: { id: transac.id },
+                        transaction,
+                        lock: transaction.LOCK.UPDATE
+                    });
+
+                    if (!originalTransaction) {
+                        throw new Error(`Transacción original no encontrada para el producto ${transac.product.name}`);
+                    }
+
+                    // Comparar cantidades
+                    quantityDifference = quantity - originalTransaction.quantity;
+                }
+
+                const sourceWarehouseId = 9;
+                const productId = transac.product.id;
+
+                // Si hay observaciones Y hay diferencias en cantidades, actualizar la transacción y ajustar stock
+                if (originalTransaction && observations && observations.trim() !== '' && quantityDifference !== 0) {
+                    originalTransaction.quantity = quantity;
+                    await originalTransaction.save({ transaction });
+
+                    // Restar la diferencia del stock de la bodega origen (donde se envió originalmente)
+                    const stockFromSource = await Stock.findOne({
+                        where: {
+                            productId,
+                            warehouseId: originalTransaction.warehouseFromId,
+                            companyId
+                        },
+                        transaction,
+                        lock: transaction.LOCK.UPDATE
+                    });
+
+                    if (!stockFromSource) {
+                        throw new Error(`Stock no encontrado para el producto ${transac.product.name} en bodega origen`);
+                    }
+
+                    stockFromSource.quantity -= quantityDifference;
+                    if (stockFromSource.quantity < 0) {
+                        throw new Error(`Stock insuficiente en bodega origen para el producto ${transac.product.name}: No se puede restar diferencia de ${quantityDifference}`);
+                    }
+                    await stockFromSource.save({ transaction });
+
+                    // Sumar la diferencia al stock de bodega 9
+                    const [stockWarehouse9] = await Stock.findOrCreate({
+                        where: {
+                            productId,
+                            warehouseId: sourceWarehouseId,
+                            companyId
+                        },
+                        defaults: { quantity: 0 },
+                        transaction,
+                        lock: transaction.LOCK.UPDATE
+                    });
+
+                    stockWarehouse9.quantity += quantityDifference;
+                    await stockWarehouse9.save({ transaction });
+                }
+
+                // Proceder con la cantidad completa: bodega 9 → warehouseToId
                 const stockFrom = await Stock.findOne({
                     where: {
-                        productId: product.id,
-                        warehouseId: 9,
+                        productId,
+                        warehouseId: sourceWarehouseId,
                         companyId
                     },
                     transaction,
@@ -361,18 +425,17 @@ class TransactionService {
                 });
 
                 if (!stockFrom) {
-                    throw new Error(`Stock no encontrado para el producto ${product.name} en almacén origen`);
+                    throw new Error(`Stock no encontrado para el producto ${transac.product.name} en almacén origen`);
                 }
-
                 if (stockFrom.quantity < quantity) {
-                    throw new Error(`Stock insuficiente para el producto ${product.name}: Disponible: ${stockFrom.quantity}, Solicitado: ${quantity}`);
+                    throw new Error(`Stock insuficiente para el producto ${transac.product.name}: Disponible: ${stockFrom.quantity}, Solicitado: ${quantity}`);
                 }
 
                 stockFrom.quantity -= quantity;
                 await stockFrom.save({ transaction });
 
                 const whereToCondition = {
-                    productId: product.id,
+                    productId,
                     warehouseId: warehouseToId,
                 };
 
@@ -387,9 +450,9 @@ class TransactionService {
                 await stockToInstance.save({ transaction });
 
                 return await Transaction.create({
-                    productId: product.id,
+                    productId,
                     userId,
-                    warehouseFromId: 9,
+                    warehouseFromId: sourceWarehouseId,
                     warehouseToId,
                     quantity,
                     type: 'Salida'

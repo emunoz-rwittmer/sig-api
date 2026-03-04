@@ -52,7 +52,6 @@ const ProductConfiguration = require('./operations/inventory/productConfiguratio
 const RequestItems = require('./operations/yachtRequest/requestItems.models');
 const StaffDocumentation = require('./catalogs/staffDocumentation.models');
 const Documentation = require('./catalogs/documentation.models');
-const DocumentationPosition = require('./catalogs/documentationPosition.models');
 
 const initModels = () => {
 
@@ -77,14 +76,9 @@ const initModels = () => {
     Staff.belongsTo(Departaments, { as: "staff_departament", foreignKey: "departament_id" });
     Departaments.hasMany(Staff, { as: "departament_staff", foreignKey: "departament_id" });
 
-
-    DocumentationPosition.belongsTo(Documentation, { as: "document", foreignKey: "document_id" });
-    DocumentationPosition.belongsTo(Positions, { as: "position", foreignKey: "position_id" });
-    Documentation.hasMany(DocumentationPosition, { as: "positions", foreignKey: "document_id", onDelete: 'CASCADE', hooks: true });
-
     StaffDocumentation.belongsTo(Staff, { as: "staff", foreignKey: "staff_id" });
     StaffDocumentation.belongsTo(Documentation, { as: "document", foreignKey: "document_id" });
-    Staff.hasMany(StaffDocumentation, { as: "staff_documentation", foreignKey: "staff_id", onDelete: 'CASCADE', hooks: true });
+    Staff.hasMany(StaffDocumentation, { as: "documentation", foreignKey: "staff_id", onDelete: 'CASCADE', hooks: true });
 
     StaffCompany.belongsTo(Staff, { as: "staff", foreignKey: "staff_id" });
     StaffCompany.belongsTo(Company, { as: "company", foreignKey: "company_id" });

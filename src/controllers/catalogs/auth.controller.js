@@ -20,8 +20,8 @@ const login = async (req, res) => {
             if (result.user.active) {
                 const { id, firstName, lastName, email } = result.user;
                 const sessioId = Utils.getSessionRandom();
-                const userData = { 
-                    id, firstName, lastName, email 
+                const userData = {
+                    id, firstName, lastName, email
                 };
 
                 userData.id = Utils.encode(userData.id);
@@ -65,16 +65,21 @@ const loginUsers = async (req, res) => {
         }
         const result = await AuthService.loginUsers({ email, password });
         if (result.isValid) {
-            if (result.user.active) {
+            if (result.user.active) {                
                 const { id, firstName, lastName, email } = result.user;
                 const userData = { id, firstName, lastName, email };
                 userData.id = Utils.encode(userData.id);
                 userData.rol = result.user.rol?.name
+
                 const sessioId = Utils.getSessionRandom();
                 const token = await Utils.generateAccessToken(userData);
                 const refreshToken = await Utils.generateRefreshToken(userData);
+
                 userData.token = token;
                 userData.changePassword = result.user.changePassword
+                userData.isTiptop = result.user.companies.some(x => x.companyId === 5); //es tiptop
+                userData.companiIds = result.user.companies.map(company => (company.companyId = Utils.encode(company.companyId)));
+                
                 const newToken = new tokenModel({
                     user: firstName + " " + lastName,
                     userId: Utils.encode(id),

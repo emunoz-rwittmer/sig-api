@@ -1,3 +1,6 @@
+const { sendEmailNewRequest, sendConfirmationEmail } = require('../../../mails/mailer');
+const Staffervice = require('../../../services/catalogs/staff.services');
+const WarehouseService = require('../../../services/operations/inventory/warehouse.services');
 const RequestService = require('../../../services/operations/yachtRequest/yachtRequest.services');
 const YachtRequestService = require('../../../services/operations/yachtRequest/yachtRequest.services');
 const Utils = require('../../../utils/Utils');
@@ -39,11 +42,11 @@ const createRequest = async (req, res) => {
         data.userId = Utils.decode(req.body.userId)
 
         await RequestService.createRequest(data)
-        // const company = await WarehouseService.getWarehouseById(warehouseId)
-        // const staff = await Staffervice.getStaffById(userId)
-        // action = 'requerimiento'
-        // // sendEmailNewRequest(company.name);
-        // // sendConfirmationEmail(action, company.name, staff)
+        const company = await WarehouseService.getWarehouseById(warehouseId)
+        const staff = await Staffervice.getStaffById(userId)
+        action = 'requerimiento'
+        sendEmailNewRequest(company.name);
+        sendConfirmationEmail(action, company.name, staff)
         res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
         res.status(400).json(error.message);

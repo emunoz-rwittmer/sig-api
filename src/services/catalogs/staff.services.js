@@ -6,11 +6,11 @@ const { Op } = require("sequelize");
 const Roles = require('../../models/catalogs/roles.models');
 const Company = require('../../models/catalogs/company.models');
 const StaffCompany = require('../../models/catalogs/staffCompany.models');
-const { model } = require('mongoose');
 const db = require('../../utils/database');
 const Regulation = require('../../models/rrhh/regulation.models');
-const { forEach } = require('mathjs');
 const StaffReadRegulation = require('../../models/rrhh/readRegulation.models');
+const StaffDocumentation = require('../../models/catalogs/staffDocumentation.models');
+const Documentation = require('../../models/catalogs/documentation.models');
 
 class Staffervice {
     static async getAll() {
@@ -23,7 +23,7 @@ class Staffervice {
                     {
                         model: StaffCompany,
                         as: 'companies',
-                        attributes: ['id'],
+                        attributes: ['companyId'],
                         include: [{
                             model: Company,
                             as: 'company',
@@ -100,7 +100,7 @@ class Staffervice {
                 model: StaffCompany,
                 as: 'companies',
                 attributes: ['id'],
-               ...(companyId && { where: { companyId } })
+                ...(companyId && { where: { companyId } })
             };
 
             const result = await Staff.findAll({
@@ -224,17 +224,28 @@ class Staffervice {
         try {
             const result = await Staff.findOne({
                 where: { id },
-                attributes: ['first_name', 'last_name', 'email', 'ci_staff', 'cell_phone', 'date_entry', 'description', 'roleId', 'departamentId', 'positionId', 'active'],
                 include: [
                     {
                         model: StaffCompany,
                         as: 'companies',
-                        attributes: ['id'],
+                        attributes: ['companyId'],
                         include: [
                             {
                                 model: Company,
                                 as: 'company',
                                 attributes: ['name', 'logo']
+                            }
+                        ]
+                    },
+                    {
+                        model: StaffDocumentation,
+                        as: 'documentation',
+                        attributes: ['id', 'status', 'file', 'expiryDate', 'fileName', 'fileSize', 'updatedAt'],
+                        include: [
+                            {
+                                model: Documentation,
+                                as: 'document',
+                                attributes: ['name', 'description', 'required'],
                             }
                         ]
                     },
@@ -334,6 +345,46 @@ class Staffervice {
         }
     }
 
+    static async uploadImage(data, id) {
+        try {
+            await Staff.update(data, {
+                where: { id }
+            });
+
+            return true;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async uploadStaffDocumentation(documents) {
+        const transaction = await db.transaction();
+        try {
+            for (const doc of documents) {
+                // 🔥 UPDATE si existe
+                await StaffDocumentation.update(
+                    {
+                        file: doc.file,
+                        fileName: doc.fileName,
+                        fileSize: doc.fileSize,
+                        status: doc.status,
+                        expiryDate: doc.expiryDate
+                    },
+                    {
+                        where: { id: doc.id },
+                        transaction
+                    }
+                );
+            }
+
+            await transaction.commit();
+            return true;
+
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
+    }
 
     static async delete(staffId) {
         try {
