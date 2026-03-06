@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const Utils = require('../../../utils/Utils');
 
-exports.generateRemisionPDF = async (company, data, filePath) => {
+exports.generateRemisionPDF = async (data, filePath) => {
   const { default: PDFDocument } = await import('pdfkit');
 
   const doc = new PDFDocument({ margin: 40 });
@@ -10,7 +10,7 @@ exports.generateRemisionPDF = async (company, data, filePath) => {
   doc.pipe(writeStream);
 
   // === ENCABEZADO (alineado en una sola línea) ===
-  const logoPath = path.resolve(`./${company.logo}`);
+  const logoPath = path.resolve(`./uploads/companies/logo_rwittmer.png`);
   const startY = 40;
 
   // Cuadro de encabezado
@@ -18,50 +18,61 @@ exports.generateRemisionPDF = async (company, data, filePath) => {
 
   // Logo (izquierda)
   if (fs.existsSync(logoPath)) {
-    doc.image(logoPath, 50, startY + 15, { width: 90 });
+    doc.image(logoPath, 410, startY + 5, { width: 100 });
   }
 
   // Datos de empresa (centro)
   doc
     .font('Helvetica-Bold')
     .fontSize(12)
-    .text(company.name.toUpperCase(), 150, startY + 15, { align: 'left' })
+    .text('ROLF WITTMER', 50, startY + 15, { align: 'left' })
     .fontSize(9)
     .font('Helvetica')
-    .text('CONTRIBUYENTE ESPECIAL - RESOLUCIÓN SRA No 571', 150, startY + 30)
-    .text('DEL 7 DE AGOSTO DE 2009', 150, startY + 42)
-    .text('MATRIZ: Tomás de Berlanga s/n y Los Colonos - Santa Cruz', 150, startY + 54)
-    .text(`SUCURSAL: ${company.adress}`, 150, startY + 66);
+    .text('CONTRIBUYENTE ESPECIAL - RESOLUCIÓN SRA No 571', 50, startY + 30)
+    .text('DEL 7 DE AGOSTO DE 2009', 50, startY + 42)
+    .text('MATRIZ: Tomás de Berlanga s/n y Los Colonos - Santa Cruz', 50, startY + 54)
+    .text(`SUCURSAL: Leonidas Plaza N24-282 y Lizardo García Quito - Ecuador`, 50, startY + 66);
 
   // Bloque de la guía (derecha)
   const rightX = 380;
   doc
     .font('Helvetica-Bold')
     .fontSize(10)
-    .text('GUÍA DE REMISIÓN', rightX, startY + 20, { align: 'center', width: 160 })
+    .text('GUÍA DE REMISIÓN', rightX, startY + 50, { align: 'center', width: 160 })
     .fontSize(14)
-    .text(`Nº ${data.counter || ''}`, rightX, startY + 38, { align: 'center', width: 160 })
-    // .fontSize(9)
-    // .text('AUT. SRI. # 1119086046', rightX, startY + 60, { align: 'center', width: 160 })
-    // .fontSize(7)
-    // .text('OBLIGADO A LLEVAR CONTABILIDAD', rightX, startY + 72, { align: 'center', width: 160 });
+    .text(`Nº ${data.counter || ''}`, rightX, startY + 65, { align: 'center', width: 160 })
 
   // === FECHAS DE TRASLADO ===
   doc.moveDown(2);
   const fechasY = startY + 120;
   doc
+    .fontSize(9)
+    .font('Helvetica-Bold')
+    .text('TRASLADO', 50, fechasY)
+    .font('Helvetica')
+    .text(`Inicio de traslado: ${Utils.formatMonthYear(data.dateStartTraslate)}`, 50, fechasY + 15)
+    .text(`Terminación de traslado: ${Utils.formatMonthYear(data.dateEndTraslate)}`, 50, fechasY + 30);
+
+  // Bloque de la guía (derecha)
+  doc
+    .fontSize(9)
+    .font('Helvetica-Bold')
+    .text('RUTA', rightX, fechasY)
+    .font('Helvetica')
+    .text(`Origen: ${data.from}`, rightX, fechasY + 15)
+    .text(`Destino: ${data.to}`, rightX, fechasY + 30)
+
+  doc
     .fontSize(10)
     .font('Helvetica')
-    .text(`Fecha de inicio de traslado: ${Utils.formatMonthYear(data.dateStartTraslate)}`, 50, fechasY)
-    .text(`Fecha de terminación de traslado: ${Utils.formatMonthYear(data.dateEndTraslate)}`, 50, fechasY + 15)
-    .text(`Ventas: ${data.sale ? 'x': ''}`, 50, fechasY + 30)
-    .text(`Compras: ${data.buy ? 'x': ''}`, 150, fechasY + 30)
-    .text(`Otros: ${data.other ? 'x': ''}`, 300, fechasY + 30);
+    .text(`Ventas: ${data.sale ? 'x': ''}`, 50, fechasY + 45)
+    .text(`Compras: ${data.buy ? 'x': ''}`, 150, fechasY + 45)
+    .text(`Otros: ${data.other ? 'x': ''}`, 300, fechasY + 45);
 
 
   // Datos de traslado (centro)
   doc.moveDown(3);
-  const trasladoY = fechasY + 50;
+  const trasladoY = fechasY + 65;
   doc
     .fontSize(9)
     .font('Helvetica-Bold')
@@ -116,7 +127,7 @@ exports.generateRemisionPDF = async (company, data, filePath) => {
     y += rowHeight;
   });
 
-  const firmasY = y + 50;
+  const firmasY = y + 200;
   doc
     .moveTo(100, firmasY)
     .lineTo(250, firmasY)

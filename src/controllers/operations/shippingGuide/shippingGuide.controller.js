@@ -1,17 +1,15 @@
-const Consecutivo = require('../../../models/catalogs/consecutivo.model');
-const ConsecutivoGuias = require('../../../models/catalogs/consecutivoGuias.model');
+const ShippingGuideCount = require('../../../models/operations/shippingGuide/shippingGuideCount.model');
 const CompanyService = require('../../../services/catalogs/company.services');
-const GuideService = require('../../../services/operations/referralGuides/guides.services');
-const { generateRemisionPDF } = require('../../../services/operations/referralGuides/pdfService');
+const ShippingGuideService = require('../../../services/operations/shippingGuide/shippingGuide.services');
+const { generateRemisionPDF } = require('../../../services/operations/shippingGuide/pdfService');
 const { sendEmailGuiaRemisionCreada } = require('../../../mails/mailer');
 const Utils = require('../../../utils/Utils');
 const fs = require('fs');
 const path = require('path');
 
-const getGuidesByCompany = async (req, res) => {
+const getShippingGuides = async (req, res) => {
     try {
-        const companyId = Utils.decode(req.params.company_id);
-        const result = await GuideService.getGuidesByCompany(companyId);
+        const result = await ShippingGuideService.getShippingGuides();
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
@@ -23,10 +21,10 @@ const getGuidesByCompany = async (req, res) => {
     }
 }
 
-const getGuideById = async (req, res) => {
+const getShippingGuideById = async (req, res) => {
     try {
         const guideId = Utils.decode(req.params.guide_id);
-        const result = await GuideService.getGuideById(guideId);
+        const result = await ShippingGuideService.getShippingGuideById(guideId);
         result.id = Utils.encode(result.id);
         res.status(200).json(result);
     } catch (error) {
@@ -34,58 +32,46 @@ const getGuideById = async (req, res) => {
     }
 }
 
-const createGuide = async (req, res) => {
+const createShippingGuide = async (req, res) => {
     try {
         const data = req.body;
-        const companyId = Utils.decode(req.params.company_id);
-
-        const [consecutivo] = await ConsecutivoGuias.findOrCreate({
-            where: { companyId },
-            defaults: { valor: 1, companyId },
+        const [consecutivo] = await ShippingGuideCount.findOrCreate({
+            where: {},
+            defaults: { valor: 1 },
         });
 
         const formattedCounter = `000-${consecutivo.valor.toString().padStart(3, '0')}`;
-        await ConsecutivoGuias.update(
-            { valor: consecutivo.valor + 1 },
-            { where: { companyId } }
+        await ShippingGuideCount.update(
+            { valor: consecutivo.valor + 1 }, { where: {} }
         );
 
-        data.companyId = companyId;
+
         data.counter = formattedCounter;
 
-        const company = await CompanyService.getCompanyById(companyId);
-        const folderName = company.name.replace(/\s+/g, '_');
-        const folderPath = path.join(__dirname, '../../../../uploads/pdfs/guides', folderName);
-
-        if (!fs.existsSync(folderPath)) {
-            fs.mkdirSync(folderPath, { recursive: true });
-        }
-
         const fileName = `guia_remision_${data.counter}.pdf`;
-        const filePath = path.join(folderPath, fileName);
+        const filePath = path.join(__dirname, '../../../../uploads/pdfs/guides', fileName);
 
-        await generateRemisionPDF(company, data, filePath);
+        await generateRemisionPDF(data, filePath);
 
         const documentPath = '/' + path.relative(path.join(__dirname, '../../../../'), filePath).replace(/\\/g, '/');
         const fileData = fs.readFileSync(filePath).toString('base64');
 
         data.file = documentPath;
 
-        await GuideService.createGuide(data);
+        await ShippingGuideService.createShippingGuide(data);
         const dataMail = {
             counter: data.counter,
-            company: company.name
         };
-        sendEmailGuiaRemisionCreada(dataMail, fileName, fileData);
+        //sendEmailGuiaRemisionCreada(dataMail, fileName, fileData);
 
         res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
         console.log(error)
-        res.status(400).json({ error: error.message });
+        res.status(400).json(error.message);
     }
 };
 
-const updateGuide = async (req, res) => {
+const updateShippingGuide = async (req, res) => {
     try {
 
         const { body, params } = req;
@@ -111,7 +97,7 @@ const updateGuide = async (req, res) => {
         }
 
         const itemsUpdate = items.filter(item => item.id !== "");
-        const result = await GuideService.updateGuide(itemsUpdate);
+        const result = await ShippingGuideService.updateShippingGuide(itemsUpdate);
 
         const newItems = items.filter(item => item.id === "");
         if (newItems.length > 0) {
@@ -120,7 +106,7 @@ const updateGuide = async (req, res) => {
                 ...rest,
                 orderId: orderId
             }));
-            await GuideService.createItemsOfGuide(itemsCreate);
+            await ShippingGuideService.createItemsOfShippingGuide(itemsCreate);
         }
 
         if (result) {
@@ -134,12 +120,12 @@ const updateGuide = async (req, res) => {
 }
 
 
-const GuideController = {
+const ShippingGuideController = {
 
-    getGuidesByCompany,
-    getGuideById,
-    createGuide,
-    updateGuide,
-    //deleteGuide,
+    getShippingGuides,
+    getShippingGuideById,
+    createShippingGuide,
+    updateShippingGuide,
+    //deleteShippingGuide,
 }
-module.exports = GuideController
+module.exports = ShippingGuideController

@@ -1,10 +1,10 @@
 const RegulationService = require('../../services/rrhh/regulations.services');
-const Utils = require('../../utils/Utils');
 const FormatService = require('../../services/rrhh/formats.services');
+const ShippingGuideService = require('../../services/operations/shippingGuide/shippingGuide.services');
+const Utils = require('../../utils/Utils');
 const path = require('path');
 const fs = require('fs');
 const mime = require('mime-types');
-const GuideService = require('../../services/operations/referralGuides/guides.services');
 
 const downloadReglamento = async (req, res) => {
     try {
@@ -83,7 +83,7 @@ const downloadSolicitud = async (req, res) => {
 const downloadGuiaRemision = async (req, res) => {
     try {
         const guideId = Utils.decode(req.params.guide_id);
-        const regulation = await GuideService.getGuideById(guideId);
+        const regulation = await ShippingGuideService.getShippingGuideById(guideId);
         const relativePath = regulation.dataValues.file;
 
         if (!relativePath) {

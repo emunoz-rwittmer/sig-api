@@ -1,18 +1,17 @@
-const guideItems = require('../../../models/operations/referralGuides/guideItems.models');
-const Guide = require('../../../models/operations/referralGuides/guides.models');
-const Company = require('../../../models/catalogs/company.models');
+const ShippingGuideItems = require('../../../models/operations/shippingGuide/shippingGuideItems.models');
+const ShippingGuide = require('../../../models/operations/shippingGuide/shippingGuide.models');
 const db = require('../../../utils/database');
 
 
-class GuideService {
-    static async getGuidesByCompany(companyId) {
+class ShippingGuideService {
+    static async getShippingGuides() {
         try {
-            const result = await Guide.findAll({
-                where: { companyId },
+            const result = await ShippingGuide.findAll({
                 include: [{
-                    model: guideItems,
+                    model: ShippingGuideItems,
                     as: 'details',
-                }]
+                }],
+                order:[['createdAt', 'DESC']]
             });
             return result;
         } catch (error) {
@@ -20,19 +19,16 @@ class GuideService {
         }
     }
 
-    static async getGuideById(id) {
+    static async getShippingGuideById(id) {
         try {
-            const result = await Guide.findOne({
+            const result = await ShippingGuide.findOne({
                 where: { id },
                 include: [
                     {
-                        model: guideItems,
+                        model: ShippingGuideItems,
                         as: 'details',
                     },
-                    {
-                        model: Company,
-                        as: 'company',
-                    }]
+                ]
             });
             return result;
         } catch (error) {
@@ -40,10 +36,10 @@ class GuideService {
         }
     }
 
-    static async createGuide(data) {
+    static async createShippingGuide(data) {
         const transaction = await db.transaction();
         try {
-            const result = await Guide.create(data, { transaction });
+            const result = await ShippingGuide.create(data, { transaction });
             if (!result) {
                 throw new Error('No se pudo crear guia');
             }
@@ -53,7 +49,7 @@ class GuideService {
                 guideId: result.id
             }));
 
-            await guideItems.bulkCreate(details, { transaction });
+            await ShippingGuideItems.bulkCreate(details, { transaction });
             await transaction.commit();
             return result;
         } catch (error) {
@@ -63,10 +59,10 @@ class GuideService {
         }
     }
 
-    static async updateGuide(data) {
+    static async updateShippingGuide(data) {
         try {
             const results = await Promise.all(data.map(async (item) => {
-                const result = await guideItems.update({
+                const result = await ShippingGuideItems.update({
                     product: item.product,
                     quantity: item.quantity,
                     originalQuantity: item.originalQuantity,
@@ -85,7 +81,7 @@ class GuideService {
 
     static async deleteItem(itemId) {
         try {
-            const result = await guideItems.destroy({
+            const result = await ShippingGuideItems.destroy({
                 where: { id: itemId }
             });
             if (result) {
@@ -98,4 +94,4 @@ class GuideService {
 
 }
 
-module.exports = GuideService;
+module.exports = ShippingGuideService;

@@ -5,10 +5,17 @@ const Departaments = require('./catalogs/departament.models');
 const Yacht = require('./catalogs/yacht.models');
 const Company = require('./catalogs/company.models');
 const Staff = require('./catalogs/staff.models');
+const StaffCompany = require('./catalogs/staffCompany.models');
 const Question = require('./operations/surveys/question.models');
 const HouseRule = require('./catalogs/houseRule.models');
 const Form = require('./operations/surveys/form.models');
-
+// commentcards
+const ComentCard = require('./operations/comentCard/comentCard.models');
+const ComentCardRespond = require('./operations/comentCard/comentCardRespond.models');
+const ComentCardAnswers = require('./operations/comentCard/comentCardAnswers.models');
+const ComentCardQuestions = require('./operations/comentCard/comentCardQuestions.models');
+const ComentCardYacht = require('./operations/comentCard/cardYacht.models');
+const ComentCardQR = require('./operations/comentCard/cardQR.models');
 // Invetory Models
 const Order = require('./operations/orders/order.models');
 const orderItems = require('./operations/orders/orderItems.models');
@@ -18,6 +25,8 @@ const Product = require('./operations/orders/product.models');
 const Transaction = require('./operations/inventory/transaction.models');
 const Request = require('./operations/yachtRequest/request.models');
 const LaundryYacht = require('./operations/yachtRequest/laundryYacht');
+const ShippingGuide = require('./operations/shippingGuide/shippingGuide.models');
+const shippingGuideItems = require('./operations/shippingGuide/shippingGuideItems.models');
 // Manameng Indicators
 const Indicator = require('./operations/indicators/indicator.models');
 const Tabulation = require('./operations/indicators/tabulation.models');
@@ -29,21 +38,13 @@ const Levels = require('./operations/indicators/levels.models');
 const Strategy = require('./operations/indicators/strategy.models');
 const Register = require('./operations/inventory/register.models');
 const Consecutivo = require('./catalogs/consecutivo.model');
-const ComentCard = require('./operations/comentCard/comentCard.models');
-const ComentCardRespond = require('./operations/comentCard/comentCardRespond.models');
-const ComentCardAnswers = require('./operations/comentCard/comentCardAnswers.models');
-const ComentCardQuestions = require('./operations/comentCard/comentCardQuestions.models');
-const ComentCardYacht = require('./operations/comentCard/cardYacht.models');
-const ComentCardQR = require('./operations/comentCard/cardQR.models');
-const StaffCompany = require('./catalogs/staffCompany.models');
+
 const Regulation = require('./rrhh/regulation.models');
 const StaffReadRegulation = require('./rrhh/readRegulation.models');
 const Trading = require('./rrhh/trading.models');
 const Format = require('./rrhh/format.models');
 const DoctorFormat = require('./rrhh/doctorFormat.models');
-const Guide = require('./operations/referralGuides/guides.models');
-const guideItems = require('./operations/referralGuides/guideItems.models');
-const ConsecutivoGuias = require('./catalogs/consecutivoGuias.model');
+const ShippingGuideCount = require('./operations/shippingGuide/shippingGuideCount.model');
 const ShipmentDates = require('./operations/surveys/shipmentDates.models');
 const FormRespond = require('./operations/surveys/formRespond.models');
 const FormAnswers = require('./operations/surveys/formAnswers.models');
@@ -57,7 +58,7 @@ const initModels = () => {
 
     //catalogs
     Consecutivo,
-        ConsecutivoGuias,
+        ShippingGuideCount,
         Question,
         HouseRule,
         Trading,
@@ -144,9 +145,8 @@ const initModels = () => {
     Order.hasMany(orderItems, { foreignKey: 'order_id', as: 'orderItems' });
     orderItems.belongsTo(Order, { foreignKey: 'order_id', as: 'order' });
 
-    Guide.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
-    Guide.hasMany(guideItems, { foreignKey: 'guide_id', as: 'details' });
-    guideItems.belongsTo(Guide, { foreignKey: 'guide_id', as: 'guide' });
+    ShippingGuide.hasMany(shippingGuideItems, { foreignKey: 'guide_id', as: 'details' });
+    shippingGuideItems.belongsTo(ShippingGuide, { foreignKey: 'guide_id', as: 'guide' });
 
     Order.belongsTo(Staff, { foreignKey: 'user_id', as: 'responsible' });
     Staff.hasMany(Order, { foreignKey: 'user_id', as: 'orders' });

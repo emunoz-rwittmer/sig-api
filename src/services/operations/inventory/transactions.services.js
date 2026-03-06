@@ -368,7 +368,12 @@ class TransactionService {
                 const productId = transac.product.id;
 
                 // Si hay observaciones Y hay diferencias en cantidades, actualizar la transacción y ajustar stock
+                if (quantityDifference !== 0 && !observations) {
+                    throw new Error(`La cantidad del producto ${transac.product.name} ha cambiado, debe ingresar observaciones`);
+                }
+
                 if (originalTransaction && observations && observations.trim() !== '' && quantityDifference !== 0) {
+
                     originalTransaction.quantity = quantity;
                     await originalTransaction.save({ transaction });
 

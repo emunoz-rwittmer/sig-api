@@ -1,16 +1,11 @@
 const db = require('../../../utils/database');
 const { DataTypes } = require('sequelize');
 
-const Guide = db.define('Guide', {
+const ShippingGuide = db.define('shipping_guide', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
-  },
-  companyId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    field: 'company_id',
   },
   counter: {
     type: DataTypes.STRING,
@@ -54,19 +49,22 @@ const Guide = db.define('Guide', {
   addresseeRuc: {
     type: DataTypes.STRING,
     allowNull: true,
-    field: 'destinatarioRuc'
+    field: 'destinatario_ruc'
   },
   carrier: {
     type: DataTypes.STRING,
     allowNull: true,
+    field: 'transportista',
   },
   carrierRuc: {
     type: DataTypes.STRING,
     allowNull: true,
+    field: 'transportista_ruc',
   },
   carrierLicence: {
     type: DataTypes.STRING,
     allowNull: true,
+    field: 'transportista_placa',
   },
   file: {
     type: DataTypes.TEXT,
@@ -74,4 +72,4 @@ const Guide = db.define('Guide', {
   },
 });
 
-module.exports = Guide;
+module.exports = ShippingGuide;
