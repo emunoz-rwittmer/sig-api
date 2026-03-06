@@ -132,14 +132,11 @@ class TransactionService {
             }
 
             // Consolidar productos y validar cantidades
-            const consolidatedProducts = Object.values(
-                products.reduce((acc, product) => {
-                    const quantity = Number(product.quantity);
+            const validProducts = products.filter(p => Number(p.quantity) > 0);
 
-                    // Validar cantidad válida y mayor a 0
-                    if (!Number.isFinite(quantity) || quantity <= 0) {
-                        return acc; // Ignorar productos con cantidad inválida
-                    }
+            const consolidatedProducts = Object.values(
+                validProducts.reduce((acc, product) => {
+                    const quantity = Number(product.quantity);
 
                     if (!acc[product.id]) {
                         acc[product.id] = {
@@ -152,7 +149,6 @@ class TransactionService {
                     return acc;
                 }, {})
             );
-
             // Validar que haya productos válidos después de consolidación
             if (consolidatedProducts.length === 0) {
                 throw new Error('No hay productos válidos para procesar');

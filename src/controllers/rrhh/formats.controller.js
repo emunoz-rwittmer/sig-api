@@ -51,8 +51,9 @@ const updateFormat = async (req, res) => {
         const data = req.body;
         delete data.id;
         await FormatService.updateFormat(
-            {...data,
-               companies: data.companies.map(reg => reg) 
+            {
+                ...data,
+                companies: data.companies.map(reg => reg)
             }, {
             where: { id: formatId },
         });
@@ -126,8 +127,9 @@ const updateDoctorFormat = async (req, res) => {
             data.file = `/uploads/pdfs/${req.file.filename}`
         }
         await FormatService.updateDoctorFormat(
-            {...data,
-               companies: JSON.parse(data.companies) 
+            {
+                ...data,
+                companies: JSON.parse(data.companies)
             }, {
             where: { id: formatId },
         });
@@ -178,7 +180,7 @@ const createRequesForStaff = async (req, res) => {
         const staff = await Staffervice.getStaffById(staffId);
         const fomrat = await FormatService.getFormatById(formatId);
 
-        const staffFullName = `${staff.dataValues.first_name}_${staff.dataValues.last_name}`.replace(/\s+/g, '_');
+        const staffFullName = `${staff.dataValues.firstName}_${staff.dataValues.lastName}`.replace(/\s+/g, '_');
         const stafftDir = path.join(__dirname, '../../../uploads/staffs', staffFullName);
 
         if (!fs.existsSync(stafftDir)) {
@@ -201,7 +203,7 @@ const createRequesForStaff = async (req, res) => {
         data.name = fomrat.dataValues.name;
         data.formatId = formatId;
         data.staffId = staffId;
-        data.file = relativePath;
+        data.file = `/${relativePath}`;
 
         const attachments = [
             {
@@ -224,7 +226,7 @@ const createRequesForStaff = async (req, res) => {
 
         const result = await FormatService.createRequesForStaff(data);
         if (result) {
-            //sendEmailNuevaSolicitud(formatId, dataMail, attachments);
+            sendEmailNuevaSolicitud(formatId, dataMail, attachments);
             res.status(200).json({ data: 'resource created successfully' });
         }
     } catch (error) {

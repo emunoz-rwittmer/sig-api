@@ -6,6 +6,7 @@ const router = Router();
 
 router.get('/',StaffController.getAllStaffs);
 router.get('/:staff_id',StaffController.getStaff);
+router.get('/:staff_id/companies',StaffController.getStaffCompanies);
 router.post('/createStaff',StaffController.createStaff);
 router.put('/updateStaff/:staff_id',StaffController.updateStaff);
 router.put('/:staff_id/uploadImageFile', uploadImageFile, StaffController.uploadImage);

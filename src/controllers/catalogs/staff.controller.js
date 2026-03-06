@@ -25,6 +25,84 @@ const getAllStaffs = async (req, res) => {
     }
 }
 
+const getStaff = async (req, res) => {
+    try {
+        const staffId = Utils.decode(req.params.staff_id);
+        const result = await StaffService.getStaffById(staffId);
+        if (result instanceof Object) {
+            result.dataValues.id = Utils.encode(result.dataValues.id);
+            if (result.dataValues.roleId) result.dataValues.roleId = Utils.encode(result.dataValues.roleId);
+            result.dataValues.departamentId = Utils.encode(result.dataValues.departamentId);
+            result.dataValues.positionId = Utils.encode(result.dataValues.positionId);
+            result.companies = result.companies.map(x => (
+                x.dataValues.companyId = Utils.encode(x.dataValues.companyId)
+            ))
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(400).json(error.message)
+    }
+}
+
+const getStaffCompanies = async (req, res) => {
+    try {
+        const staffId = Utils.decode(req.params.staff_id);
+        const result = await StaffService.getStaffCompanies(staffId);
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+            });
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(400).json(error.message)
+    }
+}
+
+const createStaff = async (req, res) => {
+    try {
+        const staff = req.body;
+        const passwordGenerate = Utils.getPasswordRandom();
+        staff.roleId = staff.roleId ? Utils.decode(staff.roleId) : null;
+        staff.departamentId = Utils.decode(req.body.departamentId);
+        staff.positionId = Utils.decode(req.body.positionId);
+        if (staff.companyId?.length) staff.companyId = staff.companyId.map(x => Utils.decode(x));
+        staff.password = passwordGenerate
+        await StaffService.createStaff(staff);
+        res.status(200).json({ data: 'resource created successfully' });
+
+    } catch (error) {
+        res.status(400).json(error.message);
+    }
+}
+
+const updateStaff = async (req, res) => {
+    try {
+        const staffId = Utils.decode(req.params.staff_id);
+        const staff = req.body;
+        staff.id = staffId;
+        staff.roleId = staff.roleId ? Utils.decode(staff.roleId) : null;
+        staff.departamentId = Utils.decode(req.body.departamentId);
+        staff.positionId = Utils.decode(req.body.positionId);
+        if (staff.companyId?.length) staff.companyId = staff.companyId.map(x => Utils.decode(x));
+        await StaffService.updateStaff(staff, staffId);
+        res.status(200).json({ data: 'resource updated successfully' });
+    } catch (error) {
+        res.status(400).json(error.message);
+    }
+}
+
+const deleteStaff = async (req, res) => {
+    try {
+        const staffId = Utils.decode(req.params.staff_id);
+        const result = await StaffService.delete(staffId);
+        res.status(200).json({ data: result })
+    } catch (error) {
+
+        res.status(400).json(error.message);
+    }
+}
+
 const getEvaluators = async (req, res) => {
     try {
         const { search } = req.query;
@@ -120,59 +198,6 @@ const getEvaluatedsByFilters = async (req, res) => {
     } catch (error) {
 
         res.status(400).json(error.message)
-    }
-}
-
-const getStaff = async (req, res) => {
-    try {
-        const staffId = Utils.decode(req.params.staff_id);
-        const result = await StaffService.getStaffById(staffId);
-        if (result instanceof Object) {
-            result.dataValues.id = Utils.encode(result.dataValues.id);
-            if (result.dataValues.roleId) result.dataValues.roleId = Utils.encode(result.dataValues.roleId);
-            result.dataValues.departamentId = Utils.encode(result.dataValues.departamentId);
-            result.dataValues.positionId = Utils.encode(result.dataValues.positionId);
-            result.companies = result.companies.map(x => (
-                x.dataValues.companyId = Utils.encode(x.dataValues.companyId)
-            ))
-        }
-        res.status(200).json(result);
-    } catch (error) {
-        res.status(400).json(error.message)
-    }
-}
-
-const createStaff = async (req, res) => {
-    try {
-        const staff = req.body;
-        const passwordGenerate = Utils.getPasswordRandom();
-        staff.roleId = staff.roleId ? Utils.decode(staff.roleId) : null;
-        staff.departamentId = Utils.decode(req.body.departamentId);
-        staff.positionId = Utils.decode(req.body.positionId);
-        if (staff.companyId?.length) staff.companyId = staff.companyId.map(x => Utils.decode(x));
-        staff.password = passwordGenerate
-        await StaffService.createStaff(staff);
-        res.status(200).json({ data: 'resource created successfully' });
-
-    } catch (error) {
-        res.status(400).json(error.message);
-    }
-}
-
-const updateStaff = async (req, res) => {
-    try {
-        const staffId = Utils.decode(req.params.staff_id);
-        const staff = req.body;
-        console.log(staff)
-        staff.id = staffId;
-        staff.roleId = staff.roleId ? Utils.decode(staff.roleId) : null;
-        staff.departamentId = Utils.decode(req.body.departamentId);
-        staff.positionId = Utils.decode(req.body.positionId);
-        if (staff.companyId?.length) staff.companyId = staff.companyId.map(x => Utils.decode(x));
-        await StaffService.updateStaff(staff, staffId);
-        res.status(200).json({ data: 'resource updated successfully' });
-    } catch (error) {
-        res.status(400).json(error.message);
     }
 }
 
@@ -292,20 +317,10 @@ const uploadStaffDocumentation = async (req, res) => {
     }
 };
 
-const deleteStaff = async (req, res) => {
-    try {
-        const staffId = Utils.decode(req.params.staff_id);
-        const result = await StaffService.delete(staffId);
-        res.status(200).json({ data: result })
-    } catch (error) {
-
-        res.status(400).json(error.message);
-    }
-}
-
 const StaffController = {
     getAllStaffs,
     getStaff,
+    getStaffCompanies,
     getEvaluators,
     getEvaluatorsByFilters,
     getEvaluateds,
