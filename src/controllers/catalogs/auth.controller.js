@@ -151,17 +151,16 @@ const forgotPasswordStaff = async (req, res) => {
 
         if (staff) {
             sendEmailPasswordStaff(staff, passwordGenerate);
-            await Staffervice.updateStaff(
-                {
-                    password: passwordGenerated, changePassword: true
-                }, { where: { id: staff.id } });
-
-
+            const data = {
+                id: staff.id,
+                password: passwordGenerated,
+                changePassword: true
+            };
+            await AuthService.staffUpgradePassword(data);
             res.status(200).json({ data: "password updated successfully" });
-
         }
     } catch (error) {
-
+        console.log(error)
         res.status(400).json(error.message);
     }
 }
