@@ -92,7 +92,7 @@ class Mails {
     return htmlContent;
   }
 
-  static htmlStaffForgotPassword(result) {
+  static htmlStaffForgotPassword(result, passwordGenerate) {
     const htmlContent = `
           <!DOCTYPE html>
           <html lang="es">
@@ -161,7 +161,7 @@ class Mails {
                  margin-right: 10px;
               }
               .styled-image {
-                 width: 180px;
+                 width: 200px;
               }
             </style>
           </head>
@@ -172,16 +172,14 @@ class Mails {
               </div>
               <h2>Contraseña restablecida con éxito</h2> 
               <p>
-                Hola, <strong>${result.firstName} ${result.lastName}</strong>  te informamos que <strong>${result.staff}</strong> ha generado una <strong>${result.formato}</strong>.
+                Hola, <strong>${result.firstName} ${result.lastName}</strong>.
               </p>
               <p>Recibimos tu solicitud de restablecimiento de contraseña,</p>
               <p>puedes iniciar sesión con la siguiente contraseña temporal y tu correo registrado.</p>
               <div class="credencial-container">
                 <h3 class="credential-tittle">Password:</h3> <p>${passwordGenerate} </p>
-              </div>
-              <div class="button">
-                <a href=${process.env.URL_CAPTAINS} class="button">Iniciar sesión</a>
-              </div>
+              </div>              
+              <a href=${process.env.URL_CAPTAINS} class="button">Iniciar sesión</a>
               <div class="footer">
                 <p>
                   Este mensaje fue generado automáticamente por el sistema de gestión interna.<br>
