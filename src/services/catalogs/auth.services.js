@@ -32,7 +32,7 @@ class AuthService {
         }
     }
 
-    static async loginUsers(credentials) {
+    static async loginStaffs(credentials) {
         try {
             const { email, password } = credentials;
             const user = await Staff.findOne({

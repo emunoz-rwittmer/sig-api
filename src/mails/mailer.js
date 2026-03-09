@@ -32,6 +32,24 @@ const sendEmail = (user, passwordGenerated, action, userCopy, bodyMail) => {
         })
 }
 
+const sendEmailPasswordStaff = (user, passwordGenerated) => {
+    const htmlContentForgotPassword = Mails.htmlStaffForgotPassword(user, passwordGenerated)
+    const msg = {
+        to: user.email, // Change to your recipient
+        from: 'notify-sig@rwittmer.com', // Change to your verified sender
+        subject: 'Restablecimiento de contraseña',
+        html: htmlContentForgotPassword
+    }
+    sgMail
+        .send(msg)
+        .then(() => {
+            console.log('Email sent')
+        })
+        .catch((error) => {
+            console.error(error)
+        })
+}
+
 const sendEmailNewOrder = (companyName) => {
     const htmlContentNewOrder = MailsOrder.htmlNewOrder(companyName)
     const msg = {
@@ -119,7 +137,7 @@ const sendEmailNuevaSolicitud = async (formatId, dataMail, adjuntos) => {
         };
 
         if (formatId === 1 || formatId === 2) {
-            msg.cc = ['javier@tiptoptravel.ec', 'mirian@rwittmer.com','marjuri@rwittmer.com'];
+            msg.cc = ['javier@tiptoptravel.ec', 'mirian@rwittmer.com', 'marjuri@rwittmer.com'];
         }
 
         await sgMail.send(msg);
@@ -176,6 +194,7 @@ const sendEmailGuiaRemisionCreada = (dataMail, fileName, filePath) => {
 
 module.exports = {
     sendEmail,
+    sendEmailPasswordStaff,
     sendEmailNewOrder,
     sendConfirmationEmail,
     sendDispatchEmail,
