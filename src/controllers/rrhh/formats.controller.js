@@ -188,7 +188,7 @@ const createRequesForStaff = async (req, res) => {
         }
 
         const dataMail = {
-            staff: `${staff.dataValues.first_name} ${staff.dataValues.last_name}`,
+            staff: `${staff.dataValues.firstName} ${staff.dataValues.lastName}`,
             formato: fomrat.dataValues.name
         };
 
