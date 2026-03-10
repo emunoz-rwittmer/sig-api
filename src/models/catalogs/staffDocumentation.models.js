@@ -35,7 +35,7 @@ const StaffDocumentation = db.define('staff_documentation', {
     },
     expiryDate: {
         type: DataTypes.DATE,
-        allowNull: false,
+        allowNull: true,
         field: "expiry_date",
     },
 });
