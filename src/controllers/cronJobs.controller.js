@@ -42,7 +42,7 @@ const generateWeeklyCruises = async (req, res) => {
         const startFormatted = formatDateLocal(start);
         const endFormatted = formatDateLocal(end);
 
-        const response = await axios.get(`${process.env.URL_STAFFS}/microservice/cruise?start=${startFormatted}&end=${endFormatted}`);
+        const response = await axios.get(`${process.env.URL_MICRO_SERVICE}/microservice/cruise?start=${startFormatted}&end=${endFormatted}`);
         const cruises = response.data;
 
         if (!cruises.length) {
