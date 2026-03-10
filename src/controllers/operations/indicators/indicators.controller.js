@@ -19,11 +19,6 @@ const getAllDepartamentsWhitIndicators = async (req, res) => {
 const getIndicatorsByDepartament = async (req, res) => {
     try {
         const departamentId = Utils.decode(req.params.departament_id);
-        const departament = await IndicatorService.getProcessById(departamentId);
-        if (departament instanceof Object) {
-            departament.id = Utils.encode(departament.id);
-        }
-
         const result = await IndicatorService.getIndicatorsByDepartament(departamentId);
         if (result instanceof Array) {
             result.map((x) => {
@@ -31,7 +26,7 @@ const getIndicatorsByDepartament = async (req, res) => {
                 x.dataValues.departamentId = Utils.encode(x.dataValues.departamentId);
             });
         }
-        res.status(200).json({ departament, result });
+        res.status(200).json(result);
     } catch (error) {
         res.status(400).json(error.message)
     }

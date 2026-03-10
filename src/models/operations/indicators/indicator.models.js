@@ -55,8 +55,12 @@ const Indicator = db.define('indicator', {
     type: DataTypes.STRING,
     allowNull: true,
     field: 'time_type'
+  },
+  active: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
   }
-  
+
 });
 
 module.exports = Indicator;
