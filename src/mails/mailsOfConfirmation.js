@@ -72,7 +72,7 @@ class MailsConfirmation {
                     <p>revisa su estado iniciando sesión</p>
                   </div>
                   <div class="buttom-container">
-                      <a href=${process.env.URL_CAPTAINS} class="button">Iniciar sesión</a>
+                      <a href=${process.env.URL_STAFFS} class="button">Iniciar sesión</a>
                   </div>
                   <div class="footer">
                     <p>Atentamente</p>
@@ -156,7 +156,7 @@ class MailsConfirmation {
                     <p>revisa su estado iniciando sesión</p>
                   </div>
                   <div class="buttom-container">
-                      <a href=${process.env.URL_CAPTAINS} class="button">Iniciar sesión</a>
+                      <a href=${process.env.URL_STAFFS} class="button">Iniciar sesión</a>
                   </div>
                   <div class="footer">
                     <p>Atentamente</p>

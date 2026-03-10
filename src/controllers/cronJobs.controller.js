@@ -12,6 +12,8 @@ const axios = require('axios');
 const Utils = require('../utils/Utils');
 const moment = require('moment');
 const FormRespond = require('../models/operations/surveys/formRespond.models');
+require('dotenv').config();
+
 
 function getWeekRange() {
     const now = new Date();
@@ -40,7 +42,7 @@ const generateWeeklyCruises = async (req, res) => {
         const startFormatted = formatDateLocal(start);
         const endFormatted = formatDateLocal(end);
 
-        const response = await axios.get(`http://localhost:3156/microservice/cruise?start=${startFormatted}&end=${endFormatted}`);
+        const response = await axios.get(`${process.env.URL_STAFFS}/microservice/cruise?start=${startFormatted}&end=${endFormatted}`);
         const cruises = response.data;
 
         if (!cruises.length) {
@@ -79,7 +81,7 @@ const generateWeeklyCruises = async (req, res) => {
             });
 
             const encodedId = Utils.encode(created.id);
-            const accessLink = `${process.env.URL_CAPTAINS}/coment_card/${encodedId}`;
+            const accessLink = `${process.env.URL_STAFFS}/coment_card/${encodedId}`;
 
             await created.update({ accessLink });
 

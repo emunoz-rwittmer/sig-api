@@ -179,7 +179,7 @@ class Mails {
               <div class="credencial-container">
                 <h3 class="credential-tittle">Password:</h3> <p>${passwordGenerate} </p>
               </div>              
-              <a href=${process.env.URL_CAPTAINS} class="button">Iniciar sesión</a>
+              <a href=${process.env.URL_STAFFS} class="button">Iniciar sesión</a>
               <div class="footer">
                 <p>
                   Este mensaje fue generado automáticamente por el sistema de gestión interna.<br>
@@ -364,7 +364,7 @@ class Mails {
                     <h3 class="credential-tittle">User:</h3> <p>${result.email}</p>
                   </div>
                   <div class="buttom-container">
-                      <a href=${process.env.URL_CAPTAINS} class="button">Iniciar sesión</a>
+                      <a href=${process.env.URL_STAFFS} class="button">Iniciar sesión</a>
                   </div>
                   <div class="footer">
                     <p>Atentamente</p>

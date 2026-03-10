@@ -51,7 +51,7 @@ const login = async (req, res) => {
         res.status(200).json(userData);
 
     } catch (error) {
-        res.status(400).json({ data: 'somethign wrong' })
+         res.status(400).json(error.message)
     }
 }
 
@@ -138,8 +138,7 @@ const loginStaffs = async (req, res) => {
         res.status(200).json(userData);
 
     } catch (error) {
-        console.log(error)
-        res.status(400).json({ data: 'somethign wrong' })
+        res.status(400).json(error.message)
     }
 }
 
