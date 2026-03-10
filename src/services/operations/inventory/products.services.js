@@ -37,6 +37,7 @@ class ProductService {
     static async getProductsWithConfigurations() {
         try {
             const result = await ProductConfiguration.findAll({
+                where: { active: true },
                 include: [{
                     model: Product,
                     as: 'product',
