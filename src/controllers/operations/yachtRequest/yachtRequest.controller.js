@@ -42,11 +42,12 @@ const createRequest = async (req, res) => {
         data.userId = Utils.decode(req.body.userId)
 
         await RequestService.createRequest(data)
-        const company = await WarehouseService.getWarehouseById(warehouseId)
-        const staff = await Staffervice.getStaffById(userId)
+        const company = await WarehouseService.getWarehouseById(data.warehouseId)
+        const staff = await Staffervice.getStaffById(data.userId)
+
         action = 'requerimiento'
-        sendEmailNewRequest(company.name);
-        sendConfirmationEmail(action, company.name, staff)
+        sendEmailNewRequest(company.dataValues.name);
+        sendConfirmationEmail(action, company.dataValues.name, staff)
         res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
         res.status(400).json(error.message);
