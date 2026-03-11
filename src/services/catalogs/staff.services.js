@@ -104,7 +104,15 @@ class Staffervice {
                             {
                                 model: Company,
                                 as: 'company',
-                                attributes: ['name', 'logo']
+                                attributes: ['name', 'logo'],
+                                include: [
+                                    {
+                                        model: Yacht,
+                                        as: 'yacht',
+                                        attributes: ['name']
+
+                                    }
+                                ]
                             }
                         ]
                     },
