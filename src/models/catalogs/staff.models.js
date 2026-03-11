@@ -78,6 +78,11 @@ const Staff = db.define('staff', {
         allowNull: true,
         defaultValue: 0
     },
+    contractType: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        field: "contract_type",
+    },
     parentFirstName: {
         type: DataTypes.STRING,
         allowNull: true,

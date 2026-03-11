@@ -110,7 +110,6 @@ const incomeProductsInWarehouse = async (req, res) => {
             res.status(200).json({ data: 'Transacción completada correctamente.' });
         }
     } catch (error) {
-
         res.status(400).json(error.message);
     }
 }
