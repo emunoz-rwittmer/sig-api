@@ -36,37 +36,49 @@ class RequestService {
             const result = await Request.findOne({
                 where: { id: requestId },
                 attributes: ['id', 'name', 'warehouseId', 'status', 'pax', 'cruise', 'supplyDate'],
-                include: [{
-                    model: RequestItems,
-                    as: 'requestItems',
-                    include: [{
-                        model: ProductConfiguration,
-                        as: 'configuracion',
-                        attributes: { exclude: ['createdAt', 'updatedAt'] },
+                include: [
+                    {
+                        model: RequestItems,
+                        as: 'requestItems',
                         include: [{
-                            model: Product,
-                            as: 'product',
-                            attributes: ['name']
+                            model: ProductConfiguration,
+                            as: 'configuracion',
+                            attributes: { exclude: ['createdAt', 'updatedAt'] },
+                            include: [{
+                                model: Product,
+                                as: 'product',
+                                attributes: ['name']
+                            }]
                         }]
-                    }]
-                },
-                {
-                    model: Warehouse,
-                    as: 'warehouse',
-                    attributes: ['name']
-                },
-                {
-                    model: Staff,
-                    as: 'responsible',
-                    attributes: ['id', 'firstName', 'lastName']
-                }]
+                    },
+                    {
+                        model: Warehouse,
+                        as: 'warehouse',
+                        attributes: ['name']
+                    },
+                    {
+                        model: Staff,
+                        as: 'responsible',
+                        attributes: ['id', 'firstName', 'lastName']
+                    }
+                ],
+                order: [
+                    [
+                        { model: RequestItems, as: 'requestItems' },
+                        { model: ProductConfiguration, as: 'configuracion' },
+                        { model: Product, as: 'product' },
+                        'name',
+                        'ASC'
+                    ]
+                ]
             });
+
             return result;
+
         } catch (error) {
             throw error;
         }
     }
-
     static async createRequest(data) {
         const transaction = await db.transaction();
 
