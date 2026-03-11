@@ -122,7 +122,7 @@ const readAceptRegulation = async (req, res) => {
         const staff = await Staffervice.getStaffById(result.dataValues.staffId);
         const regulation = await RegulationService.getRegulationById(result.dataValues.regulationId);
         const dataMail = {
-            staff: `${staff.dataValues.first_name} ${staff.dataValues.last_name}`,
+            staff: `${staff.dataValues.firstName} ${staff.dataValues.lastName}`,
             reglamento: regulation.dataValues.name
         };
         sendEmailConfirmacion(dataMail);

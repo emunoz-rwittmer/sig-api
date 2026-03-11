@@ -352,7 +352,7 @@ class Mails {
                     <img src="https://reservation.rwittmer.com/logo_rwittmer.png" alt="Imagen con Estilos" class="styled-image">
                   </div>
                   <h2>Evaluación de desempeño</h2>
-                  <p>Hola, ${result.first_name} ${result.last_name}</p>
+                  <p>Hola, ${result.firstName} ${result.lastName}</p>
                   <div class="body-container">
                     <p>Las evaluaciones de desempeño se ecuentran listas</p>
                     <p>por favor llenarlas lo antes posible, utiliza tu correo y contraseña registrados para acceder.</p>

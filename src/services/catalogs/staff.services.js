@@ -19,7 +19,7 @@ class Staffervice {
             const result = await Staff.findAll({
                 attributes: { exclude: ['role_id', 'position_id', 'departament_id'] },
                 order: [
-                    ['last_name', 'ASC']
+                    ['lastName', 'ASC']
                 ],
                 include: [
                     {
