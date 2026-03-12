@@ -139,7 +139,7 @@ const getEvaluatorsByFilters = async (req, res) => {
         );
         const companyId = Utils.decode(req.query.companyId) || null;
         const departamentId = req.query.departamentId
-        const positionId = req.query.positionId
+        const positionId = Utils.decode(req.query.positionId);
 
         const result = await StaffService.getEvaluatorsByFilters(decodedArray, companyId, departamentId, positionId);
         result.map((x) => {
