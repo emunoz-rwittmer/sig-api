@@ -8,9 +8,8 @@ cron.schedule('0 0 * * 0', async () => {
     timezone: "America/Guayaquil"
 });
 //Jueves 10:00 crear evaluaciones para capitanes
-//cron.schedule("0 10 * * 4", async () => {
-// cron.schedule("* * * * *", async () => {
-//     CronJobs.generateWeeklyEvaluationCrew();
-// }, {
-//     timezone: "America/Guayaquil"
-// });
+cron.schedule("0 14 * * 4", async () => {
+    CronJobs.generateWeeklyEvaluationCrew();
+}, {
+    timezone: "America/Guayaquil"
+});

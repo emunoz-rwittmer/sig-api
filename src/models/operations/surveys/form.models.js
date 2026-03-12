@@ -16,6 +16,10 @@ const Form = db.define('form', {
     allowNull: false,
     field: 'positions'
   },
+  isAdministrative: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
+  },
   active: {
     type: DataTypes.BOOLEAN,
     defaultValue: true

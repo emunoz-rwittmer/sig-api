@@ -257,7 +257,7 @@ const generateWeeklyEvaluationCrew = async () => {
             }
         }
 
-        // 🔹 5️⃣ Tripulación → Capitán
+        // 🔹 5️⃣ Tripulación → Capitán (solo forms NO administrativos)
         for (const crew of crewList) {
 
             const captain = captainByCompany[crew.companyId];
@@ -267,6 +267,9 @@ const generateWeeklyEvaluationCrew = async () => {
             const captainForms = formsByPosition[positionEncoded] || [];
 
             for (const form of captainForms) {
+
+                // 🔥 ignorar evaluaciones administrativas
+                if (form.isAdministrative) continue;
 
                 const evaluator = crew.fullName;
                 const evaluated = captain.fullName;
