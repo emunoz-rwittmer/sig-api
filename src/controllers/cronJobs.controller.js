@@ -97,7 +97,7 @@ const generateWeeklyCruises = async (req, res) => {
     }
 }
 
-const generateWeeklyEvaluationCaptains = async () => {
+const generateWeeklyEvaluationCrew = async () => {
     try {
 
         const { start } = getWeekRange();
@@ -212,7 +212,7 @@ const generateWeeklyEvaluationCaptains = async () => {
 
 const CronJobs = {
     generateWeeklyCruises,
-    generateWeeklyEvaluationCaptains
+    generateWeeklyEvaluationCrew
 }
 
 module.exports = CronJobs 
