@@ -12,6 +12,7 @@ const axios = require('axios');
 const Utils = require('../utils/Utils');
 const moment = require('moment');
 const FormRespond = require('../models/operations/surveys/formRespond.models');
+const { sendEmailEvaluationCrew } = require('../mails/mailer');
 require('dotenv').config();
 
 
@@ -102,10 +103,12 @@ const generateWeeklyEvaluationCrew = async () => {
 
         const { start } = getWeekRange();
         const startFormatted = formatDateLocal(start);
+
         const now = moment();
         const periodWeek = `${now.isoWeekYear()}-W${String(now.isoWeek()).padStart(2, "0")}`;
-        const expirationDate = now.add(3, 'days').toDate();
+        const expirationDate = now.add(3, "days").toDate();
 
+        // 🔹 Obtener tripulación embarcada
         const embarkedStaff = await ShipmentDates.findAll({
             where: {
                 shipmentDate: { [Op.lte]: startFormatted },
@@ -122,91 +125,183 @@ const generateWeeklyEvaluationCrew = async () => {
                         {
                             model: Staff,
                             as: "staff",
-                            attributes: ['id', 'firstName', 'lastName'],
+                            attributes: ["id", "firstName", "lastName"],
                             include: [
                                 {
                                     model: Positions,
                                     as: "staff_position",
-                                    attributes: ['id', 'name'],
-                                },
+                                    attributes: ["id", "name"]
+                                }
                             ]
                         },
                         {
                             model: Company,
                             as: "company",
-                            attributes: ['id', 'name'],
-                        },
+                            attributes: ["id", "name"]
+                        }
                     ]
-                },
+                }
             ]
         });
 
-        // 🔥 1️⃣ Separar capitanes activos
+        // 🔹 1️⃣ Separar capitanes por compañía
         const captainByCompany = {};
+        const crewList = [];
 
         for (const shipment of embarkedStaff) {
+
             const companyId = shipment.empresa.companyId;
             const staff = shipment.empresa.staff;
-            const positionCode = staff.staff_position?.name;
+            const positionName = staff.staff_position?.name;
 
-            if (positionCode === "Capitan") {
-                captainByCompany[companyId] = staff;
+            if (!staff || !staff.staff_position) continue;
+
+            const fullName = `${staff.firstName} ${staff.lastName}`;
+
+            if (positionName === "Capitan") {
+                captainByCompany[companyId] = {
+                    ...staff.toJSON(),
+                    fullName
+                };
+            } else {
+                crewList.push({
+                    companyId,
+                    ...staff.toJSON(),
+                    fullName
+                });
             }
         }
 
-        // 🔥 2️⃣ Generar evaluaciones solo para tripulación
-        for (const shipment of embarkedStaff) {
-            
-            const companyId = shipment.empresa.companyId;
-            const staff = shipment.empresa.staff;
-            const positionCode = staff.staff_position?.name;
+        // 🔹 2️⃣ Obtener todos los forms
+        const forms = await Form.findAll();
 
-            // Saltar si es capitán
-            if (positionCode === "Capitan") continue;
+        // 🔹 Agrupar forms por position
+        const formsByPosition = {};
 
-            const captain = captainByCompany[companyId];
-            if (!captain) continue; // No hay capitán embarcado
+        for (const form of forms) {
 
-            const positionId = Utils.encode(staff.staff_position.id);
+            let positions = [];
 
-            const forms = await Form.findAll({
-                where: where(
-                    fn("JSON_CONTAINS", col("positions"), JSON.stringify(positionId)),
-                    Op.eq,
-                    1
-                )
-            });
+            try {
 
-            for (const form of forms) {
+                if (typeof form.positions === "string") {
 
-                const exists = await FormRespond.findOne({
-                    where: {
-                        companyId,
-                        formId: form.id,
-                        evaluator: captain.firstName + ' ' + captain.lastName,
-                        evaluated: staff.firstName + ' ' + staff.lastName,
-                        periodWeek
+                    if (form.positions.startsWith("[")) {
+                        positions = JSON.parse(form.positions);
+                    } else {
+                        positions = [form.positions];
                     }
+
+                } else if (Array.isArray(form.positions)) {
+                    positions = form.positions;
+                }
+
+            } catch (error) {
+                console.warn("positions mal formateado en form:", form.id);
+                positions = [];
+            }
+
+            for (const pos of positions) {
+
+                if (!formsByPosition[pos]) {
+                    formsByPosition[pos] = [];
+                }
+
+                formsByPosition[pos].push(form);
+            }
+        }
+
+        // 🔹 3️⃣ Obtener evaluaciones ya creadas
+        const existingEvaluations = await FormRespond.findAll({
+            where: { periodWeek }
+        });
+
+        const existingSet = new Set();
+
+        for (const ev of existingEvaluations) {
+            const key = `${ev.companyId}_${ev.formId}_${ev.evaluator}_${ev.evaluated}`;
+            existingSet.add(key);
+        }
+
+        const newEvaluations = [];
+
+        // 🔹 4️⃣ Capitán → Tripulación
+        for (const crew of crewList) {
+
+            const captain = captainByCompany[crew.companyId];
+            if (!captain) continue;
+
+            const positionEncoded = Utils.encode(crew.staff_position.id);
+            const crewForms = formsByPosition[positionEncoded] || [];
+
+            for (const form of crewForms) {
+
+                const evaluator = captain.fullName;
+                const evaluated = crew.fullName;
+
+                const key = `${crew.companyId}_${form.id}_${evaluator}_${evaluated}`;
+
+                if (existingSet.has(key)) continue;
+
+                newEvaluations.push({
+                    companyId: crew.companyId,
+                    formId: form.id,
+                    evaluator,
+                    evaluated,
+                    state: "Pendiente",
+                    expirationDate,
+                    periodWeek
                 });
 
-                if (!exists) {
-                    await FormRespond.create({
-                        companyId,
-                        formId: form.id,
-                        evaluator: captain.firstName + ' ' + captain.lastName,
-                        evaluated: staff.firstName + ' ' + staff.lastName,
-                        state: "Pendiente",
-                        expirationDate,
-                        periodWeek
-                    });
-                }
+                existingSet.add(key);
             }
         }
 
-        console.log("Evaluaciones generadas correctamente");
+        // 🔹 5️⃣ Tripulación → Capitán
+        for (const crew of crewList) {
+
+            const captain = captainByCompany[crew.companyId];
+            if (!captain) continue;
+
+            const positionEncoded = Utils.encode(captain.staff_position.id);
+            const captainForms = formsByPosition[positionEncoded] || [];
+
+            for (const form of captainForms) {
+
+                const evaluator = crew.fullName;
+                const evaluated = captain.fullName;
+
+                const key = `${crew.companyId}_${form.id}_${evaluator}_${evaluated}`;
+
+                if (existingSet.has(key)) continue;
+
+                newEvaluations.push({
+                    companyId: crew.companyId,
+                    formId: form.id,
+                    evaluator,
+                    evaluated,
+                    state: "Pendiente",
+                    expirationDate,
+                    periodWeek
+                });
+
+                existingSet.add(key);
+            }
+        }
+
+        // 🔹 6️⃣ Insertar evaluaciones nuevas en bulk
+        if (newEvaluations.length > 0) {
+            await FormRespond.bulkCreate(newEvaluations);
+        }
+
+        console.log("======================================");
+        console.log("CRON WEEKLY CREW EVALUATION");
+        console.log("Evaluaciones creadas:", newEvaluations.length);
+        console.log("Periodo:", periodWeek);
+        console.log("======================================");
 
     } catch (error) {
-        console.error('Error ejecutando cron job:', error);
+        console.error("Error ejecutando cron job:", error);
     }
 };
 

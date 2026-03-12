@@ -32,6 +32,25 @@ const sendEmail = (user, passwordGenerated, action, userCopy, bodyMail) => {
         })
 }
 
+const sendEmailEvaluationCrew = () => {
+    const htmlContentNewEvaluations = Mails.htmlContentNewEvaluations()
+    const msg = {
+        to: 'edison@tiptoptravel.ec',
+        from: 'notify-sig@rwittmer.com',
+        //cc: 'emunoz@tiptoptravel.ec',
+        subject: 'Evaluaciónes de desempeño creadas y enviadas',
+        html: htmlContentNewEvaluations
+    }
+    sgMail
+        .send(msg)
+        .then(() => {
+            console.log('Email sent')
+        })
+        .catch((error) => {
+            console.error(error)
+        })
+}
+
 const sendEmailPasswordStaff = (user, passwordGenerated) => {
     const htmlContentForgotPassword = Mails.htmlStaffForgotPassword(user, passwordGenerated)
     const msg = {
@@ -194,6 +213,7 @@ const sendEmailGuiaRemisionCreada = (dataMail, fileName, filePath) => {
 
 module.exports = {
     sendEmail,
+    sendEmailEvaluationCrew,
     sendEmailPasswordStaff,
     sendEmailNewOrder,
     sendConfirmationEmail,
