@@ -223,9 +223,25 @@ class IndicatorService {
         }
     }
 
-    static async getTabulationsByIndicator(indicatorId) {
+    static async getTabulationsByIndicator(id) {
         try {
-            const result = await Tabulation.findAll({ where: { indicatorId } });
+            const result = await Indicator.findOne(
+                {
+                    where: { id },
+                    include: [
+                        {
+                            model: Process,
+                            as: 'departament'
+                        },
+                        {
+                            model: Tabulation,
+                            as: 'tabulations'
+                        }
+                    ],
+                    order: [
+                        [{ model: Tabulation, as: 'tabulations' }, 'createdAt', 'DESC']
+                    ]
+                });
             return result;
         } catch (error) {
             throw error;

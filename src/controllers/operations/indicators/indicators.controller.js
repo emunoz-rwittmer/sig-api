@@ -183,14 +183,8 @@ const createTabulation = async (req, res) => {
 const getTabulationsByIndicator = async (req, res) => {
     try {
         const indicatorId = Utils.decode(req.params.indicator_id);
-        const indicator = await IndicatorService.getIndicatorById(indicatorId);
-        if (indicator instanceof Object) {
-            indicator.dataValues.id = Utils.encode(indicator.dataValues.id);
-            indicator.dataValues.departamentId = Utils.encode(indicator.dataValues.departamentId);
-            indicator.dataValues.formulaId = Utils.encode(indicator.dataValues.formulaId);
-        }
         const result = await IndicatorService.getTabulationsByIndicator(indicatorId);
-        res.status(200).json({ indicator, result });
+        res.status(200).json(result);
     } catch (error) {
 
         res.status(400).json(error.message)
