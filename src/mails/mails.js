@@ -368,10 +368,11 @@ class Mails {
               <p>
                 Hola, <strong>Maria Belen Jara</strong>.
               </p>
-              <p>Le informamos que el sistema creo y envió  correctamente a los Capitanes las evaluaciones </p>
-              <p>de desempeño de su tripulación a bordo.</p>
+              <p>Le informamos que el sistema creo y envió  correctamente las evaluaciones de desempeño </p>
+              <p>• Capitán → Tripulación</p>
+              <p>• Tripulación → Capitán</p>
 
-              <p>Para revisar detalles y listados ingrese al sistema apartado evaluaciones enviadas.</p>
+              <p>Para revisar detalles y listados ingrese al sistema, apartado evaluaciones enviadas.</p>
 
               <a href=${process.env.URL} class="button">Iniciar sesión</a>
 

@@ -1,19 +1,20 @@
+const axios = require('axios');
+const Utils = require('../utils/Utils');
+const moment = require('moment');
+require('dotenv').config();
+
 const ComentCardYacht = require('../models/operations/comentCard/cardYacht.models');
 const ComentCardQR = require('../models/operations/comentCard/cardQR.models');
 const ShipmentDates = require('../models/operations/surveys/shipmentDates.models');
 const StaffCompany = require('../models/catalogs/staffCompany.models');
 const Staff = require('../models/catalogs/staff.models');
 const Company = require('../models/catalogs/company.models');
-const Positions = require('../models/catalogs/positions.models');
-const Yacht = require('../models/catalogs/yacht.models');
-const Form = require('../models/operations/surveys/form.models');
-const { Op, fn, col, where } = require("sequelize");
-const axios = require('axios');
-const Utils = require('../utils/Utils');
-const moment = require('moment');
 const FormRespond = require('../models/operations/surveys/formRespond.models');
+const Positions = require('../models/catalogs/positions.models');
+const Form = require('../models/operations/surveys/form.models');
+const { Op } = require("sequelize");
+
 const { sendEmailEvaluationCrew } = require('../mails/mailer');
-require('dotenv').config();
 
 
 function getWeekRange() {
@@ -302,6 +303,8 @@ const generateWeeklyEvaluationCrew = async () => {
         console.log("Evaluaciones creadas:", newEvaluations.length);
         console.log("Periodo:", periodWeek);
         console.log("======================================");
+
+        sendEmailEvaluationCrew();
 
     } catch (error) {
         console.error("Error ejecutando cron job:", error);

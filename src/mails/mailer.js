@@ -35,9 +35,9 @@ const sendEmail = (user, passwordGenerated, action, userCopy, bodyMail) => {
 const sendEmailEvaluationCrew = () => {
     const htmlContentNewEvaluations = Mails.htmlContentNewEvaluations()
     const msg = {
-        to: 'edison@tiptoptravel.ec',
+        to: 'belen@rwittmer.com',
         from: 'notify-sig@rwittmer.com',
-        //cc: 'emunoz@tiptoptravel.ec',
+        cc: 'edison@tiptoptravel.ec',
         subject: 'Evaluaciónes de desempeño creadas y enviadas',
         html: htmlContentNewEvaluations
     }
