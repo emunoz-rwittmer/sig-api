@@ -11,7 +11,7 @@ require('./utils/cronJobs');
 const app = express();
 
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: '10mb' }));
 app.use(morgan('tiny'));
 
 // linea para servir IMG o PDF
