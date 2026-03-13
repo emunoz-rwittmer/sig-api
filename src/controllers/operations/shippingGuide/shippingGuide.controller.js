@@ -62,7 +62,7 @@ const createShippingGuide = async (req, res) => {
         const dataMail = {
             counter: data.counter,
         };
-        //sendEmailGuiaRemisionCreada(dataMail, fileName, fileData);
+        sendEmailGuiaRemisionCreada(dataMail, fileName, fileData);
 
         res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
