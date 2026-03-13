@@ -112,7 +112,7 @@ const generateWeeklyEvaluationCrew = async () => {
         // 🔹 Obtener tripulación embarcada
         const embarkedStaff = await ShipmentDates.findAll({
             where: {
-                shipmentDate: { [Op.lte]: startFormatted },
+                shipmentDate: { [Op.lt]: startFormatted },
                 [Op.or]: [
                     { dischargeDate: null },
                     { dischargeDate: { [Op.gte]: startFormatted } }
@@ -174,7 +174,7 @@ const generateWeeklyEvaluationCrew = async () => {
         }
 
         // 🔹 2️⃣ Obtener todos los forms
-        const forms = await Form.findAll();
+        const forms = await Form.findAll({ where: { active: true } });
 
         // 🔹 Agrupar forms por position
         const formsByPosition = {};
