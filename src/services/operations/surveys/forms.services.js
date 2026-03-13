@@ -142,7 +142,7 @@ class FormService {
         try {
             const { formId, companyId, evaluatorIds = [], evaluatedIds = [], expirationDate, periodWeek } = data;
 
-            if (!formId || !companyId || !evaluatorIds.length || !evaluatedIds.length) {
+            if (!formId || !evaluatorIds.length || !evaluatedIds.length) {
                 throw new Error('Datos incompletos para enviar evaluacion');
             }
 
@@ -191,7 +191,7 @@ class FormService {
                     payload.push({
                         formId,
                         state: 'Pendiente',
-                        companyId,
+                        companyId: companyId || null,
                         evaluator: evaluatorFullName,
                         evaluated: evaluatedFullName,
                         expirationDate,
