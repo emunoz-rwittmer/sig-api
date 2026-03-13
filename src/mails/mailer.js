@@ -188,8 +188,9 @@ const sendEmailConfirmacion = (dataMail) => {
 const sendEmailGuiaRemisionCreada = (dataMail, fileName, filePath) => {
     const html = MailsSolicitudes.htmlGuiaRemisionCreada(dataMail);
     const msg = {
-        to: 'edison@tiptoptravel.ec', // Change to your recipient
+        to: 'belen@rwittmer.com', // Change to your recipient
         from: 'notify-sig@rwittmer.com', // Change to your verified sender
+        cc: 'enrique@rwittmer.com',
         subject: 'Confirmación de guía de remisión',
         html: html,
         attachments: [
