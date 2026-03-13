@@ -15,7 +15,7 @@ const uploadMiddleware = (type, fields = []) => (req, res, next) => {
 
     multerMiddleware(req, res, function (err) {
         if (err) {
-            console.log(err)
+            console.error('Error en uploadStaffDocumentation:', err);
             return res.status(400).json(err.message || 'Error uploading file');
         }
         next();
