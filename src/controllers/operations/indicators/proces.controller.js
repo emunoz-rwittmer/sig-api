@@ -7,6 +7,7 @@ const getAllProcess = async (req, res) => {
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
+                 x.dataValues.departamentId = Utils.encode(x.dataValues.departamentId);
             });
         }
         res.status(200).json(result);
@@ -32,6 +33,7 @@ const getProces = async (req, res) => {
 const createProces = async (req, res) => {
     try {
         const data = req.body;
+        data.departamentId = Utils.decode(data.departamentId)
         const result = await ProcesService.createProces(data);
         if (result) {
             res.status(200).json({ data: 'resource created successfully' });
@@ -47,7 +49,9 @@ const updateProces = async (req, res) => {
     try {
         const id = Utils.decode(req.params.proces_id);
         const data = req.body;
-        const result = await ProcesService.updateProces(data, {
+        data.departamentId = Utils.decode(data.departamentId)
+        delete data.id;
+        await ProcesService.updateProces(data, {
             where: { id },
         });
         res.status(200).json({ data: 'resource updated successfully' });
@@ -64,7 +68,7 @@ const deleteProces = async (req, res) => {
         });
         res.status(200).json({ data: 'resource deleted successfully' })
     } catch (error) {
-        
+
         res.status(500).json(error.message);
     }
 }

@@ -7,6 +7,11 @@ const Process = db.define('process', {
         primaryKey: true,
         autoIncrement: true
     },
+    departamentId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        field: 'departament_id'
+    },
     name: {
         type: DataTypes.STRING,
         allowNull: false

@@ -1,10 +1,18 @@
+const Departaments = require('../../../models/catalogs/departament.models');
 const Process = require('../../../models/operations/indicators/process.models');
 
 class ProcessService {
     static async getAll() {
         try {
             const result = await Process.findAll({
-                attributes: ['id', 'name'],
+                attributes: ['id', 'name', 'departamentId', 'createdAt'],
+                include: [
+                    {
+                        model: Departaments,
+                        as: 'departamento',
+                        attributes: ['name'],
+                    },
+                ]
             });
             return result;
         } catch (error) {
@@ -16,7 +24,7 @@ class ProcessService {
         try {
             const result = await Process.findOne({
                 where: { id },
-                attributes: ['id','name'],
+                 attributes: ['id', 'name', 'departamentId', 'createdAt'],
             });
             return result;
         } catch (error) {
@@ -35,10 +43,10 @@ class ProcessService {
 
     static async updateProces(data, id) {
         try {
-            const result = await Process.update(data,id);
+            const result = await Process.update(data, id);
             return result;
         } catch (error) {
-            throw error;  
+            throw error;
         }
     }
 
@@ -52,4 +60,4 @@ class ProcessService {
     }
 }
 
-module.exports =  ProcessService;
+module.exports = ProcessService;

@@ -18,37 +18,6 @@ class IndicatorService {
         }
     }
 
-    static async getAllDepartamentsWhitIndicators() {
-        try {
-            const result = await Process.findAll({
-                attributes: [
-                    'id', 'name',
-                    [Sequelize.literal(`(
-                        SELECT COUNT(*)
-                        FROM indicators AS indicadores
-                        WHERE indicadores.departament_id = process.id
-                    )`), 'indicatorsCount']
-                ],
-                include: [{
-                    model: ProcessStaff,
-                    as: 'processStaff',
-                    include: {
-                        model: Staff,
-                        as: 'staffs',
-                        attributes: ['firstName', 'lastName'],
-                    }
-                }],
-                group: ['process.id', 'process.name', 'processStaff.id'],
-                order: [['name', 'ASC']]
-            });
-
-            return result;
-        } catch (error) {
-
-            throw error;
-        }
-    }
-
     static async getIndicatorsByDepartament(departamentId) {
         try {
             const result = await Indicator.findAll({
@@ -71,19 +40,15 @@ class IndicatorService {
         }
     }
 
-    static async getTabulationsyDepartament(departamentId) {
+    static async getIndicatorById(id) {
         try {
-            const result = await Indicator.findAll({
-                where: { departamentId },
+            const result = await Indicator.findOne({
+                where: { id },
                 include: [{
-                    model: Tabulation,
-                    as: 'tabulations',
-                    separate: true, // Esto asegura que las tabulaciones se ordenen por separado
-                    order: [['createdAt', 'ASC']], // Ordena las tabulaciones por la fecha de creación
+                    model: Formula,
+                    as: 'formula_indicator',
+                    attributes: ['name']
                 }],
-                order: [
-                    ['createdAt', 'ASC'], // Ordena los indicadores por su propia fecha de creación
-                ],
             });
             return result;
         } catch (error) {
@@ -149,22 +114,6 @@ class IndicatorService {
         }
 
         return changes;
-    }
-
-    static async getIndicatorById(id) {
-        try {
-            const result = await Indicator.findOne({
-                where: { id },
-                include: [{
-                    model: Formula,
-                    as: 'formula_indicator',
-                    attributes: ['name']
-                }],
-            });
-            return result;
-        } catch (error) {
-            throw error;
-        }
     }
 
     static async getFormulas() {

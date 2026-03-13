@@ -2,20 +2,6 @@ const IndicatorService = require('../../../services/operations/indicators/indica
 const Utils = require('../../../utils/Utils');
 const { create, all, cos } = require('mathjs'); // Para evaluar fórmulas dinámicas
 
-const getAllDepartamentsWhitIndicators = async (req, res) => {
-    try {
-        const result = await IndicatorService.getAllDepartamentsWhitIndicators();
-        if (result instanceof Array) {
-            result.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
-            });
-        }
-        res.status(200).json(result);
-    } catch (error) {
-        res.status(400).json(error.message)
-    }
-}
-
 const getIndicatorsByDepartament = async (req, res) => {
     try {
         const departamentId = Utils.decode(req.params.departament_id);
@@ -24,67 +10,9 @@ const getIndicatorsByDepartament = async (req, res) => {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
                 x.dataValues.departamentId = Utils.encode(x.dataValues.departamentId);
+                x.dataValues.formulaId = Utils.encode(x.dataValues.formulaId);
             });
         }
-        res.status(200).json(result);
-    } catch (error) {
-        res.status(400).json(error.message)
-    }
-}
-
-const getTabulationsyDepartament = async (req, res) => {
-    try {
-        const departamentId = Utils.decode(req.params.departament_id);
-        const departament = await IndicatorService.getProcessById(departamentId);
-        if (departament instanceof Array) {
-            departament.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
-            });
-        }
-        const result = await IndicatorService.getTabulationsyDepartament(departamentId);
-
-        if (result instanceof Array) {
-
-            const currentYear = new Date().getFullYear();
-
-            for (const x of result) {
-                const changesPercent = await IndicatorService.getChangePercentageByMeasurement(x.id);
-                const yearsTabulation = x.tabulations.reduce((acc, tabulation) => {
-                    const year = new Date(tabulation.createdAt).getFullYear();
-                    if (!acc[year]) {
-                        acc[year] = { tabulations: [], averagePercent: 0 };
-                    }
-                    acc[year].tabulations.push(tabulation);
-                    acc[year].averagePercent = acc[year].tabulations.reduce((sum, tab) => sum + tab.percent, 0) / acc[year].tabulations.length;
-                    return acc;
-                }, {});
-
-                const currentYearTabulations = x.tabulations.filter(tabulation => new Date(tabulation.createdAt).getFullYear() === currentYear);
-                const totalAchieved = currentYearTabulations.reduce((sum, tabulation) => sum + tabulation.percent, 0);
-                const averageAchieved = currentYearTabulations.length > 0 ? totalAchieved / currentYearTabulations.length : 0;
-                x.dataValues.yearsTabulation = yearsTabulation;
-                x.dataValues.id = Utils.encode(x.dataValues.id);
-                x.dataValues.averageAchieved = averageAchieved.toFixed(2);
-                x.dataValues.changesPercent = changesPercent;
-            }
-        }
-
-        res.status(200).json({ departament, result });
-    } catch (error) {
-
-        res.status(400).json(error.message)
-    }
-}
-
-const getIndicatorById = async (req, res) => {
-    try {
-        const indicatorId = Utils.decode(req.params.indicator_id)
-        const result = await IndicatorService.getIndicatorById(indicatorId);
-        if (result instanceof Object) {
-            result.id = Utils.encode(result.id);
-            result.formulaId = Utils.encode(result.formulaId);
-            result.departamentId = Utils.encode(result.departamentId);
-        };
         res.status(200).json(result);
     } catch (error) {
         res.status(400).json(error.message)
@@ -123,6 +51,7 @@ const updateIndicator = async (req, res) => {
     try {
         const indicatorId = Utils.decode(req.params.indicator_id);
         const data = req.body
+        delete data.id;
         data.formulaId = Utils.decode(data.formulaId);
         data.departamentId = Utils.decode(data.departamentId)
         const result = await IndicatorService.updateIndicator(data, {
@@ -254,10 +183,7 @@ const deleteStafft = async (req, res) => {
 }
 
 const IndicatorController = {
-    getAllDepartamentsWhitIndicators,
     getIndicatorsByDepartament,
-    getTabulationsyDepartament,
-    getIndicatorById,
     getFormulas,
     createIndicator,
     updateIndicator,
