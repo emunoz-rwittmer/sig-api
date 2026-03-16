@@ -52,7 +52,7 @@ async function generateAndSavePDF(htmlContent, filePath, result) {
       </head>
       <body>
       <div class="logo-container">
-        <img src="${process.env.URL_STAFFS + "/api" + logoUrl}" alt="Logo ${result.company}" />
+        <img style="width:150px; src="${process.env.URL_STAFFS + "/api" + logoUrl}" alt="Logo ${result.company}" />
       </div>
         ${contenidoHTML}
       </body>
