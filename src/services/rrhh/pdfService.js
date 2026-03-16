@@ -8,7 +8,7 @@ require('dotenv').config();
 async function generateAndSavePDF(htmlContent, filePath, result) {
 
   const compania = await CompanyService.getCompanyByName(result.company)
-  const logoHtml = `<img src="${process.env.URL_STAFFS + "/api/uploads/companies/firma_rrhh.png"}" alt="signature" style="width:130px;" />`;
+  const logoHtml = `<img src="${process.env.URL_STAFFS + "/api/uploads/companies/firma_rrhh.png"}" alt="signature" style="width:150px;" />`;
   const logoUrl = compania.logo || '';  // ajusta según cómo te llegue la ruta o URL
 
   const contenidoHTML = htmlContent
@@ -36,7 +36,7 @@ async function generateAndSavePDF(htmlContent, filePath, result) {
         <style>
           body { font-family: Arial, sans-serif; padding: 10px 20px 20px; }
           .logo-container { text-align: right; margin-bottom: 5px; }
-          .logo-container img { width: 300px; }
+          .logo-container img { width: 200px; }
           .footer-logo {
             position: fixed;
             bottom: 0px;
@@ -72,7 +72,6 @@ async function generateAndSavePDF(htmlContent, filePath, result) {
 
   await browser.close();
 
-  // ✅ Guarda el archivo en la ruta completa recibida
   await fs.writeFile(filePath, pdfBuffer);
 
   return filePath;
