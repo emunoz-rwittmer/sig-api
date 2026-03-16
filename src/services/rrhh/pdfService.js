@@ -8,7 +8,7 @@ require('dotenv').config();
 async function generateAndSavePDF(htmlContent, filePath, result) {
 
   const compania = await CompanyService.getCompanyByName(result.company)
-  const logoHtml = `<img src="${process.env.URL_STAFFS + "/api/uploads/companies/firma_rrhh.png"}" alt="signature" style="width:150px;" />`;
+  const logoHtml = `<img src="${process.env.URL_STAFFS + "/api/uploads/companies/firma_rrhh.png"}" alt="signature" style="width:130px;" />`;
   const logoUrl = compania.logo || '';  // ajusta según cómo te llegue la ruta o URL
 
   const contenidoHTML = htmlContent

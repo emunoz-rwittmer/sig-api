@@ -192,7 +192,7 @@ const createRequesForStaff = async (req, res) => {
             formato: fomrat.dataValues.name
         };
 
-        const fileName = `${dataMail.formato}-${dataMail.staff}.pdf`.replace(/\s+/g, '_');
+        const fileName = `${dataMail.formato}-${dataMail.staff}-${Date.now()}.pdf`.replace(/\s+/g, '_');
         const filePath = path.join(stafftDir, fileName);
 
         await generateAndSavePDF(data.contenido, filePath, data);
@@ -226,7 +226,7 @@ const createRequesForStaff = async (req, res) => {
 
         const result = await FormatService.createRequesForStaff(data);
         if (result) {
-            sendEmailNuevaSolicitud(formatId, dataMail, attachments);
+            //sendEmailNuevaSolicitud(formatId, dataMail, attachments);
             res.status(200).json({ data: 'resource created successfully' });
         }
     } catch (error) {
