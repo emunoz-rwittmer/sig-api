@@ -122,7 +122,6 @@ const getEvaluators = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-
         res.status(400).json(error.message)
     }
 }
@@ -210,41 +209,32 @@ const uploadImage = async (req, res) => {
             return res.status(400).json({ message: 'No se ha subido ningún archivo' });
         }
 
-        // Obtener información del staff
         const staff = await StaffService.getStaffById(staffId);
         const staffFullName = `${staff.dataValues.firstName}_${staff.dataValues.lastName}`.replace(/\s+/g, '_');
         const staffDir = path.join(__dirname, '../../../uploads/staffs', staffFullName);
 
-        // Crear la carpeta del staff si no existe
         if (!fs.existsSync(staffDir)) {
             fs.mkdirSync(staffDir, { recursive: true });
         }
 
-        // Obtener el tipo de imagen de body
         const { type } = req.body;
         if (!type) {
             return res.status(400).json({ message: 'El campo "type" es requerido' });
         }
 
-        // Crear el nombre del archivo con el tipo
         const fileExtension = path.extname(file.originalname);
         const fileName = `${type}-${Date.now()}${fileExtension}`.replace(/\s+/g, '_');
         const newFilePath = path.join(staffDir, fileName);
 
-        // Si multer guardó el archivo en otro lugar, moverlo a la carpeta del staff
         if (file.path && file.path !== newFilePath) {
             fs.renameSync(file.path, newFilePath);
         }
 
-        // Construir la ruta relativa para guardar en BD
         const relativePath = path.relative(path.join(__dirname, '../../../'), newFilePath).replace(/\\/g, '/');
-
-        // Preparar los datos para actualizar en BD
         const dataToUpdate = {
             [type]: `/${relativePath}`
         };
 
-        // Guardar la ruta en la BD
         await StaffService.uploadImage(dataToUpdate, staffId);
 
         res.status(200).json({ data: 'resource updated successfully' });
