@@ -257,10 +257,10 @@ const uploadImage = async (req, res) => {
 const uploadStaffDocumentation = async (req, res) => {
     try {
         const staffId = Utils.decode(req.params.staff_id);
-        const documents = JSON.parse(req.body.documentsData);
-        const files = req.files;
+        const document = req.body;
+        const file = req.file;
 
-        if (!files || !files.length) {
+        if (!file) {
             return res.status(400).json({ message: 'No se ha subido ningún archivo' });
         }
 
@@ -274,40 +274,25 @@ const uploadStaffDocumentation = async (req, res) => {
             fs.mkdirSync(staffDir, { recursive: true });
         }
 
-        const updatedDocuments = [];
+        const fileExtension = path.extname(file.originalname);
+        const fileName = `documentation-${Date.now()}-${document.id}${fileExtension}`
+            .replace(/\s+/g, '_');
 
-        for (let i = 0; i < documents.length; i++) {
+        const newFilePath = path.join(staffDir, fileName);
 
-            const doc = documents[i];
-            const file = files[i];
-
-            if (!file) {
-                updatedDocuments.push(doc);
-                continue;
-            }
-
-            const fileExtension = path.extname(file.originalname);
-            const fileName = `documentation-${Date.now()}-${i}${fileExtension}`
-                .replace(/\s+/g, '_');
-
-            const newFilePath = path.join(staffDir, fileName);
-
-            if (file.path && file.path !== newFilePath) {
-                fs.renameSync(file.path, newFilePath);
-            }
-
-            const relativePath = path
-                .relative(path.join(__dirname, '../../../'), newFilePath)
-                .replace(/\\/g, '/');
-
-            doc.file = `/${relativePath}`;
-            doc.fileName = file.originalname;
-            doc.fileSize = file.size;
-
-            updatedDocuments.push(doc);
+        if (file.path && file.path !== newFilePath) {
+            fs.renameSync(file.path, newFilePath);
         }
 
-        await StaffService.uploadStaffDocumentation(updatedDocuments);
+        const relativePath = path
+            .relative(path.join(__dirname, '../../../'), newFilePath)
+            .replace(/\\/g, '/');
+
+        document.file = `/${relativePath}`;
+        document.fileName = file.originalname;
+        document.fileSize = file.size;
+
+        await StaffService.uploadStaffDocumentation(document);
 
         res.status(200).json({ data: 'Documentación guardada exitosamente' });
 

@@ -413,25 +413,22 @@ class Staffervice {
         }
     }
 
-    static async uploadStaffDocumentation(documents) {
+    static async uploadStaffDocumentation(document) {
         const transaction = await db.transaction();
         try {
-            for (const doc of documents) {
-                // 🔥 UPDATE si existe
-                await StaffDocumentation.update(
-                    {
-                        file: doc.file,
-                        fileName: doc.fileName,
-                        fileSize: doc.fileSize,
-                        status: doc.status,
-                        expiryDate: doc.expiryDate
-                    },
-                    {
-                        where: { id: doc.id },
-                        transaction
-                    }
-                );
-            }
+            await StaffDocumentation.update(
+                {
+                    file: document.file,
+                    fileName: document.fileName,
+                    fileSize: document.fileSize,
+                    status: document.status,
+                    expiryDate: document.expiryDate
+                },
+                {
+                    where: { id: document.id },
+                    transaction
+                }
+            );
 
             await transaction.commit();
             return true;

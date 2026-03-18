@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const StaffController  = require ('../../controllers/catalogs/staff.controller');
-const { uploadImageFile, uploadManyFiles } = require('../../utils/uploadConfiguration');
+const { uploadImageFile, uploadManyFiles, uploadPdfFile } = require('../../utils/uploadConfiguration');
 
 const router = Router();
 
@@ -10,7 +10,7 @@ router.get('/:staff_id/companies',StaffController.getStaffCompanies);
 router.post('/createStaff',StaffController.createStaff);
 router.put('/updateStaff/:staff_id',StaffController.updateStaff);
 router.put('/:staff_id/uploadImageFile', uploadImageFile, StaffController.uploadImage);
-router.put('/update/documentation/:staff_id', uploadManyFiles, StaffController.uploadStaffDocumentation);
+router.put('/update/documentation/:staff_id', uploadPdfFile, StaffController.uploadStaffDocumentation);
 router.delete('/:staff_id',StaffController.deleteStaff);
 
 //evaluators and evaluated
