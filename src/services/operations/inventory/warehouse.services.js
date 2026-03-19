@@ -6,8 +6,7 @@ const Product = require('../../../models/operations/orders/product.models');
 const requestItems = require('../../../models/operations/yachtRequest/requestItems.models');
 const LaundryYacht = require('../../../models/operations/yachtRequest/laundryYacht');
 const Request = require('../../../models/operations/yachtRequest/request.models');
-const Utils = require('../../../utils/Utils');
-const { Sequelize, Op, where } = require("sequelize");
+const { Sequelize, Op } = require("sequelize");
 const db = require('../../../utils/database');
 const Company = require('../../../models/catalogs/company.models');
 
@@ -149,6 +148,74 @@ class WarehouseService {
                 order: [[{ model: Product, as: 'product' }, 'name', 'ASC']]
             });
             return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    static async getStockProduct(id) {
+        try {
+            const result = await Stock.findOne({
+                where: { id },
+                order: [['createdAt', 'DESC']],
+                include: [
+                    {
+                        model: Warehouse,
+                        as: 'warehouse',
+                        attributes: ['name']
+                    },
+                    {
+                        model: Company,
+                        as: 'company',
+                        attributes: ['name']
+                    },
+                    {
+                        model: Product,
+                        as: 'product',
+                        attributes: ['name'],
+                        include: [
+                            {
+                                model: Transaction,
+                                as: 'transactions',
+                                attributes: ['createdAt','warehouseFromId', 'warehouseToId', 'type', 'quantity'],
+                                include: [
+                                    {
+                                        model: Warehouse,
+                                        as: 'warehouseTo',
+                                        attributes: ['name']
+                                    },
+                                    {
+                                        model: Staff,
+                                        as: 'responsible',
+                                        attributes: ['firstName', 'lastName']
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            });
+
+            if (!result) return null;
+
+            const plain = result.get({ plain: true });
+
+            const { warehouseId } = plain;
+
+            if (!plain?.product?.transactions) return plain;
+
+            plain.product.transactions = plain.product.transactions
+                .filter(({ warehouseFromId, warehouseToId }) =>
+                    warehouseFromId === warehouseId || warehouseToId === warehouseId
+                )
+                .map(trx => ({
+                    ...trx,
+                    type: warehouseId === trx.warehouseToId ? 'Entrada' : 'Salida'
+                }))
+                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+            return plain;
+
         } catch (error) {
             throw error;
         }

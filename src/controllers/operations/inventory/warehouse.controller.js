@@ -89,6 +89,16 @@ const getStockInWarehouse = async (req, res) => {
     }
 }
 
+const getStockProduct = async (req, res) => {
+    try {
+        const stockId = Utils.decode(req.params.stock_id);
+        const result = await WarehouseService.getStockProduct(stockId);
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(400).json(error.message || 'Error inesperado');
+    }
+};
+
 const getTransactionsWarehouse = async (req, res) => {
     try {
         const warehouseId = Utils.decode(req.params.warehouse_id);
@@ -177,6 +187,7 @@ const WarehouseController = {
     deleteWarehouse,
     getAllWarehousesTypeYacht,
     getStockInWarehouse,
+    getStockProduct,
     getTransactionsWarehouse,
     getRequestToWareHouse,
     getItemsToRequest,

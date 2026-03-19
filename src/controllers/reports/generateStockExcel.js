@@ -20,6 +20,34 @@ const generateStockExcel = async (req, res) => {
             return res.status(400).json({ message: "No hay items en la orden." });
         }
 
+        const getObservation = (quantity, min, max) => {
+            if (quantity < min) {
+                return {
+                    text: '🔴 ⚠️ Hay que ingresar stock',
+                    color: 'FF4C4C'
+                };
+            }
+
+            if (quantity <= (min + 5)) {
+                return {
+                    text: '🟡 ⚠️ Stock debe ser atendido',
+                    color: 'FFD966'
+                };
+            }
+
+            if (quantity > max) {
+                return {
+                    text: '🔵 📦 Exceso de stock',
+                    color: '9BC2E6'
+                };
+            }
+
+            return {
+                text: '🟢 ✅ Stock OK',
+                color: 'C6E0B4'
+            };
+        };
+
         //COLUMNS
         ws.column(1).setWidth(25);
         ws.column(2).setWidth(40);
@@ -73,17 +101,60 @@ const generateStockExcel = async (req, res) => {
         ws.cell(5, 1).string("Sku").style(headerLeftWrapStyle);
         ws.cell(5, 2).string("Producto").style(headerLeftWrapStyle);
         ws.cell(5, 3).string("Stock").style(headerLeftWrapStyle);
-        ws.cell(5, 4).string("Entradas").style(headerLeftWrapStyle);
-        ws.cell(5, 5).string("Salidas").style(headerLeftWrapStyle);
+        ws.cell(5, 4).string("Stock Maximo").style(headerLeftWrapStyle);
+        ws.cell(5, 5).string("Stock Minimo").style(headerLeftWrapStyle);
+        ws.cell(5, 6).string("Entradas").style(headerLeftWrapStyle);
+        ws.cell(5, 7).string("Salidas").style(headerLeftWrapStyle);
+        ws.cell(5, 8).string("Observación").style(headerLeftWrapStyle);
 
 
         //SHOW DATA - Revisa el array result.orderItems usando forEach
         data.products.forEach((item, index) => {
-            ws.cell(6 + index, 1).string(item.sku || "Sin producto");
-            ws.cell(6 + index, 2).string(item.name || "Sin producto");
-            ws.cell(6 + index, 3).string(item.quantity.toString() || "0");
-            ws.cell(6 + index, 4).string(item.totalIncome || "0");
-            ws.cell(6 + index, 5).string(item.totalOutcome || "0");
+            const row = 6 + index;
+
+            const quantity = Number(item.quantity || 0);
+            const min = Number(item.min || 0);
+            const max = Number(item.max || 0);
+
+            const observation = getObservation(quantity, min, max);
+
+            // estilo dinámico
+            const obsStyle = wb.createStyle({
+                fill: {
+                    type: 'pattern',
+                    patternType: 'solid',
+                    fgColor: observation.color
+                },
+                alignment: {
+                    horizontal: 'center',
+                    vertical: 'center',
+                    wrapText: true
+                },
+                font: {
+                    bold: true,
+                    size: 11,
+                    color: '000000'
+                },
+                border: {
+                    left: { style: 'thin' },
+                    right: { style: 'thin' },
+                    top: { style: 'thin' },
+                    bottom: { style: 'thin' }
+                }
+            });
+
+            ws.cell(row, 1).string(item.sku || "Sin producto");
+            ws.cell(row, 2).string(item.name || "Sin producto");
+            ws.cell(row, 3).number(quantity);
+            ws.cell(row, 4).number(max);
+            ws.cell(row, 5).number(min);
+            ws.cell(row, 6).string(item.totalIncome || 0);
+            ws.cell(row, 7).string(item.totalOutcome || 0);
+
+            // 🔥 OBSERVACIÓN CON COLOR
+            ws.cell(row, 8)
+                .string(observation.text)
+                .style(obsStyle);
         });
 
         //GENERATE EXCEL
@@ -93,6 +164,7 @@ const generateStockExcel = async (req, res) => {
         );
         wb.write(`report.xlsx`, res);
     } catch (error) {
+        console.log(error)
         res.status(400).json(error.message)
     }
 

@@ -13,6 +13,7 @@ router.put('/updateProduct/:product_id', ProductController.updateProduct);
 router.delete('/:product_id', ProductController.deleteProduct);
 
 router.put('/configurations/switchConfiguration/:configuration_id', ProductController.switchConfirguration);
+router.put('/upadate/stock/:stock_id', ProductController.updateStock);
 
 
 module.exports = router;

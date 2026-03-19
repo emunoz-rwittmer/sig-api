@@ -9,7 +9,7 @@ router.delete('/:warehouse_id', WarehouseController.deleteWarehouse);
 
 router.get('/typeYacht',WarehouseController.getAllWarehousesTypeYacht);
 router.get('/stockInWareHouse/:warehouse_id',WarehouseController.getStockInWarehouse);
-router.get('/:warehouse_id/transactions',WarehouseController.getTransactionsWarehouse);
+router.get('/:stock_id/stockProduct',WarehouseController.getStockProduct);
 
 //Yacht request 
 router.get('/requestToWareHouse/:warehouse_id/:type',WarehouseController.getRequestToWareHouse);

@@ -53,6 +53,7 @@ const ProductConfiguration = require('./operations/inventory/productConfiguratio
 const RequestItems = require('./operations/yachtRequest/requestItems.models');
 const StaffDocumentation = require('./catalogs/staffDocumentation.models');
 const Documentation = require('./catalogs/documentation.models');
+const StockHistory = require('./operations/inventory/stockHistory.models');
 
 const initModels = () => {
 
@@ -155,9 +156,6 @@ const initModels = () => {
     Warehouse.belongsTo(Yacht, { foreignKey: 'yacht_id', as: 'yacht' });
     Company.hasMany(Order, { foreignKey: 'company_id', as: 'orders' });
 
-    Warehouse.hasMany(Stock, { foreignKey: 'warehouse_id', as: 'stocks' });
-    Stock.belongsTo(Warehouse, { foreignKey: 'warehouse_id', as: 'warehouse' });
-
     Staff.hasMany(Transaction, { foreignKey: 'user_id', as: 'transactions' });
     Warehouse.hasMany(Transaction, { foreignKey: 'warehouse_from_id', as: 'outgoingTransactions' });// Bodega de origen
     Transaction.belongsTo(Warehouse, { foreignKey: 'warehouse_from_id', as: 'warehouseFrom' });
@@ -165,11 +163,17 @@ const initModels = () => {
     Warehouse.hasMany(Transaction, { foreignKey: 'warehouse_to_id', as: 'incomingTransactions' }); // Bodega de destino
     Transaction.belongsTo(Warehouse, { foreignKey: 'warehouse_to_id', as: 'warehouseTo' });
 
+    Warehouse.hasMany(Stock, { foreignKey: 'warehouse_id', as: 'stocks' });
+    Stock.belongsTo(Warehouse, { foreignKey: 'warehouse_id', as: 'warehouse' });
+
     Product.hasMany(Stock, { foreignKey: 'product_id', as: 'stocks' });
     Stock.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
 
     Company.hasMany(Stock, { foreignKey: 'company_id', as: 'stocks' });
     Stock.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
+
+    Stock.hasMany(StockHistory, { foreignKey: 'stock_id', as: 'historial' });
+    StockHistory.belongsTo(Stock, { foreignKey: 'stock_id', as: 'stock' });
 
     Product.hasMany(Transaction, { foreignKey: 'product_id', as: 'transactions' });
     Transaction.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
@@ -220,7 +224,7 @@ const initModels = () => {
 
     Impact
     Levels,
-        Strategy
+    Strategy
 
 }
 

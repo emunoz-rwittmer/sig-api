@@ -1,26 +1,20 @@
 const db = require('../../../utils/database');
 const { DataTypes } = require('sequelize');
 
-const Stock = db.define('stock', {
+const StockHistory = db.define('stock_history', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
   },
-  warehouseId: {
+  stockId: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    field: 'warehouse_id'
+    field: 'stock_id'
   },
-  productId: {
-    type: DataTypes.INTEGER,
+  responsable: {
+    type: DataTypes.STRING,
     allowNull: false,
-    field: 'product_id'
-  },
-  companyId: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    field: 'company_id'
   },
   quantity: {
     type: DataTypes.INTEGER,
@@ -38,4 +32,4 @@ const Stock = db.define('stock', {
   },
 });
 
-module.exports = Stock;
+module.exports = StockHistory;

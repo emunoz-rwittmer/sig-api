@@ -5,6 +5,7 @@ const ProductConfiguration = require('../../../models/operations/inventory/produ
 const Stock = require('../../../models/operations/inventory/stock.models');
 const Company = require('../../../models/catalogs/company.models');
 const { Sequelize, Op } = require('sequelize');
+const StockHistory = require('../../../models/operations/inventory/stockHistory.models');
 
 class ProductService {
     static async findProduct(sku) {
@@ -80,7 +81,7 @@ class ProductService {
         try {
             const result = await Stock.findAll({
                 where: { warehouseId },
-                attributes: ['companyId', 'quantity',
+                attributes: ['id', 'max', 'min', 'companyId', 'quantity',
 
                     [Sequelize.literal(`
                         (
@@ -249,6 +250,45 @@ class ProductService {
             const result = await ProductConfiguration.update(data, id);
             return result;
         } catch (error) {
+            throw error;
+        }
+    }
+
+    static async updateStock(id, data) {
+        const transaction = await db.transaction();
+
+        try {
+            const current = await Stock.findByPk(id, { transaction });
+            if (!current) {
+                throw new Error('Stock no encontrado');
+            }
+
+            const currentPlain = current.get({ plain: true });
+            const hasChanges = Object.keys(data).some(key => {
+                return data[key] !== currentPlain[key];
+            });
+
+            if (!hasChanges) {
+                await transaction.rollback();
+                return;
+            }
+
+            await Stock.update(data, {
+                where: { id },
+                transaction
+            });
+
+            await StockHistory.create({
+                stockId: id,
+                ...data
+            }, { transaction });
+
+            await transaction.commit();
+
+            return { message: 'Actualizado correctamente' };
+
+        } catch (error) {
+            await transaction.rollback();
             throw error;
         }
     }

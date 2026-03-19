@@ -52,6 +52,7 @@ const getProductsByWarehouse = async (req, res) => {
         const result = await ProductService.getProductsByWarehouse(warehouseId);
         if (result instanceof Array) {
             result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
                 x.companyId = Utils.encode(x.companyId);
             });
         }
@@ -113,8 +114,6 @@ const deleteProduct = async (req, res) => {
 }
 
 
-
-
 const switchConfirguration = async (req, res) => {
     try {
 
@@ -131,6 +130,18 @@ const switchConfirguration = async (req, res) => {
     }
 }
 
+const updateStock = async (req, res) => {
+    try {
+
+        const stockId = Utils.decode(req.params.stock_id);
+        const data = req.body
+        await ProductService.updateStock(stockId, data);
+        res.status(200).json({ data: 'resource updated successfully' });
+    } catch (error) {
+        res.status(400).json(error.message);
+    }
+}
+
 const ProductController = {
     getProducts,
     getProduct,
@@ -141,5 +152,6 @@ const ProductController = {
     getProductsWithConfigurations,
     getProductsByWarehouse,
     switchConfirguration,
+    updateStock
 }
 module.exports = ProductController
