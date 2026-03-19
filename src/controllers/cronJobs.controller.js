@@ -151,6 +151,11 @@ const generateWeeklyEvaluationCrew = async () => {
 
         for (const shipment of embarkedStaff) {
 
+            if (!shipment.empresa) {
+                console.warn("Shipment sin empresa:", shipment.id);
+                continue;
+            }
+
             const companyId = shipment.empresa.companyId;
             const staff = shipment.empresa.staff;
             const positionName = staff.staff_position?.name;
