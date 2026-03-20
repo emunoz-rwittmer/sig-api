@@ -43,7 +43,7 @@ class CrewBoardingService {
                         model: StaffCompany,
                         as: 'personal',
                         attributes: ['id'],
-                        include: {
+                        include: [{
                             model: Staff,
                             as: 'staff',
                             include: [
@@ -56,7 +56,10 @@ class CrewBoardingService {
                                     as: 'staff_position',
                                     attributes: ['id', 'name'],
                                 }],
-                        }
+                        }, {
+                            model: ShipmentDates,
+                            as: 'embarques',
+                        }]
                     }
                 }
             });
@@ -100,7 +103,7 @@ class CrewBoardingService {
                     {
                         model: ShipmentDates,
                         as: 'embarques',
-                        attributes: ['id','shipmentDate', 'dischargeDate'],
+                        attributes: ['id', 'shipmentDate', 'dischargeDate'],
                     }]
             });
             return result;
