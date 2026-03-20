@@ -26,14 +26,14 @@ async function generateAndSavePDF(htmlContent, filePath, result, staffSignature)
     .replace('{firma_rrhh}', firmaRRHH)
     .replace('{firma_colaborador}', firmaColaborador)
 
-    .replace('{fecha_desembarque}', result.fecha_desembarque)
-    .replace('{fecha_ingreso}', result.fecha_ingreso)
+    .replace('{fecha_desembarque}', result.fecha_desembarque|| '')
+    .replace('{fecha_ingreso}', result.fecha_ingreso|| '')
 
-    .replace('{relevo_colaborador}', result.relevo_colaborador)
+    .replace('{relevo_colaborador}', result.relevo_colaborador|| '')
     .replace('{relevo_cargo}', result.relevo_cargo)
-    .replace('{relevo_telf}', result.relevo_telf)
-    .replace('{relevo_correo}', result.relevo_correo)
-    .replace('{obser_colaborador}', result.obser_colaborador)
+    .replace('{relevo_telf}', result.relevo_telf || '')
+    .replace('{relevo_correo}', result.relevo_correo || '')
+    .replace('{obser_colaborador}', result.obser_colaborador || '')
 
 
   const browser = await puppeteer.launch({
