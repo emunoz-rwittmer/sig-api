@@ -59,12 +59,12 @@ const initModels = () => {
 
     //catalogs
     Consecutivo,
-        ShippingGuideCount,
-        Question,
-        HouseRule,
-        Trading,
-        Format,
-        DoctorFormat
+    ShippingGuideCount,
+    Question,
+    HouseRule,
+    Trading,
+    Format,
+    DoctorFormat
 
     Users.belongsTo(Roles, { as: "user_rol", foreignKey: "role_id" });
     Roles.hasMany(Users, { as: "rol_user", foreignKey: "role_id" });

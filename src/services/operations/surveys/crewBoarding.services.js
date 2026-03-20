@@ -46,6 +46,11 @@ class CrewBoardingService {
                         include: [{
                             model: Staff,
                             as: 'staff',
+                            where: {
+                                positionId: {
+                                    [Op.in]: [1, 2, 3, 4, 5, 6, 7, 12, 13]
+                                }
+                            },
                             include: [
                                 {
                                     model: Departaments,
