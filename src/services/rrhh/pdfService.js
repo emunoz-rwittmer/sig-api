@@ -5,23 +5,35 @@ const path = require('path');
 const CompanyService = require('../catalogs/company.services');
 require('dotenv').config();
 
-async function generateAndSavePDF(htmlContent, filePath, result) {
+async function generateAndSavePDF(htmlContent, filePath, result, staffSignature) {
 
-  const compania = await CompanyService.getCompanyByName(result.company)
-  const logoHtml = `<img src="${process.env.URL_STAFFS + "/api/uploads/companies/firma_rrhh.png"}" alt="signature" style="width:180px;" />`;
-  const logoUrl = compania.logo || '';  // ajusta según cómo te llegue la ruta o URL
+  const compania = await CompanyService.getCompanyByName(result.compania)
+  const firmaRRHH = `<img src="${process.env.URL_STAFFS + "/api/uploads/companies/firma_rrhh.png"}" alt="signature" style="width:180px;" />`;
+  const firmaColaborador = `<img src="${process.env.URL_STAFFS + "/api" + staffSignature}" alt="signature" style="width:180px;" />`;
+  const logoUrl = `<img src="${process.env.URL_STAFFS + "/api" + compania.logo}" alt="logo_empresa" style="width:180px;" />`;
 
   const contenidoHTML = htmlContent
-    .replace('{compania}', result.company)
-    .replace('{valor_numero}', result.advanceValue)
-    .replace('{numero_cuotas}', result.numberInstallments)
-    .replace('{motivo_prestamo}', result.loanReason)
+    .replace('{compania}', result.compania)
+    .replace('{yate}', result.yate)
+    .replace('{valor_numero}', result.valor_numero)
+    .replace('{numero_cuotas}', result.numero_cuotas)
+    .replace('{motivo_prestamo}', result.motivo_prestamo)
     .replace('{adjuntar_documento}', '')
-    .replace('{vuelo_uno}', `Ruta: ${result.flightOne}`)
-    .replace('{fecha_vuelo_uno}', `Fecha: ${result.dateFlightOne}`)
-    .replace('{vuelo_dos}', `Ruta: ${result.flightTwo}`)
-    .replace('{fecha_vuelo_dos}', `Fecha: ${result.dateFlightTwo}`)
-    .replace('{firma_rrhh}', logoHtml)
+    .replace('{vuelo_uno}', `Ruta: ${result.vuelo_uno}`)
+    .replace('{fecha_vuelo_uno}', `Fecha: ${result.fecha_vuelo_uno}`)
+    .replace('{vuelo_dos}', `Ruta: ${result.vuelo_dos}`)
+    .replace('{fecha_vuelo_dos}', `Fecha: ${result.fecha_vuelo_dos}`)
+    .replace('{firma_rrhh}', firmaRRHH)
+    .replace('{firma_colaborador}', firmaColaborador)
+
+    .replace('{fecha_desembarque}', result.fecha_desembarque)
+    .replace('{fecha_ingreso}', result.fecha_ingreso)
+
+    .replace('{relevo_colaborador}', result.relevo_colaborador)
+    .replace('{relevo_cargo}', result.relevo_cargo)
+    .replace('{relevo_telf}', result.relevo_telf)
+    .replace('{relevo_correo}', result.relevo_correo)
+    .replace('{obser_colaborador}', result.obser_colaborador)
 
 
   const browser = await puppeteer.launch({
@@ -52,7 +64,7 @@ async function generateAndSavePDF(htmlContent, filePath, result) {
       </head>
       <body>
       <div class="logo-container">
-        <img style="width:150px; src="${process.env.URL_STAFFS + "/api" + logoUrl}" alt="Logo ${result.company}" />
+       ${logoUrl}
       </div>
         ${contenidoHTML}
       </body>

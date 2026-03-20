@@ -24,26 +24,12 @@ const RequestStaffs = db.define('request_staffs', {
     company: {
         type: DataTypes.STRING,
         allowNull: false,
+        field: 'compania'
     },
-    flightOne: {
+    yacht: {
         type: DataTypes.STRING,
         allowNull: true,
-        field: 'vuelo_uno'
-    },
-    dateFlightOne: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        field: 'fecha_vuelo_uno'
-    },
-    flightTwo: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        field: 'vuelo_dos'
-    },
-    dateFlightTwo: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        field: 'fecha_vuelo_dos'
+        field: 'yate'
     },
     file: {
         type: DataTypes.TEXT,

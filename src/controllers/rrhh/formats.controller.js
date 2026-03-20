@@ -180,6 +180,7 @@ const createRequesForStaff = async (req, res) => {
         const staff = await Staffervice.getStaffById(staffId);
         const fomrat = await FormatService.getFormatById(formatId);
 
+        const staffSignature = staff.signature;
         const staffFullName = `${staff.dataValues.firstName}_${staff.dataValues.lastName}`.replace(/\s+/g, '_');
         const stafftDir = path.join(__dirname, '../../../uploads/staffs', staffFullName);
 
@@ -195,7 +196,7 @@ const createRequesForStaff = async (req, res) => {
         const fileName = `${dataMail.formato}-${dataMail.staff}-${Date.now()}.pdf`.replace(/\s+/g, '_');
         const filePath = path.join(stafftDir, fileName);
 
-        await generateAndSavePDF(data.contenido, filePath, data);
+        await generateAndSavePDF(data.contenido, filePath, data, staffSignature);
 
         const relativePath = path.relative(path.join(__dirname, '../../../'), filePath);
         const fileData = fs.readFileSync(filePath).toString('base64');
@@ -226,7 +227,7 @@ const createRequesForStaff = async (req, res) => {
 
         const result = await FormatService.createRequesForStaff(data);
         if (result) {
-            sendEmailNuevaSolicitud(formatId, dataMail, attachments);
+            //sendEmailNuevaSolicitud(formatId, dataMail, attachments);
             res.status(200).json({ data: 'resource created successfully' });
         }
     } catch (error) {

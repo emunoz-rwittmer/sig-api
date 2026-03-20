@@ -138,7 +138,9 @@ class FormatService {
 
     static async createRequesForStaff(data) {
         try {
-            const result = await RequestStaffs.create(data);
+            const { compania, yate, name, formatId, staffId, file } = data;
+            const newData = {company: compania, yacht: yate, name, formatId, staffId, file};
+            const result = await RequestStaffs.create(newData);
             return result;
         } catch (error) {
             throw error;
