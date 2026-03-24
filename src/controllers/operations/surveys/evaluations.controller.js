@@ -66,6 +66,15 @@ const getReportingByCompany = async (req, res) => {
         const startDate = req.query.startDate;
         const endDate = req.query.endDate;
         const result = await EvaluationService.getEvaluationsByCompany(companyId, startDate, endDate)
+        
+        await Promise.all(
+            result.map(async (evaluation) => {
+                if (isTempPasswordExpired(evaluation.expirationDate)) {
+                    await EvaluationService.updateEvaluation(evaluation.id);
+                }
+            })
+        );
+
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
