@@ -476,8 +476,7 @@ class Mails {
               <p>
                 Hola, <strong>Administrador</strong>.
               </p>
-              <p>Le informamos que el sistema creo correctamente las comment cards para cada barco</p>
-              <p>de forma satisfactoria</p>
+              <p>Le informamos que el sistema creo correctamente las comment cards para cada barco de forma satisfactoria</p>
               <p>Para revisar detalles ingrese al sistema, apartado Comment Cards</p>
 
               <a href=${process.env.URL} class="button">Iniciar sesión</a>

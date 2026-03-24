@@ -14,7 +14,7 @@ const Positions = require('../models/catalogs/positions.models');
 const Form = require('../models/operations/surveys/form.models');
 const { Op } = require("sequelize");
 
-const { sendEmailEvaluationCrew } = require('../mails/mailer');
+const { sendEmailEvaluationCrew, sendEmailCommentCard } = require('../mails/mailer');
 
 
 function getWeekRange() {

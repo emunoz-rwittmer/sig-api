@@ -238,6 +238,7 @@ const sendEmailGuiaRemisionCreada = (dataMail, fileName, filePath) => {
 module.exports = {
     sendEmail,
     sendEmailEvaluationCrew,
+    sendEmailCommentCard,
     sendEmailPasswordStaff,
     sendEmailNewOrder,
     sendConfirmationEmail,
