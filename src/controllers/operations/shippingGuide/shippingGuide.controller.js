@@ -1,5 +1,4 @@
 const ShippingGuideCount = require('../../../models/operations/shippingGuide/shippingGuideCount.model');
-const CompanyService = require('../../../services/catalogs/company.services');
 const ShippingGuideService = require('../../../services/operations/shippingGuide/shippingGuide.services');
 const { generateRemisionPDF } = require('../../../services/operations/shippingGuide/pdfService');
 const { sendEmailGuiaRemisionCreada } = require('../../../mails/mailer');

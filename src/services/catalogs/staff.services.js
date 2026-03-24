@@ -260,7 +260,6 @@ class Staffervice {
 
     static async getEvaluatorsByFilters(search, companyId, departamentId, positionId) {
 
-        console.log(search, companyId, departamentId, positionId)
         try {
 
             const where = { active: true };
