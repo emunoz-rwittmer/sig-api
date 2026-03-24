@@ -249,12 +249,12 @@ class MailsSolicitudes {
   
               <p>
                 Le informamos que se ha generado exitosamente la <strong>Guía de Remisión Nº ${result.counter}</strong>
-                correspondiente a la empresa <strong>${result.company}</strong>.
+                correspondiente a la empresa <strong>Rolf Wittmer Turismo</strong>.
               </p>
 
               <p>
                 Este documento ampara el traslado de los bienes registrados en su guía y ha sido emitido
-                conforme a las disposiciones vigentes del SRI.
+                conforme a las disposiciones vigentes de la empresa.
               </p>
 
               <p>
