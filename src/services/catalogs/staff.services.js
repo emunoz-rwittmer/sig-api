@@ -202,18 +202,38 @@ class Staffervice {
                 transaction
             });
 
-            await StaffCompany.destroy({
+            const currentRelations = await StaffCompany.findAll({
                 where: { staffId: id },
                 transaction
             });
 
-            if (companyId?.length) {
-                const relations = companyId.map(company => ({
+            const currentCompanyIds = currentRelations.map(rel => rel.companyId);
+            const newCompanyIds = companyId || [];
+
+            const companiesToRemove = currentCompanyIds.filter(
+                company => !newCompanyIds.includes(company)
+            );
+
+            const companiesToAdd = newCompanyIds.filter(
+                company => !currentCompanyIds.includes(company)
+            );
+
+            if (companiesToRemove.length > 0) {
+                await StaffCompany.destroy({
+                    where: {
+                        staffId: id,
+                        companyId: companiesToRemove
+                    },
+                    transaction
+                });
+            }
+
+            if (companiesToAdd.length > 0) {
+                const newRelations = companiesToAdd.map(company => ({
                     staffId: id,
                     companyId: company
                 }));
-
-                await StaffCompany.bulkCreate(relations, { transaction });
+                await StaffCompany.bulkCreate(newRelations, { transaction });
             }
 
             await transaction.commit();
@@ -223,6 +243,7 @@ class Staffervice {
             throw error;
         }
     }
+
 
     static async delete(staffId) {
         try {

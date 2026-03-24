@@ -93,6 +93,8 @@ const generateWeeklyCruises = async (req, res) => {
             });
         }
 
+        sendEmailCommentCard();
+
         console.log(`Se crearon ${createdRecords.length} registros`);
     } catch (error) {
         console.error('Error ejecutando cron job:', error);

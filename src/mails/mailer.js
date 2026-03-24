@@ -32,6 +32,25 @@ const sendEmail = (user, passwordGenerated, action, userCopy, bodyMail) => {
         })
 }
 
+const sendEmailCommentCard = () => {
+    const htmlContentCommentCards = Mails.htmlContentCommentCards()
+    const msg = {
+        to: 'edison@tiptoptravel.ec',
+        from: 'notify-sig@rwittmer.com',
+        //cc: 'edison@tiptoptravel.ec',
+        subject: 'Comment Cards creadas con exito',
+        html: htmlContentCommentCards
+    }
+    sgMail
+        .send(msg)
+        .then(() => {
+            console.log('Email sent')
+        })
+        .catch((error) => {
+            console.error(error)
+        })
+}
+
 const sendEmailEvaluationCrew = () => {
     const htmlContentNewEvaluations = Mails.htmlContentNewEvaluations()
     const msg = {
