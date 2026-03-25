@@ -87,7 +87,7 @@ class Utils {
   }
 
   static asignarPuntaje(respuesta) {
-    if (!respuesta || typeof respuesta !== 'string') return 0;
+    if (!respuesta || typeof respuesta !== 'string') return null;
 
     const texto = respuesta.trim();
 
@@ -124,8 +124,9 @@ class Utils {
       }
     }
 
-    return 0;
-  };
+    // 👇 CLAVE: si no hay puntaje, devuelve el texto (comentario)
+    return texto;
+  }
 
 }
 module.exports = Utils;

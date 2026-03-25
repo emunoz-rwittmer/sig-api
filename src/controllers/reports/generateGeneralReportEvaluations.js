@@ -14,10 +14,10 @@ const generateGeneralReportEvaluations = async (req, res) => {
         const wb = new xl.Workbook();
         const ws = wb.addWorksheet("reporte general");
 
-        const companyId = req.params.company_id ? Utils.decode(req.params.company_id) : null;
+        const companyId = Utils.decode(req.params.company_id);
         const startDate = req.query.startDate;
         const endDate = req.query.endDate;
-        
+
         const result = await EvaluationService.getEvaluationsByCompany(companyId, startDate, endDate)
         if (!result || result.length === 0) {
             return res.status(400).json("No hay registros.");
@@ -139,8 +139,8 @@ const generateGeneralReportEvaluations = async (req, res) => {
             const formulario = item.formulario?.name || "Sin Datos";
             const evaluador = item.evaluator;
             const evaluado = item.evaluated;
-            const empresa = item.empresa?.name || "Sin Datos";
-            const yate = item.empresa.yacht?.name || "N/A";
+            const empresa = item.empresa?.name || "N/A";
+            const yate = item.empresa?.yacht?.name || "N/A";
             const fecha = formatDateToLocal(item.updatedAt) || "Sin Datos";
             const estado = item.state || "Sin Datos";
 
@@ -158,8 +158,12 @@ const generateGeneralReportEvaluations = async (req, res) => {
 
             // Llenar las 10 columnas de respuestas
             for (let i = 0; i < 10; i++) {
-                const respuesta = respuestas[i] || "Sin respuesta";
-                ws.cell(row, 8 + i).string(String(respuesta)).style(infoStyle);
+                const respuesta = respuestas[i];
+                const valorFinal =
+                    respuesta === null || respuesta === undefined || respuesta === ''
+                        ? "Sin respuesta"
+                        : respuesta;
+                ws.cell(row, 8 + i).string(String(valorFinal)).style(infoStyle);
             }
         });
 
