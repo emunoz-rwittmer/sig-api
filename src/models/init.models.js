@@ -54,17 +54,18 @@ const RequestItems = require('./operations/yachtRequest/requestItems.models');
 const StaffDocumentation = require('./catalogs/staffDocumentation.models');
 const Documentation = require('./catalogs/documentation.models');
 const StockHistory = require('./operations/inventory/stockHistory.models');
+const YachtParts = require('./catalogs/yachtParts.models');
 
 const initModels = () => {
 
     //catalogs
     Consecutivo,
-    ShippingGuideCount,
-    Question,
-    HouseRule,
-    Trading,
-    Format,
-    DoctorFormat
+        ShippingGuideCount,
+        Question,
+        HouseRule,
+        Trading,
+        Format,
+        DoctorFormat
 
     Users.belongsTo(Roles, { as: "user_rol", foreignKey: "role_id" });
     Roles.hasMany(Users, { as: "rol_user", foreignKey: "role_id" });
@@ -85,10 +86,16 @@ const initModels = () => {
     StaffCompany.belongsTo(Staff, { as: "staff", foreignKey: "staff_id" });
     StaffCompany.belongsTo(Company, { as: "company", foreignKey: "company_id" });
     ShipmentDates.belongsTo(StaffCompany, { as: "empresa", foreignKey: "staff_company_id" });
+
     StaffCompany.hasMany(ShipmentDates, { as: "embarques", foreignKey: "staff_company_id", onDelete: 'CASCADE', hooks: true });
     Staff.hasMany(StaffCompany, { as: 'companies', foreignKey: 'staff_id', onDelete: 'CASCADE', hooks: true });
     Company.hasMany(StaffCompany, { as: 'personal', foreignKey: 'company_id', onDelete: 'CASCADE', hooks: true });
 
+    Company.hasOne(Yacht, { foreignKey: 'company_id', as: 'yacht' });
+    Yacht.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
+
+    YachtParts.belongsTo(Yacht, { as: 'yacht', foreignKey: 'yacht_id', });
+    Yacht.hasMany(YachtParts, { as: 'parts', foreignKey: 'yacht_id', onDelete: 'CASCADE', hooks: true });
 
     //rrhh
     Company.hasMany(Regulation, { as: "regulations", foreignKey: "company_id" });
@@ -138,8 +145,6 @@ const initModels = () => {
     FormRespond.belongsTo(Company, { as: 'empresa', foreignKey: 'company_id' });
 
     //INVENTORY RELATIONS
-    Company.hasOne(Yacht, { foreignKey: 'company_id', as: 'yacht' });
-    Yacht.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
     Yacht.hasOne(Warehouse, { foreignKey: 'yacht_id', as: 'warehouse' });
 
     Order.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
@@ -224,7 +229,7 @@ const initModels = () => {
 
     Impact
     Levels,
-    Strategy
+        Strategy
 
 }
 

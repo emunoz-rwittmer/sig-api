@@ -1,8 +1,8 @@
 const db = require('../../utils/database');
 const { DataTypes } = require('sequelize');
 
-const Yacht= db.define('yacht',{
-    id:{
+const Yacht = db.define('yacht', {
+    id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true,
@@ -20,6 +20,14 @@ const Yacht= db.define('yacht',{
     name: {
         type: DataTypes.STRING,
         allowNull: false,
+    },
+    email: {
+        type: DataTypes.STRING(50),
+        unique: true,
+        allowNull: false,
+        validate: {
+            isEmail: true,
+        }
     },
     code: {
         type: DataTypes.STRING,

@@ -167,7 +167,7 @@ const sendEmailNuevaSolicitud = async (formatId, dataMail, adjuntos) => {
         const htmlFirmaContrato = MailsSolicitudes.htmlNuevaSolicitud(dataMail);
 
         const msg = {
-            to: 'belen@rwittmer.com',
+            to: ['belen@rwittmer.com', 'charles@rwittmer.com'],
             from: 'notify-sig@rwittmer.com',
             subject: `${dataMail.formato} de ${dataMail.staff}`,
             html: htmlFirmaContrato,
@@ -175,7 +175,7 @@ const sendEmailNuevaSolicitud = async (formatId, dataMail, adjuntos) => {
         };
 
         if (formatId === 1 || formatId === 2) {
-            msg.cc = ['javier@tiptoptravel.ec', 'mirian@rwittmer.com', 'marjuri@rwittmer.com'];
+            msg.cc = ['javier@tiptoptravel.ec', 'mirian@rwittmer.com', 'marjuri@rwittmer.com', 'rosa@tiptoptravel.ec'];
         }
 
         if (formatId === 10) {
