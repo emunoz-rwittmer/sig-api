@@ -54,7 +54,7 @@ const productEntryInWarehouse = async (req, res) => {
 const transactionWarehouse = async (req, res) => {
     try {
         const { products, userName, location } = req.body;
-        const companyId = Utils.decode(req.body.companyId);
+        const companyId = Utils.decode(req.body.companyId) || null;
         const warehouseFromId = Utils.decode(req.body.warehouseFromId);
         const warehouseToId = Utils.decode(req.body.warehouseToId);
         const userId = Utils.decode(req.body.userId);
@@ -79,7 +79,7 @@ const transactionWarehouse = async (req, res) => {
         if (transactions.success) {
             if (location === 'UIO') {
                 const result = await CompanyService.getCompanyById(companyId);
-                axios.post('http://190.12.15.164:5859/print/transactions', { products, userName, company: result.name, formattedCounter })
+                axios.post('http://190.12.15.164:5859/print/transactions', { products, userName, company: result?.name, formattedCounter })
             }
             if (location === 'GPS') {
                 console.log('imprimiendo en galapagos')
