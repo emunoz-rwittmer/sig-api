@@ -1,10 +1,9 @@
+const db = require('../../utils/database');
+
 const Yachts = require('../../models/catalogs/yacht.models');
-const Roles = require('../../models/catalogs/roles.models');
-const { Op, where } = require("sequelize");
 const Company = require('../../models/catalogs/company.models');
 const YachtParts = require('../../models/catalogs/yachtParts.models');
-const MaintenanceRules = require('../../models/catalogs/maintenancerules.models');
-const db = require('../../utils/database');
+const MaintenanceRules = require('../../models/catalogs/maintenanceRules.models');
 const MaintenanceRulesPart = require('../../models/catalogs/maintenanceRulesPart.models');
 
 
