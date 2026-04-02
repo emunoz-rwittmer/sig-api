@@ -56,7 +56,7 @@ const Documentation = require('./catalogs/documentation.models');
 const StockHistory = require('./operations/inventory/stockHistory.models');
 const YachtParts = require('./catalogs/yachtParts.models');
 const MaintenanceRulesPart = require('./catalogs/maintenanceRulesPart.models');
-const MaintenanceRules = require('./catalogs/maintenancerules.models');
+const MaintenanceRules = require('./catalogs/maintenanceRules.models');
 
 const initModels = () => {
 
