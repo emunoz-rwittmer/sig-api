@@ -55,6 +55,8 @@ const StaffDocumentation = require('./catalogs/staffDocumentation.models');
 const Documentation = require('./catalogs/documentation.models');
 const StockHistory = require('./operations/inventory/stockHistory.models');
 const YachtParts = require('./catalogs/yachtParts.models');
+const MaintenanceRulesPart = require('./catalogs/maintenanceRulesPart.models');
+const MaintenanceRules = require('./catalogs/maintenancerules.models');
 
 const initModels = () => {
 
@@ -96,6 +98,12 @@ const initModels = () => {
 
     YachtParts.belongsTo(Yacht, { as: 'yacht', foreignKey: 'yacht_id', });
     Yacht.hasMany(YachtParts, { as: 'parts', foreignKey: 'yacht_id', onDelete: 'CASCADE', hooks: true });
+
+    MaintenanceRulesPart.belongsTo(YachtParts, { as: 'parte', foreignKey: 'part_id', });
+    YachtParts.hasMany(MaintenanceRulesPart, { as: 'reglas', foreignKey: 'part_id', onDelete: 'CASCADE', hooks: true });
+   
+    MaintenanceRulesPart.belongsTo(MaintenanceRules, { as: 'regla', foreignKey: 'rule_id', });
+    MaintenanceRules.hasMany(MaintenanceRulesPart, { as: 'partes', foreignKey: 'rule_id', onDelete: 'CASCADE', hooks: true });
 
     //rrhh
     Company.hasMany(Regulation, { as: "regulations", foreignKey: "company_id" });

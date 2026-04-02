@@ -2,12 +2,10 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs/promises');
 const path = require('path');
-const CompanyService = require('../catalogs/company.services');
 require('dotenv').config();
 
-async function generateAndSavePDF(htmlContent, filePath, result, staffSignature) {
+async function generateAndSavePDF(htmlContent, filePath, result, staffSignature, compania) {
 
-  const compania = await CompanyService.getCompanyByName(result.compania)
   const firmaRRHH = `<img src="${process.env.URL_STAFFS + "/api/uploads/companies/firma_rrhh.png"}" alt="signature" style="width:180px;" />`;
   const firmaColaborador = `<img src="${process.env.URL_STAFFS + "/api" + staffSignature}" alt="signature" style="width:180px;" />`;
   const logoUrl = `<img src="${process.env.URL_STAFFS + "/api" + compania.logo}" alt="logo_empresa" style="width:180px;" />`;

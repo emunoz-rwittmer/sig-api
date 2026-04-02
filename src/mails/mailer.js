@@ -162,7 +162,7 @@ const sendDispatchEmail = (action, content) => {
         })
 }
 
-const sendEmailNuevaSolicitud = async (formatId, dataMail, adjuntos) => {
+const sendEmailNuevaSolicitud = async (formatId, dataMail, adjuntos, yachtEmail) => {
     try {
         const htmlFirmaContrato = MailsSolicitudes.htmlNuevaSolicitud(dataMail);
 
@@ -179,7 +179,7 @@ const sendEmailNuevaSolicitud = async (formatId, dataMail, adjuntos) => {
         }
 
         if (formatId === 10) {
-            msg.cc = ['mirian@rwittmer.com'];
+            msg.cc = ['mirian@rwittmer.com', `${yachtEmail}`];
         }
 
         await sgMail.send(msg);

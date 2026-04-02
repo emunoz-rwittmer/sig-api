@@ -5,6 +5,7 @@ const { sendEmailNuevaSolicitud } = require('../../mails/mailer');
 const Utils = require('../../utils/Utils');
 const fs = require('fs');
 const path = require('path');
+const CompanyService = require('../../services/catalogs/company.services');
 
 const getAllFormats = async (req, res) => {
     try {
@@ -179,6 +180,7 @@ const createRequesForStaff = async (req, res) => {
 
         const staff = await Staffervice.getStaffById(staffId);
         const fomrat = await FormatService.getFormatById(formatId);
+        const compania = await CompanyService.getCompanyByName(data.compania)
 
         const staffSignature = staff.signature;
         const staffFullName = `${staff.dataValues.firstName}_${staff.dataValues.lastName}`.replace(/\s+/g, '_');
@@ -196,7 +198,7 @@ const createRequesForStaff = async (req, res) => {
         const fileName = `${dataMail.formato}-${dataMail.staff}-${Date.now()}.pdf`.replace(/\s+/g, '_');
         const filePath = path.join(stafftDir, fileName);
 
-        await generateAndSavePDF(data.contenido, filePath, data, staffSignature);
+        await generateAndSavePDF(data.contenido, filePath, data, staffSignature, compania);
 
         const relativePath = path.relative(path.join(__dirname, '../../../'), filePath);
         const fileData = fs.readFileSync(filePath).toString('base64');
@@ -227,7 +229,7 @@ const createRequesForStaff = async (req, res) => {
 
         const result = await FormatService.createRequesForStaff(data);
         if (result) {
-            sendEmailNuevaSolicitud(formatId, dataMail, attachments);
+            sendEmailNuevaSolicitud(formatId, dataMail, attachments, compania.yacht.email);
             res.status(200).json({ data: 'resource created successfully' });
         }
     } catch (error) {

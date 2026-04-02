@@ -57,6 +57,9 @@ class MailsSolicitudes {
                  text-align: center;
                  margin-top: 20px;
                }
+              .styled-image {
+                    width: 180px;
+              }
                .footer p,h3 {
                  margin: 0px;
                 }

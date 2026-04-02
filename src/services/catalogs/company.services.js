@@ -14,8 +14,7 @@ class CompanyService {
                 {
                     model: Yacht,
                     as: 'yacht'
-                }
-                ]
+                }]
             });
             return result;
         } catch (error) {
@@ -39,7 +38,12 @@ class CompanyService {
         try {
             const result = await Company.findOne({
                 where: { name },
-                attributes: ['logo']
+                attributes: ['logo'],
+                include: [
+                    {
+                        model: Yacht,
+                        as: 'yacht'
+                    }]
             });
             return result;
         } catch (error) {
