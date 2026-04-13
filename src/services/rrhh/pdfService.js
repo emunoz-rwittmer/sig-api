@@ -21,6 +21,8 @@ async function generateAndSavePDF(htmlContent, filePath, result, staffSignature,
     .replace('{fecha_vuelo_uno}', `Fecha: ${result.fecha_vuelo_uno}`)
     .replace('{vuelo_dos}', `Ruta: ${result.vuelo_dos}`)
     .replace('{fecha_vuelo_dos}', `Fecha: ${result.fecha_vuelo_dos}`)
+    .replace('{nombre_persona}', result.nombre_persona)
+    .replace('{cedula_persona}', result.cedula_persona)
     .replace('{firma_rrhh}', firmaRRHH)
     .replace('{firma_colaborador}', firmaColaborador)
 
