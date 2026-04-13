@@ -121,13 +121,6 @@ class TransactionService {
         const { products, warehouseFromId, warehouseToId, userId, companyId, formattedCounter } = transactionData;
         const transaction = await db.transaction();
 
-        console.log('products', products)
-        console.log('warehouseFromId', warehouseFromId)
-        console.log('warehouseToId', warehouseToId,)
-        console.log('userId', userId)
-        console.log('companyId', companyId)
-        console.log('formattedCounter', formattedCounter)
-
         try {
             // Validaciones previas
             if (!Array.isArray(products) || products.length === 0) {

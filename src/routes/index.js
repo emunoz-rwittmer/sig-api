@@ -13,6 +13,7 @@ const HouseRulesRoutes = require("./catalogs/houseRules.routes");
 const regulationsRoutes = require("./rrhh/regulations.routes");
 const tradingRoutes = require("./rrhh/trading.routes");
 const formatsRoutes = require("./rrhh/formats.routes");
+const maintenanceRoutes = require("./catalogs/maintenance.routes");
 
 //Operations
 const questiondRoutes = require("./operations/surveys/questions.routes");
@@ -47,6 +48,7 @@ const routerApi = (app) => {
   app.use("/api/positions", authJwt.verifyToken, positionsRoutes);
   app.use("/api/documentation", authJwt.verifyToken, documentationRoutes);
   app.use("/api/yachts", authJwt.verifyToken, yachtRoutes);
+  app.use("/api/maintenance", authJwt.verifyToken, maintenanceRoutes);
   app.use("/api/companies", authJwt.verifyToken, companyRoutes);
   //RRHH
   app.use("/api/regulations", authJwt.verifyToken, regulationsRoutes);

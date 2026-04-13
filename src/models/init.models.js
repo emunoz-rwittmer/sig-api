@@ -57,6 +57,8 @@ const StockHistory = require('./operations/inventory/stockHistory.models');
 const YachtParts = require('./catalogs/yachtParts.models');
 const MaintenanceRulesPart = require('./catalogs/maintenanceRulesPart.models');
 const MaintenanceRules = require('./catalogs/maintenanceRules.models');
+const Maintenance = require('./catalogs/maintenance.models');
+const MaintenanceMaterials = require('./catalogs/maintenanceMaterials.models');
 
 const initModels = () => {
 
@@ -101,9 +103,18 @@ const initModels = () => {
 
     MaintenanceRulesPart.belongsTo(YachtParts, { as: 'parte', foreignKey: 'part_id', });
     YachtParts.hasMany(MaintenanceRulesPart, { as: 'reglas', foreignKey: 'part_id', onDelete: 'CASCADE', hooks: true });
-   
+
     MaintenanceRulesPart.belongsTo(MaintenanceRules, { as: 'regla', foreignKey: 'rule_id', });
     MaintenanceRules.hasMany(MaintenanceRulesPart, { as: 'partes', foreignKey: 'rule_id', onDelete: 'CASCADE', hooks: true });
+
+    Maintenance.belongsTo(MaintenanceRulesPart, { as: 'rules_part', foreignKey: 'rules_part_id', });
+    MaintenanceRulesPart.hasMany(Maintenance, { as: 'maintenances', foreignKey: 'rules_part_id', onDelete: 'CASCADE', hooks: true });
+
+    MaintenanceMaterials.belongsTo(Maintenance, { as: 'maintenance', foreignKey: 'maintenance_id', });
+    Maintenance.hasMany(MaintenanceMaterials, { as: 'materials', foreignKey: 'maintenance_id', onDelete: 'CASCADE', hooks: true });
+
+    MaintenanceMaterials.belongsTo(Product, { as: 'product', foreignKey: 'product_id' });
+    Product.hasMany(MaintenanceMaterials, { as: 'materials', foreignKey: 'product_id' });
 
     //rrhh
     Company.hasMany(Regulation, { as: "regulations", foreignKey: "company_id" });
@@ -116,40 +127,40 @@ const initModels = () => {
     StaffReadRegulation.belongsTo(Regulation, { as: "regulation", foreignKey: "regulation_id" });
 
     //coment cards
-    ComentCardRespond.hasMany(ComentCardAnswers, { as: 'respuestas', foreignKey: "respuesta_coment_card_id", onDelete: "CASCADE" });
+    ComentCardRespond.hasMany(ComentCardAnswers, { as: 'respuestas', foreignKey: "respuesta_coment_card_id", onDelete: "CASCADE", hooks: true });
     ComentCardAnswers.belongsTo(ComentCardRespond, { as: 'respuesta_formulario', foreignKey: "respuesta_coment_card_id" });
 
-    ComentCardQuestions.hasOne(ComentCardAnswers, { as: 'respuesta', foreignKey: "pregunta_id", onDelete: "CASCADE" });
+    ComentCardQuestions.hasOne(ComentCardAnswers, { as: 'respuesta', foreignKey: "pregunta_id", onDelete: "CASCADE", hooks: true });
     ComentCardAnswers.belongsTo(ComentCardQuestions, { as: 'pregunta', foreignKey: "pregunta_id" });
 
-    ComentCard.hasMany(ComentCardQuestions, { as: 'preguntas', foreignKey: "coment_card_id", onDelete: "CASCADE" });
+    ComentCard.hasMany(ComentCardQuestions, { as: 'preguntas', foreignKey: "coment_card_id", onDelete: "CASCADE", hooks: true });
     ComentCardQuestions.belongsTo(ComentCard, { as: 'coment_card', foreignKey: "coment_card_id" });
 
     ComentCardYacht.belongsTo(ComentCard, { as: "coment_card", foreignKey: "coment_card_id" });
     ComentCardYacht.belongsTo(Yacht, { as: "yate", foreignKey: "yacht_id" });
     ComentCard.hasMany(ComentCardYacht, { as: 'yates', foreignKey: 'coment_card_id' });
 
-    ComentCardYacht.hasMany(ComentCardQR, { as: 'links_acceso', foreignKey: "coment_card_yacht_id", onDelete: "CASCADE" });
+    ComentCardYacht.hasMany(ComentCardQR, { as: 'links_acceso', foreignKey: "coment_card_yacht_id", onDelete: "CASCADE", hooks: true });
     ComentCardQR.belongsTo(ComentCardYacht, { as: 'card_yacht', foreignKey: "coment_card_yacht_id" });
 
-    ComentCardQR.hasMany(ComentCardRespond, { as: 'respuestas_coment_card', foreignKey: 'card_qr_id', onDelete: "CASCADE" });
+    ComentCardQR.hasMany(ComentCardRespond, { as: 'respuestas_coment_card', foreignKey: 'card_qr_id', onDelete: "CASCADE", hooks: true });
     ComentCardRespond.belongsTo(ComentCardQR, { as: 'coment_card', foreignKey: 'card_qr_id' });
 
     //Evaluations
 
-    Form.hasMany(FormRespond, { as: 'respuestas', foreignKey: 'form_id', onDelete: "CASCADE" });
+    Form.hasMany(FormRespond, { as: 'respuestas', foreignKey: 'form_id', onDelete: "CASCADE", hooks: true });
     FormRespond.belongsTo(Form, { as: 'formulario', foreignKey: 'form_id' });
 
-    FormRespond.hasMany(FormAnswers, { as: 'respuestas', foreignKey: "respuesta_form_id", onDelete: "CASCADE" });
+    FormRespond.hasMany(FormAnswers, { as: 'respuestas', foreignKey: "respuesta_form_id", onDelete: "CASCADE", hooks: true });
     FormAnswers.belongsTo(FormRespond, { as: 'respuesta_formulario', foreignKey: "respuesta_form_id" });
 
-    FormQuestion.hasOne(FormAnswers, { as: 'respuesta', foreignKey: "pregunta_id", onDelete: "CASCADE" });
+    FormQuestion.hasOne(FormAnswers, { as: 'respuesta', foreignKey: "pregunta_id", onDelete: "CASCADE", hooks: true });
     FormAnswers.belongsTo(FormQuestion, { as: 'pregunta', foreignKey: "pregunta_id" });
 
-    Form.hasMany(FormQuestion, { as: 'preguntas', foreignKey: "form_id", onDelete: "CASCADE" });
+    Form.hasMany(FormQuestion, { as: 'preguntas', foreignKey: "form_id", onDelete: "CASCADE", hooks: true });
     FormQuestion.belongsTo(Form, { as: 'formulario', foreignKey: "form_id" });
 
-    Company.hasMany(FormRespond, { as: 'respuestas', foreignKey: 'company_id', onDelete: "CASCADE" });
+    Company.hasMany(FormRespond, { as: 'respuestas', foreignKey: 'company_id', onDelete: "CASCADE", hooks: true });
     FormRespond.belongsTo(Company, { as: 'empresa', foreignKey: 'company_id' });
 
     //INVENTORY RELATIONS
@@ -201,7 +212,7 @@ const initModels = () => {
     Staff.hasMany(Register, { foreignKey: 'user_id', as: 'registros' });
     Register.belongsTo(Staff, { foreignKey: 'user_id', as: 'responsable' });
 
-    Product.hasMany(ProductConfiguration, { as: 'configurations', foreignKey: 'product_id', onDelete: "CASCADE" });
+    Product.hasMany(ProductConfiguration, { as: 'configurations', foreignKey: 'product_id', onDelete: "CASCADE", hooks: true });
     ProductConfiguration.belongsTo(Product, { as: "product", foreignKey: "product_id" });
 
     LaundryYacht.belongsTo(Product, { as: "product", foreignKey: "product_id" });

@@ -54,11 +54,11 @@ const getProductsByWarehouse = async (req, res) => {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
                 x.companyId = Utils.encode(x.companyId);
+                x.productId = Utils.encode(x.productId);
             });
         }
         res.status(200).json(result);
     } catch (error) {
-        console.log(error)
         res.status(400).json(error.message)
     }
 }

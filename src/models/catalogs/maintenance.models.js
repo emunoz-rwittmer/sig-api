@@ -7,9 +7,23 @@ const Maintenance = db.define('maintenance', {
         primaryKey: true,
         autoIncrement: true,
     },
-    name: {
-        type: DataTypes.TEXT,
+    rulesPartId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        field: 'rules_part_id',
+    },
+    responsible: {
+        type: DataTypes.STRING,
         allowNull: true,
+        field: 'responsable'
+    },
+    state: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
+    type: {
+        type: DataTypes.STRING,
+        allowNull: false,
     },
     previousMaintenanceHours: {
         type: DataTypes.FLOAT,
@@ -30,18 +44,17 @@ const Maintenance = db.define('maintenance', {
         type: DataTypes.TEXT,
         allowNull: true,
     },
-    materials: {
-        type: DataTypes.TEXT,
+    doneDate: {
+        type: DataTypes.DATE,
         allowNull: true,
+        field: 'fecha_realizacion'
     },
-    state: {
-        type: DataTypes.STRING,
-        allowNull: false,
+    approve: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+        field: 'aprobado'
     },
-    type: {
-        type: DataTypes.STRING,
-        allowNull: false,
-    },
+
 });
 
 module.exports = Maintenance;

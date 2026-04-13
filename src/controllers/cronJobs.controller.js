@@ -64,7 +64,6 @@ const generateWeeklyCruises = async (req, res) => {
         for (const cruise of cruises) {
 
             const yacht = yachtMap[cruise.yacht_id];
-            console.log(yacht)
             if (!yacht) continue;
 
             const exists = await ComentCardQR.findOne({

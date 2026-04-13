@@ -81,7 +81,7 @@ class ProductService {
         try {
             const result = await Stock.findAll({
                 where: { warehouseId },
-                attributes: ['id', 'max', 'min', 'companyId', 'quantity',
+                attributes: ['id', 'productId', 'max', 'min', 'companyId', 'quantity',
 
                     [Sequelize.literal(`
                         (
