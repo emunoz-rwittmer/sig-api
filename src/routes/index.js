@@ -33,6 +33,7 @@ const processRoutes = require('./operations/indicators/proces.routes');
 const startegryRoutes = require('./operations/indicators/strategy.routes');
 const comentCardRoutes = require("./operations/comentCard/comentCard.routes");
 const shippingGuideRoutes = require('./operations/shippingGuide/shippingGuide.routes');
+const bar = require('./bar/bar.routes');
 //Report
 const reportRoutes = require("./reports/reports.routes");
 const downloadsRoutes = require("./donwloads/donwloads.routes");
@@ -77,6 +78,7 @@ const routerApi = (app) => {
   //REPORTS
   app.use("/api/reports", authJwt.verifyToken, reportRoutes);
   app.use("/api/downloads", authJwt.verifyToken, downloadsRoutes);
+  app.use("/api/bar", authJwt.verifyToken, bar)
 
 };
 

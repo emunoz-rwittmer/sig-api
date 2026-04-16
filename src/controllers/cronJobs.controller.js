@@ -15,12 +15,20 @@ const Form = require('../models/operations/surveys/form.models');
 const { Op } = require("sequelize");
 
 const { sendEmailEvaluationCrew, sendEmailCommentCard } = require('../mails/mailer');
+const Cruise = require('../models/bar/cruises.models');
 
 
 function getWeekRange() {
     const now = new Date();
 
+    // 0=domingo, 5=viernes
+    const day = now.getDay();
+
+    // calcular cuánto retroceder hasta viernes
+    const diffToFriday = (day === 5 ? 0 : (day + 2) % 7);
+
     const start = new Date(now);
+    start.setDate(now.getDate() - diffToFriday);
     start.setHours(0, 0, 0, 0);
 
     const end = new Date(start);
@@ -51,6 +59,17 @@ const generateWeeklyCruises = async (req, res) => {
             console.log('No hay cruceros para la semana');
             return;
         }
+
+        // const dataCruises = cruises.map(cruise => ({
+        //     yachtId: cruise.yacht_id,
+        //     code: cruise.code,
+        //     name: cruise.name,
+        //     itinerary: cruise.itinerary,
+        //     startDate: cruise.start_date,
+        //     endDate: cruise.end_date
+        // }));
+
+        // await Cruise.bulkCreate(dataCruises);
 
         const yachts = await ComentCardYacht.findAll();
         const yachtMap = {};
@@ -94,7 +113,7 @@ const generateWeeklyCruises = async (req, res) => {
             });
         }
 
-        //sendEmailCommentCard();
+        sendEmailCommentCard();
 
         console.log(`Se crearon ${createdRecords.length} registros`);
     } catch (error) {

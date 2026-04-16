@@ -59,6 +59,7 @@ const MaintenanceRulesPart = require('./catalogs/maintenanceRulesPart.models');
 const MaintenanceRules = require('./catalogs/maintenanceRules.models');
 const Maintenance = require('./catalogs/maintenance.models');
 const MaintenanceMaterials = require('./catalogs/maintenanceMaterials.models');
+const Cruise = require('./bar/cruises.models');
 
 const initModels = () => {
 
@@ -69,7 +70,10 @@ const initModels = () => {
         HouseRule,
         Trading,
         Format,
-        DoctorFormat
+        DoctorFormat,
+        Impact
+    Levels,
+        Strategy
 
     Users.belongsTo(Roles, { as: "user_rol", foreignKey: "role_id" });
     Roles.hasMany(Users, { as: "rol_user", foreignKey: "role_id" });
@@ -246,9 +250,9 @@ const initModels = () => {
     ProcessStaff.belongsTo(Process, { as: "process", foreignKey: "process_id" });
     ProcessStaff.belongsTo(Staff, { as: "staffs", foreignKey: "staff_id" });
 
-    Impact
-    Levels,
-        Strategy
+    //bar
+    Cruise.belongsTo(Yacht, { as: 'yacht', foreignKey: 'yacht_id', });
+    Yacht.hasMany(Cruise, { as: 'cruises', foreignKey: 'yacht_id', onDelete: 'CASCADE', hooks: true });
 
 }
 
