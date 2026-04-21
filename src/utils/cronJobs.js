@@ -3,7 +3,13 @@ const CronJobs = require('../controllers/cronJobs.controller');
 
 // Viernes 00:00 crear comentcard de la semana venidera de cada yate
 cron.schedule('0 0 * * 5', async () => {
-    CronJobs.generateWeeklyCruises();
+    CronJobs.generateWeeklyCommentCard();
+}, {
+    timezone: "America/Guayaquil"
+});
+// Viernes 00:00 crear cruseros e info de pasajeros de la semana venidera de cada yate
+cron.schedule('0 0 * * 5', async () => {
+    CronJobs.generateWeeklyCruisesAndPassengerInfo();
 }, {
     timezone: "America/Guayaquil"
 });

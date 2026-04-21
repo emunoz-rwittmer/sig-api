@@ -1,4 +1,6 @@
+const ConsumerCard = require('../../models/bar/consumerCard.models');
 const Cruise = require('../../models/bar/cruises.models');
+const Passenger = require('../../models/bar/passenger.models');
 const Yacht = require('../../models/catalogs/yacht.models');
 
 class CruiseService {
@@ -10,7 +12,7 @@ class CruiseService {
                         model: Yacht,
                         as: 'yacht'
                     }],
-                order:[['startDate', 'DESC']]
+                order: [['startDate', 'DESC']]
             });
             return result;
         } catch (error) {
@@ -22,25 +24,49 @@ class CruiseService {
         try {
             const result = await Cruise.findOne({
                 where: { id },
-            });
-            return result;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    static async getCruiseByName(name) {
-        try {
-            const result = await Cruise.findOne({
-                where: { name },
-                attributes: ['logo'],
                 include: [
                     {
                         model: Yacht,
-                        as: 'yacht'
-                    }]
+                        as: 'yacht',
+                        attributes: ['name', 'code']
+                    },
+                    {
+                        model: Passenger,
+                        as: 'passengers',
+                        include: [
+                            {
+                                model: ConsumerCard,
+                                as: 'consumer_card',
+                                attributes: ['id', 'numberCard', 'totalCount']
+                            },                            
+                        ]
+                    },
+                ]
             });
-            return result;
+
+            if (!result) return null;
+
+            const passengers = result.passengers || [];
+            const cabins = Array.from({ length: 10 }, (_, i) => ({
+                cabin: i + 1,
+                passengers: []
+            }));
+
+            passengers.forEach(p => {
+                const cabinIndex = p.cabin - 1;
+
+                if (cabins[cabinIndex]) {
+                    cabins[cabinIndex].passengers.push(p);
+                }
+            });
+
+            const response = {
+                ...result.toJSON(),
+                cabins
+            };
+
+            return response;
+
         } catch (error) {
             throw error;
         }

@@ -77,7 +77,7 @@ class Staffervice {
                             {
                                 model: Yacht,
                                 as: 'yacht',
-                                attributes: ['name']
+                                attributes: ['id', 'name', 'code']
 
                             }
                         ]

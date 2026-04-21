@@ -13,18 +13,18 @@ const FormRespond = require('../models/operations/surveys/formRespond.models');
 const Positions = require('../models/catalogs/positions.models');
 const Form = require('../models/operations/surveys/form.models');
 const { Op } = require("sequelize");
+const db = require('../utils/database');
 
 const { sendEmailEvaluationCrew, sendEmailCommentCard } = require('../mails/mailer');
 const Cruise = require('../models/bar/cruises.models');
+const Passenger = require('../models/bar/passenger.models');
+const ConsumerCardCount = require('../models/bar/consumerCardCount.model');
+const ConsumerCard = require('../models/bar/consumerCard.models');
 
 
 function getWeekRange() {
     const now = new Date();
-
-    // 0=domingo, 5=viernes
     const day = now.getDay();
-
-    // calcular cuánto retroceder hasta viernes
     const diffToFriday = (day === 5 ? 0 : (day + 2) % 7);
 
     const start = new Date(now);
@@ -44,32 +44,36 @@ function formatDateLocal(date) {
         `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
+const generateWeeklyCruises = async () => {
+    const { start, end } = getWeekRange();
+    const startFormatted = formatDateLocal(start);
+    const endFormatted = formatDateLocal(end);
 
-const generateWeeklyCruises = async (req, res) => {
+    const response = await axios.get(`${process.env.URL_MICRO_SERVICE}/microservice/cruise?start=${startFormatted}&end=${endFormatted}`);
+    const cruises = response.data;
+    return cruises
+}
+
+// helper para convertir DD/MM/YYYY -> YYYY-MM-DD
+const parseDate = (dateStr) => {
+    if (!dateStr) return null;
+
+    const parts = dateStr.split('/');
+    if (parts.length !== 3) return null;
+
+    const [day, month, year] = parts;
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+};
+
+const generateWeeklyCommentCard = async (req, res) => {
 
     try {
-        const { start, end } = getWeekRange();
-        const startFormatted = formatDateLocal(start);
-        const endFormatted = formatDateLocal(end);
-
-        const response = await axios.get(`${process.env.URL_MICRO_SERVICE}/microservice/cruise?start=${startFormatted}&end=${endFormatted}`);
-        const cruises = response.data;
+        const cruises = generateWeeklyCruises();
 
         if (!cruises.length) {
             console.log('No hay cruceros para la semana');
             return;
         }
-
-        // const dataCruises = cruises.map(cruise => ({
-        //     yachtId: cruise.yacht_id,
-        //     code: cruise.code,
-        //     name: cruise.name,
-        //     itinerary: cruise.itinerary,
-        //     startDate: cruise.start_date,
-        //     endDate: cruise.end_date
-        // }));
-
-        // await Cruise.bulkCreate(dataCruises);
 
         const yachts = await ComentCardYacht.findAll();
         const yachtMap = {};
@@ -120,6 +124,127 @@ const generateWeeklyCruises = async (req, res) => {
         console.error('Error ejecutando cron job:', error);
     }
 }
+
+const generateWeeklyCruisesAndPassengerInfo = async (req, res) => {
+    const t = await db.transaction();
+
+    try {
+        const cruises = await generateWeeklyCruises();
+
+        if (!cruises.length) {
+            console.log('No hay cruceros para la semana');
+            return;
+        }
+
+        const decodedCruises = cruises.map(c => ({
+            ...c,
+            id: Utils.decode(c.id)
+        }));
+
+        // 1. Crear cruceros
+        const dataCruises = decodedCruises.map(cruise => ({
+            yachtId: cruise.yacht_id,
+            code: cruise.code,
+            name: cruise.name,
+            itinerary: cruise.itinerary,
+            startDate: cruise.start_date,
+            endDate: cruise.end_date
+        }));
+
+        const createdCruises = await Cruise.bulkCreate(dataCruises, {
+            returning: true,
+            transaction: t
+        });
+
+        // 2. Obtener pasajeros
+        let passengersToInsert = [];
+
+        for (let i = 0; i < decodedCruises.length; i++) {
+            const cruise = decodedCruises[i];
+            const createdCruise = createdCruises[i];
+
+            const response = await axios.get(`${process.env.URL_MICRO_SERVICE}/microservice/cruise/${cruise.id}/passenger_info`);
+
+            const passengers = response.data || [];
+            const mappedPassengers = passengers.map(p => {
+                let startDate = null;
+                let endDate = null;
+
+                if (p.dates_on_board && p.dates_on_board.includes('-')) {
+                    const [start, end] = p.dates_on_board.split('-');
+
+                    startDate = parseDate(start.trim());
+                    endDate = parseDate(end.trim());
+                }
+
+                return {
+                    cruiseId: createdCruise.id,
+                    identificationNumber: p.passenger_passport,
+                    name: p.passenger_name,
+                    age: p.passenger_age,
+                    agency: p.agency_name,
+                    cabin: p.cabin_name,
+                    type: p.cruise_type,
+                    nationality: p.passenger_nationality,
+                    country: p.passenger_country,
+                    gender: p.passenger_gender,
+                    cruiseStartDate: startDate,
+                    cruiseEndDate: endDate
+                };
+            });
+
+            passengersToInsert.push(...mappedPassengers);
+        }
+
+        // 3. Crear pasajeros
+        const createdPassengers = await Passenger.bulkCreate(passengersToInsert, {
+            returning: true,
+            transaction: t
+        });
+
+        // 4. Obtener contador con LOCK 🔒
+        let consecutivo = await ConsumerCardCount.findOne({
+            transaction: t,
+            lock: t.LOCK.UPDATE
+        });
+
+        if (!consecutivo) {
+            consecutivo = await ConsumerCardCount.create(
+                { valor: 1 },
+                { transaction: t }
+            );
+        }
+
+        let currentCounter = consecutivo.valor;
+
+        // 5. Crear consumer cards
+        const consumerCards = createdPassengers.map(p => {
+            const formattedCounter = `000-${currentCounter.toString().padStart(3, '0')}`;
+            currentCounter++;
+
+            return {
+                passenger_id: p.id,
+                numberCard: formattedCounter
+            };
+        });
+
+        await ConsumerCard.bulkCreate(consumerCards, {
+            transaction: t
+        });
+
+        // 6. Actualizar contador
+        await consecutivo.update(
+            { valor: currentCounter },
+            { transaction: t }
+        );
+
+        await t.commit();
+        console.log('Todo creado correctamente 🚀');
+    } catch (error) {
+        await t.rollback();
+        console.error('Error ejecutando cron job:', error);
+    }
+};
 
 const generateWeeklyEvaluationCrew = async () => {
     try {
@@ -339,7 +464,8 @@ const generateWeeklyEvaluationCrew = async () => {
 };
 
 const CronJobs = {
-    generateWeeklyCruises,
+    generateWeeklyCommentCard,
+    generateWeeklyCruisesAndPassengerInfo,
     generateWeeklyEvaluationCrew
 }
 

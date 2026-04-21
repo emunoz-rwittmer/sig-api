@@ -348,7 +348,6 @@ class TransactionService {
                 let originalTransaction = null;
                 let quantityDifference = 0;
 
-                // Si viene el ID de la transacción original, consultarla y comparar cantidades
                 if (transac.id) {
                     originalTransaction = await Transaction.findOne({
                         where: { id: transac.id },
@@ -360,14 +359,12 @@ class TransactionService {
                         throw new Error(`Transacción original no encontrada para el producto ${transac.product.name}`);
                     }
 
-                    // Comparar cantidades
                     quantityDifference = quantity - originalTransaction.quantity;
                 }
 
                 const sourceWarehouseId = 9;
                 const productId = transac.product.id;
 
-                // Si hay observaciones Y hay diferencias en cantidades, actualizar la transacción y ajustar stock
                 if (quantityDifference !== 0 && !observations) {
                     throw new Error(`La cantidad del producto ${transac.product.name} ha cambiado, debe ingresar observaciones`);
                 }
@@ -377,7 +374,6 @@ class TransactionService {
                     originalTransaction.quantity = quantity;
                     await originalTransaction.save({ transaction });
 
-                    // Restar la diferencia del stock de la bodega origen (donde se envió originalmente)
                     const stockFromSource = await Stock.findOne({
                         where: {
                             productId,
@@ -398,7 +394,6 @@ class TransactionService {
                     }
                     await stockFromSource.save({ transaction });
 
-                    // Sumar la diferencia al stock de bodega 9
                     const [stockWarehouse9] = await Stock.findOrCreate({
                         where: {
                             productId,
@@ -414,7 +409,6 @@ class TransactionService {
                     await stockWarehouse9.save({ transaction });
                 }
 
-                // Proceder con la cantidad completa: bodega 9 → warehouseToId
                 const stockFrom = await Stock.findOne({
                     where: {
                         productId,

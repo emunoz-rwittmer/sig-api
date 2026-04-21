@@ -29,6 +29,16 @@ const getCruise = async (req, res) => {
     }
 }
 
+const getInfoCruiseForBarman = async (req, res) => {
+    try {
+        const barmanId = Utils.decode(req.params.barman_id);
+        const result = await CruiseService.getInfoCruiseForBarman(barmanId);
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(400).json(error.message)
+    }
+}
+
 const createCruise = async (req, res) => {
     try {
         const cruise = req.body;
@@ -66,7 +76,7 @@ const deleteCruise = async (req, res) => {
         });
         res.status(200).json({ data: 'resource deleted successfully' })
     } catch (error) {
-        
+
         res.status(400).json(error.message);
     }
 }

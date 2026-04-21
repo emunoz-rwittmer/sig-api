@@ -48,13 +48,17 @@ const getStaffCompanies = async (req, res) => {
     try {
         const staffId = Utils.decode(req.params.staff_id);
         const result = await StaffService.getStaffCompanies(staffId);
-        if (result instanceof Array) {
-            result.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
+        const currentPlain = result.map(r => r.get({ plain: true }));
+
+        if (currentPlain instanceof Array) {
+            currentPlain.map((x) => {
+                x.id = Utils.encode(x.id);
+                x.company.yacht.id = Utils.encode(x.company.yacht.id);
             });
         }
-        res.status(200).json(result);
+        res.status(200).json(currentPlain);
     } catch (error) {
+        console.log(error)
         res.status(400).json(error.message)
     }
 }
