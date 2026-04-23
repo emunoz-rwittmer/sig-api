@@ -27,7 +27,7 @@ exports.generateCruiseReportPDF = async (cruise, passengers, filePath) => {
     doc
       .font('Helvetica-Bold')
       .fontSize(24)
-      .text('REPORTE DE CRUCERO', 150, 60, { align: 'center' })
+      .text(`REPORTE DE CRUCERO (${cruise.yacht?.name})`, 150, 60, { align: 'center' })
       .fontSize(12)
       .font('Helvetica')
       .text('Consumer Cards Report', 150, 90, { align: 'center' });
@@ -159,7 +159,7 @@ exports.generateCruiseReportPDF = async (cruise, passengers, filePath) => {
       // Imagen del voucher
       if (consumerCard.image) {
         try {
-          const imagePath = path.resolve(`${process.env.URL_STAFFS + "/api" + consumerCard.image}`);
+          const imagePath = path.resolve("." + consumerCard.image);
           if (fs.existsSync(imagePath)) {
             doc
               .font('Helvetica-Bold')

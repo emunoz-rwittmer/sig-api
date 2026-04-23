@@ -123,7 +123,7 @@ const sendCruiseReportEmail = async (to, cruise, excelPath, pdfPath, zipPath, cc
                 - Código: ${cruise.code}<br>
                 - Yacht: ${cruise.yacht?.name || 'N/A'}<br>
                 - Itinerario: ${cruise.itinerary}<br>
-                - Fechas: ${new Date(cruise.startDate).toLocaleDateString('es-ES')} - ${new Date(cruise.endDate).toLocaleDateString('es-ES')}
+                - Fechas: ${new Date(cruise.startDate).toLocaleDateString('es-ES')} - ${new Date(cruise.endDate).toLocaleDateString('es-ES')} <br>
                 - Barman: ${cruise.barman}
                 </p>
               <p>

@@ -41,14 +41,17 @@ const sendCruiseReport = async (req, res) => {
         const MailsWithAttachments = require('../../mails/mailsWithAttachments');
 
         const cruiseId = Utils.decode(req.params.cruise_id);
-        const cruise = await CruiseService.getCruiseById(cruiseId);
+        const data = req.body
+        
+        await CruiseService.updateCruise(cruiseId, data);
 
+        const cruise = await CruiseService.getCruiseById(cruiseId);
         if (!cruise) {
             return res.status(404).json({ message: 'Crucero no encontrado' });
         }
 
-        const emailTo = req.body?.email || 'edison@tiptoptravel.ec';
-        const emailCc = req.body?.cc || '';
+        const emailTo = ['fabian@rwittmer.com', 'rosa@tiptoptravel.ec'];
+        const emailCc = ['enrique@rwittmer.com', 'edison@tiptoptravel.ec'];
 
         const passengersWithCards = cruise.passengers.filter(
             (p) => p.consumer_card && p.consumer_card.totalCount > 0 && p.consumer_card.paidAccount === true
@@ -96,7 +99,8 @@ const sendCruiseReport = async (req, res) => {
             emailCc
         );
 
-        await CruiseService.updateCruise(cruiseId, { cruiseState: 'under review' });
+        await CruiseService.updateCruise(cruiseId, {cruiseState: 'under review'});
+
         setTimeout(() => {
             try {
                 if (fs.existsSync(excelPath)) fs.unlinkSync(excelPath);

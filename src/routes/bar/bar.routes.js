@@ -10,7 +10,7 @@ const router = Router();
 //cruises
 router.get('/cruises', CruiseController.getAllCruises);
 router.get('/cruises/:cruise_id', CruiseController.getCruise);
-router.get('/cruises/sendCruiseReport/:cruise_id', CruiseController.sendCruiseReport);
+router.put('/cruises/sendCruiseReport/:cruise_id', CruiseController.sendCruiseReport);
 
 //products-bar
 router.get('/products', ProductBarController.getProducts);
