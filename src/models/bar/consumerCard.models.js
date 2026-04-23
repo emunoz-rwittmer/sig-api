@@ -29,6 +29,14 @@ const ConsumerCard = db.define('consumer_card', {
         type: DataTypes.STRING,
         allowNull: true,
     },
+    receiptNumber: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    paidAccount: {
+        type: DataTypes.BOOLEAN,
+        allowNull: true,
+    },
 });
 
 module.exports = ConsumerCard;

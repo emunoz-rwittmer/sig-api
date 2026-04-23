@@ -1,6 +1,8 @@
 const ConsumerCard = require('../../models/bar/consumerCard.models');
+const ConsumerCardItems = require('../../models/bar/consumerCardItems.models');
 const Cruise = require('../../models/bar/cruises.models');
 const Passenger = require('../../models/bar/passenger.models');
+const ProductBar = require('../../models/bar/productBar.models');
 const Yacht = require('../../models/catalogs/yacht.models');
 
 class CruiseService {
@@ -37,8 +39,19 @@ class CruiseService {
                             {
                                 model: ConsumerCard,
                                 as: 'consumer_card',
-                                attributes: ['id', 'numberCard', 'totalCount']
-                            },                            
+                                attributes: ['id', 'numberCard', 'totalCount', 'paidAccount', 'image'],
+                                include: [
+                                    {
+                                        model: ConsumerCardItems,
+                                        as: 'items',
+                                        attributes: ['quantity', 'price', 'createdAt'],
+                                        include: [{
+                                            model: ProductBar,
+                                            as: 'product',
+                                            attributes: ['name', 'price', 'category'],
+                                        }]
+                                    }]
+                            },
                         ]
                     },
                 ]

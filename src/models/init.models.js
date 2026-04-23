@@ -63,6 +63,7 @@ const Cruise = require('./bar/cruises.models');
 const Passenger = require('./bar/passenger.models');
 const ConsumerCard = require('./bar/consumerCard.models');
 const ConsumerCardItems = require('./bar/consumerCardItems.models');
+const ProductBar = require('./bar/productBar.models');
 
 const initModels = () => {
 
@@ -263,8 +264,11 @@ const initModels = () => {
     ConsumerCard.belongsTo(Passenger, { as: 'passenger', foreignKey: 'passenger_id', onDelete: 'CASCADE', hooks: true });
     Passenger.hasOne(ConsumerCard, { as: 'consumer_card', foreignKey: 'passenger_id' });
 
-    ConsumerCardItems.belongsTo(ConsumerCard, { as: 'consumer_card', foreignKey: 'consumer_card_id', });
-    ConsumerCard.hasMany(ConsumerCardItems, { as: 'consumer_card_items', foreignKey: 'consumer_card_id', onDelete: 'CASCADE', hooks: true });
+    ConsumerCardItems.belongsTo(ConsumerCard, { as: 'consumer_card', foreignKey: 'consumer_card_id', onDelete: 'CASCADE' });
+    ConsumerCard.hasMany(ConsumerCardItems, { as: 'items', foreignKey: 'consumer_card_id' });
+    
+    ConsumerCardItems.belongsTo(ProductBar, { as: 'product', foreignKey: 'product_id', });
+    ProductBar.hasMany(ConsumerCardItems, { as: 'consumerCardItems', foreignKey: 'product_id' });
 
 }
 
