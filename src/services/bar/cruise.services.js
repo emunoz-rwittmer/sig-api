@@ -39,7 +39,7 @@ class CruiseService {
                             {
                                 model: ConsumerCard,
                                 as: 'consumer_card',
-                                attributes: ['id', 'numberCard', 'totalCount', 'paidAccount', 'image'],
+                                attributes: ['id', 'numberCard', 'totalCount', 'paidAccount', 'image', 'paymentType', 'receiptNumber'],
                                 include: [
                                     {
                                         model: ConsumerCardItems,
@@ -85,33 +85,17 @@ class CruiseService {
         }
     }
 
-    static async createCruise(data) {
+    static async updateCruise(id, data) {
         try {
-            const result = await Cruise.create(data);
-            return result;
-        } catch (error) {
-            throw error;
-
-        }
-    }
-
-    static async updateCruise(data, id) {
-        try {
-            const result = await Cruise.update(data, id);
+            const result = await Cruise.update(data, {
+                where: { id }
+            });
             return result;
         } catch (error) {
             throw error;
         }
     }
 
-    static async delete(id) {
-        try {
-            const result = await Cruise.destroy(id);
-            return result;
-        } catch (error) {
-            throw error;
-        }
-    }
 }
 
 module.exports = CruiseService;

@@ -1,0 +1,179 @@
+const path = require('path');
+const xl = require('excel4node');
+const Utils = require('../../utils/Utils');
+
+exports.generateCruiseReportExcel = async (cruise, passengers, filePath) => {
+  try {
+    const wb = new xl.Workbook({
+      dateFormat: 'dd/mm/yyyy hh:mm:ss',
+    });
+
+    // Sheet 1: Información del Crucero
+    const wsCruise = wb.addWorksheet('Crucero');
+    
+    // Estilos
+    const titleStyle = wb.createStyle({
+      alignment: { horizontal: 'center', vertical: 'center' },
+      fill: {
+        type: 'pattern',
+        patternType: 'solid',
+        fgColor: '2C70BB',
+      },
+      font: {
+        bold: true,
+        color: 'ffffff',
+        size: 14,
+      },
+    });
+
+    const headerStyle = wb.createStyle({
+      alignment: { horizontal: 'center', vertical: 'center' },
+      fill: {
+        type: 'pattern',
+        patternType: 'solid',
+        fgColor: '4472C4',
+      },
+      font: {
+        bold: true,
+        color: 'ffffff',
+        size: 11,
+      },
+    });
+
+    const labelStyle = wb.createStyle({
+      font: { bold: true, size: 11 },
+      alignment: { horizontal: 'left' },
+    });
+
+    const cellStyle = wb.createStyle({
+      font: { size: 10 },
+      alignment: { horizontal: 'left' },
+    });
+
+    // Ancho de columnas
+    wsCruise.column(1).setWidth(25);
+    wsCruise.column(2).setWidth(50);
+
+    // Título
+    wsCruise.cell(1, 1, 1, 2, true).string('INFORMACIÓN DEL CRUCERO').style(titleStyle);
+    
+    // Información del crucero
+    let row = 3;
+    wsCruise.cell(row, 1).string('Código:').style(labelStyle);
+    wsCruise.cell(row, 2).string(cruise.code).style(cellStyle);
+    row++;
+
+    wsCruise.cell(row, 1).string('Nombre:').style(labelStyle);
+    wsCruise.cell(row, 2).string(cruise.name).style(cellStyle);
+    row++;
+
+    wsCruise.cell(row, 1).string('Yacht:').style(labelStyle);
+    wsCruise.cell(row, 2).string(cruise.yacht?.name || 'N/A').style(cellStyle);
+    row++;
+
+    wsCruise.cell(row, 1).string('Itinerario:').style(labelStyle);
+    wsCruise.cell(row, 2).string(cruise.itinerary).style(cellStyle);
+    row++;
+
+    wsCruise.cell(row, 1).string('Fecha Inicio:').style(labelStyle);
+    wsCruise.cell(row, 2).string(Utils.formatDateToLocal(cruise.startDate)).style(cellStyle);
+    row++;
+
+    wsCruise.cell(row, 1).string('Fecha Fin:').style(labelStyle);
+    wsCruise.cell(row, 2).string(Utils.formatDateToLocal(cruise.endDate)).style(cellStyle);
+    row++;
+
+    // Sheet 2: Consumer Cards
+    const wsCards = wb.addWorksheet('Consumer Cards');
+
+    wsCards.column(1).setWidth(15);
+    wsCards.column(2).setWidth(25);
+    wsCards.column(3).setWidth(20);
+    wsCards.column(4).setWidth(15);
+    wsCards.column(5).setWidth(15);
+    wsCards.column(6).setWidth(15);
+    wsCards.column(7).setWidth(15);
+
+    // Encabezados
+    wsCards.cell(1, 1, 1, 7, true).string('CONSUMER CARDS - PASAJEROS CON CONSUMO').style(titleStyle);
+
+    // Headers
+    const headers = ['Pasajero', 'Tarjeta', 'Total Consumo', 'Metodo de Pago', 'Recibo Nº', 'Cuenta Pagada', 'Items'];
+    headers.forEach((header, colIndex) => {
+      wsCards.cell(3, colIndex + 1).string(header).style(headerStyle);
+    });
+
+    // Datos
+    let dataRow = 4;
+    let totalGeneral = 0;
+
+    passengers.forEach((passenger) => {
+      if (passenger.consumer_card && passenger.consumer_card.totalCount > 0 && passenger.consumer_card.paidAccount === true) {
+        const itemCount = passenger.consumer_card.items?.length || 0;
+        
+        wsCards.cell(dataRow, 1).string(passenger.name).style(cellStyle);
+        wsCards.cell(dataRow, 2).string(passenger.consumer_card.numberCard).style(cellStyle);
+        wsCards.cell(dataRow, 3).number(passenger.consumer_card.totalCount).style(cellStyle);
+        wsCards.cell(dataRow, 4).string(passenger.consumer_card.paymentType || 'N/A').style(cellStyle);
+        wsCards.cell(dataRow, 5).string(passenger.consumer_card.receiptNumber || 'N/A').style(cellStyle);
+        wsCards.cell(dataRow, 6).string(passenger.consumer_card.paidAccount ? 'Sí' : 'No').style(cellStyle);
+        wsCards.cell(dataRow, 7).number(itemCount).style(cellStyle);
+
+        totalGeneral += passenger.consumer_card.totalCount;
+        dataRow++;
+      }
+    });
+
+    // Fila de total
+    wsCards.cell(dataRow + 1, 2).string('TOTAL GENERAL:').style(labelStyle);
+    wsCards.cell(dataRow + 1, 3).number(totalGeneral).style(headerStyle);
+
+    // Sheet 3: Detalle de Items
+    const wsItems = wb.addWorksheet('Detalle Items');
+
+    wsItems.column(1).setWidth(25);
+    wsItems.column(2).setWidth(25);
+    wsItems.column(3).setWidth(15);
+    wsItems.column(4).setWidth(15);
+    wsItems.column(5).setWidth(20);
+
+    wsItems.cell(1, 1, 1, 5, true).string('DETALLE DE ITEMS CONSUMIDOS').style(titleStyle);
+
+    const itemHeaders = ['Pasajero', 'Producto', 'Cantidad', 'Precio Unitario', 'Total'];
+    itemHeaders.forEach((header, colIndex) => {
+      wsItems.cell(3, colIndex + 1).string(header).style(headerStyle);
+    });
+
+    let itemRow = 4;
+    passengers.forEach((passenger) => {
+      if (passenger.consumer_card && passenger.consumer_card.totalCount > 0 && passenger.consumer_card.paidAccount === true) {
+        const items = passenger.consumer_card.items || [];
+        
+        items.forEach((item, index) => {
+          if (index === 0) {
+            wsItems.cell(itemRow, 1).string(passenger.name).style(cellStyle);
+          }
+          
+          wsItems.cell(itemRow, 2).string(item.product?.name || 'N/A').style(cellStyle);
+          wsItems.cell(itemRow, 3).number(item.quantity).style(cellStyle);
+          wsItems.cell(itemRow, 4).number(item.product?.price || 0).style(cellStyle);
+          wsItems.cell(itemRow, 5).number(item.price).style(cellStyle);
+          
+          itemRow++;
+        });
+      }
+    });
+
+    // Escribir archivo
+    await new Promise((resolve, reject) => {
+      wb.write(filePath, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+
+    return filePath;
+  } catch (error) {
+    throw error;
+  }
+};

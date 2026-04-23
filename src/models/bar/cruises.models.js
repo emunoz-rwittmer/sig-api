@@ -20,6 +20,10 @@ const Cruise = db.define('cruise', {
         type: DataTypes.STRING,
         allowNull: false,
     },
+    barman: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
     itinerary: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -34,10 +38,10 @@ const Cruise = db.define('cruise', {
         allowNull: false,
         field: 'end_date',
     },
-    cruiseClosed: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
-        field: 'cruise_closed',
+    cruiseState: {
+        type: DataTypes.STRING,
+        defaultValue: true,
+        field: 'cruise_state',
     },
 
 });

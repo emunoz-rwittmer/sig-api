@@ -1,38 +1,15 @@
+const { cos } = require('mathjs');
 const ConsumerCardCount = require('../../models/bar/consumerCardCount.model');
 const ConsumerCardService = require('../../services/bar/consumerCard.services');
+const CruiseService = require('../../services/bar/cruise.services');
 const Utils = require('../../utils/Utils');
-
-const getConsumerCards = async (req, res) => {
-    try {
-        const result = await ConsumerCardService.getAll();
-        if (result instanceof Array) {
-            result.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
-            });
-        }
-        res.status(200).json(result);
-    } catch (error) {
-        res.status(400).json(error.message)
-    }
-}
-
-const getConsumerCard = async (req, res) => {
-    try {
-        const consumerCardId = Utils.decode(req.params.consumerCard_id);
-        const result = await ConsumerCardService.getConsumerCardById(consumerCardId);
-        if (result instanceof Object) {
-            result.id = Utils.encode(result.id);
-        }
-        res.status(200).json(result);
-    } catch (error) {
-        res.status(400).json(error.message)
-    }
-}
+const fs = require('fs');
+const path = require('path');
 
 const createConsumerCard = async (req, res) => {
     try {
-        const data = req.body;     
-        
+        const data = req.body;
+
         if (!data.cardItems.length) throw new Error('No se han agregado items a la tarjeta de consumo');
 
         data.cardItems.map((item) => {
@@ -51,32 +28,44 @@ const createConsumerCard = async (req, res) => {
 
 const updateConsumerCard = async (req, res) => {
     try {
-        const consumerCardId = Utils.decode(req.params.consumerCard_id);
+        const consumerCardId = req.params.card_id;
+        const cruiseId = Utils.decode(req.body.cruiseId);
         const data = req.body;
+        const file = req.file; // puede ser undefined
         delete data.id
+
+        if (file) {
+            const cruise = await CruiseService.getCruiseById(cruiseId);
+            const folderName = `${cruise.code}`.replace(/\s+/g, '_');
+            const voucherDir = path.join(__dirname, '../../../uploads/vouchers', folderName);
+
+            if (!fs.existsSync(voucherDir)) {
+                fs.mkdirSync(voucherDir, { recursive: true });
+            }
+
+            const fileName = `${data.numberCard}.${file.mimetype.split('/')[1]}`.replace(/\s+/g, '_');
+            const filePath = path.join(voucherDir, fileName);
+            const relativePath = path.relative(path.join(__dirname, '../../../'), filePath);
+
+            // Mover el archivo de donde lo guardó multer a la carpeta de vouchers
+            await fs.promises.rename(file.path, filePath);
+            
+            data.image = `/${relativePath}`;
+        }
+
+        data.paidAccount = true;
+
         await ConsumerCardService.updateConsumerCard(data, consumerCardId);
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
+        console.log(error)
         res.status(400).json(error.message);
     }
 }
 
-const deleteConsumerCard = async (req, res) => {
-    try {
-        const consumerCardId = Utils.decode(req.params.ConsumerCard_id);
-        const result = await ConsumerCardService.delete(consumerCardId);
-        res.status(200).json({ data: result })
-    } catch (error) {
-
-        res.status(400).json(error.message);
-    }
-}
 
 const ConsumerCardController = {
-    getConsumerCards,
-    getConsumerCard,
     createConsumerCard,
     updateConsumerCard,
-    deleteConsumerCard,
 }
 module.exports = ConsumerCardController

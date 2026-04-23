@@ -4,6 +4,8 @@ const Passenger = require('../../models/bar/passenger.models');
 const Yacht = require('../../models/catalogs/yacht.models');
 const ConsumerCardService = require('./consumerCard.services');
 const db = require('../../utils/database');
+const ConsumerCardItems = require('../../models/bar/consumerCardItems.models');
+const ProductBar = require('../../models/bar/productBar.models');
 
 
 const parseDate = (dateStr) => {
@@ -17,6 +19,35 @@ const parseDate = (dateStr) => {
 };
 
 class PassengerService {
+
+    static async getPassengerByCruice(id) {
+        try {
+            const result = await Passenger.findAll({
+                where: { id },
+                include: [
+                    {
+                        model: ConsumerCard,
+                        as: 'consumer_card',
+                        attributes: ['id', 'numberCard', 'totalCount', 'paidAccount', 'image', 'paymentType', 'receiptNumber'],
+                        include: [
+                            {
+                                model: ConsumerCardItems,
+                                as: 'items',
+                                attributes: ['quantity', 'price', 'createdAt'],
+                                include: [{
+                                    model: ProductBar,
+                                    as: 'product',
+                                    attributes: ['name', 'price', 'category'],
+                                }]
+                            }]
+                    },
+                ]
+            });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
 
     static async sincronizePassengers(passengers, cruiseId) {
         const transaction = await db.transaction();

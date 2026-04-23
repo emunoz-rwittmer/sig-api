@@ -6,32 +6,6 @@ const { Console } = require('escpos');
 
 class ConsumerCardService {
 
-    static async getAll() {
-        try {
-            const result = await ConsumerCard.findAll({
-                attributes: ['id', 'name', 'category', 'price', 'active', 'createdAt'],
-                order: [['name', 'ASC']]
-
-            });
-            return result;
-        } catch (error) {
-
-            throw error;
-        }
-    }
-
-    static async getConsumerCardById(id) {
-        try {
-            const result = await ConsumerCard.findOne({
-                where: { id },
-                attributes: ['id', 'name', 'category', 'price', 'active', 'createdAt'],
-            });
-            return result;
-        } catch (error) {
-            throw error;
-        }
-    }
-
     static async createConsumerCard(data) {
         const transaction = await db.transaction();
         try {
@@ -71,20 +45,6 @@ class ConsumerCardService {
                 }
             );
             return result
-        } catch (error) {
-            throw error;
-        }
-    }
-
-
-    static async delete(id) {
-        try {
-            const result = await ConsumerCard.destroy({
-                where: { id }
-            });
-            if (result) {
-                return 'resource deleted successfully'
-            }
         } catch (error) {
             throw error;
         }
