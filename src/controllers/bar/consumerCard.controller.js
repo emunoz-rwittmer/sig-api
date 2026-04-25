@@ -49,7 +49,7 @@ const updateConsumerCard = async (req, res) => {
 
             // Mover el archivo de donde lo guardó multer a la carpeta de vouchers
             await fs.promises.rename(file.path, filePath);
-            
+
             data.image = `/${relativePath}`;
         }
 
@@ -63,9 +63,31 @@ const updateConsumerCard = async (req, res) => {
     }
 }
 
+//Cortecy Card
+
+const createCortecyCard = async (req, res) => {
+    try {
+        const data = req.body;
+        if (!data.items.length) throw new Error('No se han agregado items a la tarjeta');
+
+        data.items.map((item) => {
+            item.id = Utils.decode(item.id);
+        })
+
+        const result = await ConsumerCardService.createCortecyCard(data);
+
+        res.status(200).json({ data: 'resource created successfully' });
+
+    } catch (error) {
+        console.log(error)
+        res.status(400).json(error.message);
+    }
+}
+
 
 const ConsumerCardController = {
     createConsumerCard,
     updateConsumerCard,
+    createCortecyCard
 }
 module.exports = ConsumerCardController

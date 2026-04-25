@@ -1,5 +1,7 @@
 const ConsumerCard = require('../../models/bar/consumerCard.models');
 const ConsumerCardItems = require('../../models/bar/consumerCardItems.models');
+const CortecyCard = require('../../models/bar/cortecyCard.models');
+const CortecyCardItems = require('../../models/bar/cortecyCardItems.models');
 const Cruise = require('../../models/bar/cruises.models');
 const Passenger = require('../../models/bar/passenger.models');
 const ProductBar = require('../../models/bar/productBar.models');
@@ -53,6 +55,22 @@ class CruiseService {
                                     }]
                             },
                         ]
+                    },
+                    {
+                        model: CortecyCard,
+                        as: 'cortecy_cards',
+                        attributes: ['id', 'numberCard', 'totalCount', 'type', 'observation'],
+                        include: [
+                            {
+                                model: CortecyCardItems,
+                                as: 'items',
+                                attributes: ['quantity', 'price', 'createdAt'],
+                                include: [{
+                                    model: ProductBar,
+                                    as: 'product',
+                                    attributes: ['name', 'price', 'category'],
+                                }]
+                            }]
                     },
                 ]
             });

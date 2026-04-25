@@ -20,6 +20,7 @@ const Cruise = require('../models/bar/cruises.models');
 const Passenger = require('../models/bar/passenger.models');
 const ConsumerCardCount = require('../models/bar/consumerCardCount.model');
 const ConsumerCard = require('../models/bar/consumerCard.models');
+const CortecyCard = require('../models/bar/cortecyCard.models');
 
 
 function getWeekRange() {
@@ -232,7 +233,28 @@ const generateWeeklyCruisesAndPassengerInfo = async (req, res) => {
             transaction: t
         });
 
-        // 6. Actualizar contador
+        // 6. Crear cortecies cards
+
+        const cortecies = [{ type: 'cortecy' }, { type: 'intake' }];
+
+        const cortecyCards = createdCruises.flatMap(cruice => {
+            return cortecies.map(cortecy => {
+                const formattedCounter = `000-${currentCounter.toString().padStart(3, '0')}`;
+                currentCounter++;
+
+                return {
+                    type: cortecy.type, // 👈 ahora sí usas el tipo correcto
+                    cruiseId: cruice.id,
+                    numberCard: formattedCounter
+                };
+            });
+        });
+
+        await CortecyCard.bulkCreate(cortecyCards, {
+            transaction: t
+        });
+
+        // 7. Actualizar contador
         await consecutivo.update(
             { valor: currentCounter },
             { transaction: t }
@@ -257,12 +279,21 @@ const generateWeeklyEvaluationCrew = async () => {
         const expirationDate = now.add(3, "days").toDate();
 
         // 🔹 Obtener tripulación embarcada
-        const embarkedStaff = await ShipmentDates.findAll({
+        const shipments = await ShipmentDates.findAll({
             where: {
-                shipmentDate: { [Op.lt]: startFormatted },
+                shipmentDate: { [Op.lt]: startFormatted }, // ❌ excluir embarques de esta semana
                 [Op.or]: [
-                    { dischargeDate: null },
-                    { dischargeDate: { [Op.gte]: startFormatted } }
+                    { dischargeDate: null }, // sigue embarcado
+                    {
+                        dischargeDate: {
+                            [Op.between]: [startFormatted, endFormatted] // se desembarca esta semana
+                        }
+                    },
+                    {
+                        dischargeDate: {
+                            [Op.gt]: endFormatted // sigue después de la semana
+                        }
+                    }
                 ]
             },
             include: [

@@ -42,7 +42,7 @@ const sendCruiseReport = async (req, res) => {
 
         const cruiseId = Utils.decode(req.params.cruise_id);
         const data = req.body
-        
+
         await CruiseService.updateCruise(cruiseId, data);
 
         const cruise = await CruiseService.getCruiseById(cruiseId);
@@ -99,7 +99,7 @@ const sendCruiseReport = async (req, res) => {
             emailCc
         );
 
-        await CruiseService.updateCruise(cruiseId, {cruiseState: 'under review'});
+        await CruiseService.updateCruise(cruiseId, { cruiseState: 'under review' });
 
         setTimeout(() => {
             try {

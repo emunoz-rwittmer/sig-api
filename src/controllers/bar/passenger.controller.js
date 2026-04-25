@@ -31,8 +31,9 @@ const createPassenger = async (req, res) => {
 
 const updatePassenger = async (req, res) => {
     try {
-        const passengerId = Utils.decode(req.params.passenger_id);
+        const passengerId = req.params.passenger_id;
         const passenger = req.body;
+        delete passenger.id
         await PassengerService.updatePassenger(passenger, {
             where: { id: passengerId },
         });

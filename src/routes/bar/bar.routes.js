@@ -28,4 +28,7 @@ router.put('/passengers/updatePassenger/:passenger_id', PassengerController.upda
 router.post('/consumer-cards/createConsumerCard', ConsumerCardController.createConsumerCard);
 router.put('/consumer-cards/updateConsumerCard/:card_id', uploadImageFile, ConsumerCardController.updateConsumerCard);
 
+//consumer card
+router.post('/cortecty-cards/createCortecyCard', ConsumerCardController.createCortecyCard);
+
 module.exports = router;

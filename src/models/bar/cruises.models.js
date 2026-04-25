@@ -40,7 +40,7 @@ const Cruise = db.define('cruise', {
     },
     cruiseState: {
         type: DataTypes.STRING,
-        defaultValue: true,
+        defaultValue: 'open',
         field: 'cruise_state',
     },
 
