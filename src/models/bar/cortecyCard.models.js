@@ -27,7 +27,7 @@ const CortecyCard = db.define('cortecy_card', {
     },
     observation: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
     },
 });
 
