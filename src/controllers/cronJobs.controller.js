@@ -271,15 +271,16 @@ const generateWeeklyCruisesAndPassengerInfo = async (req, res) => {
 const generateWeeklyEvaluationCrew = async () => {
     try {
 
-        const { start } = getWeekRange();
+        const { start, end } = getWeekRange();
         const startFormatted = formatDateLocal(start);
+        const endFormatted = formatDateLocal(end);
 
         const now = moment();
         const periodWeek = `${now.isoWeekYear()}-W${String(now.isoWeek()).padStart(2, "0")}`;
         const expirationDate = now.add(3, "days").toDate();
 
         // 🔹 Obtener tripulación embarcada
-        const shipments = await ShipmentDates.findAll({
+        const embarkedStaff = await ShipmentDates.findAll({
             where: {
                 shipmentDate: { [Op.lt]: startFormatted }, // ❌ excluir embarques de esta semana
                 [Op.or]: [
