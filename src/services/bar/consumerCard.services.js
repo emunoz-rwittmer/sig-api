@@ -81,7 +81,7 @@ class ConsumerCardService {
 
             const totalCount = result.totalCount + items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-            await result.update({ totalCount, observation }, { transaction });
+            await result.update({ totalCount }, { transaction });
 
             await Promise.all(items.map(item => {
                 return CortecyCardItems.create({
@@ -89,6 +89,7 @@ class ConsumerCardService {
                     productId: item.id,
                     quantity: item.quantity,
                     price: item.price * item.quantity,
+                    observation
                 }, { transaction });
             }));
 

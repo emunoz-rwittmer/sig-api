@@ -26,6 +26,10 @@ const CortecyCardItems = db.define('cortecy_card_items', {
         type: DataTypes.FLOAT,
         allowNull: false,
     },
+    observation: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
 });
 
 module.exports = CortecyCardItems;
