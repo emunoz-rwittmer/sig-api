@@ -6,25 +6,66 @@ const Utils = require('../../utils/Utils');
 const fs = require('fs');
 const path = require('path');
 
+const ProductBar = require('../../models/bar/productBar.models');
+const { sendBarConsumption } = require('../../mails/mailer');
+
 const createConsumerCard = async (req, res) => {
     try {
         const data = req.body;
 
-        if (!data.cardItems.length) throw new Error('No se han agregado items a la tarjeta de consumo');
+        if (!data.cardItems.length) {
+            throw new Error('No se han agregado items a la tarjeta de consumo');
+        }
 
-        data.cardItems.map((item) => {
-            item.id = Utils.decode(item.id);
-        })
+        data.cardItems = data.cardItems.map(item => ({
+            ...item,
+            id: Utils.decode(item.id)
+        }));
 
         const result = await ConsumerCardService.createConsumerCard(data);
+        if (result && result.passenger.email) {
+
+            const productIds = data.cardItems.map(item => item.id);
+            const products = await ProductBar.findAll({
+                where: {
+                    id: productIds
+                }
+            });
+
+            const productsPlain = products.map(r => r.get({ plain: true }));
+            const productMap = {};
+            productsPlain.forEach(p => {
+                productMap[p.id] = p;
+            });
+
+            const itemsFormatted = data.cardItems.map(item => {
+                const product = productMap[item.id];
+                return `${item.quantity}x ${product.name} ($${item.quantity * item.price})`;
+            }).join(', ');
+
+            const totalAmount = data.cardItems.reduce(
+                (sum, item) => sum + (item.price * item.quantity),
+                0
+            );
+
+            const dataMail = {
+                passengerName: result.passenger.name,
+                passengerEmail: result.passenger.email,
+                date: new Date().toLocaleDateString(),
+                time: new Date().toLocaleTimeString(),
+                yacht: result.passenger.cruise.yacht?.code,
+                items: itemsFormatted,
+                totalAmount
+            };
+
+            await sendBarConsumption(dataMail, result.passenger.email);
+        }
 
         res.status(200).json({ data: 'resource created successfully' });
-
     } catch (error) {
-        console.log(error)
-        res.status(400).json(error.message);
+        res.status(400).json({ message: error.message });
     }
-}
+};
 
 const updateConsumerCard = async (req, res) => {
     try {

@@ -66,6 +66,9 @@ class PassengerService {
                     transaction
                 });
 
+                let startDate = null;
+                let endDate = null;
+
                 if (p.dates_on_board && p.dates_on_board.includes('-')) {
                     const [start, end] = p.dates_on_board.split('-');
 

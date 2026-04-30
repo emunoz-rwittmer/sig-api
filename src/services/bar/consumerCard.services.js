@@ -1,10 +1,11 @@
 const ConsumerCard = require('../../models/bar/consumerCard.models');
-const { Sequelize, Op } = require('sequelize');
 const ConsumerCardItems = require('../../models/bar/consumerCardItems.models');
-const db = require('../../utils/database');
-const { Console } = require('escpos');
 const CortecyCard = require('../../models/bar/cortecyCard.models');
 const CortecyCardItems = require('../../models/bar/cortecyCardItems.models');
+const Cruise = require('../../models/bar/cruises.models');
+const Passenger = require('../../models/bar/passenger.models');
+const Yacht = require('../../models/catalogs/yacht.models');
+const db = require('../../utils/database');
 
 class ConsumerCardService {
 
@@ -14,9 +15,23 @@ class ConsumerCardService {
             const { consumerCardId, cardItems, passengerId, counter } = data;
 
             const result = await ConsumerCard.findOne({
-                where: { id: consumerCardId }
+                where: { id: consumerCardId },
+                include: [{
+                    model: Passenger,
+                    as: 'passenger',
+                    attributes: ['email', 'name'],
+                    include: [{
+                        model: Cruise,
+                        as: 'cruise',
+                        attributes: ['name'],
+                        include: [{
+                            model: Yacht,
+                            as: 'yacht',
+                            attributes: ['code']
+                        }]
+                    }]
+                }]
             }, { transaction });
-
 
             const totalCount = result.totalCount + cardItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
@@ -31,8 +46,10 @@ class ConsumerCardService {
                 }, { transaction });
             }));
 
+            const currentPlain = result.get({ plain: true });
+
             await transaction.commit();
-            return result;
+            return currentPlain;
         } catch (error) {
             await transaction.rollback();
             throw error;

@@ -51,6 +51,24 @@ const sendEmailCommentCard = () => {
         })
 }
 
+const sendBarConsumption = (data) => {
+    const htmlContentCommentCards = MailsConfirmation.htmlConsumoRealizado(data)
+    const msg = {
+        to: data.passengerEmail,
+        from: 'notify-sig@rwittmer.com',
+        subject: 'Bar Consumption Notification',
+        html: htmlContentCommentCards
+    }
+    sgMail
+        .send(msg)
+        .then(() => {
+            console.log('Email sent')
+        })
+        .catch((error) => {
+            console.error(error)
+        })
+}
+
 const sendEmailEvaluationCrew = () => {
     const htmlContentNewEvaluations = Mails.htmlContentNewEvaluations()
     const msg = {
@@ -237,6 +255,7 @@ const sendEmailGuiaRemisionCreada = (dataMail, fileName, filePath) => {
 
 module.exports = {
     sendEmail,
+    sendBarConsumption,
     sendEmailEvaluationCrew,
     sendEmailCommentCard,
     sendEmailPasswordStaff,

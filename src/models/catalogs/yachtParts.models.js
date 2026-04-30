@@ -17,6 +17,11 @@ const YachtParts = db.define('yacht_parts', {
         allowNull: false,
         field: 'horas'
     },
+    lastRepair: {
+        type: DataTypes.FLOAT,
+        allowNull: false,
+        field: 'ultima_reparacion'
+    },
     name: {
         type: DataTypes.STRING,
         allowNull: false,
