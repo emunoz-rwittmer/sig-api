@@ -1,4 +1,4 @@
-const Product = require('../../../models/operations/orders/product.models');
+const Product = require('../../../models/operations/inventory/product.models');
 const Transaction = require('../../../models/operations/inventory/transaction.models');
 const Register = require('../../../models/operations/inventory/register.models');
 const Staff = require('../../../models/catalogs/staff.models');

@@ -5,7 +5,7 @@ const Request = require('../../../models/operations/yachtRequest/request.models'
 const db = require('../../../utils/database');
 const RequestItems = require('../../../models/operations/yachtRequest/requestItems.models');
 const ProductConfiguration = require('../../../models/operations/inventory/productConfiguration');
-const Product = require('../../../models/operations/orders/product.models');
+const Product = require('../../../models/operations/inventory/product.models');
 
 class RequestService {
     static async getAllRequests() {

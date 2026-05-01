@@ -5,7 +5,7 @@ const MaintenanceRules = require('../../models/catalogs/maintenanceRules.models'
 const MaintenanceRulesPart = require('../../models/catalogs/maintenanceRulesPart.models');
 const MaintenanceMaterials = require('../../models/catalogs/maintenanceMaterials.models');
 const Yacht = require('../../models/catalogs/yacht.models');
-const Product = require('../../models/operations/orders/product.models');
+const Product = require('../../models/operations/inventory/product.models');
 
 class MaintenanceService {
     static async getAll() {

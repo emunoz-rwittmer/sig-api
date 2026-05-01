@@ -1,4 +1,4 @@
-const Product = require('../../../models/operations/orders/product.models');
+const Product = require('../../../models/operations/inventory/product.models');
 const LaundryYacht = require('../../../models/operations/yachtRequest/laundryYacht');
 const db = require('../../../utils/database');
 const ProductConfiguration = require('../../../models/operations/inventory/productConfiguration');

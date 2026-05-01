@@ -5,7 +5,7 @@ const Warehouse = require("../../models/catalogs/wareHouse.models");
 const Transaction = require("../../models/operations/inventory/transaction.models");
 const orderItems = require("../../models/operations/orders/orderItems.models");
 const Order = require('../../models/operations/orders/order.models');
-const Product = require("../../models/operations/orders/product.models");
+const Product = require("../../models/operations/inventory/product.models");
 const Request = require("../../models/operations/yachtRequest/request.models");
 const requestItems = require("../../models/operations/yachtRequest/requestItems.models");
 
