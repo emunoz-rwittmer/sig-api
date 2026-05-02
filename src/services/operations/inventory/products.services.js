@@ -20,7 +20,7 @@ class ProductService {
     static async getAll() {
         try {
             const result = await Product.findAll({
-                attributes: ['id', 'name', 'sku'],
+                attributes: ['id', 'name', 'sku', 'type', 'unit', 'presentationQuantity', 'active', 'createdAt'],
                 include: [{
                     model: ProductConfiguration,
                     as: 'configurations',
@@ -65,7 +65,7 @@ class ProductService {
         try {
             const result = await Product.findOne({
                 where: { id },
-                attributes: ['id', 'name', 'sku'],
+                attributes: ['id', 'name', 'sku', 'type', 'unit', 'presentationQuantity', 'active'],
                 include: [{
                     model: ProductConfiguration,
                     as: 'configurations',
@@ -171,7 +171,9 @@ class ProductService {
                 {
                     name: product.name,
                     sku: product.sku,
-                    category: product.category
+                    type: product.type, 
+                    unit: product.unit,
+                    presentationQuantity: product.presentationQuantity
                 },
                 {
                     where: { id },

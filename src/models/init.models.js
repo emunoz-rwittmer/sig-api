@@ -66,6 +66,8 @@ const ConsumerCardItems = require('./bar/consumerCardItems.models');
 const ProductBar = require('./bar/productBar.models');
 const CortecyCardItems = require('./bar/cortecyCardItems.models');
 const CortecyCard = require('./bar/cortecyCard.models');
+const Recipe = require('./bar/recipe.models');
+const RecipeDetail = require('./bar/recipeDetail.models');
 
 const initModels = () => {
 
@@ -256,7 +258,7 @@ const initModels = () => {
     ProcessStaff.belongsTo(Process, { as: "process", foreignKey: "process_id" });
     ProcessStaff.belongsTo(Staff, { as: "staffs", foreignKey: "staff_id" });
 
-    //bar
+    //CRUISE-BAR
     Cruise.belongsTo(Yacht, { as: 'yacht', foreignKey: 'yacht_id', });
     Yacht.hasMany(Cruise, { as: 'cruises', foreignKey: 'yacht_id', onDelete: 'CASCADE', hooks: true });
 
@@ -266,11 +268,23 @@ const initModels = () => {
     ConsumerCard.belongsTo(Passenger, { as: 'passenger', foreignKey: 'passenger_id', onDelete: 'CASCADE', hooks: true });
     Passenger.hasOne(ConsumerCard, { as: 'consumer_card', foreignKey: 'passenger_id' });
 
-    ConsumerCardItems.belongsTo(ConsumerCard, { as: 'consumer_card', foreignKey: 'consumer_card_id', onDelete: 'CASCADE' });
+    // BAR
+    ProductBar.belongsTo(Product, { as: 'product', foreignKey: "productId" });
+
+    // RECETAS
+    ProductBar.hasOne(Recipe, { as: 'recipe', foreignKey: "productBarId" });
+    Recipe.belongsTo(ProductBar);
+
+    Recipe.hasMany(RecipeDetail, { as: 'recipe_details', foreignKey: "recipeId" });
+    RecipeDetail.belongsTo(Recipe);
+
+    RecipeDetail.belongsTo(Product, { as: 'recipe_product', foreignKey: "productId" });
+
+    //CONSUMOS
     ConsumerCard.hasMany(ConsumerCardItems, { as: 'items', foreignKey: 'consumer_card_id' });
+    ConsumerCardItems.belongsTo(ConsumerCard, { as: 'consumer_card', foreignKey: 'consumer_card_id', onDelete: 'CASCADE' });
 
     ConsumerCardItems.belongsTo(ProductBar, { as: 'product', foreignKey: 'product_id', });
-    ProductBar.hasMany(ConsumerCardItems, { as: 'consumerCardItems', foreignKey: 'product_id' });
 
     CortecyCard.belongsTo(Cruise, { as: 'cruise', foreignKey: 'cruise_id', });
     Cruise.hasMany(CortecyCard, { as: 'cortecy_cards', foreignKey: 'cruise_id', onDelete: 'CASCADE', hooks: true });
@@ -279,7 +293,6 @@ const initModels = () => {
     CortecyCard.hasMany(CortecyCardItems, { as: 'items', foreignKey: 'cortecy_card_id' });
 
     CortecyCardItems.belongsTo(ProductBar, { as: 'product', foreignKey: 'product_id', });
-    ProductBar.hasMany(CortecyCardItems, { as: 'cortecyCardItems', foreignKey: 'product_id' });
 }
 
 module.exports = initModels;

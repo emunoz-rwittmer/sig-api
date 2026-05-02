@@ -16,6 +16,24 @@ const Product = db.define('product', {
     unique: true,
     allowNull: true,
   },
+  type: {
+    type: DataTypes.ENUM("DISCRETE", "CONSUMABLE"),
+    allowNull: false
+  },
+  unit: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'unidad_medida'
+  },
+  presentationQuantity: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'presentacion'
+  },
+  active: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
+  }
 });
 
 module.exports = Product;

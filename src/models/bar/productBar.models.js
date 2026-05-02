@@ -1,5 +1,6 @@
 const db = require('../../utils/database');
 const { DataTypes } = require('sequelize');
+const { fields } = require('../../utils/multer');
 
 const ProductBar = db.define('product_bar', {
   id: {
@@ -18,9 +19,17 @@ const ProductBar = db.define('product_bar', {
     field: 'categoria'
   },
   price: {
-    type: DataTypes.FLOAT,
+    type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
     field: 'precio'
+  },
+  type: {
+    type: DataTypes.ENUM("DIRECT", "RECIPE"),
+    allowNull: false
+  },
+  productId: {
+    type: DataTypes.INTEGER,
+    field: 'product_id'
   },
   image: {
     type: DataTypes.TEXT,

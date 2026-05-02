@@ -19,11 +19,6 @@ const Warehouse= db.define('warehouse',{
         type: DataTypes.STRING,
         allowNull: false,
     },
-    currentStock: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        field: 'current_stock'
-    },
 });
 
 module.exports = Warehouse;

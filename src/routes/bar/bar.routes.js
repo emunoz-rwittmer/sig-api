@@ -14,6 +14,7 @@ router.put('/cruises/sendCruiseReport/:cruise_id', CruiseController.sendCruiseRe
 
 //products-bar
 router.get('/products', ProductBarController.getProducts);
+router.get('/products/relationBar', ProductBarController.getProductsForBar);
 router.get('/products/:product_id', ProductBarController.getProduct);
 router.post('/products/createProduct', ProductBarController.createProduct);
 router.put('/products/updateProduct/:product_id', ProductBarController.updateProduct);

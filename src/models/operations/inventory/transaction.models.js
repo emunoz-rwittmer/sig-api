@@ -17,10 +17,6 @@ const Transaction = db.define('transaction', {
     allowNull: true,
     field: 'reference_id'
   },
-  type: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
   userId: {
     type: DataTypes.INTEGER,
     allowNull: false,
@@ -40,6 +36,10 @@ const Transaction = db.define('transaction', {
     type: DataTypes.INTEGER,
     allowNull: false,
     field: 'warehouse_to_id'
+  },
+  type: {
+    type: DataTypes.ENUM("IN", "OUT", "ADJUST", "BAR_CONSUMPTION"),
+    allowNull: false,
   },
   quantity: {
     type: DataTypes.INTEGER,

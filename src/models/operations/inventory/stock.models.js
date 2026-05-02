@@ -7,15 +7,15 @@ const Stock = db.define('stock', {
     primaryKey: true,
     autoIncrement: true,
   },
-  warehouseId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    field: 'warehouse_id'
-  },
   productId: {
     type: DataTypes.INTEGER,
     allowNull: false,
     field: 'product_id'
+  },
+  warehouseId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    field: 'warehouse_id'
   },
   companyId: {
     type: DataTypes.INTEGER,
