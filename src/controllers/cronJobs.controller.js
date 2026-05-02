@@ -69,7 +69,7 @@ const parseDate = (dateStr) => {
 const generateWeeklyCommentCard = async (req, res) => {
 
     try {
-        const cruises = generateWeeklyCruises();
+        const cruises = await generateWeeklyCruises();
 
         if (!cruises.length) {
             console.log('No hay cruceros para la semana');
