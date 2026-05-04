@@ -1,233 +1,257 @@
 const fs = require('fs');
+const fsPromises = require('fs').promises;
 const path = require('path');
-const Utils = require('../../utils/Utils');
-require('dotenv').config();
+const PDFDocument = require('pdfkit');
+
+// Style constants - Cache para evitar recalculos
+const STYLES = {
+  colors: {
+    primary: '#1f5a96',
+    accent: '#4a90e2',
+    textDark: '#2c3e50',
+    textLight: '#7f8c8d',
+    border: '#ecf0f1'
+  },
+  fonts: {
+    title: { name: 'Helvetica-Bold', size: 24 },
+    heading: { name: 'Helvetica-Bold', size: 11 },
+    label: { name: 'Helvetica-Bold', size: 10 },
+    normal: { name: 'Helvetica', size: 9 },
+    largeLabel: { name: 'Helvetica-Bold', size: 12 }
+  }
+};
+
+const LAYOUT = {
+  margin: 50,
+  pageSize: 'LETTER',
+  col1: 60,
+  col2: 250,
+  col3: 370,
+  col4: 470,
+  logoX: 420,
+  logoY: 45,
+  logoWidth: 150,
+  logoHeight: 60
+};
+
+const applyStyle = (doc, style) => {
+  if (style.font) {
+    doc.font(style.font.name).fontSize(style.font.size);
+  }
+  if (style.color) {
+    doc.fillColor(style.color);
+  }
+  return doc;
+};
+
+const drawHeader = async (doc, pageWidth, logoPath) => {
+  const hasLogo = await (async () => {
+    try {
+      await fsPromises.access(logoPath);
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+
+  if (hasLogo) {
+    doc.image(logoPath, LAYOUT.logoX, LAYOUT.logoY, {
+      width: LAYOUT.logoWidth,
+      height: LAYOUT.logoHeight
+    });
+  }
+
+  applyStyle(doc, { font: STYLES.fonts.title, color: STYLES.colors.primary });
+  doc.text('ROLF WITTMER', 50, 55);
+
+  applyStyle(doc, { font: STYLES.fonts.normal, color: STYLES.colors.textLight });
+  doc.text('Cruise Services', 50, 78)
+    .text('Email: info@rwittmer.ec', 50, 92)
+    .text('Phone: +593 (4) 2xxx-xxxx', 50, 106);
+
+  doc.strokeColor(STYLES.colors.primary)
+    .lineWidth(2)
+    .moveTo(50, 145)
+    .lineTo(pageWidth - 50, 145)
+    .stroke();
+
+  applyStyle(doc, { font: STYLES.fonts.title, color: STYLES.colors.primary });
+  doc.text('INVOICE', 50, 160);
+
+  return { hasLogo };
+};
+
+const drawInvoiceDetails = (doc, pageWidth, invoiceDate) => {
+  const invoiceRightX = pageWidth - 200;
+  const invoiceNumber = Date.now();
+
+  applyStyle(doc, { font: STYLES.fonts.label, color: STYLES.colors.textDark });
+  doc.text('Invoice Number:', invoiceRightX, 160);
+
+  applyStyle(doc, { font: STYLES.fonts.normal, color: STYLES.colors.textLight });
+  doc.text(invoiceNumber.toString(), invoiceRightX, 175);
+
+  applyStyle(doc, { font: STYLES.fonts.label, color: STYLES.colors.textDark });
+  doc.text('Date:', invoiceRightX, 195);
+
+  applyStyle(doc, { font: STYLES.fonts.normal, color: STYLES.colors.textLight });
+  doc.text(invoiceDate.toLocaleDateString(), invoiceRightX, 210);
+
+  return invoiceNumber;
+};
+
+const drawPassengerInfo = (doc, pageWidth, passenger) => {
+  const invoiceRightX = pageWidth - 200;
+
+  applyStyle(doc, { font: STYLES.fonts.heading, color: STYLES.colors.primary });
+  doc.text('BILL TO:', 50, 200);
+
+  applyStyle(doc, { font: STYLES.fonts.heading, color: STYLES.colors.textDark });
+  doc.text(passenger?.name || 'N/A', 50, 215);
+
+  applyStyle(doc, { font: STYLES.fonts.normal, color: STYLES.colors.textLight });
+  const passengerDetails = [
+    { label: 'ID', value: passenger?.identificationNumber },
+    { label: 'Email', value: passenger?.email },
+    { label: 'Cabin', value: passenger?.cabin },
+    { label: 'Type', value: passenger?.type },
+    { label: 'Nationality', value: passenger?.nationality },
+    { label: 'Country', value: passenger?.country }
+  ];
+
+  let yPos = 230;
+  passengerDetails.forEach(({ label, value }) => {
+    doc.text(`${label}: ${value || 'N/A'}`, 50, yPos);
+    yPos += 15;
+  });
+};
+
+const drawConsumerCardDetails = (doc, pageWidth, consumerCard) => {
+  const invoiceRightX = pageWidth - 200;
+
+  applyStyle(doc, { font: STYLES.fonts.label, color: STYLES.colors.primary });
+  doc.text('CONSUMER CARD DETAILS', invoiceRightX, 250);
+
+  applyStyle(doc, { font: STYLES.fonts.normal, color: STYLES.colors.textDark });
+
+  const detailsY = 265;
+  const details = [
+    { label: 'Card Number', value: consumerCard.numberCard },
+    { label: 'Payment Type', value: consumerCard.paymentType || 'N/A' },
+    { label: 'Status', value: consumerCard.paidAccount ? 'Paid' : 'Pending' }
+  ];
+
+  details.forEach(({ label, value }, index) => {
+    doc.text(`${label}: ${value}`, invoiceRightX, detailsY + (index * 15));
+  });
+};
+
+const drawItemsTable = (doc, pageWidth, items) => {
+  const tableY = 320;
+  let subtotal = 0;
+
+  doc.fillColor(STYLES.colors.primary)
+    .rect(50, tableY, pageWidth - 100, 25)
+    .fill();
+
+  applyStyle(doc, { font: STYLES.fonts.label, color: 'white' });
+  doc.text('Product', LAYOUT.col1, tableY + 5)
+    .text('Qty', LAYOUT.col2, tableY + 5)
+    .text('Unit Price', LAYOUT.col3, tableY + 5)
+    .text('Total', LAYOUT.col4, tableY + 5);
+
+  applyStyle(doc, { font: STYLES.fonts.normal, color: STYLES.colors.textDark });
+
+  let currentY = tableY + 30;
+
+  (items || []).forEach((item, index) => {
+    if (index % 2 === 0) {
+      doc.fillColor(STYLES.colors.border)
+        .rect(50, currentY - 5, pageWidth - 100, 20)
+        .fill();
+    }
+
+    applyStyle(doc, { color: STYLES.colors.textDark });
+    doc.text(item.product?.name || 'N/A', LAYOUT.col1, currentY)
+      .text(item.quantity.toString(), LAYOUT.col2, currentY)
+      .text(`$${Number(item.product?.price || 0).toFixed(2)}`, LAYOUT.col3, currentY)
+      .text(`$${Number(item.price || 0).toFixed(2)}`, LAYOUT.col4, currentY);
+
+    subtotal += Number(item.price) || 0;
+    currentY += 25;
+  });
+
+  doc.strokeColor(STYLES.colors.primary)
+    .lineWidth(1.5)
+    .moveTo(50, currentY)
+    .lineTo(pageWidth - 50, currentY)
+    .stroke();
+
+  return { currentY, subtotal };
+};
+
+const drawTotals = (doc, pageWidth, currentY, total) => {
+  const totalsX = pageWidth - 200;
+  const totalsY = currentY + 10;
+
+  applyStyle(doc, { font: STYLES.fonts.largeLabel, color: STYLES.colors.primary });
+  doc.text('TOTAL:', totalsX, totalsY + 25);
+
+  applyStyle(doc, { font: { name: 'Helvetica-Bold', size: 14 }, color: STYLES.colors.primary });
+  doc.text(`$${Number(total || 0).toFixed(2)}`, totalsX + 70, totalsY + 25);
+
+  return totalsY + 60;
+};
+
+const drawPaymentVoucher = async (doc, consumerCard, imageY) => {
+  if (!consumerCard.image) return imageY;
+
+  try {
+    const imagePath = path.resolve("." + consumerCard.image);
+    await fsPromises.access(imagePath);
+
+    applyStyle(doc, { font: STYLES.fonts.heading, color: STYLES.colors.primary });
+    doc.text('PAYMENT VOUCHER', 50, imageY);
+
+    imageY += 20;
+    doc.image(imagePath, 50, imageY, { width: 100, height: 150 });
+    return imageY + 150;
+  } catch (error) {
+    applyStyle(doc, { font: STYLES.fonts.normal, color: STYLES.colors.textLight });
+    doc.text('Voucher image not available', 50, imageY);
+    return imageY + 20;
+  }
+};
 
 exports.passengerInvoicePDF = async (consumerCard, filePath) => {
   try {
-    const { default: PDFDocument } = await import('pdfkit');
-
+    const logoPath = path.resolve('./uploads/companies/logo_rwittmer.png');
+    const invoiceDate = new Date();
     const doc = new PDFDocument({
-      margin: 50,
-      bufferPages: true,
-      size: 'LETTER'
+      margin: LAYOUT.margin,
+      size: LAYOUT.pageSize,
+      bufferPages: false
     });
+
     const writeStream = fs.createWriteStream(filePath);
+    writeStream.on('error', (err) => {
+      throw new Error(`Write stream error: ${err.message}`);
+    });
+
     doc.pipe(writeStream);
 
-    // Colores corporativos
-    const primaryColor = '#1f5a96';
-    const accentColor = '#4a90e2';
-    const textDark = '#2c3e50';
-    const textLight = '#7f8c8d';
-    const borderColor = '#ecf0f1';
-
-    const logoPath = path.resolve('./uploads/companies/logo_rwittmer.png');
     const pageWidth = doc.page.width;
-    const pageHeight = doc.page.height;
 
-    // ============ ENCABEZADO ============
-    // Logo
-    let logoX = 420;
-    if (fs.existsSync(logoPath)) {
-      doc.image(logoPath, logoX, 45, { width: 150, height: 60 });
-    }
-
-    // Información de la empresa (a la derecha del logo)
-    doc
-      .font('Helvetica-Bold')
-      .fontSize(18)
-      .fillColor(primaryColor)
-      .text('ROLF WITTMER', 50, 55);
-
-    doc
-      .font('Helvetica')
-      .fontSize(9)
-      .fillColor(textLight)
-      .text('Cruise Services', 50, 78)
-      .text('Email: info@rwittmer.ec', 50, 92)
-      .text('Phone: +593 (4) 2xxx-xxxx', 50, 106);
-
-    // Línea separadora
-    doc
-      .strokeColor(primaryColor)
-      .lineWidth(2)
-      .moveTo(50, 145)
-      .lineTo(pageWidth - 50, 145)
-      .stroke();
-
-    // Título INVOICE
-    doc
-      .font('Helvetica-Bold')
-      .fontSize(24)
-      .fillColor(primaryColor)
-      .text('INVOICE', 50, 160);
-
-    // Información de invoice y fecha (lado derecho)
-    const invoiceRightX = pageWidth - 200;
-    doc
-      .font('Helvetica-Bold')
-      .fontSize(10)
-      .fillColor(textDark)
-      .text('Invoice Number:', invoiceRightX, 160)
-      .font('Helvetica')
-      .fontSize(10)
-      .fillColor(textLight)
-      .text(Date.now() || 'N/A', invoiceRightX, 175);
-
-    doc
-      .font('Helvetica-Bold')
-      .fontSize(10)
-      .fillColor(textDark)
-      .text('Date:', invoiceRightX, 195)
-      .font('Helvetica')
-      .fontSize(10)
-      .fillColor(textLight)
-      .text(new Date(), invoiceRightX, 210);
-
-    // ============ INFORMACIÓN DEL PASAJERO ============
+    await drawHeader(doc, pageWidth, logoPath);
+    drawInvoiceDetails(doc, pageWidth, invoiceDate);
     doc.moveDown(2);
+    drawPassengerInfo(doc, pageWidth, consumerCard.passenger);
+    drawConsumerCardDetails(doc, pageWidth, consumerCard);
 
-    // Sección: Bill To
-    doc
-      .font('Helvetica-Bold')
-      .fontSize(11)
-      .fillColor(primaryColor)
-      .text('BILL TO:', 50, 200);
+    const { currentY, subtotal } = drawItemsTable(doc, pageWidth, consumerCard.items);
+    const imageY = drawTotals(doc, pageWidth, currentY, consumerCard.totalCount || subtotal);
 
-    doc
-      .font('Helvetica-Bold')
-      .fontSize(11)
-      .fillColor(textDark)
-      .text(consumerCard.passenger?.name || 'N/A', 50, 215);
-
-    doc
-      .font('Helvetica')
-      .fontSize(9)
-      .fillColor(textLight)
-      .text(`ID: ${consumerCard.passenger?.identificationNumber || 'N/A'}`, 50, 230)
-      .text(`Email: ${consumerCard.passenger?.email || 'N/A'}`, 50, 245)
-      .text(`Cabin: ${consumerCard.passenger?.cabin || 'N/A'}`, 50, 260)
-      .text(`Type: ${consumerCard.passenger?.type || 'N/A'}`, 50, 275)
-      .text(`Nationality: ${consumerCard.passenger?.nationality || 'N/A'}`, 50, 290)
-      .text(`Country: ${consumerCard.passenger?.country || 'N/A'}`, 50, 305);
-
-
-    // Información de consumo en columna derecha
-    doc
-      .font('Helvetica-Bold')
-      .fontSize(10)
-      .fillColor(primaryColor)
-      .text('CONSUMER CARD DETAILS', invoiceRightX, 250);
-
-    doc
-      .font('Helvetica')
-      .fontSize(9)
-      .fillColor(textDark);
-
-    const detailsY = 265;
-    doc.text(`Card Number: ${consumerCard.numberCard}`, invoiceRightX, detailsY);
-    doc.text(`Payment Type: ${consumerCard.paymentType || 'N/A'}`, invoiceRightX, detailsY + 15);
-    doc.text(`Status: ${consumerCard.paidAccount ? 'Paid' : 'Pending'}`, invoiceRightX, detailsY + 30);
-
-    // ============ TABLA DE ITEMS ============
-    const items = consumerCard.items || [];
-    const tableY = 320;
-
-    // Encabezado de tabla
-    doc
-      .fillColor(primaryColor)
-      .rect(50, tableY, pageWidth - 100, 25)
-      .fill();
-
-    doc
-      .font('Helvetica-Bold')
-      .fontSize(10)
-      .fillColor('white');
-
-    const col1 = 60;
-    const col2 = 250;
-    const col3 = 370;
-    const col4 = 470;
-
-    doc.text('Product', col1, tableY + 5)
-      .text('Qty', col2, tableY + 5)
-      .text('Unit Price', col3, tableY + 5)
-      .text('Total', col4, tableY + 5);
-
-    // Filas de tabla
-    doc
-      .font('Helvetica')
-      .fontSize(9)
-      .fillColor(textDark);
-
-    let currentY = tableY + 30;
-    let subtotal = 0;
-
-    items.forEach((item, index) => {
-      // Fila alternada
-      if (index % 2 === 0) {
-        doc.fillColor(borderColor).rect(50, currentY - 5, pageWidth - 100, 20).fill();
-      }
-
-      doc.fillColor(textDark);
-      doc.text(item.product?.name || 'N/A', col1, currentY);
-      doc.text(item.quantity.toString(), col2, currentY);
-      doc.text(`$${Number(item.product?.price || 0).toFixed(2)}`, col3, currentY);
-      doc.text(`$${Number(item.price || 0).toFixed(2)}`, col4, currentY);
-
-      subtotal += Number(item.price) || 0;
-      currentY += 25;
-    });
-
-    // Línea final de tabla
-    doc
-      .strokeColor(primaryColor)
-      .lineWidth(1.5)
-      .moveTo(50, currentY)
-      .lineTo(pageWidth - 50, currentY)
-      .stroke();
-
-    // ============ TOTALES ============
-    const totalsY = currentY + 10;
-    const totalsX = pageWidth - 200;
-
-    // Total
-    doc
-      .font('Helvetica-Bold')
-      .fontSize(12)
-      .fillColor(primaryColor)
-      .text('TOTAL:', totalsX, totalsY + 25);
-
-    doc
-      .font('Helvetica-Bold')
-      .fontSize(14)
-      .fillColor(primaryColor)
-      .text(`$${consumerCard.totalCount || subtotal}`, totalsX + 70, totalsY + 25);
-
-    let imageY = totalsY + 60;
-
-    if (consumerCard.image) {
-      try {
-        const imagePath = path.resolve("." + consumerCard.image);
-        if (fs.existsSync(imagePath)) {
-          doc
-            .font('Helvetica-Bold')
-            .fontSize(11)
-            .fillColor(primaryColor)
-            .text('PAYMENT VOUCHER', 50, imageY);
-
-          imageY += 20;
-          doc.image(imagePath, 50, imageY, { width: 100, height: 150 });
-        }
-      } catch (error) {
-        doc
-          .font('Helvetica')
-          .fontSize(9)
-          .fillColor(textLight)
-          .text('Voucher image not available', 50, imageY);
-      }
-    }
+    await drawPaymentVoucher(doc, consumerCard, imageY);
 
     doc.end();
 
@@ -236,6 +260,6 @@ exports.passengerInvoicePDF = async (consumerCard, filePath) => {
       writeStream.on('error', reject);
     });
   } catch (error) {
-    throw error;
+    throw new Error(`PDF generation failed: ${error.message}`);
   }
 };

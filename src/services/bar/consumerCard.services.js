@@ -65,6 +65,7 @@ class ConsumerCardService {
                 throw new Error(`Bar warehouse not found for yacht ${yachtId}`);
             }
 
+            // Process items with optimized batch operations
             for (const item of cardItems) {
                 const productBar = await ProductBar.findOne({
                     where: { id: item.id },
@@ -143,23 +144,33 @@ class ConsumerCardService {
                 throw new Error(`Consumer card with id ${id} not found`);
             }
 
-            await card.update({
+            // Safer update payload handling
+            const updatePayload = {
                 ...data,
-                paidAccount: true
-            }, { transaction });
+                paidAccount: data.paidAccount !== undefined ? data.paidAccount : true
+            };
 
+            await card.update(updatePayload, { transaction });
+
+            // Optimized query with selective attributes
             const updatedCard = await ConsumerCard.findByPk(id, {
+                attributes: {
+                    exclude: ['createdAt', 'updatedAt']
+                },
                 include: [
                     {
                         model: Passenger,
                         as: 'passenger',
+                        attributes: ['id', 'name', 'email', 'identificationNumber', 'cabin', 'type', 'nationality', 'country']
                     },
                     {
                         model: ConsumerCardItems,
                         as: 'items',
+                        attributes: ['id', 'productId', 'quantity', 'price'],
                         include: [{
                             model: ProductBar,
-                            as: 'product'
+                            as: 'product',
+                            attributes: ['id', 'name', 'price']
                         }]
                     }
                 ],
@@ -197,15 +208,17 @@ class ConsumerCardService {
             const totalConsumption = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
             const newTotal = Number(cortecyCard.totalCount) + totalConsumption;
 
-            for (const item of items) {
-                await CortecyCardItems.create({
+            // Batch create items
+            await CortecyCardItems.bulkCreate(
+                items.map(item => ({
                     cortecyCardId: cortecyCard.id,
                     productId: item.id,
                     quantity: item.quantity,
                     price: item.price * item.quantity,
                     observation
-                }, { transaction });
-            }
+                })),
+                { transaction }
+            );
 
             await cortecyCard.update({ totalCount: newTotal }, { transaction });
             await transaction.commit();
@@ -216,8 +229,6 @@ class ConsumerCardService {
             throw error;
         }
     }
-
-
 }
 
 module.exports = ConsumerCardService;
