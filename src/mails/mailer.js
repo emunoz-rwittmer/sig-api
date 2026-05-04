@@ -51,6 +51,35 @@ const sendEmailCommentCard = () => {
         })
 }
 
+const sendInvoiceEmail = async (data) => {
+    const fs = require('fs').promises;
+    const htmlContentCommentCards = MailsConfirmation.htmlInvoicePassenger(data)
+    
+    try {
+        const fileContent = await fs.readFile(data.invoicePath);
+        const base64Content = fileContent.toString('base64');
+        
+        const msg = {
+            to: data.passengerEmail,
+            from: 'notify-sig@rwittmer.com',
+            subject: 'Bar Notification',
+            html: htmlContentCommentCards,
+            attachments: [
+                {
+                    content: base64Content,
+                    filename: `Invoice_${data.passengerName.replace(/\s+/g, '_')}.pdf`,
+                    type: 'application/pdf',
+                    disposition: 'attachment'
+                },
+            ],
+        }
+        await sgMail.send(msg);
+        console.log('Email sent')
+    } catch (error) {
+        console.error(error)
+    }
+}
+
 const sendBarConsumption = (data) => {
     const htmlContentCommentCards = MailsConfirmation.htmlConsumoRealizado(data)
     const msg = {
@@ -256,6 +285,7 @@ const sendEmailGuiaRemisionCreada = (dataMail, fileName, filePath) => {
 module.exports = {
     sendEmail,
     sendBarConsumption,
+    sendInvoiceEmail,
     sendEmailEvaluationCrew,
     sendEmailCommentCard,
     sendEmailPasswordStaff,

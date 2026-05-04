@@ -1,8 +1,9 @@
 const db = require('../../utils/database');
 const { DataTypes } = require('sequelize');
+const Yacht = require('./yacht.models');
 
-const Warehouse= db.define('warehouse',{
-    id:{
+const Warehouse = db.define('warehouse', {
+    id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true,
@@ -18,6 +19,11 @@ const Warehouse= db.define('warehouse',{
     type: {
         type: DataTypes.STRING,
         allowNull: false,
+    },
+    yachtId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        field: 'yacht_id'
     },
 });
 

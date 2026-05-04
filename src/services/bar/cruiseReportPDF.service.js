@@ -27,10 +27,11 @@ exports.generateCruiseReportPDF = async (cruise, passengers, filePath) => {
     doc
       .font('Helvetica-Bold')
       .fontSize(24)
-      .text(`REPORTE DE CRUCERO (${cruise.yacht?.name})`, 150, 60, { align: 'center' })
+      .text(`REPORTE DE CRUCERO`, 150, 60, { align: 'center' })
       .fontSize(12)
       .font('Helvetica')
-      .text('Consumer Cards Report', 150, 90, { align: 'center' });
+      .text(`${cruise.yacht?.name}`, 150, 90, { align: 'center' })
+      .text('Consumer Cards Report', 150, 120, { align: 'center' });
 
     doc.moveDown(2);
 

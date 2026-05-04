@@ -34,7 +34,7 @@ const Transaction = db.define('transaction', {
   },
   warehouseToId: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
     field: 'warehouse_to_id'
   },
   type: {
@@ -42,7 +42,7 @@ const Transaction = db.define('transaction', {
     allowNull: false,
   },
   quantity: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
   },
 });

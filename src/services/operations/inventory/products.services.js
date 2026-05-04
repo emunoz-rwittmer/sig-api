@@ -109,7 +109,7 @@ class ProductService {
                 include: [{
                     model: Product,
                     as: 'product',
-                    attributes: ['name', 'sku'],
+                    attributes: ['name', 'sku', 'type', 'unit', 'presentationQuantity'],
                     include: [{
                         model: ProductConfiguration,
                         as: 'configurations',

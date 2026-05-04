@@ -23,7 +23,7 @@ const Stock = db.define('stock', {
     field: 'company_id'
   },
   quantity: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
   },
   max: {

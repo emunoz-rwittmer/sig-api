@@ -23,7 +23,7 @@ const ConsumerCardItems = db.define('consumer_card_items', {
         field: 'quantity'
     },
     price: {
-        type: DataTypes.FLOAT,
+        type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
     },
 });

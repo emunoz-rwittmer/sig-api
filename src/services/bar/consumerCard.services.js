@@ -4,17 +4,27 @@ const CortecyCard = require('../../models/bar/cortecyCard.models');
 const CortecyCardItems = require('../../models/bar/cortecyCardItems.models');
 const Cruise = require('../../models/bar/cruises.models');
 const Passenger = require('../../models/bar/passenger.models');
+const ProductBar = require('../../models/bar/productBar.models');
+const Recipe = require('../../models/bar/recipe.models');
+const RecipeDetail = require('../../models/bar/recipeDetail.models');
+const Warehouse = require('../../models/catalogs/wareHouse.models');
 const Yacht = require('../../models/catalogs/yacht.models');
+const Product = require('../../models/operations/inventory/product.models');
 const db = require('../../utils/database');
+const { deductDirectStock, deductRecipeStock } = require('./consumerCard.helpers');
 
 class ConsumerCardService {
 
     static async createConsumerCard(data) {
         const transaction = await db.transaction();
         try {
-            const { consumerCardId, cardItems, passengerId, counter } = data;
+            const { consumerCardId, cardItems, userId, counter } = data;
 
-            const result = await ConsumerCard.findOne({
+            if (!consumerCardId || !cardItems || cardItems.length === 0) {
+                throw new Error('Invalid consumer card data: consumerCardId and cardItems are required');
+            }
+
+            const consumerCard = await ConsumerCard.findOne({
                 where: { id: consumerCardId },
                 include: [{
                     model: Passenger,
@@ -23,33 +33,90 @@ class ConsumerCardService {
                     include: [{
                         model: Cruise,
                         as: 'cruise',
-                        attributes: ['name'],
+                        attributes: ['name', 'yachtId'],
                         include: [{
                             model: Yacht,
                             as: 'yacht',
                             attributes: ['code']
                         }]
                     }]
-                }]
-            }, { transaction });
+                }],
+                transaction,
+                lock: transaction.LOCK.UPDATE
+            });
 
-            const totalCount = result.totalCount + cardItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            if (!consumerCard) {
+                throw new Error(`Consumer card with id ${consumerCardId} not found`);
+            }
 
-            await result.update({ totalCount }, { transaction });
+            const consumerCardPlain = consumerCard.get({ plain: true });
+            const yachtId = consumerCardPlain.passenger.cruise.yachtId;
+            const numberCard = consumerCardPlain.numberCard;
 
-            await Promise.all(cardItems.map(item => {
-                return ConsumerCardItems.create({
-                    consumerCardId: result.id,
+            const totalConsumption = cardItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const newTotal = Number(consumerCard.totalCount) + totalConsumption;
+
+            const warehouse = await Warehouse.findOne({
+                where: { type: 'Bar', yachtId },
+                transaction
+            });
+
+            if (!warehouse) {
+                throw new Error(`Bar warehouse not found for yacht ${yachtId}`);
+            }
+
+            for (const item of cardItems) {
+                const productBar = await ProductBar.findOne({
+                    where: { id: item.id },
+                    include: [{
+                        model: Recipe,
+                        as: 'recipe',
+                        include: [{
+                            model: RecipeDetail,
+                            as: 'recipe_details'
+                        }]
+                    }],
+                    transaction
+                });
+
+                if (!productBar) {
+                    throw new Error(`Product bar with id ${item.id} not found`);
+                }
+
+                const productBarPlain = productBar.get({ plain: true });
+
+                if (productBarPlain.type === 'DIRECT') {
+                    await deductDirectStock(
+                        warehouse.id,
+                        productBarPlain,
+                        item,
+                        userId,
+                        numberCard,
+                        transaction
+                    );
+                } else if (productBarPlain.type === 'RECIPE') {
+                    await deductRecipeStock(
+                        warehouse.id,
+                        productBarPlain,
+                        item,
+                        userId,
+                        numberCard,
+                        transaction
+                    );
+                }
+
+                await ConsumerCardItems.create({
+                    consumerCardId: consumerCard.id,
                     productId: item.id,
                     quantity: item.quantity,
                     price: item.price * item.quantity,
                 }, { transaction });
-            }));
+            }
 
-            const currentPlain = result.get({ plain: true });
-
+            await consumerCard.update({ totalCount: newTotal }, { transaction });
             await transaction.commit();
-            return currentPlain;
+
+            return consumerCardPlain;
         } catch (error) {
             await transaction.rollback();
             throw error;
@@ -57,14 +124,53 @@ class ConsumerCardService {
     }
 
     static async updateConsumerCard(data, id) {
+        const transaction = await db.transaction();
         try {
-            const result = await ConsumerCard.update(data,
-                {
-                    where: { id },
-                }
-            );
-            return result
+            if (!id) {
+                throw new Error('Consumer card ID is required for update');
+            }
+
+            if (!data || Object.keys(data).length === 0) {
+                throw new Error('No data provided for update');
+            }
+
+            const card = await ConsumerCard.findByPk(id, {
+                transaction,
+                lock: transaction.LOCK.UPDATE
+            });
+
+            if (!card) {
+                throw new Error(`Consumer card with id ${id} not found`);
+            }
+
+            await card.update({
+                ...data,
+                paidAccount: true
+            }, { transaction });
+
+            const updatedCard = await ConsumerCard.findByPk(id, {
+                include: [
+                    {
+                        model: Passenger,
+                        as: 'passenger',
+                    },
+                    {
+                        model: ConsumerCardItems,
+                        as: 'items',
+                        include: [{
+                            model: ProductBar,
+                            as: 'product'
+                        }]
+                    }
+                ],
+                transaction
+            });
+
+            await transaction.commit();
+            return updatedCard;
+
         } catch (error) {
+            await transaction.rollback();
             throw error;
         }
     }
@@ -74,27 +180,37 @@ class ConsumerCardService {
         try {
             const { id, items, observation, counter } = data;
 
-            const result = await CortecyCard.findOne({
-                where: { id }
-            }, { transaction });
+            if (!id || !items || items.length === 0) {
+                throw new Error('Invalid cortecyCard data: id and items are required');
+            }
 
+            const cortecyCard = await CortecyCard.findOne({
+                where: { id },
+                transaction,
+                lock: db.sequelize.Transaction.LOCK.UPDATE
+            });
 
-            const totalCount = result.totalCount + items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            if (!cortecyCard) {
+                throw new Error(`Cortecycard with id ${id} not found`);
+            }
 
-            await result.update({ totalCount }, { transaction });
+            const totalConsumption = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const newTotal = Number(cortecyCard.totalCount) + totalConsumption;
 
-            await Promise.all(items.map(item => {
-                return CortecyCardItems.create({
-                    cortecyCardId: result.id,
+            for (const item of items) {
+                await CortecyCardItems.create({
+                    cortecyCardId: cortecyCard.id,
                     productId: item.id,
                     quantity: item.quantity,
                     price: item.price * item.quantity,
                     observation
                 }, { transaction });
-            }));
+            }
 
+            await cortecyCard.update({ totalCount: newTotal }, { transaction });
             await transaction.commit();
-            return result;
+
+            return cortecyCard.get({ plain: true });
         } catch (error) {
             await transaction.rollback();
             throw error;

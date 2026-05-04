@@ -7,11 +7,13 @@ const fs = require('fs');
 const path = require('path');
 
 const ProductBar = require('../../models/bar/productBar.models');
-const { sendBarConsumption } = require('../../mails/mailer');
+const { sendBarConsumption, sendInvoiceEmail } = require('../../mails/mailer');
+const { passengerInvoicePDF } = require('../../services/bar/passengerInvoicePDF.service');
 
 const createConsumerCard = async (req, res) => {
     try {
         const data = req.body;
+        data.userId = Utils.decode(data.userId);
 
         if (!data.cardItems.length) {
             throw new Error('No se han agregado items a la tarjeta de consumo');
@@ -58,12 +60,13 @@ const createConsumerCard = async (req, res) => {
                 totalAmount
             };
 
-            await sendBarConsumption(dataMail, result.passenger.email);
+            //await sendBarConsumption(dataMail, result.passenger.email);
         }
 
         res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
-        res.status(400).json({ message: error.message });
+
+        res.status(400).json(error.message);
     }
 };
 
@@ -72,14 +75,14 @@ const updateConsumerCard = async (req, res) => {
         const consumerCardId = req.params.card_id;
         const cruiseId = Utils.decode(req.body.cruiseId);
         const data = req.body;
-        const file = req.file; // puede ser undefined
+        const file = req.file;
         delete data.id
 
-        if (file) {
-            const cruise = await CruiseService.getCruiseById(cruiseId);
-            const folderName = `${cruise.code}`.replace(/\s+/g, '_');
-            const voucherDir = path.join(__dirname, '../../../uploads/vouchers', folderName);
+        const cruise = await CruiseService.getCruiseById(cruiseId);
+        const folderName = `${cruise.code}`.replace(/\s+/g, '_');
 
+        if (file) {
+            const voucherDir = path.join(__dirname, '../../../uploads/cruises', folderName, 'vouchers');
             if (!fs.existsSync(voucherDir)) {
                 fs.mkdirSync(voucherDir, { recursive: true });
             }
@@ -88,15 +91,36 @@ const updateConsumerCard = async (req, res) => {
             const filePath = path.join(voucherDir, fileName);
             const relativePath = path.relative(path.join(__dirname, '../../../'), filePath);
 
-            // Mover el archivo de donde lo guardó multer a la carpeta de vouchers
             await fs.promises.rename(file.path, filePath);
 
             data.image = `/${relativePath}`;
         }
 
-        data.paidAccount = true;
+        const result = await ConsumerCardService.updateConsumerCard(data, consumerCardId);
+        console.log(data)
+        if (data.paidAccount === 'null') {
+            const resultPlain = result.get({ plain: true });
 
-        await ConsumerCardService.updateConsumerCard(data, consumerCardId);
+            const invoiceDir = path.join(__dirname, '../../../uploads/cruises', folderName, 'invoices');
+            if (!fs.existsSync(invoiceDir)) {
+                fs.mkdirSync(invoiceDir, { recursive: true });
+            }
+
+            const invoicePath = path.join(invoiceDir, `invoice_${data.numberCard}.pdf`);
+            await passengerInvoicePDF(resultPlain, invoicePath);
+
+            if (result && result.passenger && result.passenger.email) {
+                const mailData = {
+                    passengerName: resultPlain.passenger.name,
+                    passengerEmail: resultPlain.passenger.email,
+                    date: new Date().toLocaleDateString(),
+                    yacht: cruise.yacht?.code,
+                    invoicePath: invoicePath
+                };
+
+                await sendInvoiceEmail(mailData);
+            }
+        }
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
         console.log(error)

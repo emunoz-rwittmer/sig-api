@@ -21,7 +21,7 @@ const ConsumerCard = db.define('consumer_card', {
         allowNull: true,
     },
     totalCount: {
-        type: DataTypes.FLOAT,
+        type: DataTypes.DECIMAL(10, 2),
         defaultValue: 0,
         allowNull: false,
     },
