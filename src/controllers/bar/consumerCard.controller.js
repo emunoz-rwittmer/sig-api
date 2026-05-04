@@ -97,7 +97,7 @@ const updateConsumerCard = async (req, res) => {
         }
 
         const result = await ConsumerCardService.updateConsumerCard(data, consumerCardId);
-        console.log(data)
+
         if (data.paidAccount === 'null') {
             const resultPlain = result.get({ plain: true });
 
