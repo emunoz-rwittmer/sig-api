@@ -128,5 +128,32 @@ class Utils {
     return texto;
   }
 
+  // helper interno
+  static normalizeQuantity(product, quantity) {
+    if (product.type === 'CONSUMABLE') {
+      if (!product.presentationQuantity) {
+        throw new Error(`Producto ${product.name} sin presentationQuantity`);
+      }
+
+      return quantity * product.presentationQuantity; // botellas → ml
+    }
+
+    // DISCRETE
+    return quantity;
+  }
+
+  static viewCorrectQuantity(product, quantity) {
+    if (product.type === 'CONSUMABLE') {
+      if (!product.presentationQuantity) {
+        throw new Error(`Producto ${product.name} sin presentationQuantity`);
+      }
+
+      return (quantity / product.presentationQuantity).toFixed(2);
+    }
+
+    return quantity;
+  }
+
+
 }
 module.exports = Utils;

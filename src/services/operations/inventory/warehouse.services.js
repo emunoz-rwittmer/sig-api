@@ -11,6 +11,7 @@ const db = require('../../../utils/database');
 const Company = require('../../../models/catalogs/company.models');
 
 class WarehouseService {
+
     static async getAllWarehouses() {
         try {
             const result = await Warehouse.findAll({
@@ -157,32 +158,38 @@ class WarehouseService {
         try {
             const result = await Stock.findOne({
                 where: { id },
+                attributes: ['id', 'productId', 'warehouseId', 'companyId', 'quantity', 'max', 'min'],
                 order: [['createdAt', 'DESC']],
                 include: [
                     {
                         model: Warehouse,
                         as: 'warehouse',
-                        attributes: ['name']
+                        attributes: ['id', 'name']
                     },
                     {
                         model: Company,
                         as: 'company',
-                        attributes: ['name']
+                        attributes: ['id', 'name']
                     },
                     {
                         model: Product,
                         as: 'product',
-                        attributes: ['name'],
+                        attributes: ['id', 'name', 'type', 'presentationQuantity'],
                         include: [
                             {
                                 model: Transaction,
                                 as: 'transactions',
-                                attributes: ['createdAt','warehouseFromId', 'warehouseToId', 'type', 'quantity'],
+                                attributes: ['id', 'createdAt', 'warehouseFromId', 'warehouseToId', 'type', 'quantity', 'userId'],
                                 include: [
                                     {
                                         model: Warehouse,
                                         as: 'warehouseTo',
-                                        attributes: ['name']
+                                        attributes: ['id', 'name']
+                                    },
+                                    {
+                                        model: Warehouse,
+                                        as: 'warehouseFrom',
+                                        attributes: ['id', 'name']
                                     },
                                     {
                                         model: Staff,
@@ -200,18 +207,16 @@ class WarehouseService {
 
             const plain = result.get({ plain: true });
 
-            const { warehouseId } = plain;
+            const { warehouseId, companyId } = plain;
 
             if (!plain?.product?.transactions) return plain;
 
             plain.product.transactions = plain.product.transactions
-                .filter(({ warehouseFromId, warehouseToId }) =>
-                    warehouseFromId === warehouseId || warehouseToId === warehouseId
-                )
-                .map(trx => ({
-                    ...trx,
-                    type: warehouseId === trx.warehouseToId ? 'Entrada' : 'Salida'
-                }))
+                .filter(({ warehouseFromId, warehouseToId }) => {
+                    const isFromThisWarehouse = warehouseFromId === warehouseId;
+                    const isToThisWarehouse = warehouseToId === warehouseId;
+                    return isFromThisWarehouse || isToThisWarehouse;
+                })
                 .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
             return plain;

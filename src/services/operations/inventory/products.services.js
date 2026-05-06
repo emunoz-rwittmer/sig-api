@@ -6,6 +6,8 @@ const Stock = require('../../../models/operations/inventory/stock.models');
 const Company = require('../../../models/catalogs/company.models');
 const { Sequelize, Op } = require('sequelize');
 const StockHistory = require('../../../models/operations/inventory/stockHistory.models');
+const Transaction = require('../../../models/operations/inventory/transaction.models');
+const Utils = require('../../../utils/Utils');
 
 class ProductService {
     static async findProduct(sku) {
@@ -171,7 +173,7 @@ class ProductService {
                 {
                     name: product.name,
                     sku: product.sku,
-                    type: product.type, 
+                    type: product.type,
                     unit: product.unit,
                     presentationQuantity: product.presentationQuantity
                 },
@@ -257,40 +259,84 @@ class ProductService {
     }
 
     static async updateStock(id, data) {
-        const transaction = await db.transaction();
+        const t = await db.transaction();
 
         try {
-            const current = await Stock.findByPk(id, { transaction });
+            const current = await Stock.findByPk(id, { transaction: t });
+
             if (!current) {
                 throw new Error('Stock no encontrado');
             }
 
             const currentPlain = current.get({ plain: true });
+
             const hasChanges = Object.keys(data).some(key => {
                 return data[key] !== currentPlain[key];
             });
 
             if (!hasChanges) {
-                await transaction.rollback();
+                await t.rollback();
                 return;
             }
 
-            await Stock.update(data, {
+            const product = await Product.findOne({
+                where: { id: currentPlain.productId },
+                transaction: t,
+                lock: t.LOCK.UPDATE
+            });
+
+            const normalizedQty = Utils.normalizeQuantity(product, data.quantity);
+
+            const hasQuantityChange =
+                normalizedQty !== undefined &&
+                normalizedQty !== currentPlain.quantity;
+
+            let diff = 0;
+            let diffNormal = 0;
+            let newQuantity = currentPlain.quantity;
+
+            if (hasQuantityChange) {
+                diff = normalizedQty - currentPlain.quantity;
+                newQuantity = normalizedQty;
+
+                diffNormal = Utils.viewCorrectQuantity(product, diff)
+            }
+
+            await Stock.update({
+                ...data,
+                quantity: normalizedQty
+            }, {
                 where: { id },
-                transaction
+                transaction: t
             });
 
             await StockHistory.create({
                 stockId: id,
                 ...data
-            }, { transaction });
+            }, { transaction: t });
 
-            await transaction.commit();
+            if (hasQuantityChange) {
+
+                const isIncrease = diff > 0;
+
+                await Transaction.create({
+                    productId: currentPlain.productId,
+                    userId: data.userId,
+                    warehouseFromId: isIncrease ? null : currentPlain.warehouseId,
+                    warehouseToId: isIncrease ? currentPlain.warehouseId : null,
+
+                    quantity: Math.abs(diffNormal),
+                    type: isIncrease ? 'IN' : 'OUT',
+
+                }, { transaction: t });
+            }
+
+            await t.commit();
 
             return { message: 'Actualizado correctamente' };
 
         } catch (error) {
-            await transaction.rollback();
+            await t.rollback();
             throw error;
         }
     }

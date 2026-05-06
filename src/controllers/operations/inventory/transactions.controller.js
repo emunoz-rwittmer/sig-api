@@ -30,7 +30,7 @@ const productEntryInWarehouse = async (req, res) => {
         };
 
         const transactionData = {
-            type: 'Entrada',
+            type: 'IN',
             warehouseToId: warehouseId,
             quantity: parsedQuantity,
             userId: Utils.decode(user),

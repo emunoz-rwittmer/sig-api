@@ -4,6 +4,7 @@ const Transaction = require('../../../models/operations/inventory/transaction.mo
 const db = require('../../../utils/database');
 const orderItems = require('../../../models/operations/orders/orderItems.models');
 const Register = require('../../../models/operations/inventory/register.models');
+const Utils = require('../../../utils/Utils');
 
 class TransactionService {
 
@@ -50,14 +51,16 @@ class TransactionService {
                 lock: t.LOCK.UPDATE
             });
 
+            const normalizedQty = Utils.normalizeQuantity(product, quantity);
+
             if (stock) {
-                stock.quantity += quantity;
+                stock.quantity += normalizedQty;
                 await stock.save({ transaction: t });
             } else {
                 stock = await Stock.create(
                     {
                         ...stockData,
-                        quantity,
+                        normalizedQty,
                         productId: product.id
                     },
                     { transaction: t }
@@ -78,7 +81,7 @@ class TransactionService {
                 {
                     ...transactionData,
                     productId: product.id,
-                    quantity
+                    normalizedQty
                 },
                 { transaction: t }
             );
@@ -96,7 +99,7 @@ class TransactionService {
             await orderItem.update(
                 {
                     status: 'ingresado',
-                    quantity
+                    normalizedQty
                 },
                 { transaction: t }
             );
@@ -170,6 +173,12 @@ class TransactionService {
             for (const product of consolidatedProducts) {
                 const { id: productId, name, quantity } = product;
 
+                const infoProduct = await Product.findOne({
+                    where: { id },
+                    transaction,
+                    lock: transaction.LOCK.UPDATE
+                });
+
                 const stockFrom = await Stock.findOne({
                     where: {
                         productId,
@@ -180,8 +189,10 @@ class TransactionService {
                     lock: transaction.LOCK.UPDATE
                 });
 
-                if (!stockFrom || stockFrom.quantity < quantity) {
-                    throw new Error(`Stock insuficiente para ${name}. Disponible: ${stockFrom?.quantity || 0}, Solicitado: ${quantity}`);
+                const normalizedQty = Utils.normalizeQuantity(infoProduct, quantity);
+
+                if (!stockFrom || stockFrom.quantity < normalizedQty) {
+                    throw new Error(`Stock insuficiente para ${name}. Disponible: ${stockFrom?.quantity || 0}, Solicitado: ${normalizedQty}`);
                 }
             }
 
@@ -189,6 +200,12 @@ class TransactionService {
             for (const product of consolidatedProducts) {
                 const { id: productId, name, quantity } = product;
 
+                const infoProduct = await Product.findOne({
+                    where: { id },
+                    transaction,
+                    lock: transaction.LOCK.UPDATE
+                });
+
                 const stockFrom = await Stock.findOne({
                     where: {
                         productId,
@@ -199,8 +216,10 @@ class TransactionService {
                     lock: transaction.LOCK.UPDATE
                 });
 
+                const normalizedQty = Utils.normalizeQuantity(infoProduct, quantity);
+
                 // Restar del almacén origen
-                stockFrom.quantity -= quantity;
+                stockFrom.quantity -= normalizedQty;
                 await stockFrom.save({ transaction });
 
                 // Sumar al almacén destino
@@ -215,7 +234,7 @@ class TransactionService {
                     lock: transaction.LOCK.UPDATE
                 });
 
-                stockTo.quantity += quantity;
+                stockTo.quantity += normalizedQty;
                 await stockTo.save({ transaction });
 
                 await Transaction.create({
@@ -223,8 +242,8 @@ class TransactionService {
                     userId,
                     warehouseFromId,
                     warehouseToId,
-                    quantity,
-                    type: 'Salida',
+                    normalizedQty,
+                    type: 'OUT',
                     registerId: register.id
                 }, { transaction });
             }
@@ -266,6 +285,12 @@ class TransactionService {
                 validProducts.map(async (product) => {
                     const quantity = Number(product.quantity);
 
+                    const infoProduct = await Product.findOne({
+                        where: { id: product.id },
+                        transaction,
+                        lock: transaction.LOCK.UPDATE
+                    });
+
                     const whereCondition = {
                         productId: product.id,
                         warehouseId: warehouseToId,
@@ -279,7 +304,9 @@ class TransactionService {
                         lock: transaction.LOCK.UPDATE
                     });
 
-                    stockToInstance.quantity += quantity;
+                    const normalizedQty = Utils.normalizeQuantity(infoProduct, quantity);
+
+                    stockToInstance.quantity += normalizedQty;
                     await stockToInstance.save({ transaction });
 
                     return Transaction.create({
@@ -287,7 +314,7 @@ class TransactionService {
                         userId,
                         warehouseToId,
                         quantity,
-                        type: 'Entrada'
+                        type: 'IN'
                     }, { transaction });
                 })
             );
@@ -323,9 +350,9 @@ class TransactionService {
     }
 
     static async incomeProductsRegister(transactionData) {
-        const { transactiones, warehouseToId, companyId, userId, registerId, observations } = transactionData;
 
         const transaction = await db.transaction();
+        const { transactiones, warehouseToId, companyId, userId, registerId, observations } = transactionData;
 
         try {
             // Validar que haya productos
@@ -450,7 +477,7 @@ class TransactionService {
                     warehouseFromId: sourceWarehouseId,
                     warehouseToId,
                     quantity,
-                    type: 'Salida'
+                    type: 'OUT'
                 }, { transaction });
             }));
 

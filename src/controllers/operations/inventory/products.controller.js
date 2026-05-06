@@ -58,7 +58,7 @@ const getProductsByWarehouse = async (req, res) => {
                 x.id = Utils.encode(x.id);
                 x.companyId = Utils.encode(x.companyId);
                 x.productId = Utils.encode(x.productId);
-                x.quantity = x.product.type === 'CONSUMABLE' ? (x.quantity / x.product.presentationQuantity).toFixed(2) : x.quantity
+                x.quantity = Utils.viewCorrectQuantity(x.product, x.quantity)
             });
         }
         res.status(200).json(currentPlain);
@@ -139,6 +139,7 @@ const updateStock = async (req, res) => {
 
         const stockId = Utils.decode(req.params.stock_id);
         const data = req.body
+        data.userId = Utils.decode(data.userId);
         await ProductService.updateStock(stockId, data);
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
