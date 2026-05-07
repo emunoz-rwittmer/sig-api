@@ -6,6 +6,7 @@ const db = require('../../../utils/database');
 const RequestItems = require('../../../models/operations/yachtRequest/requestItems.models');
 const ProductConfiguration = require('../../../models/operations/inventory/productConfiguration');
 const Product = require('../../../models/operations/inventory/product.models');
+const Stock = require('../../../models/operations/inventory/stock.models');
 
 class RequestService {
     static async getAllRequests() {
@@ -47,7 +48,6 @@ class RequestService {
                             include: [{
                                 model: Product,
                                 as: 'product',
-                                attributes: ['name']
                             }]
                         }]
                     },
@@ -73,12 +73,14 @@ class RequestService {
                 ]
             });
 
-            return result;
+            const currentPlain = result.get({ plain: true });
+            return currentPlain;
 
         } catch (error) {
             throw error;
         }
     }
+
     static async createRequest(data) {
         const transaction = await db.transaction();
 
@@ -95,6 +97,70 @@ class RequestService {
             await transaction.commit();
             return result;
         } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
+    }
+
+    static async createDrinkRequest(yachtId, userId) {
+        const transaction = await db.transaction();
+
+        try {
+
+            const warehouse = await Warehouse.findOne({
+                where: { type: 'Bar', yachtId },
+                transaction
+            });
+
+            const stocks = await Stock.findAll({
+                where: { warehouseId: warehouse.id },
+                include: [{
+                    model: Product,
+                    as: 'product',
+                    include: [{
+                        model: ProductConfiguration,
+                        as: 'configurations'
+                    }],
+                }],
+                transaction,
+                lock: transaction.LOCK.UPDATE
+            });
+
+            const currenStocks = stocks.map(r => r.get({ plain: true }));
+
+            const formattedDate = new Date();
+            const day = formattedDate.getDate();
+            const month = formattedDate.getMonth() + 1;
+            const year = formattedDate.getFullYear();
+
+            const warehouseRequest = await Warehouse.findOne({
+                where: { type: 'Yate', yachtId },
+                transaction
+            });
+
+
+            const result = await Request.create({
+                warehouseId: warehouseRequest.id,
+                userId,
+                group: 'drink_request',
+                status: 'Pendiente',
+                name: `drink_request_${day}${month}${year}`,
+            }, { transaction });
+
+            const productsRequest = stocks.map(item => ({
+                requestId: result.id,
+                configurationId: item.product.configurations[0]?.id,
+                stock: item.quantity,
+                order: 0,
+                quantity: 0
+            }));
+
+            await requestItems.bulkCreate(productsRequest, { transaction });
+
+            await transaction.commit();
+            return result;
+        } catch (error) {
+            console.log(error)
             await transaction.rollback();
             throw error;
         }

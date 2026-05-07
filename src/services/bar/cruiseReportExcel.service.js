@@ -11,18 +11,17 @@ exports.generateCruiseReportExcel = async (cruise, passengers, filePath) => {
     // Sheet 1: Información del Crucero
     const wsCruise = wb.addWorksheet('Crucero');
 
-    // Estilos
+    // Estilos minimalistas para reducir tamaño
     const titleStyle = wb.createStyle({
       alignment: { horizontal: 'center', vertical: 'center' },
       fill: {
         type: 'pattern',
         patternType: 'solid',
-        fgColor: '2C70BB',
+        fgColor: 'CCCCCC',
       },
       font: {
         bold: true,
-        color: 'ffffff',
-        size: 14,
+        size: 11,
       },
     });
 
@@ -31,28 +30,27 @@ exports.generateCruiseReportExcel = async (cruise, passengers, filePath) => {
       fill: {
         type: 'pattern',
         patternType: 'solid',
-        fgColor: '4472C4',
+        fgColor: 'DDDDDD',
       },
       font: {
         bold: true,
-        color: 'ffffff',
-        size: 11,
+        size: 10,
       },
     });
 
     const labelStyle = wb.createStyle({
-      font: { bold: true, size: 11 },
+      font: { bold: true, size: 10 },
       alignment: { horizontal: 'left' },
     });
 
     const cellStyle = wb.createStyle({
-      font: { size: 10 },
+      font: { size: 9 },
       alignment: { horizontal: 'left' },
     });
 
-    // Ancho de columnas
-    wsCruise.column(1).setWidth(25);
-    wsCruise.column(2).setWidth(45);
+    // Ancho de columnas optimizado
+    wsCruise.column(1).setWidth(20);
+    wsCruise.column(2).setWidth(40);
 
     // Título
     wsCruise.cell(1, 1, 1, 2, true).string(`INFORMACIÓN DEL CRUCERO (${cruise.yacht?.name})`).style(titleStyle);
@@ -87,21 +85,22 @@ exports.generateCruiseReportExcel = async (cruise, passengers, filePath) => {
     wsCruise.cell(row, 2).string(cruise.barman).style(cellStyle);
     row++;
 
-    wsCruise.column(3).setWidth(25);
-    wsCruise.column(4).setWidth(20);
-    wsCruise.column(5).setWidth(15);
-    wsCruise.column(6).setWidth(15);
-    wsCruise.column(7).setWidth(15);
-    wsCruise.column(8).setWidth(15);
-    wsCruise.column(9).setWidth(15);
-    wsCruise.column(10).setWidth(15);
-    wsCruise.column(11).setWidth(15);
+    // Columnas optimizadas para tabla
+    wsCruise.column(3).setWidth(20);
+    wsCruise.column(4).setWidth(18);
+    wsCruise.column(5).setWidth(12);
+    wsCruise.column(6).setWidth(12);
+    wsCruise.column(7).setWidth(12);
+    wsCruise.column(8).setWidth(12);
+    wsCruise.column(9).setWidth(12);
+    wsCruise.column(10).setWidth(12);
+    wsCruise.column(11).setWidth(10);
 
     // Encabezados
     wsCruise.cell(11, 1, 11, 11, true).string('CONSUMER CARDS - PASAJEROS CON CONSUMO').style(titleStyle);
 
-    // Headers
-    const headers = ['Pasajero', 'Pasaporte Nº', 'Nacionalidad', 'Tarjeta', 'SubTotal', 'IVA 15%', 'Total', 'Metodo de Pago', 'Recibo Nº', 'Cuenta Pagada', 'Items consumidos'];
+    // Headers de tabla
+    const headers = ['Pasajero', 'Pasaporte Nº', 'Nacionalidad', 'Tarjeta', 'SubTotal', 'IVA 15%', 'Total', 'Metodo de Pago', 'Recibo Nº', 'Cuenta Pagada', 'Items'];
     headers.forEach((header, colIndex) => {
       wsCruise.cell(13, colIndex + 1).string(header).style(headerStyle);
     });
@@ -113,9 +112,8 @@ exports.generateCruiseReportExcel = async (cruise, passengers, filePath) => {
     passengers.forEach((passenger) => {
       if (passenger.consumer_card && passenger.consumer_card.totalCount > 0 && passenger.consumer_card.paidAccount === true) {
         const itemCount = passenger.consumer_card.items?.length || 0;
-
-        const subtotal = (passenger.consumer_card.totalCount / 1.15).toFixed(2)
-        const iva = (subtotal * 0.15).toFixed(2)
+        const subtotal = (passenger.consumer_card.totalCount / 1.15).toFixed(2);
+        const iva = (subtotal * 0.15).toFixed(2);
 
         wsCruise.cell(dataRow, 1).string(passenger.name).style(cellStyle);
         wsCruise.cell(dataRow, 2).string(passenger.identificationNumber).style(cellStyle);
@@ -123,33 +121,33 @@ exports.generateCruiseReportExcel = async (cruise, passengers, filePath) => {
         wsCruise.cell(dataRow, 4).string(passenger.consumer_card.numberCard).style(cellStyle);
         wsCruise.cell(dataRow, 5).string(subtotal).style(cellStyle);
         wsCruise.cell(dataRow, 6).string(iva).style(cellStyle);
-        wsCruise.cell(dataRow, 7).number(passenger.consumer_card.totalCount).style(cellStyle);
+        wsCruise.cell(dataRow, 7).string(passenger.consumer_card.totalCount).style(cellStyle);
         wsCruise.cell(dataRow, 8).string(passenger.consumer_card.paymentType || 'N/A').style(cellStyle);
         wsCruise.cell(dataRow, 9).string(passenger.consumer_card.receiptNumber || 'N/A').style(cellStyle);
         wsCruise.cell(dataRow, 10).string(passenger.consumer_card.paidAccount ? 'Sí' : 'No').style(cellStyle);
         wsCruise.cell(dataRow, 11).number(itemCount).style(cellStyle);
 
-        totalGeneral += passenger.consumer_card.totalCount;
+        totalGeneral += Number(passenger.consumer_card.totalCount);
         dataRow++;
       }
     });
 
     // Fila de total
     wsCruise.cell(dataRow + 1, 2).string('TOTAL GENERAL:').style(labelStyle);
-    wsCruise.cell(dataRow + 1, 3).number(totalGeneral).style(headerStyle);
+    wsCruise.cell(dataRow + 1, 3).string(totalGeneral).style(headerStyle);
 
-    // Sheet 3: Detalle de Items
+    // Sheet 2: Detalle de Items (solo si es necesario)
     const wsItems = wb.addWorksheet('Detalle Items');
 
-    wsItems.column(1).setWidth(25);
-    wsItems.column(2).setWidth(25);
-    wsItems.column(3).setWidth(15);
-    wsItems.column(4).setWidth(15);
-    wsItems.column(5).setWidth(20);
+    wsItems.column(1).setWidth(20);
+    wsItems.column(2).setWidth(22);
+    wsItems.column(3).setWidth(12);
+    wsItems.column(4).setWidth(12);
+    wsItems.column(5).setWidth(12);
 
     wsItems.cell(1, 1, 1, 5, true).string('DETALLE DE ITEMS CONSUMIDOS').style(titleStyle);
 
-    const itemHeaders = ['Pasajero', 'Producto', 'Cantidad', 'Precio Unitario', 'Total'];
+    const itemHeaders = ['Pasajero', 'Producto', 'Cantidad', 'Precio Unit.', 'Total'];
     itemHeaders.forEach((header, colIndex) => {
       wsItems.cell(3, colIndex + 1).string(header).style(headerStyle);
     });
@@ -167,7 +165,7 @@ exports.generateCruiseReportExcel = async (cruise, passengers, filePath) => {
           wsItems.cell(itemRow, 2).string(item.product?.name || 'N/A').style(cellStyle);
           wsItems.cell(itemRow, 3).number(item.quantity).style(cellStyle);
           wsItems.cell(itemRow, 4).number(item.product?.price || 0).style(cellStyle);
-          wsItems.cell(itemRow, 5).number(item.price).style(cellStyle);
+          wsItems.cell(itemRow, 5).string(item.price).style(cellStyle);
 
           itemRow++;
         });

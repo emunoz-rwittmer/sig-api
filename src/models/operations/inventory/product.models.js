@@ -26,7 +26,7 @@ const Product = db.define('product', {
     field: 'unidad_medida'
   },
   presentationQuantity: {
-    type: DataTypes.STRING,
+    type: DataTypes.DECIMAL(10, 2),
     allowNull: true,
     field: 'presentacion'
   },

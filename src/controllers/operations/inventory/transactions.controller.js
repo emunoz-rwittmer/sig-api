@@ -77,14 +77,14 @@ const transactionWarehouse = async (req, res) => {
         });
 
         if (transactions.success) {
-            if (location === 'UIO') {
-                const result = await CompanyService.getCompanyById(companyId);
-                axios.post('http://190.12.15.164:5859/print/transactions', { products, userName, company: result?.name, formattedCounter })
-            }
-            if (location === 'GPS') {
-                console.log('imprimiendo en galapagos')
-                //axios.post('http://localhost:3000/print/transactions', { products, userName, company })
-            }
+            // if (location === 'UIO') {
+            //     const result = await CompanyService.getCompanyById(companyId);
+            //     axios.post('http://190.12.15.164:5859/print/transactions', { products, userName, company: result?.name, formattedCounter })
+            // }
+            // if (location === 'GPS') {
+            //     console.log('imprimiendo en galapagos')
+            //     //axios.post('http://localhost:3000/print/transactions', { products, userName, company })
+            // }
             res.status(200).json({ data: transactions.message });
         }
     } catch (error) {

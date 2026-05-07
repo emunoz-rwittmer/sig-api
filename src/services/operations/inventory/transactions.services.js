@@ -174,7 +174,7 @@ class TransactionService {
                 const { id: productId, name, quantity } = product;
 
                 const infoProduct = await Product.findOne({
-                    where: { id },
+                    where: { id: productId },
                     transaction,
                     lock: transaction.LOCK.UPDATE
                 });
@@ -201,7 +201,7 @@ class TransactionService {
                 const { id: productId, name, quantity } = product;
 
                 const infoProduct = await Product.findOne({
-                    where: { id },
+                    where: { id: productId },
                     transaction,
                     lock: transaction.LOCK.UPDATE
                 });
@@ -242,7 +242,7 @@ class TransactionService {
                     userId,
                     warehouseFromId,
                     warehouseToId,
-                    normalizedQty,
+                    quantity,
                     type: 'OUT',
                     registerId: register.id
                 }, { transaction });
@@ -255,6 +255,7 @@ class TransactionService {
             };
 
         } catch (error) {
+            console.log(error)
             await transaction.rollback();
             throw new Error(`Error en la transacción: ${error.message}`);
         }
@@ -306,14 +307,18 @@ class TransactionService {
 
                     const normalizedQty = Utils.normalizeQuantity(infoProduct, quantity);
 
-                    stockToInstance.quantity += normalizedQty;
+                    // Usar Math.round para evitar problemas de precisión al sumar decimales
+                    const currentQty = Number(stockToInstance.quantity) || 0;
+                    const newQty = Math.round((currentQty + normalizedQty) * 100) / 100;
+
+                    stockToInstance.quantity = newQty;
                     await stockToInstance.save({ transaction });
 
                     return Transaction.create({
                         productId: product.id,
                         userId,
                         warehouseToId,
-                        quantity,
+                        quantity,  // Usar cantidad normalizada en la transacción
                         type: 'IN'
                     }, { transaction });
                 })

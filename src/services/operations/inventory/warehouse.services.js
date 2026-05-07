@@ -101,58 +101,66 @@ class WarehouseService {
         }
     }
 
-    static async getStockInWarehouse(warehouseId) {
-        try {
-            const result = await Stock.findAll({
-                where: { warehouseId },
-                attributes: ['quantity',
+    // static async getStockInWarehouse(warehouseId) {
+    //     try {
+    //         const result = await Stock.findAll({
+    //             where: { warehouseId },
+    //             attributes: ['quantity',
 
-                    [Sequelize.literal(`
-                        (
-                            SELECT SUM(CASE 
-                                WHEN  transactions.warehouse_to_id = ${warehouseId}
-                                THEN transactions.quantity 
-                                ELSE 0 
-                            END)
-                            FROM transactions
-                            WHERE transactions.product_id = product.id
-                        )
-                    `), 'totalIncome'],
-                    [Sequelize.literal(`
-                    (
-                        SELECT SUM(CASE 
-                            WHEN transactions.type = 'Salida' AND transactions.warehouse_from_id = ${warehouseId} 
-                            THEN transactions.quantity 
-                            ELSE 0 
-                        END)
-                        FROM transactions
-                        WHERE transactions.product_id = product.id
-                    )
-                `), 'totalOutcome']
-                ],
-                include: [{
-                    model: Product,
-                    as: 'product',
-                    attributes: ['id', 'name', 'sku'],
-                    // include: [{
-                    //     model: PlacesYacht,
-                    //     as: 'configurations',
-                    //     attributes: ['name'],
-                    // }],
-                },
-                {
-                    model: Company,
-                    as: 'company',
-                    attributes: ['id', 'name'],
-                }
-                ],
-                order: [[{ model: Product, as: 'product' }, 'name', 'ASC']]
-            });
-            return result;
-        } catch (error) {
-            throw error;
-        }
-    }
+    //                 [Sequelize.literal(`
+    //                     (
+    //                         SELECT SUM(CASE 
+    //                             WHEN  transactions.warehouse_to_id = ${warehouseId}
+    //                             THEN transactions.quantity 
+    //                             ELSE 0 
+    //                         END)
+    //                         FROM transactions
+    //                         WHERE transactions.product_id = product.id
+    //                     )
+    //                 `), 'totalIncome'],
+    //                 [Sequelize.literal(`
+    //                 (
+    //                     SELECT SUM(CASE 
+    //                         WHEN transactions.type = 'OUT' AND transactions.warehouse_from_id = ${warehouseId} 
+    //                         THEN transactions.quantity 
+    //                         ELSE 0 
+    //                     END)
+    //                     FROM transactions
+    //                     WHERE transactions.product_id = product.id
+    //                 )
+    //             `), 'totalOutcome'],
+    //                 [Sequelize.literal(`
+    //                 (
+    //                     SELECT SUM(CASE 
+    //                         WHEN transactions.type = 'BAR_CONSUMPTION'
+    //                         THEN transactions.quantity 
+    //                         ELSE 0 
+    //                     END)
+    //                     FROM transactions
+    //                     WHERE transactions.product_id = product.id
+    //                 )
+    //             `), 'totalBarConsumption']
+    //             ],
+    //             include: [{
+    //                 model: Product,
+    //                 as: 'product',
+    //                 attributes: ['id', 'name', 'sku'],
+    //             },
+    //             {
+    //                 model: Company,
+    //                 as: 'company',
+    //                 attributes: ['id', 'name'],
+    //             }
+    //             ],
+    //             order: [[{ model: Product, as: 'product' }, 'name', 'ASC']]
+    //         });
+
+    //         console.log(result[0])
+    //         return result;
+    //     } catch (error) {
+    //         throw error;
+    //     }
+    // }
 
     static async getStockProduct(id) {
         try {
@@ -212,10 +220,30 @@ class WarehouseService {
             if (!plain?.product?.transactions) return plain;
 
             plain.product.transactions = plain.product.transactions
-                .filter(({ warehouseFromId, warehouseToId }) => {
+                .filter(({ warehouseFromId, warehouseToId, type }) => {
+                    // Incluir transacciones BAR_CONSUMPTION (sin warehouse info)
+                    if (type === 'BAR_CONSUMPTION' && (!warehouseFromId && !warehouseToId)) {
+                        return true;
+                    }
+                    // Incluir transacciones normales que pertenecen a este warehouse
                     const isFromThisWarehouse = warehouseFromId === warehouseId;
                     const isToThisWarehouse = warehouseToId === warehouseId;
                     return isFromThisWarehouse || isToThisWarehouse;
+                })
+                .map((transaction) => {
+                    const adjustedTransaction = { ...transaction };
+                    
+                    // Solo ajustar tipo si tiene warehouse info (no es BAR_CONSUMPTION)
+                    if (transaction.warehouseFromId || transaction.warehouseToId) {
+                        if (transaction.warehouseFromId === warehouseId) {
+                            adjustedTransaction.type = 'OUT'; // Salida del warehouse
+                        } else if (transaction.warehouseToId === warehouseId) {
+                            adjustedTransaction.type = 'IN'; // Entrada al warehouse
+                        }
+                    }
+                    // Si es BAR_CONSUMPTION, mantenerlo como está
+                    
+                    return adjustedTransaction;
                 })
                 .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 

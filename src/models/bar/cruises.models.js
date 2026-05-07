@@ -43,6 +43,16 @@ const Cruise = db.define('cruise', {
         defaultValue: 'open',
         field: 'cruise_state',
     },
+    urlPDFReport: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'url_reporte_pdf',
+    },
+    urlExcelReport: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'url_reporte_excel',
+    },
 
 });
 

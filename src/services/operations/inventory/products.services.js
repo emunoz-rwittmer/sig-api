@@ -99,7 +99,7 @@ class ProductService {
                     [Sequelize.literal(`
                     (
                         SELECT SUM(CASE 
-                            WHEN transactions.type = 'Salida' AND transactions.warehouse_from_id = ${warehouseId} 
+                            WHEN transactions.type = 'OUT' AND transactions.warehouse_from_id = ${warehouseId} 
                             THEN transactions.quantity 
                             ELSE 0 
                         END)
@@ -107,6 +107,18 @@ class ProductService {
                         WHERE transactions.product_id = product.id
                     )
                 `), 'totalOutcome']
+                    ,
+                    [Sequelize.literal(`
+                    (
+                        SELECT SUM(CASE 
+                            WHEN transactions.type = 'BAR_CONSUMPTION'
+                            THEN transactions.quantity 
+                            ELSE 0 
+                        END)
+                        FROM transactions
+                        WHERE transactions.product_id = product.id
+                    )
+                `), 'totalBarConsumption']
                 ],
                 include: [{
                     model: Product,
@@ -126,7 +138,10 @@ class ProductService {
                 ],
                 order: [[{ model: Product, as: 'product' }, 'name', 'ASC']]
             });
-            return result;
+
+            const currentPlain = result.map(r => r.get({ plain: true }));
+            return currentPlain;
+
         } catch (error) {
             throw error;
         }

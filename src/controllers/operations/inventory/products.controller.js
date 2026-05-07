@@ -51,18 +51,20 @@ const getProductsByWarehouse = async (req, res) => {
         const warehouseId = Utils.decode(req.params.warehouse_id)
         const result = await ProductService.getProductsByWarehouse(warehouseId);
 
-        const currentPlain = result.map(r => r.get({ plain: true }));
-
-        if (currentPlain instanceof Array) {
-            currentPlain.map((x) => {
+        if (result instanceof Array) {
+            result.map((x) => {
                 x.id = Utils.encode(x.id);
                 x.companyId = Utils.encode(x.companyId);
                 x.productId = Utils.encode(x.productId);
                 x.quantity = Utils.viewCorrectQuantity(x.product, x.quantity)
+                x.totalBarConsumption = Utils.viewCorrectQuantity(x.product, x.totalBarConsumption)
+
             });
         }
-        res.status(200).json(currentPlain);
+        res.status(200).json(result);
     } catch (error) {
+        console.log(error)
+
         res.status(400).json(error.message)
     }
 }

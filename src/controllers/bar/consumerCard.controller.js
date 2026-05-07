@@ -111,7 +111,7 @@ const generateInvoiceAndSendEmail = async (resultPlain, invoicePath, cruise, num
                 invoicePath
             };
 
-            sendInvoiceEmail(mailData).catch(err => 
+            sendInvoiceEmail(mailData).catch(err =>
                 console.error(`Email failed for ${resultPlain.passenger.email}:`, err.message)
             );
         }
@@ -123,7 +123,7 @@ const generateInvoiceAndSendEmail = async (resultPlain, invoicePath, cruise, num
 
 const updateConsumerCard = async (req, res) => {
     const startTime = Date.now();
-    
+
     try {
         const { card_id } = req.params;
         const { cruiseId: encodedCruiseId, numberCard, paidAccount, ...updateData } = req.body;
@@ -157,10 +157,10 @@ const updateConsumerCard = async (req, res) => {
         if (paidAccount === 'null') {
             const resultPlain = result.get?.({ plain: true }) || result;
             const invoicePath = path.join(
-                UPLOADS_BASE_PATH, 
-                'cruises', 
-                folderName, 
-                'invoices', 
+                UPLOADS_BASE_PATH,
+                'cruises',
+                folderName,
+                'invoices',
                 `invoice_${numberCard}.pdf`
             );
 
@@ -168,13 +168,8 @@ const updateConsumerCard = async (req, res) => {
                 .catch(err => console.error('Invoice/Email process failed:', err));
         }
 
-        const duration = Date.now() - startTime;
-        res.status(200).json({ 
-            data: 'resource updated successfully',
-            duration: `${duration}ms`
-        });
+        res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        console.error('updateConsumerCard error:', error);
         res.status(400).json({ error: error.message });
     }
 }

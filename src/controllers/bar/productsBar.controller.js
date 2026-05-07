@@ -61,7 +61,7 @@ const createProduct = async (req, res) => {
                 x.productId = Utils.decode(x.productId)
             ))
         }
-        console.log(product)
+
         await ProductBarService.createProduct(product);
         res.status(200).json({ data: 'resource created successfully' });
 

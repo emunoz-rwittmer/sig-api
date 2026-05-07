@@ -135,11 +135,17 @@ class Utils {
         throw new Error(`Producto ${product.name} sin presentationQuantity`);
       }
 
-      return quantity * product.presentationQuantity; // botellas → ml
+      // Convertir a número para evitar problemas de precisión
+      const qty = Number(quantity);
+      const presentation = Number(product.presentationQuantity);
+      
+      // Usar Math.round para mantener precisión decimal
+      const result = qty * presentation;
+      return Math.round(result * 100) / 100; // botellas → ml
     }
 
     // DISCRETE
-    return quantity;
+    return Number(quantity);
   }
 
   static viewCorrectQuantity(product, quantity) {
