@@ -156,7 +156,7 @@ class RequestService {
             }));
 
             await requestItems.bulkCreate(productsRequest, { transaction });
-
+ 
             await transaction.commit();
             return result;
         } catch (error) {

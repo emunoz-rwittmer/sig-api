@@ -11,7 +11,7 @@ class ProductBarService {
     static async getAll() {
         try {
             const result = await ProductBar.findAll({
-                attributes: ['id', 'name', 'category', 'price', 'active', 'createdAt'],
+                attributes: ['id', 'name', 'category', 'productId', 'price', 'active', 'createdAt'],
                 include: [
                     {
                         model: Recipe,
