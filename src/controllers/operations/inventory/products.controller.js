@@ -64,7 +64,6 @@ const getProductsByWarehouse = async (req, res) => {
         res.status(200).json(result);
     } catch (error) {
         console.log(error)
-
         res.status(400).json(error.message)
     }
 }
