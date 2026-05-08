@@ -44,7 +44,7 @@ const sendEmailWithAttachments = async (to, subject, htmlContent, attachments = 
   }
 };
 
-const sendCruiseReportEmail = async (to, cruise, excelPath, pdfPath, zipPath, cc = '') => {
+const sendCruiseReportEmail = async (to, cruise, excelPath, pdfPath, zipPath, cc) => {
   try {
     const htmlContent = `
       <!DOCTYPE html>

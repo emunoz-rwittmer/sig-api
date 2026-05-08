@@ -36,7 +36,7 @@ class RequestService {
 
             const result = await Request.findOne({
                 where: { id: requestId },
-                attributes: ['id', 'name', 'warehouseId', 'status', 'pax', 'cruise', 'supplyDate'],
+                attributes: ['id', 'name', 'group', 'warehouseId', 'status', 'pax', 'cruise', 'supplyDate'],
                 include: [
                     {
                         model: RequestItems,
@@ -156,7 +156,7 @@ class RequestService {
             }));
 
             await requestItems.bulkCreate(productsRequest, { transaction });
- 
+
             await transaction.commit();
             return result;
         } catch (error) {
