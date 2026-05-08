@@ -164,7 +164,7 @@ exports.generateCruiseReportExcel = async (cruise, passengers, filePath) => {
 
           wsItems.cell(itemRow, 2).string(item.product?.name || 'N/A').style(cellStyle);
           wsItems.cell(itemRow, 3).number(item.quantity).style(cellStyle);
-          wsItems.cell(itemRow, 4).number(item.product?.price.toFixed(2) || 0).style(cellStyle);
+          wsItems.cell(itemRow, 4).string(item.product?.price || 0).style(cellStyle);
           wsItems.cell(itemRow, 5).number(item.price.toFixed(2)).style(cellStyle);
 
           itemRow++;
