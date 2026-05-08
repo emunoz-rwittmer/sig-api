@@ -107,7 +107,7 @@ exports.generateCruiseReportExcel = async (cruise, passengers, filePath) => {
 
     // Datos
     let dataRow = 14;
-    let totalGeneral = 0;
+    let totalGeneral = 0.00;
 
     passengers.forEach((passenger) => {
       if (passenger.consumer_card && passenger.consumer_card.totalCount > 0 && passenger.consumer_card.paidAccount === true) {
@@ -127,14 +127,14 @@ exports.generateCruiseReportExcel = async (cruise, passengers, filePath) => {
         wsCruise.cell(dataRow, 10).string(passenger.consumer_card.paidAccount ? 'Sí' : 'No').style(cellStyle);
         wsCruise.cell(dataRow, 11).number(itemCount).style(cellStyle);
 
-        totalGeneral += passenger.consumer_card.totalCount;
+        totalGeneral += Number(passenger.consumer_card.totalCount);
         dataRow++;
       }
     });
 
     // Fila de total
     wsCruise.cell(dataRow + 1, 2).string('TOTAL GENERAL:').style(labelStyle);
-    wsCruise.cell(dataRow + 1, 3).string(totalGeneral).style(headerStyle);
+    wsCruise.cell(dataRow + 1, 3).string(String(totalGeneral)).style(headerStyle);
 
     // Sheet 2: Detalle de Items (solo si es necesario)
     const wsItems = wb.addWorksheet('Detalle Items');
@@ -164,8 +164,8 @@ exports.generateCruiseReportExcel = async (cruise, passengers, filePath) => {
 
           wsItems.cell(itemRow, 2).string(item.product?.name || 'N/A').style(cellStyle);
           wsItems.cell(itemRow, 3).number(item.quantity).style(cellStyle);
-          wsItems.cell(itemRow, 4).string(item.product?.price || 0).style(cellStyle);
-          wsItems.cell(itemRow, 5).string(item.price).style(cellStyle);
+          wsItems.cell(itemRow, 4).number(item.product?.price.toFixed(2) || 0).style(cellStyle);
+          wsItems.cell(itemRow, 5).number(item.price.toFixed(2)).style(cellStyle);
 
           itemRow++;
         });
