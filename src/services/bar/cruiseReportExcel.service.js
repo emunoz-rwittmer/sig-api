@@ -127,7 +127,7 @@ exports.generateCruiseReportExcel = async (cruise, passengers, filePath) => {
         wsCruise.cell(dataRow, 10).string(passenger.consumer_card.paidAccount ? 'Sí' : 'No').style(cellStyle);
         wsCruise.cell(dataRow, 11).number(itemCount).style(cellStyle);
 
-        totalGeneral += Number(passenger.consumer_card.totalCount).toFixed(2);
+        totalGeneral += Number(passenger.consumer_card.totalCount);
         dataRow++;
       }
     });
