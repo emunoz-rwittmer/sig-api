@@ -78,7 +78,7 @@ exports.generateCruiseReportPDF = async (cruise, passengers, filePath) => {
 
       doc.moveDown(0.3);
       doc.text(`ID: ${passenger.identificationNumber}`);
-      doc.text(`Email: ${passenger.email}`);
+      doc.text(`Email: ${passenger.email || 'N/A'}`);
       doc.text(`Cabina: ${passenger.cabin}`);
       doc.text(`Nacionalidad: ${passenger.nationality}`);
 
@@ -144,6 +144,28 @@ exports.generateCruiseReportPDF = async (cruise, passengers, filePath) => {
           .fontSize(9)
           .text('TOTAL:', col3, totalY)
           .text(`$${consumerCard.totalCount}`, col4, totalY);
+      }
+
+      doc.moveDown(2);
+
+      // Imagen del voucher
+      if (consumerCard.image) {
+        try {
+          const imagePath = path.resolve("." + consumerCard.image);
+          if (fs.existsSync(imagePath)) {
+            doc
+              .font('Helvetica-Bold')
+              .fontSize(11)
+              .text('Foto del Voucher:', { underline: true });
+
+            doc.moveDown(0.3);
+            doc.image(imagePath, 40, doc.y, { width: 200, height: 200 });
+          }
+        } catch (error) {
+          doc.fontSize(10).text('Foto del voucher no disponible', { color: '#999999' });
+        }
+      } else {
+        doc.fontSize(10).text('Foto del voucher no disponible', { color: '#999999' });
       }
     });
 
