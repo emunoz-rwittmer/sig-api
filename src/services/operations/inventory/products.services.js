@@ -111,7 +111,7 @@ class ProductService {
                     [Sequelize.literal(`
                     (
                         SELECT SUM(CASE 
-                            WHEN transactions.type = 'BAR_CONSUMPTION'
+                            WHEN transactions.type = 'BAR_CONSUMPTION' AND transactions.warehouse_from_id
                             THEN transactions.quantity 
                             ELSE 0 
                         END)

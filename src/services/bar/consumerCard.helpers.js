@@ -43,6 +43,7 @@ async function deductDirectStock(warehouseId, productBar, item, userId, numberCa
     // Registrar la transacción
     await Transaction.create({
         productId: productBar.productId,
+        warehouseFromId: warehouseId,
         userId,
         quantity: quantityToDeduct,
         type: 'BAR_CONSUMPTION',
