@@ -127,7 +127,7 @@ exports.generateCruiseReportExcel = async (cruise, passengers, filePath) => {
         wsCruise.cell(dataRow, 10).string(passenger.consumer_card.paidAccount ? 'Sí' : 'No').style(cellStyle);
         wsCruise.cell(dataRow, 11).number(itemCount).style(cellStyle);
 
-        totalGeneral += Number(passenger.consumer_card.totalCount);
+        totalGeneral += passenger.consumer_card.totalCount;
         dataRow++;
       }
     });
@@ -164,7 +164,7 @@ exports.generateCruiseReportExcel = async (cruise, passengers, filePath) => {
 
           wsItems.cell(itemRow, 2).string(item.product?.name || 'N/A').style(cellStyle);
           wsItems.cell(itemRow, 3).number(item.quantity).style(cellStyle);
-          wsItems.cell(itemRow, 4).number(item.product?.price || 0).style(cellStyle);
+          wsItems.cell(itemRow, 4).string(item.product?.price || 0).style(cellStyle);
           wsItems.cell(itemRow, 5).string(item.price).style(cellStyle);
 
           itemRow++;
