@@ -198,7 +198,7 @@ class ConsumerCardService {
             const cortecyCard = await CortecyCard.findOne({
                 where: { id },
                 transaction,
-                lock: db.sequelize.Transaction.LOCK.UPDATE
+                lock: transaction.LOCK.UPDATE
             });
 
             if (!cortecyCard) {

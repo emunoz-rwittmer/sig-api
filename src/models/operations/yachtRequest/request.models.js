@@ -24,7 +24,6 @@ const Request = db.define('request', {
     type: DataTypes.INTEGER,
     allowNull: false,
     field: 'user_id'
-
   },
   status: {
     type: DataTypes.STRING,
