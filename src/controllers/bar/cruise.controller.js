@@ -64,7 +64,6 @@ const sendCruiseReport = async (req, res) => {
             });
         }
 
-        // Crear directorio: uploads/cruises/reports/
         const uploadsDir = path.join(__dirname, '../../..', 'uploads', 'cruises', cruise.code, 'reports');
         if (!fs.existsSync(uploadsDir)) {
             fs.mkdirSync(uploadsDir, { recursive: true });
@@ -75,33 +74,28 @@ const sendCruiseReport = async (req, res) => {
         excelPath = path.join(uploadsDir, `${baseName}.xlsx`);
         pdfPath = path.join(uploadsDir, `${baseName}.pdf`);
 
-        // Generar Excel y PDF en paralelo para optimizar tiempo
         const [excelResult, pdfResult] = await Promise.all([
             CruiseReportExcelService.generateCruiseReportExcel(cruise, passengersWithCards, excelPath),
             CruiseReportPDFService.generateCruiseReportPDF(cruise, passengersWithCards, pdfPath)
         ]);
 
-        // Construir URLs relativas para guardar en BD
         const urlPDF = `/uploads/cruises/${cruise.code}/${baseName}.pdf`;
         const urlExcel = `/uploads/cruises/${cruise.code}/${baseName}.xlsx`;
 
-        // Enviar correos con los reportes
-        // await MailsWithAttachments.sendCruiseReportEmail(
-        //     emailTo,
-        //     cruise,
-        //     excelPath,
-        //     pdfPath,
-        //     emailCc
-        // );
+        await MailsWithAttachments.sendCruiseReportEmail(
+            emailTo,
+            cruise,
+            excelPath,
+            pdfPath,
+            emailCc
+        );
 
-        // Actualizar BD con URLs de reportes y cambiar estado
         await CruiseService.updateCruise(cruiseId, {
             cruiseState: 'under review',
             urlPDFReport: urlPDF,
             urlExcelReport: urlExcel
         });
 
-        // Crear drink request de forma asíncrona sin bloquear
         RequestService.createDrinkRequest(cruise.yachtId, userId).catch(error => {
             console.error('Error creando drink request:', error);
         });
@@ -109,7 +103,6 @@ const sendCruiseReport = async (req, res) => {
         res.status(200).json({ data: 'Reporte de crucero generado y enviado correctamente' });
 
     } catch (error) {
-        console.error('Error en sendCruiseReport:', error);
         // Limpiar archivos en caso de error
         try {
             if (excelPath && fs.existsSync(excelPath)) fs.unlinkSync(excelPath);
