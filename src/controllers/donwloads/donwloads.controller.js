@@ -118,14 +118,14 @@ const downloadreportePdf = async (req, res) => {
         const relativePath = cruise.urlPDFReport;
 
         if (!relativePath) {
-            return res.status(404).json({ message: 'la crucero no tiene archivo asociado' });
+            throw new Error('la crucero no tiene archivo asociado');
         }
 
         const absolutePath = path.join(__dirname, '../../../', relativePath);
 
         if (!fs.existsSync(absolutePath)) {
             console.log('rdtsd')
-            return res.status(404).json({ message: 'Archivo no encontrado' });
+            throw new Error('Archivo no encontrado');
         }
 
         const mimeType = mime.lookup(absolutePath);  // puede devolver null si no encuentra
@@ -149,14 +149,13 @@ const downloadreporteExcel = async (req, res) => {
         const relativePath = cruise.urlExcelReport;
 
         if (!relativePath) {
-            return res.status(404).json({ message: 'la crucero no tiene archivo asociado' });
+            throw new Error('la crucero no tiene archivo asociado');
         }
 
         const absolutePath = path.join(__dirname, '../../../', relativePath);
 
         if (!fs.existsSync(absolutePath)) {
-            console.log('rdtsd')
-            return res.status(404).json({ message: 'Archivo no encontrado' });
+            throw new Error('Archivo no encontrado');
         }
 
         const mimeType = mime.lookup(absolutePath);  // puede devolver null si no encuentra
