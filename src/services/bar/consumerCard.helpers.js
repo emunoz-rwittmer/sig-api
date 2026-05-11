@@ -4,21 +4,18 @@ const Transaction = require('../../models/operations/inventory/transaction.model
 
 const db = require('../../utils/database');
 
-// Constantes para conversión de unidades
-// Las recetas siempre usan ONZAS, aquí definimos cómo convertir según el tipo de unidad del stock
 const UNIT_CONVERTERS = {
-    'ML': 29.5735,    // Stock en ML: convertir onzas de receta a mililitros (1 oz = 29.5735 ml)
-    'UNIT': 1         // Stock en UNIDADES: sin conversión (1 a 1)
+    'ml': 29.5735,
+    'unit': 1 
 };
 
 /**
- * Descuenta stock directo de bebida individual
- * @param {number} warehouseId - ID del almacén
- * @param {object} productBar - Objeto del producto de bar
- * @param {object} item - Item a descontar (con id, quantity, price)
- * @param {number} userId - ID del usuario que realiza el consumo
- * @param {string} numberCard - Número de tarjeta de consumo
- * @param {object} transaction - Transacción de BD
+ * @param {number} warehouseId 
+ * @param {object} productBar
+ * @param {object} item
+ * @param {number} userId
+ * @param {string} numberCard
+ * @param {object} transaction
  */
 async function deductDirectStock(warehouseId, productBar, item, userId, numberCard, transaction) {
     const stock = await Stock.findOne({
@@ -40,7 +37,6 @@ async function deductDirectStock(warehouseId, productBar, item, userId, numberCa
     stock.quantity -= quantityToDeduct;
     await stock.save({ transaction });
 
-    // Registrar la transacción
     await Transaction.create({
         productId: productBar.productId,
         warehouseFromId: warehouseId,
@@ -52,20 +48,18 @@ async function deductDirectStock(warehouseId, productBar, item, userId, numberCa
 }
 
 /**
- * Descuenta stock de receta (considera ingredientes individuales)
- * @param {number} warehouseId - ID del almacén
- * @param {object} productBar - Objeto del producto de bar con receta
- * @param {object} item - Item a descontar
- * @param {number} userId - ID del usuario
- * @param {string} numberCard - Número de tarjeta
- * @param {object} transaction - Transacción de BD
+ * @param {number} warehouseId
+ * @param {object} productBar
+ * @param {object} item
+ * @param {number} userId 
+ * @param {string} numberCard 
+ * @param {object} transaction
  */
 async function deductRecipeStock(warehouseId, productBar, item, userId, numberCard, transaction) {
     if (!productBar.recipe || !productBar.recipe.recipe_details) {
         throw new Error(`Recipe not found for product ${productBar.id}`);
     }
 
-    // Procesar cada ingrediente de la receta
     for (const detail of productBar.recipe.recipe_details) {
         const ingredientStock = await Stock.findOne({
             where: { warehouseId, productId: detail.productId },
@@ -77,12 +71,10 @@ async function deductRecipeStock(warehouseId, productBar, item, userId, numberCa
             throw new Error(`Ingredient stock not found for product ${detail.productId} in recipe`);
         }
 
-        // Obtener unitType del producto general para saber cómo convertir
-        // unitType puede ser 'ML' o 'UNIT' según cómo se almacena el stock
         const product = await Product.findByPk(detail.productId, { transaction });
-        const unitType = product ? product.unit : 'UNIT';
-        const converter = UNIT_CONVERTERS[unitType] || 1;
+        const unitType = product ? product.unit : 'unit';
 
+        const converter = UNIT_CONVERTERS[unitType] || 1;
         const quantityPerServing = detail.quantity * converter;
         const totalQuantityToDeduct = quantityPerServing * item.quantity;
 
@@ -97,7 +89,6 @@ async function deductRecipeStock(warehouseId, productBar, item, userId, numberCa
         ingredientStock.quantity -= totalQuantityToDeduct;
         await ingredientStock.save({ transaction });
 
-        // Registrar transacción del ingrediente
         await Transaction.create({
             productId: detail.productId,
             userId,

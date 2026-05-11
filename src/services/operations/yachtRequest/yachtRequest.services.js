@@ -54,7 +54,7 @@ class RequestService {
                     {
                         model: Warehouse,
                         as: 'warehouse',
-                        attributes: ['name']
+                        attributes: ['name', 'yachtId']
                     },
                     {
                         model: Staff,
@@ -74,8 +74,14 @@ class RequestService {
             });
 
             const currentPlain = result.get({ plain: true });
-            return currentPlain;
+            if (currentPlain.group === 'drink_request') {
+                const warehouse = await Warehouse.findOne({
+                    where: { yachtId: result.warehouse.yachtId , type: 'Bar'}
+                })
 
+                currentPlain.warehouseId = warehouse.id
+            }
+            return currentPlain;
         } catch (error) {
             throw error;
         }

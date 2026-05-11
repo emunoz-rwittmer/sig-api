@@ -86,13 +86,13 @@ const sendCruiseReport = async (req, res) => {
         const urlExcel = `/uploads/cruises/${cruise.code}/${baseName}.xlsx`;
 
         // Enviar correos con los reportes
-        await MailsWithAttachments.sendCruiseReportEmail(
-            emailTo,
-            cruise,
-            excelPath,
-            pdfPath,
-            emailCc
-        );
+        // await MailsWithAttachments.sendCruiseReportEmail(
+        //     emailTo,
+        //     cruise,
+        //     excelPath,
+        //     pdfPath,
+        //     emailCc
+        // );
 
         // Actualizar BD con URLs de reportes y cambiar estado
         await CruiseService.updateCruise(cruiseId, {
