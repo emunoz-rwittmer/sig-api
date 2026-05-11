@@ -124,7 +124,6 @@ const downloadreportePdf = async (req, res) => {
         const absolutePath = path.join(__dirname, '../../../', relativePath);
 
         if (!fs.existsSync(absolutePath)) {
-            console.log('rdtsd')
             throw new Error('Archivo no encontrado');
         }
 
