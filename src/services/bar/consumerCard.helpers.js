@@ -102,6 +102,7 @@ async function deductRecipeStock(warehouseId, productBar, item, userId, numberCa
             productId: detail.productId,
             userId,
             quantity: totalQuantityToDeduct,
+            warehouseFromId: warehouseId,
             type: 'BAR_CONSUMPTION',
             referenceId: `BAR_CONSUMPTION_${numberCard}`
         }, { transaction });
