@@ -5,6 +5,7 @@ const Utils = require('../../utils/Utils');
 const path = require('path');
 const fs = require('fs');
 const mime = require('mime-types');
+const CruiseService = require('../../services/bar/cruise.services');
 
 const downloadReglamento = async (req, res) => {
     try {
@@ -110,12 +111,76 @@ const downloadGuiaRemision = async (req, res) => {
     }
 };
 
+const downloadreportePdf = async (req, res) => {
+    try {
+        const cruiseid = Utils.decode(req.params.cruise_id);
+        const cruise = await CruiseService.getCruiseById(cruiseid);
+        const relativePath = cruise.urlPDFReport;
+
+        if (!relativePath) {
+            return res.status(404).json({ message: 'la crucero no tiene archivo asociado' });
+        }
+
+        const absolutePath = path.join(__dirname, '../../../', relativePath);
+
+        if (!fs.existsSync(absolutePath)) {
+            console.log('rdtsd')
+            return res.status(404).json({ message: 'Archivo no encontrado' });
+        }
+
+        const mimeType = mime.lookup(absolutePath);  // puede devolver null si no encuentra
+        const extension = mime.extension(mimeType);
+
+        const filename = `reporte_crucero_${cruise.code}.${extension}`;
+
+        res.setHeader('Content-Type', mimeType);
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.sendFile(absolutePath);
+    } catch (error) {
+        console.log(error);
+        res.status(400).json(error.message);
+    }
+};
+
+const downloadreporteExcel = async (req, res) => {
+    try {
+        const cruiseid = Utils.decode(req.params.cruise_id);
+        const cruise = await CruiseService.getCruiseById(cruiseid);
+        const relativePath = cruise.urlExcelReport;
+
+        if (!relativePath) {
+            return res.status(404).json({ message: 'la crucero no tiene archivo asociado' });
+        }
+
+        const absolutePath = path.join(__dirname, '../../../', relativePath);
+
+        if (!fs.existsSync(absolutePath)) {
+            console.log('rdtsd')
+            return res.status(404).json({ message: 'Archivo no encontrado' });
+        }
+
+        const mimeType = mime.lookup(absolutePath);  // puede devolver null si no encuentra
+        const extension = mime.extension(mimeType);
+
+        const filename = `reporte_crucero_${cruise.code}.${extension}`;
+
+        res.setHeader('Content-Type', mimeType);
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.sendFile(absolutePath);
+    } catch (error) {
+        console.log(error);
+        res.status(400).json(error.message);
+    }
+};
+
 
 const DonwloadController = {
     downloadReglamento,
     downloadFormato,
     downloadSolicitud,
-    downloadGuiaRemision
+    downloadGuiaRemision,
+    downloadreportePdf,
+    downloadreporteExcel
 }
 
 module.exports = DonwloadController 

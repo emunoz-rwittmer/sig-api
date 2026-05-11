@@ -79,8 +79,8 @@ const sendCruiseReport = async (req, res) => {
             CruiseReportPDFService.generateCruiseReportPDF(cruise, passengersWithCards, pdfPath)
         ]);
 
-        const urlPDF = `/uploads/cruises/${cruise.code}/${baseName}.pdf`;
-        const urlExcel = `/uploads/cruises/${cruise.code}/${baseName}.xlsx`;
+        const urlPDF = `/uploads/cruises/${cruise.code}/reports/${baseName}.pdf`;
+        const urlExcel = `/uploads/cruises/${cruise.code}/reports/${baseName}.xlsx`;
 
         await MailsWithAttachments.sendCruiseReportEmail(
             emailTo,
@@ -115,9 +115,26 @@ const sendCruiseReport = async (req, res) => {
     }
 }
 
+const updateCruise = async (req, res) => {
+    try {
+        const cruiseId = Utils.decode(req.params.cruise_id);
+        const data = req.body;
+
+        await CruiseService.updateCruise(data, {
+            where: { id: cruiseId },
+        });
+        res.status(200).json({ data: 'resource updated successfully' });
+    } catch (error) {
+        console.log(error)
+        res.status(400).json(error.message)
+    }
+}
+
+
 const CruiseController = {
     getAllCruises,
     getCruise,
-    sendCruiseReport
+    sendCruiseReport,
+    updateCruise
 }
 module.exports = CruiseController
