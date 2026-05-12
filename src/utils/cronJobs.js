@@ -13,9 +13,9 @@ cron.schedule('0 0 * * 5', async () => {
 }, {
     timezone: "America/Guayaquil"
 });
-//Jueves 10:00 crear evaluaciones para capitanes
-cron.schedule("0 14 * * 4", async () => {
-    CronJobs.generateWeeklyEvaluationCrew();
-}, {
-    timezone: "America/Guayaquil"
-});
+// //Jueves 10:00 crear evaluaciones para capitanes
+// cron.schedule("0 14 * * 4", async () => {
+//     CronJobs.generateWeeklyEvaluationCrew();
+// }, {
+//     timezone: "America/Guayaquil"
+// });
