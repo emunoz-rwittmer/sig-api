@@ -24,17 +24,17 @@ const getRequestById = async (req, res) => {
     try {
         const requestId = Utils.decode(req.params.request_id);
         const result = await YachtRequestService.getRequestById(requestId)
-        //const result = await YachtRequestService.getRequestById(requestId)
         if (result instanceof Object) {
             result.id = Utils.encode(result.id);
             result.warehouseId = Utils.encode(result.warehouseId);
             result.requestItems.map(x => (
-                x.stock = Utils.viewCorrectQuantity(x.configuracion.product, x.stock)
+                x.stock = Utils.viewCorrectQuantity(x.configuracion?.product, x.stock)
             ))
         }
 
         res.status(200).json(result);
     } catch (error) {
+        console.log(error)
         res.status(400).json(error.message)
     }
 }

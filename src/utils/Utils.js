@@ -91,25 +91,21 @@ class Utils {
 
     const texto = respuesta.trim();
 
-    // 1️⃣ Número antes del paréntesis: "Siempre 5 (algo)"
     const numeroAntesParentesis = texto.match(/(\d+)\s*\(/);
     if (numeroAntesParentesis) {
       return Number(numeroAntesParentesis[1]);
     }
 
-    // 2️⃣ Número dentro del paréntesis: "Siempre (5)"
     const numeroEnParentesis = texto.match(/\((\d+)\)/);
     if (numeroEnParentesis) {
       return Number(numeroEnParentesis[1]);
     }
 
-    // 3️⃣ Cualquier número suelto
     const numeroGeneral = texto.match(/\b\d+\b/);
     if (numeroGeneral) {
       return Number(numeroGeneral[0]);
     }
 
-    // 4️⃣ Mapeo tradicional
     const puntajes = {
       5: ['Casi siempre', 'Excelente', 'Siempre'],
       4: ['Con frecuencia', 'Muy bueno', 'Muy Bueno'],
@@ -124,24 +120,20 @@ class Utils {
       }
     }
 
-    // 👇 CLAVE: si no hay puntaje, devuelve el texto (comentario)
     return texto;
   }
 
-  // helper interno
   static normalizeQuantity(product, quantity) {
-    if (product.type === 'CONSUMABLE') {
+    if (product?.type === 'CONSUMABLE') {
       if (!product.presentationQuantity) {
         throw new Error(`Producto ${product.name} sin presentationQuantity`);
       }
 
-      // Convertir a número para evitar problemas de precisión
       const qty = Number(quantity);
       const presentation = Number(product.presentationQuantity);
-      
-      // Usar Math.round para mantener precisión decimal
+
       const result = qty * presentation;
-      return Math.round(result * 100) / 100; // botellas → ml
+      return Math.round(result * 100) / 100;
     }
 
     // DISCRETE
@@ -149,12 +141,12 @@ class Utils {
   }
 
   static viewCorrectQuantity(product, quantity) {
-    if (product.type === 'CONSUMABLE') {
-      if (!product.presentationQuantity) {
-        throw new Error(`Producto ${product.name} sin presentationQuantity`);
+    if (product?.type === 'CONSUMABLE') {
+      if (!product?.presentationQuantity) {
+        throw new Error(`Producto ${product?.name} sin presentationQuantity`);
       }
 
-      return (quantity / product.presentationQuantity).toFixed(2);
+      return (quantity / product?.presentationQuantity).toFixed(2);
     }
 
     return quantity;
