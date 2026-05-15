@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
-const sendEmailWithAttachments = async (to, subject, htmlContent, attachments = [], cc = '') => {
+const sendEmailWithAttachments = async (to, subject, htmlContent, attachments = [], cc) => {
   try {
     const sgMail = require('@sendgrid/mail');
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
