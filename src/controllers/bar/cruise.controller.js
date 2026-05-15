@@ -120,9 +120,7 @@ const updateCruise = async (req, res) => {
         const cruiseId = Utils.decode(req.params.cruise_id);
         const data = req.body;
 
-        await CruiseService.updateCruise(data, {
-            where: { id: cruiseId },
-        });
+        await CruiseService.updateCruise(cruiseId, data);
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
         console.log(error)

@@ -103,9 +103,11 @@ class CruiseService {
         }
     }
 
-    static async updateCruise(data, id) {
+    static async updateCruise(id, data) {
         try {
-            const result = await Cruise.update(data, id);
+            const result = await Cruise.update(data, {
+                where: { id },
+            });
             return result;
         } catch (error) {
             throw error;
