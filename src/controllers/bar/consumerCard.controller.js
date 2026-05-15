@@ -179,6 +179,8 @@ const updateConsumerCard = async (req, res) => {
 const createCortecyCard = async (req, res) => {
     try {
         const data = req.body;
+        data.userId = Utils.decode(data.userId);
+
         if (!data.items.length) throw new Error('No se han agregado items a la tarjeta');
 
         data.items.map((item) => {

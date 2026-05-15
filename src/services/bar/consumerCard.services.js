@@ -189,7 +189,7 @@ class ConsumerCardService {
     static async createCortecyCard(data) {
         const transaction = await db.transaction();
         try {
-            const { id, items, observation, counter } = data;
+            const { id, items, userId, observation, counter } = data;
 
             if (!id || !items || items.length === 0) {
                 throw new Error('Invalid cortecyCard data: id and items are required');
@@ -197,6 +197,11 @@ class ConsumerCardService {
 
             const cortecyCard = await CortecyCard.findOne({
                 where: { id },
+                include: [{
+                    model: Cruise,
+                    as: 'cruise',
+                    attributes: ['name', 'yachtId'],
+                }],
                 transaction,
                 lock: transaction.LOCK.UPDATE
             });
@@ -205,25 +210,78 @@ class ConsumerCardService {
                 throw new Error(`Cortecycard with id ${id} not found`);
             }
 
+            const cortecyCardPlain = cortecyCard.get({ plain: true });
+            const yachtId = cortecyCardPlain.cruise.yachtId;
+            const numberCard = cortecyCardPlain.numberCard;
+
             const totalConsumption = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
             const newTotal = Number(cortecyCard.totalCount) + totalConsumption;
 
-            // Batch create items
-            await CortecyCardItems.bulkCreate(
-                items.map(item => ({
+            const warehouse = await Warehouse.findOne({
+                where: { type: 'Bar', yachtId },
+                transaction
+            });
+
+            if (!warehouse) {
+                throw new Error(`Bar warehouse not found for yacht ${yachtId}`);
+            }
+
+            // Process items with optimized batch operations
+            for (const item of items) {
+                const productBar = await ProductBar.findOne({
+                    where: { id: item.id },
+                    include: [{
+                        model: Recipe,
+                        as: 'recipe',
+                        include: [{
+                            model: RecipeDetail,
+                            as: 'recipe_details'
+                        }]
+                    }],
+                    transaction
+                });
+
+                if (!productBar) {
+                    throw new Error(`Product bar with id ${item.id} not found`);
+                }
+
+                const productBarPlain = productBar.get({ plain: true });
+
+                if (productBarPlain.type === 'DIRECT') {
+                    await deductDirectStock(
+                        warehouse.id,
+                        productBarPlain,
+                        item,
+                        userId,
+                        numberCard,
+                        transaction
+                    );
+                } else if (productBarPlain.type === 'RECIPE') {
+                    await deductRecipeStock(
+                        warehouse.id,
+                        productBarPlain,
+                        item,
+                        userId,
+                        numberCard,
+                        transaction
+                    );
+                }
+
+                await CortecyCardItems.create({
                     cortecyCardId: cortecyCard.id,
                     productId: item.id,
                     quantity: item.quantity,
                     price: item.price * item.quantity,
                     observation
-                })),
-                { transaction }
-            );
+                },
+                    { transaction }
+                );
+            }
 
             await cortecyCard.update({ totalCount: newTotal }, { transaction });
             await transaction.commit();
 
-            return cortecyCard.get({ plain: true });
+            return cortecyCardPlain; 
         } catch (error) {
             await transaction.rollback();
             throw error;
