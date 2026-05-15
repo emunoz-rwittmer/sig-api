@@ -268,7 +268,7 @@ class ConsumerCardService {
                 }
 
                 await CortecyCardItems.create({
-                    cortecyCardId: cortecyCard.id,
+                    cortecyCardId: cortecyCardPlain.id,
                     productId: item.id,
                     quantity: item.quantity,
                     price: item.price * item.quantity,
