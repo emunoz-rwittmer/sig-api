@@ -140,9 +140,9 @@ class WarehouseService {
             plain.product.transactions = plain.product.transactions
                 .filter(({ warehouseFromId, warehouseToId, type }) => {
                     // Incluir transacciones BAR_CONSUMPTION (sin warehouse info)
-                    if (type === 'BAR_CONSUMPTION' && (!warehouseFromId && !warehouseToId)) {
-                        return true;
-                    }
+                    // if (type === 'BAR_CONSUMPTION') {
+                    //     return true;
+                    // }
                     // Incluir transacciones normales que pertenecen a este warehouse
                     const isFromThisWarehouse = warehouseFromId === warehouseId;
                     const isToThisWarehouse = warehouseToId === warehouseId;
@@ -165,6 +165,7 @@ class WarehouseService {
                 })
                 .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
+                console.log(plain.product.transactions)
             return plain;
 
         } catch (error) {

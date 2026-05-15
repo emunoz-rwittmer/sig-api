@@ -6,7 +6,7 @@ const db = require('../../utils/database');
 
 const UNIT_CONVERTERS = {
     'ml': 29.5735,
-    'unit': 1 
+    'unit': 1
 };
 
 /**
@@ -63,12 +63,19 @@ async function deductRecipeStock(warehouseId, productBar, item, userId, numberCa
     for (const detail of productBar.recipe.recipe_details) {
         const ingredientStock = await Stock.findOne({
             where: { warehouseId, productId: detail.productId },
+            include: [{
+                model: Product,
+                as: 'product',
+                attributes: ['name']
+            }],
             transaction,
             lock: transaction.LOCK.UPDATE
         });
 
+        const plaint = ingredientStock.get({ plain: true });
+
         if (!ingredientStock) {
-            throw new Error(`Ingredient stock not found for product ${detail.productId} in recipe`);
+            throw new Error(`Ingredient stock not found for product ${plaint.product.name} in recipe`);
         }
 
         const product = await Product.findByPk(detail.productId, { transaction });
@@ -78,15 +85,15 @@ async function deductRecipeStock(warehouseId, productBar, item, userId, numberCa
         const quantityPerServing = detail.quantity * converter;
         const totalQuantityToDeduct = quantityPerServing * item.quantity;
 
-        if (ingredientStock.quantity < totalQuantityToDeduct) {
+        if (plaint.quantity < totalQuantityToDeduct) {
             throw new Error(
-                `Insufficient ingredient stock for product ${detail.productId}. ` +
-                `Available: ${ingredientStock.quantity}, ` +
+                `Insufficient ingredient stock for product ${plaint.product.name}. ` +
+                `Available: ${plaint.quantity}, ` +
                 `Requested: ${totalQuantityToDeduct}`
             );
         }
 
-        ingredientStock.quantity -= totalQuantityToDeduct;
+        plaint.quantity -= totalQuantityToDeduct;
         await ingredientStock.save({ transaction });
 
         await Transaction.create({

@@ -103,7 +103,7 @@ const sendCruiseReport = async (req, res) => {
         res.status(200).json({ data: 'Reporte de crucero generado y enviado correctamente' });
 
     } catch (error) {
-        // Limpiar archivos en caso de error
+        console.error('Error limpiando archivos:', error);
         try {
             if (excelPath && fs.existsSync(excelPath)) fs.unlinkSync(excelPath);
             if (pdfPath && fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
