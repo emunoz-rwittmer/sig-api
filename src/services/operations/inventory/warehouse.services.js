@@ -165,7 +165,6 @@ class WarehouseService {
                 })
                 .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-                console.log(plain.product.transactions)
             return plain;
 
         } catch (error) {

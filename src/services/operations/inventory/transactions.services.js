@@ -53,8 +53,12 @@ class TransactionService {
 
             const normalizedQty = Utils.normalizeQuantity(product, quantity);
 
+            // Usar Math.round para evitar problemas de precisión al sumar decimales
+            const currentQty = Number(stock.quantity) || 0;
+            const newQty = Math.round((currentQty + normalizedQty) * 100) / 100;
+
             if (stock) {
-                stock.quantity += normalizedQty;
+                stock.quantity = newQty;
                 await stock.save({ transaction: t });
             } else {
                 stock = await Stock.create(
@@ -122,6 +126,7 @@ class TransactionService {
 
     static async transactionWarehouse(transactionData) {
         const { products, warehouseFromId, warehouseToId, userId, companyId, formattedCounter } = transactionData;
+
         const transaction = await db.transaction();
 
         try {
@@ -234,7 +239,11 @@ class TransactionService {
                     lock: transaction.LOCK.UPDATE
                 });
 
-                stockTo.quantity += normalizedQty;
+                // Usar Math.round para evitar problemas de precisión al sumar decimales
+                const currentQty = Number(stockTo.quantity) || 0;
+                const newQty = Math.round((currentQty + normalizedQty) * 100) / 100;
+
+                stockTo.quantity = newQty;
                 await stockTo.save({ transaction });
 
                 await Transaction.create({
@@ -255,7 +264,6 @@ class TransactionService {
             };
 
         } catch (error) {
-            console.log(error)
             await transaction.rollback();
             throw new Error(`Error en la transacción: ${error.message}`);
         }
@@ -424,6 +432,7 @@ class TransactionService {
                     if (stockFromSource.quantity < 0) {
                         throw new Error(`Stock insuficiente en bodega origen para el producto ${transac.product.name}: No se puede restar diferencia de ${quantityDifference}`);
                     }
+
                     await stockFromSource.save({ transaction });
 
                     const [stockWarehouse9] = await Stock.findOrCreate({
@@ -437,7 +446,10 @@ class TransactionService {
                         lock: transaction.LOCK.UPDATE
                     });
 
-                    stockWarehouse9.quantity += quantityDifference;
+                    const currentQty = Number(stockWarehouse9.quantity) || 0;
+                    const newQty = Math.round((currentQty + quantityDifference) * 100) / 100;
+
+                    stockWarehouse9.quantity = newQty;
                     await stockWarehouse9.save({ transaction });
                 }
 
@@ -473,7 +485,10 @@ class TransactionService {
                     lock: transaction.LOCK.UPDATE
                 });
 
-                stockToInstance.quantity += quantity;
+                const currentQty = Number(stockToInstance.quantity) || 0;
+                const newQty = Math.round((currentQty + quantity) * 100) / 100;
+
+                stockToInstance.quantity = newQty;
                 await stockToInstance.save({ transaction });
 
                 return await Transaction.create({
