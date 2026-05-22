@@ -25,6 +25,10 @@ const CortecyCard = db.define('cortecy_card', {
         defaultValue: 0,
         allowNull: false,
     },
+    image: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
 });
 
 module.exports = CortecyCard;

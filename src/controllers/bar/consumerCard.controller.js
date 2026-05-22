@@ -197,10 +197,44 @@ const createCortecyCard = async (req, res) => {
     }
 }
 
+const updateCortecyCard = async (req, res) => {
+
+    try {
+        const { card_id } = req.params;
+        const { cruiseId: encodedCruiseId, numberCard, ...updateData } = req.body;
+        const file = req.file;
+
+        if (!card_id || !encodedCruiseId) {
+            return res.status(400).json({ error: 'Invalid card_id or cruiseId' });
+        }
+
+        const cruiseId = Utils.decode(encodedCruiseId);
+        const folderName = (await CruiseService.getCruiseById(cruiseId))?.code?.replace(/\s+/g, '_');
+
+        if (!folderName) {
+            return res.status(404).json({ error: 'Cruise not found' });
+        }
+
+        const voucherDir = path.join(UPLOADS_BASE_PATH, 'cruises', folderName, 'vouchers');
+        const imageRelativePath = await processVoucherFile(file, numberCard, voucherDir) ;
+
+        if (imageRelativePath) {
+            updateData.image = imageRelativePath;
+            await ConsumerCardService.updateCortecyCard({ image: imageRelativePath }, card_id);
+
+            res.status(200).json({ data: 'resource updated successfully' });
+        }
+
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+}
+
 
 const ConsumerCardController = {
     createConsumerCard,
     updateConsumerCard,
-    createCortecyCard
+    createCortecyCard,
+    updateCortecyCard
 }
 module.exports = ConsumerCardController

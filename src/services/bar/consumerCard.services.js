@@ -281,7 +281,38 @@ class ConsumerCardService {
             await cortecyCard.update({ totalCount: newTotal }, { transaction });
             await transaction.commit();
 
-            return cortecyCardPlain; 
+            return cortecyCardPlain;
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
+    }
+
+    static async updateCortecyCard(data, id) {
+        const transaction = await db.transaction();
+        try {
+            if (!id) {
+                throw new Error('Cortecy card ID is required for update');
+            }
+
+            if (!data || Object.keys(data).length === 0) {
+                throw new Error('No data provided for update');
+            }
+
+            const card = await CortecyCard.findByPk(id, {
+                transaction,
+                lock: transaction.LOCK.UPDATE
+            });
+
+            if (!card) {
+                throw new Error(`Cortecy card with id ${id} not found`);
+            }
+
+            await card.update(data, { transaction });
+
+            await transaction.commit();
+            return card;
+
         } catch (error) {
             await transaction.rollback();
             throw error;

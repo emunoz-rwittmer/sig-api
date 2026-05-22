@@ -59,7 +59,7 @@ class CruiseService {
                     {
                         model: CortecyCard,
                         as: 'cortecy_cards',
-                        attributes: ['id', 'numberCard', 'totalCount', 'type'],
+                        attributes: ['id', 'numberCard', 'totalCount', 'image', 'type'],
                         include: [
                             {
                                 model: CortecyCardItems,
