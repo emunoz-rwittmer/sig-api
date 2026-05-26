@@ -414,6 +414,10 @@ class TransactionService {
                     originalTransaction.quantity = quantity;
                     await originalTransaction.save({ transaction });
 
+                    console.log('originalTransaction.warehouseFromId:', originalTransaction.warehouseFromId);
+
+                    console.log('companyId:', companyId);
+
                     const stockFromSource = await Stock.findOne({
                         where: {
                             productId,
@@ -423,6 +427,8 @@ class TransactionService {
                         transaction,
                         lock: transaction.LOCK.UPDATE
                     });
+
+                    console.log('Stock encontrado en bodega origen:', stockFromSource);
 
                     if (!stockFromSource) {
                         throw new Error(`Stock no encontrado para el producto ${transac.product.name} en bodega origen`);
