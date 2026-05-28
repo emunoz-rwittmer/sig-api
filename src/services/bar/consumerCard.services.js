@@ -97,6 +97,7 @@ class ConsumerCardService {
 
             return result;
         } catch (error) {
+            console.log(error)
             throw error;
         }
     }
