@@ -13,6 +13,25 @@ const { passengerInvoicePDF } = require('../../services/bar/passengerInvoicePDF.
 // Constantes
 const UPLOADS_BASE_PATH = path.resolve(__dirname, '../../../uploads');
 
+const getAllConsumer = async (req, res) => {
+    try {
+        const { year, start, end } = req.query;
+        const yachtId = Utils.decode(req.query.yachtId);
+
+        const result = await ConsumerCardService.getAll(yachtId, year, start, end);
+        const plaint = result.map(r => r.get({ plain: true }));
+
+        if (plaint instanceof Array) {
+            plaint.map((x) => {
+                x.id = Utils.encode(x.id);
+            });
+        }
+        res.status(200).json(plaint);
+    } catch (error) {
+        res.status(400).json(error.message)
+    }
+}
+
 const createConsumerCard = async (req, res) => {
     try {
         const data = req.body;
@@ -216,7 +235,7 @@ const updateCortecyCard = async (req, res) => {
         }
 
         const voucherDir = path.join(UPLOADS_BASE_PATH, 'cruises', folderName, 'vouchers');
-        const imageRelativePath = await processVoucherFile(file, numberCard, voucherDir) ;
+        const imageRelativePath = await processVoucherFile(file, numberCard, voucherDir);
 
         if (imageRelativePath) {
             updateData.image = imageRelativePath;
@@ -232,6 +251,7 @@ const updateCortecyCard = async (req, res) => {
 
 
 const ConsumerCardController = {
+    getAllConsumer,
     createConsumerCard,
     updateConsumerCard,
     createCortecyCard,

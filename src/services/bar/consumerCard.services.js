@@ -11,9 +11,95 @@ const Warehouse = require('../../models/catalogs/wareHouse.models');
 const Yacht = require('../../models/catalogs/yacht.models');
 const Product = require('../../models/operations/inventory/product.models');
 const db = require('../../utils/database');
+const { Op } = require('sequelize');
 const { deductDirectStock, deductRecipeStock } = require('./consumerCard.helpers');
 
 class ConsumerCardService {
+
+
+    static async getAll(yachtId, year, start, end) {
+        try {
+            // Construcción dinámica de filtros
+            const whereClause = {};
+            const cruiseWhereClause = {};
+            const passengerWhereClause = {};
+
+            // Filtro por yachtId
+            if (yachtId) {
+                cruiseWhereClause.yachtId = yachtId;
+            }
+
+            // Filtro por year (extrae año de startDate del cruise)
+            if (year) {
+                cruiseWhereClause.startDate = {
+                    [Op.gte]: new Date(`${year}-01-01`),
+                    [Op.lt]: new Date(`${year + 1}-01-01`)
+                };
+            }
+
+            // Filtros por rango de fechas (start y end)
+            if (start || end) {
+                const dateFilter = {};
+                if (start) {
+                    dateFilter[Op.gte] = new Date(start);
+                }
+                if (end) {
+                    dateFilter[Op.lte] = new Date(end);
+                }
+                cruiseWhereClause.startDate = {
+                    ...cruiseWhereClause.startDate,
+                    ...dateFilter
+                };
+            }
+
+            const result = await ConsumerCard.findAll({
+                where: whereClause,
+                include: [
+                    {
+                        model: Passenger,
+                        as: 'passenger',
+                        attributes: ['id', 'name', 'email', 'identificationNumber', 'cabin', 'type', 'nationality', 'country'],
+                        where: passengerWhereClause,
+                        required: true,
+                        include: [
+                            {
+                                model: Cruise,
+                                as: 'cruise',
+                                attributes: ['id', 'name', 'yachtId', 'code', 'startDate', 'endDate'],
+                                where: Object.keys(cruiseWhereClause).length > 0 ? cruiseWhereClause : undefined,
+                                required: Object.keys(cruiseWhereClause).length > 0,
+                                include: [
+                                    {
+                                        model: Yacht,
+                                        as: 'yacht',
+                                        attributes: ['id', 'code', 'name']
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        model: ConsumerCardItems,
+                        as: 'items',
+                        attributes: ['id', 'productId', 'quantity', 'price'],
+                        required: false,
+                        include: [
+                            {
+                                model: ProductBar,
+                                as: 'product',
+                                attributes: ['id', 'name', 'price']
+                            }
+                        ]
+                    }
+                ],
+                attributes: ['id', 'numberCard', 'passengerId', 'paymentType', 'totalCount', 'image', 'receiptNumber', 'paidAccount', 'createdAt', 'updatedAt']
+            });
+
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
 
     static async createConsumerCard(data) {
         const transaction = await db.transaction();

@@ -13,7 +13,6 @@ router.get('/cruises/:cruise_id', CruiseController.getCruise);
 router.put('/cruises/sendCruiseReport/:cruise_id', CruiseController.sendCruiseReport);
 router.put('/cruises/:cruise_id', CruiseController.updateCruise);
 
-
 //products-bar
 router.get('/products', ProductBarController.getProducts);
 router.get('/products/relationBar', ProductBarController.getProductsForBar);
@@ -28,6 +27,7 @@ router.post('/passengers/createPassenger', PassengerController.createPassenger);
 router.put('/passengers/updatePassenger/:passenger_id', PassengerController.updatePassenger);
 
 //consumer card
+router.get('/consumer-cards', ConsumerCardController.getAllConsumer);
 router.post('/consumer-cards/createConsumerCard', ConsumerCardController.createConsumerCard);
 router.put('/consumer-cards/updateConsumerCard/:card_id', uploadImageFile, ConsumerCardController.updateConsumerCard);
 
