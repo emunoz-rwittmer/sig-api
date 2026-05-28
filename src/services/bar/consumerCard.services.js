@@ -24,6 +24,13 @@ class ConsumerCardService {
             const cruiseWhereClause = {};
             const passengerWhereClause = {};
 
+            // Función auxiliar para validar fechas
+            const isValidDate = (dateString) => {
+                if (!dateString) return false;
+                const date = new Date(dateString);
+                return date instanceof Date && !isNaN(date.getTime());
+            };
+
             // Filtro por yachtId
             if (yachtId) {
                 cruiseWhereClause.yachtId = yachtId;
@@ -38,18 +45,24 @@ class ConsumerCardService {
             }
 
             // Filtros por rango de fechas (start y end)
-            if (start || end) {
+            if ((start && isValidDate(start)) || (end && isValidDate(end))) {
                 const dateFilter = {};
-                if (start) {
+                if (start && isValidDate(start)) {
                     dateFilter[Op.gte] = new Date(start);
                 }
-                if (end) {
+                if (end && isValidDate(end)) {
                     dateFilter[Op.lte] = new Date(end);
                 }
-                cruiseWhereClause.startDate = {
-                    ...cruiseWhereClause.startDate,
-                    ...dateFilter
-                };
+                
+                // Combina con filtro existente de year si existe
+                if (cruiseWhereClause.startDate && cruiseWhereClause.startDate[Op.gte]) {
+                    cruiseWhereClause.startDate = {
+                        ...cruiseWhereClause.startDate,
+                        ...dateFilter
+                    };
+                } else {
+                    cruiseWhereClause.startDate = dateFilter;
+                }
             }
 
             const result = await ConsumerCard.findAll({
@@ -59,7 +72,7 @@ class ConsumerCardService {
                         model: Passenger,
                         as: 'passenger',
                         attributes: ['id', 'name', 'email', 'identificationNumber', 'cabin', 'type', 'nationality', 'country'],
-                        where: passengerWhereClause,
+                        where: Object.keys(passengerWhereClause).length > 0 ? passengerWhereClause : undefined,
                         required: true,
                         include: [
                             {
@@ -97,7 +110,6 @@ class ConsumerCardService {
 
             return result;
         } catch (error) {
-            console.log(error)
             throw error;
         }
     }
