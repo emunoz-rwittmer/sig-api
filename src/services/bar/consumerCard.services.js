@@ -21,7 +21,11 @@ class ConsumerCardService {
     static async getAll(yachtId, year, start, end) {
         try {
             // Construcción dinámica de filtros
-            const whereClause = {};
+            const whereClause = {
+                totalCount: {
+                    [Op.gt]: 0
+                }
+            };
             const cruiseWhereClause = {};
             const passengerWhereClause = {};
 
