@@ -9,6 +9,8 @@ const ProductBar = require('../../models/bar/productBar.models');
 const Utils = require('../../utils/Utils');
 const { sendBarConsumption, sendInvoiceEmail } = require('../../mails/mailer');
 const { passengerInvoicePDF } = require('../../services/bar/passengerInvoicePDF.service');
+const { generateConsumerCardReportExcel } = require('../../services/bar/consumerCardReportExcel.service');
+const Yacht = require('../../models/catalogs/yacht.models');
 
 // Constantes
 const UPLOADS_BASE_PATH = path.resolve(__dirname, '../../../uploads');
@@ -18,15 +20,25 @@ const getAllConsumer = async (req, res) => {
         const { year, start, end } = req.query;
         const yachtId = Utils.decode(req.query.yachtId);
 
-        const result = await ConsumerCardService.getAll(yachtId, year, start, end);
-        const plaint = result.map(r => r.get({ plain: true }));
+        const consumerCards = await ConsumerCardService.getAllConsumerCards(yachtId, year, start, end);
+        const cortecyCards = await ConsumerCardService.getAllCortecyCards(yachtId, year, start, end);
 
-        if (plaint instanceof Array) {
-            plaint.map((x) => {
+        const plaintConsumer = consumerCards.map(r => r.get({ plain: true }));
+        const plaintCortecy = cortecyCards.map(r => r.get({ plain: true }));
+
+        if (plaintConsumer instanceof Array) {
+            plaintConsumer.map((x) => {
                 x.id = Utils.encode(x.id);
             });
         }
-        res.status(200).json(plaint);
+
+        if (plaintCortecy instanceof Array) {
+            plaintCortecy.map((x) => {
+                x.id = Utils.encode(x.id);
+            });
+        }
+
+        res.status(200).json({ consumerCards: plaintConsumer, cortecyCards: plaintCortecy });
     } catch (error) {
         res.status(400).json(error.message)
     }
@@ -249,12 +261,58 @@ const updateCortecyCard = async (req, res) => {
     }
 }
 
+const exportConsumerCardReport = async (req, res) => {
+    try {
+        const { year, start, end } = req.query;
+        const yachtId = Utils.decode(req.query.yachtId);
+
+        // Obtener información del yate
+        const yacht = await Yacht.findByPk(yachtId, {
+            attributes: ['id', 'name', 'code']
+        });
+
+        if (!yacht) {
+            return res.status(404).json({ error: 'Yacht not found' });
+        }
+
+        // Obtener consumer cards y cortecy cards filtradas
+        const consumerCards = await ConsumerCardService.getAllConsumerCards(yachtId, year, start, end);
+        const cortecyCards = await ConsumerCardService.getAllCortecyCards(yachtId, year, start, end);
+
+        // Crear directorio si no existe
+        const excelDir = path.join(UPLOADS_BASE_PATH, 'reports');
+        await fs.mkdir(excelDir, { recursive: true });
+
+        // Generar nombre del archivo
+        const timestamp = new Date().getTime();
+        const fileName = `consumer_report_${yacht.code}_${timestamp}.xlsx`;
+        const filePath = path.join(excelDir, fileName);
+
+        // Generar el Excel
+        await generateConsumerCardReportExcel(yacht.name, consumerCards, cortecyCards, filePath);
+
+        // Enviar archivo
+        res.download(filePath, fileName, (err) => {
+            if (err) {
+                console.error('Error sending file:', err);
+            }
+            // Opcionalmente eliminar archivo después de enviarlo
+            fs.unlink(filePath).catch(err => console.error('Error deleting file:', err));
+        });
+
+    } catch (error) {
+        console.error('Error generating report:', error);
+        res.status(400).json({ error: error.message });
+    }
+};
+
 
 const ConsumerCardController = {
     getAllConsumer,
     createConsumerCard,
     updateConsumerCard,
     createCortecyCard,
-    updateCortecyCard
+    updateCortecyCard,
+    exportConsumerCardReport
 }
 module.exports = ConsumerCardController

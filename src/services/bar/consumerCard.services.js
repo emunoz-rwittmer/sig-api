@@ -18,9 +18,8 @@ const { deductDirectStock, deductRecipeStock } = require('./consumerCard.helpers
 class ConsumerCardService {
 
 
-    static async getAll(yachtId, year, start, end) {
+    static async getAllConsumerCards(yachtId, year, start, end) {
         try {
-            // Construcción dinámica de filtros
             const whereClause = {
                 totalCount: {
                     [Op.gt]: 0
@@ -29,19 +28,16 @@ class ConsumerCardService {
             const cruiseWhereClause = {};
             const passengerWhereClause = {};
 
-            // Función auxiliar para validar fechas
             const isValidDate = (dateString) => {
                 if (!dateString) return false;
                 const date = new Date(dateString);
                 return date instanceof Date && !isNaN(date.getTime());
             };
 
-            // Filtro por yachtId (solo en Cruise)
             if (yachtId) {
                 cruiseWhereClause.yachtId = yachtId;
             }
 
-            // Filtro por year en ConsumerCard (createdAt) - Extrae el año con YEAR()
             if (year) {
                 const yearNum = parseInt(year, 10);
                 if (!isNaN(yearNum)) {
@@ -54,7 +50,6 @@ class ConsumerCardService {
                 }
             }
 
-            // Filtros por rango de fechas en ConsumerCard (createdAt)
             if ((start && isValidDate(start)) || (end && isValidDate(end))) {
                 const dateFilter = {};
                 if (start && isValidDate(start)) {
@@ -63,8 +58,7 @@ class ConsumerCardService {
                 if (end && isValidDate(end)) {
                     dateFilter[Op.lte] = new Date(end);
                 }
-                
-                // Combina con filtro existente de year si existe
+
                 if (whereClause.createdAt && whereClause.createdAt[Op.gte]) {
                     whereClause.createdAt = {
                         ...whereClause.createdAt,
@@ -81,7 +75,7 @@ class ConsumerCardService {
                     {
                         model: Passenger,
                         as: 'passenger',
-                        attributes: ['id', 'name', 'gender','email', 'identificationNumber', 'cabin', 'type', 'nationality', 'country'],
+                        attributes: ['id', 'name', 'gender', 'email', 'identificationNumber', 'cabin', 'type', 'nationality', 'country'],
                         where: Object.keys(passengerWhereClause).length > 0 ? passengerWhereClause : undefined,
                         required: true,
                         include: [
@@ -90,14 +84,7 @@ class ConsumerCardService {
                                 as: 'cruise',
                                 attributes: ['id', 'name', 'yachtId', 'code', 'startDate', 'endDate'],
                                 where: Object.keys(cruiseWhereClause).length > 0 ? cruiseWhereClause : undefined,
-                                required: Object.keys(cruiseWhereClause).length > 0,
-                                include: [
-                                    {
-                                        model: Yacht,
-                                        as: 'yacht',
-                                        attributes: ['id', 'code', 'name']
-                                    }
-                                ]
+                                required: Object.keys(cruiseWhereClause).length > 0,                             
                             }
                         ]
                     },
@@ -120,7 +107,91 @@ class ConsumerCardService {
 
             return result;
         } catch (error) {
-            console.log(error)
+            throw error;
+        }
+    }
+
+    static async getAllCortecyCards(yachtId, year, start, end) {
+        try {
+            const whereClause = {
+                totalCount: {
+                    [Op.gt]: 0
+                }
+            };
+            const cruiseWhereClause = {};
+            const passengerWhereClause = {};
+
+            const isValidDate = (dateString) => {
+                if (!dateString) return false;
+                const date = new Date(dateString);
+                return date instanceof Date && !isNaN(date.getTime());
+            };
+
+            if (yachtId) {
+                cruiseWhereClause.yachtId = yachtId;
+            }
+
+            if (year) {
+                const yearNum = parseInt(year, 10);
+                if (!isNaN(yearNum)) {
+                    if (!whereClause[Op.and]) {
+                        whereClause[Op.and] = [];
+                    }
+                    whereClause[Op.and].push(
+                        Sequelize.where(Sequelize.fn('YEAR', Sequelize.col('cortecy_card.createdAt')), Op.eq, yearNum)
+                    );
+                }
+            }
+
+            if ((start && isValidDate(start)) || (end && isValidDate(end))) {
+                const dateFilter = {};
+                if (start && isValidDate(start)) {
+                    dateFilter[Op.gte] = new Date(start);
+                }
+                if (end && isValidDate(end)) {
+                    dateFilter[Op.lte] = new Date(end);
+                }
+
+                if (whereClause.createdAt && whereClause.createdAt[Op.gte]) {
+                    whereClause.createdAt = {
+                        ...whereClause.createdAt,
+                        ...dateFilter
+                    };
+                } else {
+                    whereClause.createdAt = dateFilter;
+                }
+            }
+
+            const result = await CortecyCard.findAll({
+                where: whereClause,
+                include: [
+                    {
+                        model: Cruise,
+                        as: 'cruise',
+                        attributes: ['id', 'name', 'yachtId', 'code', 'startDate', 'endDate'],
+                        where: Object.keys(cruiseWhereClause).length > 0 ? cruiseWhereClause : undefined,
+                        required: Object.keys(cruiseWhereClause).length > 0,
+                       
+                    },
+                    {
+                        model: CortecyCardItems,
+                        as: 'items',
+                        attributes: ['id', 'productId', 'quantity', 'price', 'observation'],
+                        required: false,
+                        include: [
+                            {
+                                model: ProductBar,
+                                as: 'product',
+                                attributes: ['id', 'name', 'price']
+                            }
+                        ]
+                    }
+                ],
+                attributes: ['id', 'numberCard', 'type', 'totalCount', 'image', 'createdAt', 'updatedAt']
+            });
+
+            return result;
+        } catch (error) {
             throw error;
         }
     }
