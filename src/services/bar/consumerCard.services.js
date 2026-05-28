@@ -50,38 +50,32 @@ class ConsumerCardService {
                 }
             }
 
-            // if ((start && isValidDate(start)) || (end && isValidDate(end))) {
-            //     const dateFilter = {};
-            //     if (start && isValidDate(start)) {
-            //         dateFilter[Op.gte] = new Date(start);
-            //     }
-            //     if (end && isValidDate(end)) {
-            //         dateFilter[Op.lte] = new Date(end);
-            //     }
+            // FILTER POR RANGO QUE INTERSECTE EL CRUCERO
+            if (start && end && isValidDate(start) && isValidDate(end)) {
 
-            //     if (whereClause.createdAt && whereClause.createdAt[Op.gte]) {
-            //         whereClause.createdAt = {
-            //             ...whereClause.createdAt,
-            //             ...dateFilter
-            //         };
-            //     } else {
-            //         whereClause.createdAt = dateFilter;
-            //     }
-            // }
+                cruiseWhereClause[Op.and] = [
+                    {
+                        startDate: {
+                            [Op.lte]: new Date(end)
+                        }
+                    },
+                    {
+                        endDate: {
+                            [Op.gte]: new Date(start)
+                        }
+                    }
+                ];
 
-            // FILTER POR CRUISE.STARTDATE Y CRUISE.ENDDATE
-            if ((start && isValidDate(start)) || (end && isValidDate(end))) {
+            } else {
 
                 if (start && isValidDate(start)) {
-                    cruiseWhereClause.startDate = {
-                        ...(cruiseWhereClause.startDate || {}),
+                    cruiseWhereClause.endDate = {
                         [Op.gte]: new Date(start)
                     };
                 }
 
                 if (end && isValidDate(end)) {
-                    cruiseWhereClause.endDate = {
-                        ...(cruiseWhereClause.endDate || {}),
+                    cruiseWhereClause.startDate = {
                         [Op.lte]: new Date(end)
                     };
                 }

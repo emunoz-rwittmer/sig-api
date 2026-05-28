@@ -72,10 +72,8 @@ async function deductRecipeStock(warehouseId, productBar, item, userId, numberCa
             lock: transaction.LOCK.UPDATE
         });
 
-        const plaint = ingredientStock.get({ plain: true });
-
         if (!ingredientStock) {
-            throw new Error(`Ingredient stock not found for product ${plaint.product.name} in recipe`);
+            throw new Error(`Ingredient stock not found for product ${ingredientStock.product.name} in recipe`);
         }
 
         const product = await Product.findByPk(detail.productId, { transaction });
@@ -85,15 +83,15 @@ async function deductRecipeStock(warehouseId, productBar, item, userId, numberCa
         const quantityPerServing = detail.quantity * converter;
         const totalQuantityToDeduct = quantityPerServing * item.quantity;
 
-        if (plaint.quantity < totalQuantityToDeduct) {
+        if (ingredientStock.quantity < totalQuantityToDeduct) {
             throw new Error(
-                `Insufficient ingredient stock for product ${plaint.product.name}. ` +
-                `Available: ${plaint.quantity}, ` +
+                `Insufficient ingredient stock for product ${ingredientStock.product.name}. ` +
+                `Available: ${ingredientStock.quantity}, ` +
                 `Requested: ${totalQuantityToDeduct}`
             );
         }
 
-        plaint.quantity -= totalQuantityToDeduct;
+        ingredientStock.quantity -= totalQuantityToDeduct;
         await ingredientStock.save({ transaction });
 
         await Transaction.create({
