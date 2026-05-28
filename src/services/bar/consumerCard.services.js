@@ -50,22 +50,40 @@ class ConsumerCardService {
                 }
             }
 
+            // if ((start && isValidDate(start)) || (end && isValidDate(end))) {
+            //     const dateFilter = {};
+            //     if (start && isValidDate(start)) {
+            //         dateFilter[Op.gte] = new Date(start);
+            //     }
+            //     if (end && isValidDate(end)) {
+            //         dateFilter[Op.lte] = new Date(end);
+            //     }
+
+            //     if (whereClause.createdAt && whereClause.createdAt[Op.gte]) {
+            //         whereClause.createdAt = {
+            //             ...whereClause.createdAt,
+            //             ...dateFilter
+            //         };
+            //     } else {
+            //         whereClause.createdAt = dateFilter;
+            //     }
+            // }
+
+            // FILTER POR CRUISE.STARTDATE Y CRUISE.ENDDATE
             if ((start && isValidDate(start)) || (end && isValidDate(end))) {
-                const dateFilter = {};
+
                 if (start && isValidDate(start)) {
-                    dateFilter[Op.gte] = new Date(start);
-                }
-                if (end && isValidDate(end)) {
-                    dateFilter[Op.lte] = new Date(end);
+                    cruiseWhereClause.startDate = {
+                        ...(cruiseWhereClause.startDate || {}),
+                        [Op.gte]: new Date(start)
+                    };
                 }
 
-                if (whereClause.createdAt && whereClause.createdAt[Op.gte]) {
-                    whereClause.createdAt = {
-                        ...whereClause.createdAt,
-                        ...dateFilter
+                if (end && isValidDate(end)) {
+                    cruiseWhereClause.endDate = {
+                        ...(cruiseWhereClause.endDate || {}),
+                        [Op.lte]: new Date(end)
                     };
-                } else {
-                    whereClause.createdAt = dateFilter;
                 }
             }
 
@@ -84,7 +102,7 @@ class ConsumerCardService {
                                 as: 'cruise',
                                 attributes: ['id', 'name', 'yachtId', 'code', 'startDate', 'endDate'],
                                 where: Object.keys(cruiseWhereClause).length > 0 ? cruiseWhereClause : undefined,
-                                required: Object.keys(cruiseWhereClause).length > 0,                             
+                                required: Object.keys(cruiseWhereClause).length > 0,
                             }
                         ]
                     },
@@ -171,7 +189,7 @@ class ConsumerCardService {
                         attributes: ['id', 'name', 'yachtId', 'code', 'startDate', 'endDate'],
                         where: Object.keys(cruiseWhereClause).length > 0 ? cruiseWhereClause : undefined,
                         required: Object.keys(cruiseWhereClause).length > 0,
-                       
+
                     },
                     {
                         model: CortecyCardItems,
