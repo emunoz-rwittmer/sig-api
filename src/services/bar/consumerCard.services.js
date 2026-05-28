@@ -12,6 +12,7 @@ const Yacht = require('../../models/catalogs/yacht.models');
 const Product = require('../../models/operations/inventory/product.models');
 const db = require('../../utils/database');
 const { Op } = require('sequelize');
+const Sequelize = require('sequelize');
 const { deductDirectStock, deductRecipeStock } = require('./consumerCard.helpers');
 
 class ConsumerCardService {
@@ -31,20 +32,25 @@ class ConsumerCardService {
                 return date instanceof Date && !isNaN(date.getTime());
             };
 
-            // Filtro por yachtId
+            // Filtro por yachtId (solo en Cruise)
             if (yachtId) {
                 cruiseWhereClause.yachtId = yachtId;
             }
 
-            // Filtro por year (extrae año de startDate del cruise)
+            // Filtro por year en ConsumerCard (createdAt) - Extrae el año con YEAR()
             if (year) {
-                cruiseWhereClause.startDate = {
-                    [Op.gte]: new Date(`${year}-01-01`),
-                    [Op.lt]: new Date(`${year + 1}-01-01`)
-                };
+                const yearNum = parseInt(year, 10);
+                if (!isNaN(yearNum)) {
+                    if (!whereClause[Op.and]) {
+                        whereClause[Op.and] = [];
+                    }
+                    whereClause[Op.and].push(
+                        Sequelize.where(Sequelize.fn('YEAR', Sequelize.col('consumer_card.createdAt')), Op.eq, yearNum)
+                    );
+                }
             }
 
-            // Filtros por rango de fechas (start y end)
+            // Filtros por rango de fechas en ConsumerCard (createdAt)
             if ((start && isValidDate(start)) || (end && isValidDate(end))) {
                 const dateFilter = {};
                 if (start && isValidDate(start)) {
@@ -55,13 +61,13 @@ class ConsumerCardService {
                 }
                 
                 // Combina con filtro existente de year si existe
-                if (cruiseWhereClause.startDate && cruiseWhereClause.startDate[Op.gte]) {
-                    cruiseWhereClause.startDate = {
-                        ...cruiseWhereClause.startDate,
+                if (whereClause.createdAt && whereClause.createdAt[Op.gte]) {
+                    whereClause.createdAt = {
+                        ...whereClause.createdAt,
                         ...dateFilter
                     };
                 } else {
-                    cruiseWhereClause.startDate = dateFilter;
+                    whereClause.createdAt = dateFilter;
                 }
             }
 
@@ -71,7 +77,7 @@ class ConsumerCardService {
                     {
                         model: Passenger,
                         as: 'passenger',
-                        attributes: ['id', 'name', 'email', 'identificationNumber', 'cabin', 'type', 'nationality', 'country'],
+                        attributes: ['id', 'name', 'gender','email', 'identificationNumber', 'cabin', 'type', 'nationality', 'country'],
                         where: Object.keys(passengerWhereClause).length > 0 ? passengerWhereClause : undefined,
                         required: true,
                         include: [
@@ -110,6 +116,7 @@ class ConsumerCardService {
 
             return result;
         } catch (error) {
+            console.log(error)
             throw error;
         }
     }
