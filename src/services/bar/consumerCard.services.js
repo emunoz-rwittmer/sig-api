@@ -28,22 +28,6 @@ class ConsumerCardService {
             const cruiseWhereClause = {};
             const passengerWhereClause = {};
 
-            // 1. Validar y formatear de forma segura las fechas para la Base de Datos
-            let startDate = null;
-            let endDate = null;
-
-            if (start && !isNaN(Date.parse(start))) {
-                const dStart = new Date(start);
-                // Formato: YYYY-MM-DD 00:00:00
-                startDate = dStart.toISOString().split('T')[0] + ' 00:00:00';
-            }
-
-            if (end && !isNaN(Date.parse(end))) {
-                const dEnd = new Date(end);
-                // Formato: YYYY-MM-DD 23:59:59
-                endDate = dEnd.toISOString().split('T')[0] + ' 23:59:59';
-            }
-
             if (yachtId) {
                 cruiseWhereClause.yachtId = yachtId;
             }
@@ -61,25 +45,13 @@ class ConsumerCardService {
             }
 
             // FILTER POR RANGO QUE INTERSECTE EL CRUCERO
-            if (startDate || endDate) {
+            if ((start && (start !== "undefined" && start !== 'null')) && (end && (end !== "undefined" && end !== 'null'))) {
                 cruiseWhereClause[Op.and] = [];
 
-                if (startDate && endDate) {
-                    cruiseWhereClause[Op.and].push({
-                        startDate: { [Op.lte]: endDate }
-                    });
-                    cruiseWhereClause[Op.and].push({
-                        endDate: { [Op.gte]: startDate }
-                    });
-                } else if (startDate) {
-                    cruiseWhereClause[Op.and].push({
-                        endDate: { [Op.gte]: startDate }
-                    });
-                } else if (endDate) {
-                    cruiseWhereClause[Op.and].push({
-                        startDate: { [Op.lte]: endDate }
-                    });
-                }
+                cruiseWhereClause[Op.and] = [
+                    { startDate: { [Op.gte]: new Date(start) } },
+                    { endDate: { [Op.lte]: new Date(end) } }
+                ]
             }
 
             const result = await ConsumerCard.findAll({
