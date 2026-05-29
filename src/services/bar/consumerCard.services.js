@@ -28,23 +28,8 @@ class ConsumerCardService {
             const cruiseWhereClause = {};
             const passengerWhereClause = {};
 
-            const isValidDate = (dateString) => {
-                if (!dateString) return false;
-                const date = new Date(dateString);
-                return date instanceof Date && !isNaN(date.getTime());
-            };
-
-            const normalizeDate = (dateString, endOfDay = false) => {
-                if (!isValidDate(dateString)) return null;
-
-                const date = new Date(dateString);
-
-                if (/^\d{4}-\d{2}-\d{2}$/.test(String(dateString))) {
-                    date.setHours(endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
-                }
-
-                return date;
-            };
+            const startDate = start ? new Date(start) : null;
+            const endDate = end ? new Date(new Date(end).setHours(23, 59, 59, 999)) : null;
 
             if (yachtId) {
                 cruiseWhereClause.yachtId = yachtId;
@@ -62,24 +47,30 @@ class ConsumerCardService {
                 }
             }
 
-            // FILTER POR RANGO DEL CRUCERO (solo cruceros contenidos en el rango)
-            const startDate = normalizeDate(start);
-            const endDate = normalizeDate(end, true);
-
+            // FILTER POR RANGO QUE INTERSECTE EL CRUCERO
             if (startDate || endDate) {
                 cruiseWhereClause[Op.and] = [];
 
-                if (startDate) {
+                if (startDate && endDate) {
                     cruiseWhereClause[Op.and].push({
                         startDate: {
+                            [Op.lte]: endDate
+                        }
+                    });
+                    cruiseWhereClause[Op.and].push({
+                        endDate: {
                             [Op.gte]: startDate
                         }
                     });
-                }
-
-                if (endDate) {
+                } else if (startDate) {
                     cruiseWhereClause[Op.and].push({
                         endDate: {
+                            [Op.gte]: startDate
+                        }
+                    });
+                } else if (endDate) {
+                    cruiseWhereClause[Op.and].push({
+                        startDate: {
                             [Op.lte]: endDate
                         }
                     });
@@ -138,23 +129,8 @@ class ConsumerCardService {
             const cruiseWhereClause = {};
             const passengerWhereClause = {};
 
-            const isValidDate = (dateString) => {
-                if (!dateString) return false;
-                const date = new Date(dateString);
-                return date instanceof Date && !isNaN(date.getTime());
-            };
-
-            const normalizeDate = (dateString, endOfDay = false) => {
-                if (!isValidDate(dateString)) return null;
-
-                const date = new Date(dateString);
-
-                if (/^\d{4}-\d{2}-\d{2}$/.test(String(dateString))) {
-                    date.setHours(endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
-                }
-
-                return date;
-            };
+            const startDate = start ? new Date(start) : null;
+            const endDate = end ? new Date(new Date(end).setHours(23, 59, 59, 999)) : null;
 
             if (yachtId) {
                 cruiseWhereClause.yachtId = yachtId;
@@ -172,23 +148,29 @@ class ConsumerCardService {
                 }
             }
 
-            const startDate = normalizeDate(start);
-            const endDate = normalizeDate(end, true);
-
             if (startDate || endDate) {
                 cruiseWhereClause[Op.and] = [];
 
-                if (startDate) {
+                if (startDate && endDate) {
                     cruiseWhereClause[Op.and].push({
                         startDate: {
+                            [Op.lte]: endDate
+                        }
+                    });
+                    cruiseWhereClause[Op.and].push({
+                        endDate: {
                             [Op.gte]: startDate
                         }
                     });
-                }
-
-                if (endDate) {
+                } else if (startDate) {
                     cruiseWhereClause[Op.and].push({
                         endDate: {
+                            [Op.gte]: startDate
+                        }
+                    });
+                } else if (endDate) {
+                    cruiseWhereClause[Op.and].push({
+                        startDate: {
                             [Op.lte]: endDate
                         }
                     });
