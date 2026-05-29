@@ -28,8 +28,21 @@ class ConsumerCardService {
             const cruiseWhereClause = {};
             const passengerWhereClause = {};
 
-            const startDate = start ? new Date(start) : null;
-            const endDate = end ? new Date(new Date(end).setHours(23, 59, 59, 999)) : null;
+            // 1. Validar y formatear de forma segura las fechas para la Base de Datos
+            let startDate = null;
+            let endDate = null;
+
+            if (start && !isNaN(Date.parse(start))) {
+                const dStart = new Date(start);
+                // Formato: YYYY-MM-DD 00:00:00
+                startDate = dStart.toISOString().split('T')[0] + ' 00:00:00';
+            }
+
+            if (end && !isNaN(Date.parse(end))) {
+                const dEnd = new Date(end);
+                // Formato: YYYY-MM-DD 23:59:59
+                endDate = dEnd.toISOString().split('T')[0] + ' 23:59:59';
+            }
 
             if (yachtId) {
                 cruiseWhereClause.yachtId = yachtId;
@@ -53,26 +66,18 @@ class ConsumerCardService {
 
                 if (startDate && endDate) {
                     cruiseWhereClause[Op.and].push({
-                        startDate: {
-                            [Op.lte]: endDate
-                        }
+                        startDate: { [Op.lte]: endDate }
                     });
                     cruiseWhereClause[Op.and].push({
-                        endDate: {
-                            [Op.gte]: startDate
-                        }
+                        endDate: { [Op.gte]: startDate }
                     });
                 } else if (startDate) {
                     cruiseWhereClause[Op.and].push({
-                        endDate: {
-                            [Op.gte]: startDate
-                        }
+                        endDate: { [Op.gte]: startDate }
                     });
                 } else if (endDate) {
                     cruiseWhereClause[Op.and].push({
-                        startDate: {
-                            [Op.lte]: endDate
-                        }
+                        startDate: { [Op.lte]: endDate }
                     });
                 }
             }
