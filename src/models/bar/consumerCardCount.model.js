@@ -8,6 +8,12 @@ const ConsumerCardCount = db.define('consumer_card_count', {
         allowNull: false,
         autoIncrement: true
     },
+    yachtId: {
+        type: DataTypes.INTEGER,
+        defaultValue: 1,
+        unique: true,
+        field: 'yacht_id'
+    },
     valor: {
         type: DataTypes.INTEGER,
         defaultValue: 1,

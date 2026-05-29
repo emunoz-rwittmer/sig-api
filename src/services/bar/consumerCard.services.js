@@ -34,6 +34,18 @@ class ConsumerCardService {
                 return date instanceof Date && !isNaN(date.getTime());
             };
 
+            const normalizeDate = (dateString, endOfDay = false) => {
+                if (!isValidDate(dateString)) return null;
+
+                const date = new Date(dateString);
+
+                if (/^\d{4}-\d{2}-\d{2}$/.test(String(dateString))) {
+                    date.setHours(endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
+                }
+
+                return date;
+            };
+
             if (yachtId) {
                 cruiseWhereClause.yachtId = yachtId;
             }
@@ -51,33 +63,26 @@ class ConsumerCardService {
             }
 
             // FILTER POR RANGO QUE INTERSECTE EL CRUCERO
-            if (start && end && isValidDate(start) && isValidDate(end)) {
+            const startDate = normalizeDate(start);
+            const endDate = normalizeDate(end, true);
 
-                cruiseWhereClause[Op.and] = [
-                    {
-                        startDate: {
-                            [Op.lte]: new Date(end)
-                        }
-                    },
-                    {
+            if (startDate || endDate) {
+                cruiseWhereClause[Op.and] = [];
+
+                if (startDate) {
+                    cruiseWhereClause[Op.and].push({
                         endDate: {
-                            [Op.gte]: new Date(start)
+                            [Op.gte]: startDate
                         }
-                    }
-                ];
-
-            } else {
-
-                if (start && isValidDate(start)) {
-                    cruiseWhereClause.endDate = {
-                        [Op.gte]: new Date(start)
-                    };
+                    });
                 }
 
-                if (end && isValidDate(end)) {
-                    cruiseWhereClause.startDate = {
-                        [Op.lte]: new Date(end)
-                    };
+                if (endDate) {
+                    cruiseWhereClause[Op.and].push({
+                        startDate: {
+                            [Op.lte]: endDate
+                        }
+                    });
                 }
             }
 
@@ -139,6 +144,18 @@ class ConsumerCardService {
                 return date instanceof Date && !isNaN(date.getTime());
             };
 
+            const normalizeDate = (dateString, endOfDay = false) => {
+                if (!isValidDate(dateString)) return null;
+
+                const date = new Date(dateString);
+
+                if (/^\d{4}-\d{2}-\d{2}$/.test(String(dateString))) {
+                    date.setHours(endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
+                }
+
+                return date;
+            };
+
             if (yachtId) {
                 cruiseWhereClause.yachtId = yachtId;
             }
@@ -155,22 +172,26 @@ class ConsumerCardService {
                 }
             }
 
-            if ((start && isValidDate(start)) || (end && isValidDate(end))) {
-                const dateFilter = {};
-                if (start && isValidDate(start)) {
-                    dateFilter[Op.gte] = new Date(start);
-                }
-                if (end && isValidDate(end)) {
-                    dateFilter[Op.lte] = new Date(end);
+            const startDate = normalizeDate(start);
+            const endDate = normalizeDate(end, true);
+
+            if (startDate || endDate) {
+                cruiseWhereClause[Op.and] = [];
+
+                if (startDate) {
+                    cruiseWhereClause[Op.and].push({
+                        endDate: {
+                            [Op.gte]: startDate
+                        }
+                    });
                 }
 
-                if (whereClause.createdAt && whereClause.createdAt[Op.gte]) {
-                    whereClause.createdAt = {
-                        ...whereClause.createdAt,
-                        ...dateFilter
-                    };
-                } else {
-                    whereClause.createdAt = dateFilter;
+                if (endDate) {
+                    cruiseWhereClause[Op.and].push({
+                        startDate: {
+                            [Op.lte]: endDate
+                        }
+                    });
                 }
             }
 

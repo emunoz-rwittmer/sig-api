@@ -203,62 +203,102 @@ const generateWeeklyCruisesAndPassengerInfo = async (req, res) => {
             transaction: t
         });
 
-        // 4. Obtener contador con LOCK 🔒
-        let consecutivo = await ConsumerCardCount.findOne({
-            transaction: t,
-            lock: t.LOCK.UPDATE
-        });
+        // 4. Obtener contadores por barco con LOCK 🔒
+        const countersByYacht = {};
 
-        if (!consecutivo) {
-            consecutivo = await ConsumerCardCount.create(
-                { valor: 1 },
-                { transaction: t }
-            );
+        for (const cruise of createdCruises) {
+            const yachtId = cruise.yachtId;
+
+            // evitar buscar varias veces el mismo yacht
+            if (countersByYacht[yachtId]) continue;
+
+            let consecutivo = await ConsumerCardCount.findOne({
+                where: { yachtId },
+                transaction: t,
+                lock: t.LOCK.UPDATE
+            });
+
+            if (!consecutivo) {
+                consecutivo = await ConsumerCardCount.create(
+                    {
+                        yachtId,
+                        valor: 1
+                    },
+                    { transaction: t }
+                );
+            }
+
+            countersByYacht[yachtId] = consecutivo;
         }
 
-        let currentCounter = consecutivo.valor;
-
         // 5. Crear consumer cards
-        const consumerCards = createdPassengers.map(p => {
-            const formattedCounter = `000-${currentCounter.toString().padStart(3, '0')}`;
-            currentCounter++;
+        const consumerCards = [];
 
-            return {
-                passenger_id: p.id,
+        for (const passenger of createdPassengers) {
+
+            // obtener crucero del pasajero
+            const cruise = createdCruises.find(c => c.id === passenger.cruiseId);
+
+            const yachtId = cruise.yachtId;
+
+            const counter = countersByYacht[yachtId];
+
+            const formattedCounter = `000-${counter.valor
+                .toString()
+                .padStart(3, '0')}`;
+
+            counter.valor++;
+
+            consumerCards.push({
+                passenger_id: passenger.id,
                 numberCard: formattedCounter
-            };
-        });
+            });
+        }
 
         await ConsumerCard.bulkCreate(consumerCards, {
             transaction: t
         });
 
         // 6. Crear cortecies cards
+        const cortecies = [
+            { type: 'cortecy' },
+            { type: 'intake' }
+        ];
 
-        const cortecies = [{ type: 'cortecy' }, { type: 'intake' }];
+        const cortecyCards = [];
 
-        const cortecyCards = createdCruises.flatMap(cruice => {
-            return cortecies.map(cortecy => {
-                const formattedCounter = `000-${currentCounter.toString().padStart(3, '0')}`;
-                currentCounter++;
+        for (const cruise of createdCruises) {
 
-                return {
-                    type: cortecy.type, // 👈 ahora sí usas el tipo correcto
-                    cruiseId: cruice.id,
+            const yachtId = cruise.yachtId;
+
+            const counter = countersByYacht[yachtId];
+
+            for (const cortecy of cortecies) {
+
+                const formattedCounter = `000-${counter.valor
+                    .toString()
+                    .padStart(3, '0')}`;
+
+                counter.valor++;
+
+                cortecyCards.push({
+                    type: cortecy.type,
+                    cruiseId: cruise.id,
                     numberCard: formattedCounter
-                };
-            });
-        });
+                });
+            }
+        }
 
         await CortecyCard.bulkCreate(cortecyCards, {
             transaction: t
         });
 
-        // 7. Actualizar contador
-        await consecutivo.update(
-            { valor: currentCounter },
-            { transaction: t }
-        );
+        // 7. Actualizar todos los contadores
+        for (const yachtId in countersByYacht) {
+            await countersByYacht[yachtId].save({
+                transaction: t
+            });
+        }
 
         await t.commit();
         console.log('Todo creado correctamente 🚀');
