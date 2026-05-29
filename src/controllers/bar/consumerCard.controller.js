@@ -289,7 +289,7 @@ const exportConsumerCardReport = async (req, res) => {
         const filePath = path.join(excelDir, fileName);
 
         // Generar el Excel
-        await generateConsumerCardReportExcel(yacht.name, consumerCards, cortecyCards, filePath);
+        await generateConsumerCardReportExcel(yacht.name, start, end, consumerCards, cortecyCards, filePath);
 
         // Enviar archivo
         res.download(filePath, fileName, (err) => {

@@ -65,14 +65,14 @@ class ConsumerCardService {
                     {
                         model: Passenger,
                         as: 'passenger',
-                        attributes: ['id', 'name', 'gender', 'email', 'identificationNumber', 'cabin', 'type', 'nationality', 'country'],
+                        attributes: ['id', 'name', 'gender', 'email', 'identificationNumber', 'cabin', 'type', 'nationality', 'country', 'cruiseStartDate', 'cruiseEndDate'],
                         where: Object.keys(passengerWhereClause).length > 0 ? passengerWhereClause : undefined,
                         required: true,
                         include: [
                             {
                                 model: Cruise,
                                 as: 'cruise',
-                                attributes: ['id', 'name', 'yachtId', 'code', 'startDate', 'endDate'],
+                                attributes: ['id', 'barman', 'code', 'name', 'yachtId', 'code', 'startDate', 'endDate'],
                                 where: Object.keys(cruiseWhereClause).length > 0 ? cruiseWhereClause : undefined,
                                 required: Object.keys(cruiseWhereClause).length > 0,
                             }
@@ -150,7 +150,7 @@ class ConsumerCardService {
                     {
                         model: Cruise,
                         as: 'cruise',
-                        attributes: ['id', 'name', 'yachtId', 'code', 'startDate', 'endDate'],
+                        attributes: ['id', 'name', 'code','yachtId', 'code', 'startDate', 'endDate'],
                         where: Object.keys(cruiseWhereClause).length > 0 ? cruiseWhereClause : undefined,
                         required: Object.keys(cruiseWhereClause).length > 0,
 
