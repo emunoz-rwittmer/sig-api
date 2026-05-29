@@ -46,11 +46,7 @@ class ConsumerCardService {
 
             // FILTER POR RANGO QUE INTERSECTE EL CRUCERO
             if ((start && (start !== "undefined" && start !== 'null')) && (end && (end !== "undefined" && end !== 'null'))) {
-                cruiseWhereClause[Op.and] = [];
 
-                console.log(start) 
-                console.log(end)
-                
                 cruiseWhereClause[Op.and] = [
                     { startDate: { [Op.gte]: new Date(start) } },
                     { endDate: { [Op.lte]: new Date(end) } }
@@ -95,6 +91,7 @@ class ConsumerCardService {
 
             return result;
         } catch (error) {
+            console.log(error)
             throw error;
         }
     }
@@ -108,9 +105,6 @@ class ConsumerCardService {
             };
             const cruiseWhereClause = {};
             const passengerWhereClause = {};
-
-            const startDate = start ? new Date(start) : null;
-            const endDate = end ? new Date(new Date(end).setHours(23, 59, 59, 999)) : null;
 
             if (yachtId) {
                 cruiseWhereClause.yachtId = yachtId;
@@ -128,33 +122,14 @@ class ConsumerCardService {
                 }
             }
 
-            if (startDate || endDate) {
-                cruiseWhereClause[Op.and] = [];
+            // FILTER POR RANGO QUE INTERSECTE EL CRUCERO
+            if ((start && (start !== "undefined" && start !== 'null')) && (end && (end !== "undefined" && end !== 'null'))) {
+                console.log('entre aqui')
 
-                if (startDate && endDate) {
-                    cruiseWhereClause[Op.and].push({
-                        startDate: {
-                            [Op.lte]: endDate
-                        }
-                    });
-                    cruiseWhereClause[Op.and].push({
-                        endDate: {
-                            [Op.gte]: startDate
-                        }
-                    });
-                } else if (startDate) {
-                    cruiseWhereClause[Op.and].push({
-                        endDate: {
-                            [Op.gte]: startDate
-                        }
-                    });
-                } else if (endDate) {
-                    cruiseWhereClause[Op.and].push({
-                        startDate: {
-                            [Op.lte]: endDate
-                        }
-                    });
-                }
+                cruiseWhereClause[Op.and] = [
+                    { startDate: { [Op.gte]: new Date(start) } },
+                    { endDate: { [Op.lte]: new Date(end) } }
+                ]
             }
 
             const result = await CortecyCard.findAll({
