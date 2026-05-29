@@ -62,7 +62,7 @@ class ConsumerCardService {
                 }
             }
 
-            // FILTER POR RANGO QUE INTERSECTE EL CRUCERO
+            // FILTER POR RANGO DEL CRUCERO (solo cruceros contenidos en el rango)
             const startDate = normalizeDate(start);
             const endDate = normalizeDate(end, true);
 
@@ -71,7 +71,7 @@ class ConsumerCardService {
 
                 if (startDate) {
                     cruiseWhereClause[Op.and].push({
-                        endDate: {
+                        startDate: {
                             [Op.gte]: startDate
                         }
                     });
@@ -79,7 +79,7 @@ class ConsumerCardService {
 
                 if (endDate) {
                     cruiseWhereClause[Op.and].push({
-                        startDate: {
+                        endDate: {
                             [Op.lte]: endDate
                         }
                     });
@@ -180,7 +180,7 @@ class ConsumerCardService {
 
                 if (startDate) {
                     cruiseWhereClause[Op.and].push({
-                        endDate: {
+                        startDate: {
                             [Op.gte]: startDate
                         }
                     });
@@ -188,7 +188,7 @@ class ConsumerCardService {
 
                 if (endDate) {
                     cruiseWhereClause[Op.and].push({
-                        startDate: {
+                        endDate: {
                             [Op.lte]: endDate
                         }
                     });
