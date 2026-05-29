@@ -11,8 +11,7 @@ const Warehouse = require('../../models/catalogs/wareHouse.models');
 const Yacht = require('../../models/catalogs/yacht.models');
 const Product = require('../../models/operations/inventory/product.models');
 const db = require('../../utils/database');
-const { Op } = require('sequelize');
-const Sequelize = require('sequelize');
+const { Sequelize, Op, fn, col, where } = require('sequelize');
 const { deductDirectStock, deductRecipeStock } = require('./consumerCard.helpers');
 
 class ConsumerCardService {
