@@ -46,12 +46,15 @@ class ConsumerCardService {
             // FILTER POR RANGO QUE INTERSECTE EL CRUCERO
             if ((start && (start !== "undefined" && start !== 'null')) && (end && (end !== "undefined" && end !== 'null'))) {
 
+                const startDate = new Date(start).toISOString().split('T')[0];
+                const endDate = new Date(end).toISOString().split('T')[0];
+
                 cruiseWhereClause[Op.and] = [
-                    where(fn('DATE', col('cruise.start_date')), {
-                        [Op.gte]: start.split(' ')[0]
+                    where(fn('DATE', col('start_date')), {
+                        [Op.gte]: startDate
                     }),
-                    where(fn('DATE', col('cruise.start_date')), {
-                        [Op.lt]: end.split(' ')[0]
+                    where(fn('DATE', col('start_date')), {
+                        [Op.lt]: endDate
                     })
                 ];
             }
