@@ -53,10 +53,10 @@ class ConsumerCardService {
                 console.log(new Date(start))
                 console.log(new Date(end))
 
-                cruiseWhereClause[Op.and] = [
-                    { startDate: { [Op.gte]: start } },
-                    { endDate: { [Op.lte]: end } }
-                ]
+                cruiseWhereClause.startDate = {
+                    [Op.gte]: start,
+                    [Op.lt]: end
+                };
             }
 
             const result = await ConsumerCard.findAll({
