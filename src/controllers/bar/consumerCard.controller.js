@@ -284,8 +284,7 @@ const exportConsumerCardReport = async (req, res) => {
         await fs.mkdir(excelDir, { recursive: true });
 
         // Generar nombre del archivo
-        const timestamp = new Date().getTime();
-        const fileName = `consumer_report_${yacht.code}_${timestamp}.xlsx`;
+        const fileName = `consumer_report_${yacht.name}.xlsx`;
         const filePath = path.join(excelDir, fileName);
 
         // Generar el Excel
