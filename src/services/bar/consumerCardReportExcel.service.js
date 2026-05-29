@@ -108,7 +108,7 @@ exports.generateConsumerCardReportExcel = async (yachtName, start, end, consumer
       const cruise = cruiseGroup.cruise;
 
       // Encabezado del Crucero
-      wsConsumer.cell(consumerRow, 1).string(`CRUCERO: ${cruise.code}`).style(labelStyle);
+      wsConsumer.cell(consumerRow, 1).string(`CRUCERO: ${cruise.name}`).style(labelStyle);
       consumerRow++;
 
       wsConsumer.cell(consumerRow, 1).string('Código:').style(labelStyle);
