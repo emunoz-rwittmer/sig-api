@@ -44,12 +44,18 @@ class ConsumerCardService {
                 }
             }
 
+            console.log(start)
+            console.log(end)
             // FILTER POR RANGO QUE INTERSECTE EL CRUCERO
             if ((start && (start !== "undefined" && start !== 'null')) && (end && (end !== "undefined" && end !== 'null'))) {
 
+
+                console.log(new Date(start))
+                console.log(new Date(end))
+
                 cruiseWhereClause[Op.and] = [
-                    { startDate: { [Op.gte]: new Date(start) } },
-                    { endDate: { [Op.lte]: new Date(end) } }
+                    { startDate: { [Op.gte]: start } },
+                    { endDate: { [Op.lte]: end } }
                 ]
             }
 
