@@ -47,10 +47,10 @@ class ConsumerCardService {
             if ((start && (start !== "undefined" && start !== 'null')) && (end && (end !== "undefined" && end !== 'null'))) {
 
                 cruiseWhereClause[Op.and] = [
-                    where(fn('DATE', col('cruise.startDate')), {
+                    where(fn('DATE', col('cruise.start_date')), {
                         [Op.gte]: start.split(' ')[0]
                     }),
-                    where(fn('DATE', col('cruise.startDate')), {
+                    where(fn('DATE', col('cruise.start_date')), {
                         [Op.lt]: end.split(' ')[0]
                     })
                 ];
