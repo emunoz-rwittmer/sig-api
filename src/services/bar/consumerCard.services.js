@@ -48,6 +48,9 @@ class ConsumerCardService {
             if ((start && (start !== "undefined" && start !== 'null')) && (end && (end !== "undefined" && end !== 'null'))) {
                 cruiseWhereClause[Op.and] = [];
 
+                console.log(start) 
+                console.log(end)
+                
                 cruiseWhereClause[Op.and] = [
                     { startDate: { [Op.gte]: new Date(start) } },
                     { endDate: { [Op.lte]: new Date(end) } }
