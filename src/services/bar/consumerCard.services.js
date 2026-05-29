@@ -130,12 +130,18 @@ class ConsumerCardService {
 
             // FILTER POR RANGO QUE INTERSECTE EL CRUCERO
             if ((start && (start !== "undefined" && start !== 'null')) && (end && (end !== "undefined" && end !== 'null'))) {
-                console.log('entre aqui')
+
+                const startDate = new Date(start).toISOString().split('T')[0];
+                const endDate = new Date(end).toISOString().split('T')[0];
 
                 cruiseWhereClause[Op.and] = [
-                    { startDate: { [Op.gte]: new Date(start) } },
-                    { endDate: { [Op.lte]: new Date(end) } }
-                ]
+                    where(fn('DATE', col('start_date')), {
+                        [Op.gte]: startDate
+                    }),
+                    where(fn('DATE', col('start_date')), {
+                        [Op.lt]: endDate
+                    })
+                ];
             }
 
             const result = await CortecyCard.findAll({
