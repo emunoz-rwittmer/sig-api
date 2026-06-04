@@ -51,17 +51,37 @@ const sendCruiseReport = async (req, res) => {
             return res.status(404).json({ message: 'Crucero no encontrado' });
         }
 
-        const emailTo = ['fabian@rwittmer.com','rosa@tiptoptravel.ec'];
-        const emailCc = ['enrique@rwittmer.com','edison@tiptoptravel.ec'];
+        const emailTo = ['fabian@rwittmer.com', 'rosa@tiptoptravel.ec', 'enrique@rwittmer.com'];
+        const emailCc = 'edison@tiptoptravel.ec';
 
-        const passengersWithCards = cruise.passengers.filter(
+        const consumerPassengers = cruise.passengers.filter(
             (p) => p.consumer_card && p.consumer_card.totalCount > 0 && p.consumer_card.paidAccount === true
         );
 
-        if (passengersWithCards.length === 0) {
-            return res.status(400).json({
-                message: 'No hay pasajeros con consumer cards válidas para este crucero'
-            });
+        const consumerCards = consumerPassengers.map((passenger) => ({
+            ...passenger.consumer_card,
+            passenger: {
+                id: passenger.id,
+                name: passenger.name,
+                identificationNumber: passenger.identificationNumber,
+                type: passenger.type,
+                cabin: passenger.cabin,
+                country: passenger.country,
+                email: passenger.email,
+                nationality: passenger.nationality,
+                cruise,
+                cruiseStartDate: cruise.startDate,
+                cruiseEndDate: cruise.endDate,
+            },
+        }));
+
+        const cortecyCards = (cruise.cortecy_cards || []).map((card) => ({
+            ...card,
+            cruise,
+        }));
+
+        if (consumerCards.length === 0 && cortecyCards.length === 0) {
+            throw new Error('No hay consumer cards o cortecy cards válidas para este crucero');
         }
 
         const uploadsDir = path.join(__dirname, '../../..', 'uploads', 'cruises', cruise.code, 'reports');
@@ -75,8 +95,13 @@ const sendCruiseReport = async (req, res) => {
         pdfPath = path.join(uploadsDir, `${baseName}.pdf`);
 
         const [excelResult, pdfResult] = await Promise.all([
-            CruiseReportExcelService.generateCruiseReportExcel(cruise, passengersWithCards, excelPath),
-            CruiseReportPDFService.generateCruiseReportPDF(cruise, passengersWithCards, pdfPath)
+            CruiseReportExcelService.generateCruiseReportExcel(
+                cruise,
+                consumerPassengers,
+                cortecyCards,
+                excelPath
+            ),
+            CruiseReportPDFService.generateCruiseReportPDF(cruise, consumerPassengers, cortecyCards, pdfPath)
         ]);
 
         const urlPDF = `/uploads/cruises/${cruise.code}/reports/${baseName}.pdf`;
@@ -90,11 +115,36 @@ const sendCruiseReport = async (req, res) => {
             emailCc
         );
 
-        await CruiseService.updateCruise(cruiseId, {
-            cruiseState: 'under review',
+        const cruiseUpdate = {
             urlPDFReport: urlPDF,
             urlExcelReport: urlExcel
-        });
+        };
+
+        const transferDayNumber = Number(cruise.transferDay || 0);
+        if (transferDayNumber > 0) {
+            const reportDate = new Date();
+            reportDate.setHours(0, 0, 0, 0);
+
+            const cruiseStartDate = new Date(cruise.startDate);
+            cruiseStartDate.setHours(0, 0, 0, 0);
+
+            const transferDate = new Date(cruiseStartDate);
+            transferDate.setDate(transferDate.getDate() + transferDayNumber - 1);
+
+            const dayBeforeTransfer = new Date(transferDate);
+            dayBeforeTransfer.setDate(dayBeforeTransfer.getDate() - 1);
+
+            const isTransferDay = reportDate.getTime() === transferDate.getTime();
+            const isDayBeforeTransfer = reportDate.getTime() === dayBeforeTransfer.getTime();
+
+            if (!isTransferDay && !isDayBeforeTransfer) {
+                cruiseUpdate.cruiseState = 'under review';
+            }
+        } else {
+            cruiseUpdate.cruiseState = 'under review';
+        }
+
+        await CruiseService.updateCruise(cruiseId, cruiseUpdate);
 
         RequestService.createDrinkRequest(cruise.yachtId, userId).catch(error => {
             console.error('Error creando drink request:', error);

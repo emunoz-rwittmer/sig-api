@@ -148,6 +148,7 @@ const generateWeeklyCruisesAndPassengerInfo = async (req, res) => {
             code: cruise.code,
             name: cruise.name,
             itinerary: cruise.itinerary,
+            transferDay: cruise.transfer_day,
             startDate: cruise.start_date,
             endDate: cruise.end_date
         }));
