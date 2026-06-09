@@ -6,6 +6,8 @@ const ConsumerCardService = require('./consumerCard.services');
 const db = require('../../utils/database');
 const ConsumerCardItems = require('../../models/bar/consumerCardItems.models');
 const ProductBar = require('../../models/bar/productBar.models');
+const Cruise = require('../../models/bar/cruises.models');
+const { where } = require('sequelize');
 
 
 const parseDate = (dateStr) => {
@@ -153,17 +155,13 @@ class PassengerService {
         const transaction = await db.transaction();
 
         try {
+
+
             const result = await Passenger.create(data, { transaction });
+            const cruise = await Cruise.findOne({ where: { id: data.cruiseId } })
 
-            let [consecutivo] = await ConsumerCardCount.findOrCreate({
-                where: {},
-                defaults: { valor: 1 },
-                transaction,
-                lock: transaction.LOCK.UPDATE
-            });
-
-            consecutivo = await ConsumerCardCount.findOne({
-                where: { id: consecutivo.id },
+            const consecutivo = await ConsumerCardCount.findOne({
+                where: { yachtId: cruise.yachtId },
                 transaction,
                 lock: transaction.LOCK.UPDATE
             });
