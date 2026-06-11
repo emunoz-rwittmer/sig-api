@@ -162,8 +162,6 @@ const respondComentCard = async (req, res) => {
         })
             .filter(Boolean);
 
-        console.log('responsesToInsert', responsesToInsert)
-
         await ComentCardService.respondComentCard({ responsesToInsert, passenger });
         res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
