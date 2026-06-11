@@ -56,13 +56,11 @@ async function deductDirectStock(warehouseId, productBar, item, userId, numberCa
  * @param {object} transaction
  */
 async function deductRecipeStock(warehouseId, productBar, item, userId, numberCard, transaction) {
-    if (!productBar.recipe || !productBar.recipe.recipe_details) {
-        throw new Error(`Recipe not found for product ${productBar.id}`);
-    }
 
-    for (const detail of productBar.recipe.recipe_details) {
-        const ingredientStock = await Stock.findOne({
-            where: { warehouseId, productId: detail.productId },
+    if (!productBar.recipe && productBar.category === 'Cortesía') {
+
+        const stock = await Stock.findOne({
+            where: { warehouseId, productId: productBar.productId },
             include: [{
                 model: Product,
                 as: 'product',
@@ -72,36 +70,81 @@ async function deductRecipeStock(warehouseId, productBar, item, userId, numberCa
             lock: transaction.LOCK.UPDATE
         });
 
-        if (!ingredientStock) {
-            throw new Error(`Ingredient stock not found for product ${ingredientStock.product.name} in recipe`);
+        if (!stock) {
+            throw new Error(`stock not found for product ${stock.product.name}`);
         }
 
-        const product = await Product.findByPk(detail.productId, { transaction });
-        const unitType = product ? product.unit : 'unit';
+        const product = await Product.findByPk(productBar.productId, { transaction });
+        const totalQuantityToDeduct = product.presentationQuantity * item.quantity;
 
-        const converter = UNIT_CONVERTERS[unitType] || 1;
-        const quantityPerServing = detail.quantity * converter;
-        const totalQuantityToDeduct = quantityPerServing * item.quantity;
-
-        if (ingredientStock.quantity < totalQuantityToDeduct) {
+        if (stock.quantity < totalQuantityToDeduct) {
             throw new Error(
-                `Insufficient ingredient stock for product ${ingredientStock.product.name}. ` +
-                `Available: ${ingredientStock.quantity}, ` +
+                `Insufficient ingredient stock for product ${stock.product.name}. ` +
+                `Available: ${stock.quantity}, ` +
                 `Requested: ${totalQuantityToDeduct}`
             );
         }
 
-        ingredientStock.quantity -= totalQuantityToDeduct;
-        await ingredientStock.save({ transaction });
-
+        stock.quantity -= totalQuantityToDeduct;
+        await stock.save({ transaction });
         await Transaction.create({
-            productId: detail.productId,
+            productId: productBar.productId,
             userId,
             quantity: totalQuantityToDeduct,
             warehouseFromId: warehouseId,
             type: 'BAR_CONSUMPTION',
             referenceId: `BAR_CONSUMPTION_${numberCard}`
         }, { transaction });
+
+    } else {
+
+        if (!productBar.recipe || !productBar.recipe.recipe_details) {
+            throw new Error(`Recipe not found for product ${productBar.id}`);
+        }
+        
+        for (const detail of productBar.recipe.recipe_details) {
+            const ingredientStock = await Stock.findOne({
+                where: { warehouseId, productId: detail.productId },
+                include: [{
+                    model: Product,
+                    as: 'product',
+                    attributes: ['name']
+                }],
+                transaction,
+                lock: transaction.LOCK.UPDATE
+            });
+
+            if (!ingredientStock) {
+                throw new Error(`Ingredient stock not found for product ${ingredientStock.product.name} in recipe`);
+            }
+
+            const product = await Product.findByPk(detail.productId, { transaction });
+            const unitType = product ? product.unit : 'unit';
+
+            const converter = UNIT_CONVERTERS[unitType] || 1;
+            const quantityPerServing = detail.quantity * converter;
+            const totalQuantityToDeduct = quantityPerServing * item.quantity;
+
+            if (ingredientStock.quantity < totalQuantityToDeduct) {
+                throw new Error(
+                    `Insufficient ingredient stock for product ${ingredientStock.product.name}. ` +
+                    `Available: ${ingredientStock.quantity}, ` +
+                    `Requested: ${totalQuantityToDeduct}`
+                );
+            }
+
+            ingredientStock.quantity -= totalQuantityToDeduct;
+            await ingredientStock.save({ transaction });
+
+            await Transaction.create({
+                productId: detail.productId,
+                userId,
+                quantity: totalQuantityToDeduct,
+                warehouseFromId: warehouseId,
+                type: 'BAR_CONSUMPTION',
+                referenceId: `BAR_CONSUMPTION_${numberCard}`
+            }, { transaction });
+        }
     }
 }
 
