@@ -148,11 +148,10 @@ const getComentCardByDates = async (req, res) => {
 const respondComentCard = async (req, res) => {
     try {
         const cometCardQr = Utils.decode(req.params.comet_card_qr);
-        console.log(req.body)
         const { answers, cabin, name, readPolitics } = req.body;
         const passenger = { name, cabin, readPolitics, cometCardQr };
 
-        const responsesToInsert = answers.map((answer, index) => {
+        const responsesToInsert = Object.keys(answers).map((answer, index) => {
             if (answer !== null && answer !== undefined) {
                 return {
                     questionId: index,
