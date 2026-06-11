@@ -151,7 +151,7 @@ const respondComentCard = async (req, res) => {
         const { answers, cabin, name, readPolitics } = req.body;
         const passenger = { name, cabin, readPolitics, cometCardQr };
 
-        const responsesToInsert = answers.map((answer, index) => {
+        const responsesToInsert = Object.keys(answers).map((answer, index) => {
             if (answer !== null && answer !== undefined) {
                 return {
                     questionId: index,
