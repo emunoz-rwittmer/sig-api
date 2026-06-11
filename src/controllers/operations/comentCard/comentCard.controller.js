@@ -151,16 +151,16 @@ const respondComentCard = async (req, res) => {
         const { answers, cabin, name, readPolitics } = req.body;
         const passenger = { name, cabin, readPolitics, cometCardQr };
 
-        const responsesToInsert = Object.keys(answers).map((answer, index) => {
+        const responsesToInsert = Object.entries(answers).map(([questionId, answer]) => {
             if (answer !== null && answer !== undefined) {
                 return {
-                    questionId: index,
+                    questionId: Number(questionId),
                     answer,
                 };
             }
             return null;
         })
-        .filter(Boolean);
+            .filter(Boolean);
 
         console.log('responsesToInsert', responsesToInsert)
 
