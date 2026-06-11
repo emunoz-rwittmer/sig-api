@@ -152,7 +152,7 @@ const respondComentCard = async (req, res) => {
         const passenger = { name, cabin, readPolitics, cometCardQr };
         const responsesToInsert = answers
             .map((answer, index) => {
-                if (answer !== null && answer !== undefined && answer !== '') {
+                if (answer !== null && answer !== undefined) {
                     return {
                         questionId: index,
                         answer,
@@ -165,6 +165,7 @@ const respondComentCard = async (req, res) => {
         await ComentCardService.respondComentCard({ responsesToInsert, passenger });
         res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
+        console.log(error)
         res.status(400).json(error.message);
     }
 }

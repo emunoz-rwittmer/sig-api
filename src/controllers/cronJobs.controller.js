@@ -312,28 +312,39 @@ const generateWeeklyCruisesAndPassengerInfo = async (req, res) => {
 const generateWeeklyEvaluationCrew = async () => {
     try {
 
-        const { start, end } = getWeekRange();
-        const startFormatted = formatDateLocal(start);
-        const endFormatted = formatDateLocal(end);
+        const now = moment(); // Jueves 2:00 PM (Momento actual del disparo)
 
-        const now = moment();
+        // 🗓️ Definimos el inicio de la semana operativa: El VIERNES PASADO a las 00:00
+        // .day(5) es Viernes. Si hoy es Jueves, .subtract(1, 'weeks').day(5) nos da el viernes de la semana pasada.
+        const lastFriday = now.clone().subtract(1, 'weeks').day(5).startOf('day');
+
+        // Formateamos para la base de datos (YYYY-MM-DD o YYYY-MM-DD HH:mm:ss según tu DB)
+        const nowFormatted = now.format("YYYY-MM-DD HH:mm:ss");
+        const lastFridayFormatted = lastFriday.format("YYYY-MM-DD HH:mm:ss");
+
         const periodWeek = `${now.isoWeekYear()}-W${String(now.isoWeek()).padStart(2, "0")}`;
-        const expirationDate = now.add(3, "days").toDate();
+        const expirationDate = now.clone().add(3, "days").toDate(); // .clone() para evitar mutar 'now'
 
-        // 🔹 Obtener tripulación embarcada
+        // 🔹 CONSULTA BLINDADA - Obtener tripulación de la semana caída
         const embarkedStaff = await ShipmentDates.findAll({
             where: {
-                shipmentDate: { [Op.lt]: startFormatted }, // ❌ excluir embarques de esta semana
+                // REGLA: El tripulante tuvo que haber estado embarcado ANTES de hoy Jueves.
+                // (Esto excluye automáticamente a los que se embarcan mañana Viernes, ya que su shipmentDate será mayor a hoy)
+                shipmentDate: { [Op.lte]: nowFormatted },
+
                 [Op.or]: [
-                    { dischargeDate: null }, // sigue embarcado
+                    { dischargeDate: null }, // Caso 1: Sigue embarcado indefinidamente
                     {
                         dischargeDate: {
-                            [Op.between]: [startFormatted, endFormatted] // se desembarca esta semana
+                            // Caso 2: Se desembarca en el futuro (después de hoy Jueves, por ejemplo mañana Viernes)
+                            [Op.gt]: nowFormatted
                         }
                     },
                     {
                         dischargeDate: {
-                            [Op.gt]: endFormatted // sigue después de la semana
+                            // Caso de respaldo: Si por alguna razón médica o de emergencia se desembarcó 
+                            // entre el viernes pasado y hoy jueves, también se le evalúa los días que estuvo.
+                            [Op.between]: [lastFridayFormatted, nowFormatted]
                         }
                     }
                 ]
@@ -365,7 +376,7 @@ const generateWeeklyEvaluationCrew = async () => {
             ]
         });
 
-        // 🔹 1️⃣ Separar capitanes por compañía
+        // 🔹 1️⃣ Separar capitanes por compañía (Tu lógica continúa igual...)
         const captainByCompany = {};
         const crewList = [];
 
