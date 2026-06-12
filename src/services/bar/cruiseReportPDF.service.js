@@ -1,6 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const Utils = require('../../utils/Utils');
+const sharp = require('sharp');
+
 require('dotenv').config();
 
 exports.generateCruiseReportPDF = async (cruise, passengers, cortecyCards = [], filePath) => {
@@ -169,6 +171,11 @@ exports.generateCruiseReportPDF = async (cruise, passengers, cortecyCards = [], 
         if (consumerCard.image) {
           try {
             const imagePath = path.resolve('.' + consumerCard.image);
+            const compressedImage = await sharp(imagePath)
+              .resize(800)
+              .jpeg({ quality: 60 })
+              .toBuffer();
+
             if (fs.existsSync(imagePath)) {
               doc
                 .font('Helvetica-Bold')
@@ -176,7 +183,7 @@ exports.generateCruiseReportPDF = async (cruise, passengers, cortecyCards = [], 
                 .text('Foto del Voucher:', { underline: true });
 
               doc.moveDown(0.3);
-              doc.image(imagePath, 40, doc.y, { width: 200, height: 200 });
+              doc.image(compressedImage, 40, doc.y, { width: 200 });
             }
           } catch (error) {
             doc.fontSize(10).text('Foto del voucher no disponible', { color: '#999999' });
