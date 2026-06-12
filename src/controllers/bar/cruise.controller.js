@@ -51,7 +51,8 @@ const sendCruiseReport = async (req, res) => {
             return res.status(404).json({ message: 'Crucero no encontrado' });
         }
 
-        const emailTo = ['fabian@rwittmer.com', 'rosa@tiptoptravel.ec', 'enrique@rwittmer.com'];
+        const emailTo = 'edison@tiptoptravel.ec';
+        //const emailTo = ['fabian@rwittmer.com', 'rosa@tiptoptravel.ec', 'enrique@rwittmer.com'];
         const emailCc = 'edison@tiptoptravel.ec';
 
         const consumerPassengers = cruise.passengers.filter(
