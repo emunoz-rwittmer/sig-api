@@ -7,14 +7,22 @@ const sendEmailWithAttachments = async (to, subject, htmlContent, attachments = 
     const sgMail = require('@sendgrid/mail');
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
+    attachments.forEach(file => {
+      const sizeInBytes = Buffer.from(file.content, 'base64').length;
+
+      console.log(
+        `${file.filename}: ${(sizeInBytes / 1024 / 1024).toFixed(2)} MB`
+      );
+    });
+
     // Procesar archivos adjuntos
     const attachmentsData = [];
-    
+
     for (const attachment of attachments) {
       try {
         const fileContent = fs.readFileSync(attachment.path);
         const base64Content = fileContent.toString('base64');
-        
+
         attachmentsData.push({
           content: base64Content,
           filename: attachment.filename,
