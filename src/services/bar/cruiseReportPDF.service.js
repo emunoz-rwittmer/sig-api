@@ -88,7 +88,8 @@ exports.generateCruiseReportPDF = async (cruise, passengers, cortecyCards = [], 
 
     if (consumerPassengers.length > 0) {
       doc.addPage();
-      consumerPassengers.forEach((passenger, passengerIndex) => {
+      //consumerPassengers.forEach((passenger, passengerIndex) => {
+      for (const [passengerIndex, passenger] of consumerPassengers.entries()) { 
         if (passengerIndex > 0) {
           doc.addPage();
         }
@@ -191,7 +192,7 @@ exports.generateCruiseReportPDF = async (cruise, passengers, cortecyCards = [], 
         } else {
           doc.fontSize(10).text('Foto del voucher no disponible', { color: '#999999' });
         }
-      });
+      };
     }
 
     if (cortecyCards.length > 0) {
