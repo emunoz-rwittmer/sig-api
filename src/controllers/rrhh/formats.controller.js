@@ -229,7 +229,7 @@ const createRequesForStaff = async (req, res) => {
 
         const result = await FormatService.createRequesForStaff(data);
         if (result) {
-            sendEmailNuevaSolicitud(formatId, dataMail, attachments, compania.yacht.email);
+            sendEmailNuevaSolicitud(formatId, dataMail, attachments, compania?.yacht?.email);
             res.status(200).json({ data: 'resource created successfully' });
         }
     } catch (error) {

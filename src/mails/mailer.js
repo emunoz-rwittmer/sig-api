@@ -214,7 +214,7 @@ const sendEmailNuevaSolicitud = async (formatId, dataMail, adjuntos, yachtEmail)
         const htmlFirmaContrato = MailsSolicitudes.htmlNuevaSolicitud(dataMail);
 
         const msg = {
-            to: ['belen@rwittmer.com', 'charles@rwittmer.com'],
+            to: ['belen@rwittmer.com'],
             from: 'notify-sig@rwittmer.com',
             subject: `${dataMail.formato} de ${dataMail.staff}`,
             html: htmlFirmaContrato,
