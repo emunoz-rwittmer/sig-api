@@ -1,6 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const Utils = require('../../utils/Utils');
+const sharp = require('sharp');
+
 require('dotenv').config();
 
 exports.generateCruiseReportPDF = async (cruise, passengers, cortecyCards = [], filePath) => {
@@ -86,7 +88,8 @@ exports.generateCruiseReportPDF = async (cruise, passengers, cortecyCards = [], 
 
     if (consumerPassengers.length > 0) {
       doc.addPage();
-      consumerPassengers.forEach((passenger, passengerIndex) => {
+      //consumerPassengers.forEach((passenger, passengerIndex) => {
+      for (const [passengerIndex, passenger] of consumerPassengers.entries()) { 
         if (passengerIndex > 0) {
           doc.addPage();
         }
@@ -169,6 +172,11 @@ exports.generateCruiseReportPDF = async (cruise, passengers, cortecyCards = [], 
         if (consumerCard.image) {
           try {
             const imagePath = path.resolve('.' + consumerCard.image);
+            const compressedImage = await sharp(imagePath)
+              .resize(800)
+              .jpeg({ quality: 60 })
+              .toBuffer();
+
             if (fs.existsSync(imagePath)) {
               doc
                 .font('Helvetica-Bold')
@@ -176,7 +184,7 @@ exports.generateCruiseReportPDF = async (cruise, passengers, cortecyCards = [], 
                 .text('Foto del Voucher:', { underline: true });
 
               doc.moveDown(0.3);
-              doc.image(imagePath, 40, doc.y, { width: 200, height: 200 });
+              doc.image(compressedImage, 40, doc.y, { width: 200 });
             }
           } catch (error) {
             doc.fontSize(10).text('Foto del voucher no disponible', { color: '#999999' });
@@ -184,7 +192,7 @@ exports.generateCruiseReportPDF = async (cruise, passengers, cortecyCards = [], 
         } else {
           doc.fontSize(10).text('Foto del voucher no disponible', { color: '#999999' });
         }
-      });
+      };
     }
 
     if (cortecyCards.length > 0) {
