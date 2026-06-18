@@ -311,39 +311,28 @@ const generateWeeklyCruisesAndPassengerInfo = async (req, res) => {
 
 const generateWeeklyEvaluationCrew = async () => {
     try {
-
-        const now = moment(); // Jueves 2:00 PM (Momento actual del disparo)
-
-        // 🗓️ Definimos el inicio de la semana operativa: El VIERNES PASADO a las 00:00
-        // .day(5) es Viernes. Si hoy es Jueves, .subtract(1, 'weeks').day(5) nos da el viernes de la semana pasada.
+        const now = moment(); // Momento exacto del disparo (Jueves 2:00 PM)
         const lastFriday = now.clone().subtract(1, 'weeks').day(5).startOf('day');
 
-        // Formateamos para la base de datos (YYYY-MM-DD o YYYY-MM-DD HH:mm:ss según tu DB)
-        const nowFormatted = now.format("YYYY-MM-DD HH:mm:ss");
-        const lastFridayFormatted = lastFriday.format("YYYY-MM-DD HH:mm:ss");
+        const nowFormatted = formatDateLocal(now.toDate());
+        const lastFridayFormatted = formatDateLocal(lastFriday.toDate());
 
         const periodWeek = `${now.isoWeekYear()}-W${String(now.isoWeek()).padStart(2, "0")}`;
-        const expirationDate = now.clone().add(3, "days").toDate(); // .clone() para evitar mutar 'now'
 
-        // 🔹 CONSULTA BLINDADA - Obtener tripulación de la semana caída
+        const expirationDate = now.clone().add(3, "days").toDate();
         const embarkedStaff = await ShipmentDates.findAll({
             where: {
-                // REGLA: El tripulante tuvo que haber estado embarcado ANTES de hoy Jueves.
-                // (Esto excluye automáticamente a los que se embarcan mañana Viernes, ya que su shipmentDate será mayor a hoy)
                 shipmentDate: { [Op.lte]: nowFormatted },
 
                 [Op.or]: [
-                    { dischargeDate: null }, // Caso 1: Sigue embarcado indefinidamente
+                    { dischargeDate: null },
                     {
                         dischargeDate: {
-                            // Caso 2: Se desembarca en el futuro (después de hoy Jueves, por ejemplo mañana Viernes)
                             [Op.gt]: nowFormatted
                         }
                     },
                     {
                         dischargeDate: {
-                            // Caso de respaldo: Si por alguna razón médica o de emergencia se desembarcó 
-                            // entre el viernes pasado y hoy jueves, también se le evalúa los días que estuvo.
                             [Op.between]: [lastFridayFormatted, nowFormatted]
                         }
                     }
@@ -376,12 +365,10 @@ const generateWeeklyEvaluationCrew = async () => {
             ]
         });
 
-        // 🔹 1️⃣ Separar capitanes por compañía (Tu lógica continúa igual...)
         const captainByCompany = {};
         const crewList = [];
 
         for (const shipment of embarkedStaff) {
-
             if (!shipment.empresa) {
                 console.warn("Shipment sin empresa:", shipment.id);
                 continue;
@@ -389,10 +376,10 @@ const generateWeeklyEvaluationCrew = async () => {
 
             const companyId = shipment.empresa.companyId;
             const staff = shipment.empresa.staff;
-            const positionName = staff.staff_position?.name;
 
             if (!staff || !staff.staff_position) continue;
 
+            const positionName = staff.staff_position.name;
             const fullName = `${staff.firstName} ${staff.lastName}`;
 
             if (positionName === "Capitan") {
@@ -409,52 +396,44 @@ const generateWeeklyEvaluationCrew = async () => {
             }
         }
 
-        // 🔹 2️⃣ Obtener todos los forms
         const forms = await Form.findAll({ where: { active: true } });
 
-        // 🔹 Agrupar forms por position
         const formsByPosition = {};
-
         for (const form of forms) {
-
             let positions = [];
-
             try {
-
                 if (typeof form.positions === "string") {
-
                     if (form.positions.startsWith("[")) {
                         positions = JSON.parse(form.positions);
                     } else {
                         positions = [form.positions];
                     }
-
                 } else if (Array.isArray(form.positions)) {
                     positions = form.positions;
                 }
-
             } catch (error) {
-                console.warn("positions mal formateado en form:", form.id);
+                console.warn("Positions mal formateado en form:", form.id);
                 positions = [];
             }
 
             for (const pos of positions) {
-
                 if (!formsByPosition[pos]) {
                     formsByPosition[pos] = [];
                 }
-
                 formsByPosition[pos].push(form);
             }
         }
 
-        // 🔹 3️⃣ Obtener evaluaciones ya creadas
+        const startOfToday = now.clone().startOf('day').toDate();
         const existingEvaluations = await FormRespond.findAll({
-            where: { periodWeek }
+            where: {
+                createdAt: {
+                    [Op.gte]: startOfToday
+                }
+            }
         });
 
         const existingSet = new Set();
-
         for (const ev of existingEvaluations) {
             const key = `${ev.companyId}_${ev.formId}_${ev.evaluator}_${ev.evaluated}`;
             existingSet.add(key);
@@ -462,9 +441,7 @@ const generateWeeklyEvaluationCrew = async () => {
 
         const newEvaluations = [];
 
-        // 🔹 4️⃣ Capitán → Tripulación
         for (const crew of crewList) {
-
             const captain = captainByCompany[crew.companyId];
             if (!captain) continue;
 
@@ -472,10 +449,8 @@ const generateWeeklyEvaluationCrew = async () => {
             const crewForms = formsByPosition[positionEncoded] || [];
 
             for (const form of crewForms) {
-
                 const evaluator = captain.fullName;
                 const evaluated = crew.fullName;
-
                 const key = `${crew.companyId}_${form.id}_${evaluator}_${evaluated}`;
 
                 if (existingSet.has(key)) continue;
@@ -494,9 +469,7 @@ const generateWeeklyEvaluationCrew = async () => {
             }
         }
 
-        // 🔹 5️⃣ Tripulación → Capitán (solo forms NO administrativos)
         for (const crew of crewList) {
-
             const captain = captainByCompany[crew.companyId];
             if (!captain) continue;
 
@@ -504,13 +477,10 @@ const generateWeeklyEvaluationCrew = async () => {
             const captainForms = formsByPosition[positionEncoded] || [];
 
             for (const form of captainForms) {
-
-                // 🔥 ignorar evaluaciones administrativas
                 if (form.isAdministrative) continue;
 
                 const evaluator = crew.fullName;
                 const evaluated = captain.fullName;
-
                 const key = `${crew.companyId}_${form.id}_${evaluator}_${evaluated}`;
 
                 if (existingSet.has(key)) continue;
@@ -529,13 +499,12 @@ const generateWeeklyEvaluationCrew = async () => {
             }
         }
 
-        // 🔹 6️⃣ Insertar evaluaciones nuevas en bulk
         if (newEvaluations.length > 0) {
             await FormRespond.bulkCreate(newEvaluations);
         }
 
         console.log("======================================");
-        console.log("CRON WEEKLY CREW EVALUATION");
+        console.log("CRON WEEKLY CREW EVALUATION - EJECUTADO");
         console.log("Evaluaciones creadas:", newEvaluations.length);
         console.log("Periodo:", periodWeek);
         console.log("======================================");
@@ -543,7 +512,7 @@ const generateWeeklyEvaluationCrew = async () => {
         sendEmailEvaluationCrew();
 
     } catch (error) {
-        console.error("Error ejecutando cron job:", error);
+        console.error("Error ejecutando cron job de evaluaciones:", error);
     }
 };
 
