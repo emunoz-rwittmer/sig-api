@@ -311,41 +311,31 @@ const generateWeeklyCruisesAndPassengerInfo = async (req, res) => {
 
 const generateWeeklyEvaluationCrew = async () => {
     try {
-        const now = moment(); // Momento exacto del disparo (Jueves 2:00 PM)
-        const lastFriday = now.clone().subtract(1, 'weeks').day(5).startOf('day');
-
-        const nowFormatted = formatDateLocal(now.toDate());
-        const lastFridayFormatted = formatDateLocal(lastFriday.toDate());
+        const now = moment();
+        const fechaFinFormatted = now.clone().day(5).format("YYYY-MM-DD");
+        const fechaInicioFormatted = now.clone().subtract(1, 'weeks').day(5).format("YYYY-MM-DD");
 
         const periodWeek = `${now.isoWeekYear()}-W${String(now.isoWeek()).padStart(2, "0")}`;
-
         const expirationDate = now.clone().add(3, "days").toDate();
+
         const embarkedStaff = await ShipmentDates.findAll({
             where: {
-                shipmentDate: { [Op.lte]: nowFormatted },
-
+                shipmentDate: { [Op.lte]: fechaInicioFormatted },
                 [Op.or]: [
                     { dischargeDate: null },
-                    {
-                        dischargeDate: {
-                            [Op.gt]: nowFormatted
-                        }
-                    },
-                    {
-                        dischargeDate: {
-                            [Op.between]: [lastFridayFormatted, nowFormatted]
-                        }
-                    }
+                    { dischargeDate: { [Op.gte]: fechaFinFormatted } }
                 ]
             },
             include: [
                 {
                     model: StaffCompany,
                     as: "empresa",
+                    required: true,
                     include: [
                         {
                             model: Staff,
                             as: "staff",
+                            where: { active: true },
                             attributes: ["id", "firstName", "lastName"],
                             include: [
                                 {
