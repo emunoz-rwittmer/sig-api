@@ -91,25 +91,25 @@ class Utils {
 
     const texto = respuesta.trim();
 
-    const numeroAntesParentesis = texto.match(/(\d+)\s*\(/);
+    const soloNumero = texto.match(/^[1-5]$/);
+    if (soloNumero) {
+      return Number(soloNumero[0]);
+    }
+
+    const numeroAntesParentesis = texto.match(/^([1-5])\s*\(/);
     if (numeroAntesParentesis) {
       return Number(numeroAntesParentesis[1]);
     }
 
-    const numeroEnParentesis = texto.match(/\((\d+)\)/);
+    const numeroEnParentesis = texto.match(/\(([1-5])\)\s*$/);
     if (numeroEnParentesis) {
       return Number(numeroEnParentesis[1]);
-    }
-
-    const numeroGeneral = texto.match(/\b\d+\b/);
-    if (numeroGeneral) {
-      return Number(numeroGeneral[0]);
     }
 
     const puntajes = {
       5: ['Casi siempre', 'Excelente', 'Siempre'],
       4: ['Con frecuencia', 'Muy bueno', 'Muy Bueno'],
-      3: ['Mas o menos', 'Bueno'],
+      3: ['Mas o menos', 'Más o menos', 'Bueno'],
       2: ['A veces', 'Regular'],
       1: ['Casi nunca', 'Ineficiente']
     };
