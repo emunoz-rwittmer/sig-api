@@ -91,19 +91,29 @@ class Utils {
 
     const texto = respuesta.trim();
 
-    const soloNumero = texto.match(/^[1-5]$/);
+    const textoLimpio = texto
+      .replace(/[✅✔️☑️]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const soloNumero = textoLimpio.match(/^[1-5]$/);
     if (soloNumero) {
       return Number(soloNumero[0]);
     }
 
-    const numeroAntesParentesis = texto.match(/^([1-5])\s*\(/);
+    const numeroEnParentesis = textoLimpio.match(/\(([1-5])\)\s*$/);
+    if (numeroEnParentesis) {
+      return Number(numeroEnParentesis[1]);
+    }
+
+    const numeroAntesParentesis = textoLimpio.match(/\b([1-5])\s*\(/);
     if (numeroAntesParentesis) {
       return Number(numeroAntesParentesis[1]);
     }
 
-    const numeroEnParentesis = texto.match(/\(([1-5])\)\s*$/);
-    if (numeroEnParentesis) {
-      return Number(numeroEnParentesis[1]);
+    const numeroAlInicio = textoLimpio.match(/^([1-5])\b/);
+    if (numeroAlInicio) {
+      return Number(numeroAlInicio[1]);
     }
 
     const puntajes = {
@@ -115,7 +125,7 @@ class Utils {
     };
 
     for (const [puntos, respuestas] of Object.entries(puntajes)) {
-      if (respuestas.includes(texto)) {
+      if (respuestas.includes(textoLimpio)) {
         return Number(puntos);
       }
     }
