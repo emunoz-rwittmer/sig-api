@@ -12,6 +12,7 @@ const StaffReadRegulation = require('../../models/rrhh/readRegulation.models');
 const StaffDocumentation = require('../../models/catalogs/staffDocumentation.models');
 const Documentation = require('../../models/catalogs/documentation.models');
 const Yacht = require('../../models/catalogs/yacht.models');
+const Utils = require('../../utils/Utils');
 
 class Staffervice {
     static async getAll() {
@@ -158,16 +159,36 @@ class Staffervice {
             const newStaff = await Staff.create(staff, { transaction });
 
             const documents = await Documentation.findAll({
-                where: db.where(
-                    db.fn('JSON_CONTAINS', db.col('positions'), staff.positionId),
-                    1
-                ),
-                attributes: ['id'],
+                attributes: ['id', 'positions'],
                 transaction
             });
 
-            if (documents.length) {
-                const staffDocumentations = documents.map(document => ({
+            const applicableDocuments = documents.filter(document => {
+                let positions = document.positions;
+
+                if (typeof positions === 'string') {
+                    try {
+                        positions = JSON.parse(positions);
+                    } catch (error) {
+                        return false;
+                    }
+                }
+
+                if (!Array.isArray(positions)) positions = [positions];
+
+                return positions.some(position => {
+                    if (String(position) === String(staff.positionId)) return true;
+
+                    try {
+                        return Utils.decode(position) === staff.positionId;
+                    } catch (error) {
+                        return false;
+                    }
+                });
+            });
+
+            if (applicableDocuments.length) {
+                const staffDocumentations = applicableDocuments.map(document => ({
                     staffId: newStaff.id,
                     documentId: document.id,
                     status: 'pending',
