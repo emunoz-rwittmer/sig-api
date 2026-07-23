@@ -312,18 +312,23 @@ const generateWeeklyCruisesAndPassengerInfo = async (req, res) => {
 const generateWeeklyEvaluationCrew = async () => {
     try {
         const now = moment();
-        const fechaFinFormatted = now.clone().day(5).format("YYYY-MM-DD");
-        const fechaInicioFormatted = now.clone().subtract(1, 'weeks').day(5).format("YYYY-MM-DD");
-
-        const periodWeek = `${now.isoWeekYear()}-W${String(now.isoWeek()).padStart(2, "0")}`;
+        const evaluationWeekStart = now.clone().day(5).startOf('day');
+        if (evaluationWeekStart.isAfter(now)) {
+            evaluationWeekStart.subtract(7, 'days');
+        }
+        const periodWeek = `${evaluationWeekStart.format('YYYY-MM-DD')}_${evaluationWeekStart.clone().add(7, 'days').format('YYYY-MM-DD')}`;
         const expirationDate = now.clone().add(3, "days").toDate();
+        const endOfEvaluationWeek = evaluationWeekStart.clone().add(7, 'days');
+        const evaluationRunAt = now.toDate();
+        const startOfToday = now.clone().startOf('day');
+        const startOfTomorrow = startOfToday.clone().add(1, 'day');
 
         const embarkedStaff = await ShipmentDates.findAll({
             where: {
-                shipmentDate: { [Op.lte]: fechaInicioFormatted },
+                shipmentDate: { [Op.lt]: endOfEvaluationWeek.toDate() },
                 [Op.or]: [
                     { dischargeDate: null },
-                    { dischargeDate: { [Op.gte]: fechaFinFormatted } }
+                    { dischargeDate: { [Op.gte]: evaluationRunAt } }
                 ]
             },
             include: [
@@ -414,11 +419,11 @@ const generateWeeklyEvaluationCrew = async () => {
             }
         }
 
-        const startOfToday = now.clone().startOf('day').toDate();
         const existingEvaluations = await FormRespond.findAll({
             where: {
                 createdAt: {
-                    [Op.gte]: startOfToday
+                    [Op.gte]: startOfToday.toDate(),
+                    [Op.lt]: startOfTomorrow.toDate()
                 }
             }
         });
