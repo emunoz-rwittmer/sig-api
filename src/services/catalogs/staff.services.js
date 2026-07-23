@@ -2,11 +2,11 @@ const Staff = require('../../models/catalogs/staff.models');
 const Yachts = require('../../models/catalogs/yacht.models');
 const Positions = require('../../models/catalogs/positions.models');
 const Departaments = require('../../models/catalogs/departament.models')
-const { Op } = require("sequelize");
 const Roles = require('../../models/catalogs/roles.models');
 const Company = require('../../models/catalogs/company.models');
 const StaffCompany = require('../../models/catalogs/staffCompany.models');
 const db = require('../../utils/database');
+const { Op } = require("sequelize");
 const Regulation = require('../../models/rrhh/regulation.models');
 const StaffReadRegulation = require('../../models/rrhh/readRegulation.models');
 const StaffDocumentation = require('../../models/catalogs/staffDocumentation.models');
@@ -156,6 +156,25 @@ class Staffervice {
             const { companyId = [], ...staff } = staffData;
 
             const newStaff = await Staff.create(staff, { transaction });
+
+            const documents = await Documentation.findAll({
+                where: db.where(
+                    db.fn('JSON_CONTAINS', db.col('positions'), staff.positionId),
+                    1
+                ),
+                attributes: ['id'],
+                transaction
+            });
+
+            if (documents.length) {
+                const staffDocumentations = documents.map(document => ({
+                    staffId: newStaff.id,
+                    documentId: document.id,
+                    status: 'pending',
+                }));
+
+                await StaffDocumentation.bulkCreate(staffDocumentations, { transaction });
+            }
 
             if (companyId.length) {
 
