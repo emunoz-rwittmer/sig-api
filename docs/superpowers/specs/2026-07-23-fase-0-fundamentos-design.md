@@ -28,8 +28,10 @@ y una revisión manual encontraron:
   (`.models.js` vs `.service.js` vs `.services.js`), y errores de naming
   (`donwloads`, mezcla de inglés/español).
 - **`readme.md` desactualizado**: documenta Postgres (`pg`, `pg-hstore`) pero
-  `src/utils/database.js` usa `dialect: 'mysql'`; esas dos dependencias no se
-  usan en ningún lugar del código.
+  `src/utils/database.js` usa `dialect: 'mysql'`. Nota de la fase de
+  planificación: `pg`/`pg-hstore` no están instaladas en `package.json` (nunca
+  se llegaron a añadir, o ya se habían quitado) — el problema real es solo que
+  el texto del readme quedó desactualizado, no hay dependencias que remover.
 - **Sin documentación de API** (no hay Swagger/OpenAPI ni colección de Postman
   versionada en el repo).
 - **Bug funcional detectado de paso** (fuera de alcance de esta fase, solo
@@ -110,9 +112,8 @@ Cada fase es su propio ciclo diseño → plan → implementación.
 - Crear `.env.example` documentando todas las variables requeridas (sin
   valores reales) — no existe actualmente en el repo.
 
-### 5. Limpieza de dependencias y documentación básica
+### 5. Documentación básica
 
-- Remover `pg` y `pg-hstore` de `package.json` (confirmado sin uso en `src/`).
 - Corregir `readme.md`: reemplazar las referencias a Postgres por MySQL y
   actualizar los pasos de instalación con los scripts nuevos (`test`, `lint`,
   `format`, y el nuevo endpoint de documentación Swagger).
@@ -166,7 +167,6 @@ Cada fase es su propio ciclo diseño → plan → implementación.
 - La app arranca y falla rápido con mensaje claro si falta una env var
   requerida.
 - El salt de hashids ya no está hardcodeado en el código fuente.
-- `pg` y `pg-hstore` ya no están en `package.json`.
 - `/api/docs` sirve una página Swagger UI funcional con al menos 2 rutas de
   ejemplo documentadas.
 - `readme.md` refleja correctamente MySQL y los nuevos scripts de npm.
