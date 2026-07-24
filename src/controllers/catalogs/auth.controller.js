@@ -6,26 +6,27 @@ const tokenModel = require('../../models/mongoModels/Token.models');
 const bcrypt = require('bcrypt');
 const { sendEmail, sendEmailPasswordStaff } = require('../../mails/mailer');
 const Staffervice = require('../../services/catalogs/staff.services');
+const AppError = require('../../errors/AppError');
 
-const login = async (req, res) => {
+const login = async (req, res, next) => {
     try {
         const { email, password } = req.body;
         if (!email) {
-            throw new Error('Not email provided');
+            throw new AppError('Not email provided', 400);
         }
 
         if (!password) {
-            throw new Error('Not password provided');
+            throw new AppError('Not password provided', 400);
         }
 
         const result = await AuthService.login({ email, password });
 
         if (!result.isValid) {
-            throw new Error('Usuario o contraseña incorrectas');
+            throw new AppError('Usuario o contraseña incorrectas', 401);
         }
 
         if (!result.user.active) {
-            throw new Error('Usuario deshabilitado');
+            throw new AppError('Usuario deshabilitado', 403);
         }
 
         const { id, firstName, lastName } = result.user;
@@ -48,15 +49,15 @@ const login = async (req, res) => {
             sessionId: sessioId,
             refreshtoken: refreshToken
         });
-        newToken.save();
+        await newToken.save();
         res.status(200).json(userData);
 
     } catch (error) {
-         res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const upgradePassword = async (req, res) => {
+const upgradePassword = async (req, res, next) => {
     try {
         const userId = Utils.decode(req.params.user_id);
         const data = {
@@ -69,50 +70,52 @@ const upgradePassword = async (req, res) => {
 
         res.status(200).json({ data: 'password updated successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
-const forgotPassword = async (req, res) => {
+const forgotPassword = async (req, res, next) => {
     try {
         const useEmail = req.body.email;
         const passwordGenerate = Tokens.getPasswordRandom();
         const result = await UserService.getUserByEmail(useEmail);
+
+        if (!result) {
+            throw new AppError('Usuario no encontrado', 404);
+        }
+
         const passwordGenerated = bcrypt.hashSync(passwordGenerate, 10);
         const action = "forgot passowrd"
-        if (result) {
-            sendEmail(result, passwordGenerate, action);
-            await UserService.updateUser({
-                password: passwordGenerated, changePassword: true
-            },
-                { where: { id: result.id } }
-            );
+        sendEmail(result, passwordGenerate, action);
+        await UserService.updateUser({
+            password: passwordGenerated, changePassword: true
+        },
+            { where: { id: result.id } }
+        );
 
-            res.status(200).json({ data: "password updated successfully" });
-        }
+        res.status(200).json({ data: "password updated successfully" });
     } catch (error) {
-
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
-const loginStaffs = async (req, res) => {
+const loginStaffs = async (req, res, next) => {
     try {
         const { email, password } = req.body;
         if (!email) {
-            res.status(400).json({ data: 'Not email provided' });
+            throw new AppError('Not email provided', 400);
         }
         if (!password) {
-            res.status(400).json({ data: 'Not password provided' });
+            throw new AppError('Not password provided', 400);
         }
         const result = await AuthService.loginStaffs({ email, password });
 
         if (!result.isValid) {
-            throw new Error('Usuario o contraseña incorrectas');
+            throw new AppError('Usuario o contraseña incorrectas', 401);
         }
 
         if (!result.user.active) {
-            throw new Error('Usuario deshabilitado');
+            throw new AppError('Usuario deshabilitado', 403);
         }
 
         const { id, firstName, lastName } = result.user;
@@ -135,39 +138,40 @@ const loginStaffs = async (req, res) => {
             sessionId: sessioId,
             refreshtoken: refreshToken
         });
-        newToken.save();
+        await newToken.save();
         res.status(200).json(userData);
 
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const forgotPasswordStaff = async (req, res) => {
+const forgotPasswordStaff = async (req, res, next) => {
     try {
         const useEmail = req.body.email;
         const passwordGenerate = Tokens.getPasswordRandom();
         const staff = await Staffervice.getStaffByEmail(useEmail);
-        const passwordGenerated = bcrypt.hashSync(passwordGenerate, 10);
 
-        if (staff) {
-            sendEmailPasswordStaff(staff, passwordGenerate);
-            const data = {
-                id: staff.id,
-                password: passwordGenerated,
-                changePassword: true
-            };
-            await AuthService.staffUpgradePassword(data);
-            res.status(200).json({ data: "password updated successfully" });
+        if (!staff) {
+            throw new AppError('Usuario no encontrado', 404);
         }
+
+        const passwordGenerated = bcrypt.hashSync(passwordGenerate, 10);
+        sendEmailPasswordStaff(staff, passwordGenerate);
+        const data = {
+            id: staff.id,
+            password: passwordGenerated,
+            changePassword: true
+        };
+        await AuthService.staffUpgradePassword(data);
+        res.status(200).json({ data: "password updated successfully" });
     } catch (error) {
-        console.log(error)
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
 
-const upgradePasswordStaff = async (req, res) => {
+const upgradePasswordStaff = async (req, res, next) => {
     try {
         const userId = Utils.decode(req.params.staff_id);
         const data = {
@@ -180,7 +184,7 @@ const upgradePasswordStaff = async (req, res) => {
 
         res.status(200).json({ data: 'password updated successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
@@ -194,4 +198,4 @@ const AuthController = {
     upgradePasswordStaff
 }
 
-module.exports = AuthController 
+module.exports = AuthController

@@ -13,7 +13,7 @@ const verifyToken = async (req, res, next) => {
     }
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithm: 'H5512' });
+        const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithm: 'HS512' });
         req.userRol = decoded.rol;
         return next();
     } catch (err) {
@@ -26,7 +26,7 @@ const verifyToken = async (req, res, next) => {
                 return res.status(498).json({ data: 'Invalid session' });
             }
 
-            const refreshDecoded = jwt.verify(sessionData.refreshtoken, process.env.JWT_REFRESH_SECRET, { algorithm: 'H5512' });
+            const refreshDecoded = jwt.verify(sessionData.refreshtoken, process.env.JWT_REFRESH_SECRET, { algorithm: 'HS512' });
             const newAccessToken = Tokens.generateAccessToken({
                 id: refreshDecoded.id,
                 firstName: refreshDecoded.firstName,

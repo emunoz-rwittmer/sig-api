@@ -3,8 +3,9 @@ const Utils = require('../../utils/Utils');
 const Tokens = require('../../utils/tokens');
 const fs = require('fs');
 const path = require('path');
+const AppError = require('../../errors/AppError');
 
-const getAllStaffs = async (req, res) => {
+const getAllStaffs = async (req, res, next) => {
     try {
         const result = await StaffService.getAll();
         if (result instanceof Array) {
@@ -20,13 +21,11 @@ const getAllStaffs = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        console.log(error)
-
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const getStaff = async (req, res) => {
+const getStaff = async (req, res, next) => {
     try {
         const staffId = Utils.decode(req.params.staff_id);
         const result = await StaffService.getStaffById(staffId);
@@ -41,11 +40,11 @@ const getStaff = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const getStaffCompanies = async (req, res) => {
+const getStaffCompanies = async (req, res, next) => {
     try {
         const staffId = Utils.decode(req.params.staff_id);
         const result = await StaffService.getStaffCompanies(staffId);
@@ -59,12 +58,11 @@ const getStaffCompanies = async (req, res) => {
         }
         res.status(200).json(currentPlain);
     } catch (error) {
-        console.log(error)
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const createStaff = async (req, res) => {
+const createStaff = async (req, res, next) => {
     try {
         const staff = req.body;
         const passwordGenerate = Tokens.getPasswordRandom();
@@ -77,11 +75,11 @@ const createStaff = async (req, res) => {
         res.status(200).json({ data: 'resource created successfully' });
 
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
-const updateStaff = async (req, res) => {
+const updateStaff = async (req, res, next) => {
     try {
         const staffId = Utils.decode(req.params.staff_id);
         const staff = req.body;
@@ -93,22 +91,21 @@ const updateStaff = async (req, res) => {
         await StaffService.updateStaff(staff, staffId);
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
-const deleteStaff = async (req, res) => {
+const deleteStaff = async (req, res, next) => {
     try {
         const staffId = Utils.decode(req.params.staff_id);
         const result = await StaffService.delete(staffId);
         res.status(200).json({ data: result })
     } catch (error) {
-
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
-const getEvaluators = async (req, res) => {
+const getEvaluators = async (req, res, next) => {
     try {
         const { search } = req.query;
         const searchArray = search
@@ -127,11 +124,11 @@ const getEvaluators = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const getEvaluatorsByFilters = async (req, res) => {
+const getEvaluatorsByFilters = async (req, res, next) => {
     try {
         const { search } = req.query;
         const searchArray = search
@@ -151,12 +148,11 @@ const getEvaluatorsByFilters = async (req, res) => {
         });
         res.status(200).json(result);
     } catch (error) {
-
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const getEvaluateds = async (req, res) => {
+const getEvaluateds = async (req, res, next) => {
     try {
         const { search } = req.query;
         const searchArray = search
@@ -175,12 +171,11 @@ const getEvaluateds = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const getEvaluatedsByFilters = async (req, res) => {
+const getEvaluatedsByFilters = async (req, res, next) => {
     try {
         const { search } = req.query;
         const searchArray = search
@@ -200,18 +195,17 @@ const getEvaluatedsByFilters = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const uploadImage = async (req, res) => {
+const uploadImage = async (req, res, next) => {
     try {
         const staffId = Utils.decode(req.params.staff_id);
         const file = req.file;
 
         if (!file) {
-            return res.status(400).json({ message: 'No se ha subido ningún archivo' });
+            throw new AppError('No se ha subido ningún archivo', 400);
         }
 
         const staff = await StaffService.getStaffById(staffId);
@@ -224,7 +218,7 @@ const uploadImage = async (req, res) => {
 
         const { type } = req.body;
         if (!type) {
-            return res.status(400).json({ message: 'El campo "type" es requerido' });
+            throw new AppError('El campo "type" es requerido', 400);
         }
 
         const fileExtension = path.extname(file.originalname);
@@ -244,19 +238,18 @@ const uploadImage = async (req, res) => {
 
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        console.error('Error en uploadImage:', error);
-        res.status(400).json({ message: error.message });
+        next(error);
     }
 }
 
-const uploadStaffDocumentation = async (req, res) => {
+const uploadStaffDocumentation = async (req, res, next) => {
     try {
         const staffId = Utils.decode(req.params.staff_id);
         const document = req.body;
         const file = req.file;
 
         if (!file) {
-            return res.status(400).json({ message: 'No se ha subido ningún archivo' });
+            throw new AppError('No se ha subido ningún archivo', 400);
         }
 
         const staff = await StaffService.getStaffById(staffId);
@@ -292,8 +285,7 @@ const uploadStaffDocumentation = async (req, res) => {
         res.status(200).json({ data: 'Documentación guardada exitosamente' });
 
     } catch (error) {
-        console.error('Error en uploadStaffDocumentation:', error);
-        res.status(400).json({ message: error.message });
+        next(error);
     }
 };
 

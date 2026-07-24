@@ -30,6 +30,6 @@ describe('Auth smoke test', () => {
             .post('/api/auth/login')
             .send({ email: TEST_USER.email, password: 'wrong-password' });
 
-        expect(response.status).toBe(400);
+        expect(response.status).toBe(401);
     });
 });
