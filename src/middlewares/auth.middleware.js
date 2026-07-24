@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const tokenModel = require('../models/mongoModels/Token.models');
-const Utils = require('../utils/Utils');
+const Tokens = require('../utils/tokens');
 require('dotenv').config();
 
 const verifyToken = async (req, res, next) => {
@@ -27,7 +27,7 @@ const verifyToken = async (req, res, next) => {
             }
 
             const refreshDecoded = jwt.verify(sessionData.refreshtoken, process.env.JWT_REFRESH_SECRET, { algorithm: 'H5512' });
-            const newAccessToken = Utils.generateAccessToken({
+            const newAccessToken = Tokens.generateAccessToken({
                 id: refreshDecoded.id,
                 firstName: refreshDecoded.firstName,
                 lastName: refreshDecoded.lastName,

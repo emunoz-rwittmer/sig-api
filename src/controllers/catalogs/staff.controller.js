@@ -1,5 +1,6 @@
 const StaffService = require('../../services/catalogs/staff.services');
 const Utils = require('../../utils/Utils');
+const Tokens = require('../../utils/tokens');
 const fs = require('fs');
 const path = require('path');
 
@@ -66,7 +67,7 @@ const getStaffCompanies = async (req, res) => {
 const createStaff = async (req, res) => {
     try {
         const staff = req.body;
-        const passwordGenerate = Utils.getPasswordRandom();
+        const passwordGenerate = Tokens.getPasswordRandom();
         staff.roleId = staff.roleId ? Utils.decode(staff.roleId) : null;
         staff.departamentId = Utils.decode(req.body.departamentId);
         staff.positionId = Utils.decode(req.body.positionId);

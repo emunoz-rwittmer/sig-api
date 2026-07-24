@@ -1,6 +1,7 @@
 const AuthService = require('../../services/catalogs/auth.services');
 const UserService = require('../../services/catalogs/users.services');
 const Utils = require('../../utils/Utils');
+const Tokens = require('../../utils/tokens');
 const tokenModel = require('../../models/mongoModels/Token.models');
 const bcrypt = require('bcrypt');
 const { sendEmail, sendEmailPasswordStaff } = require('../../mails/mailer');
@@ -28,15 +29,15 @@ const login = async (req, res) => {
         }
 
         const { id, firstName, lastName } = result.user;
-        const sessioId = Utils.getSessionRandom();
+        const sessioId = Tokens.getSessionRandom();
         const userData = { id, firstName, lastName };
 
         userData.id = Utils.encode(userData.id);
         userData.rol = result.user.user_rol?.name;
         userData.sessionId = sessioId;
 
-        const token = await Utils.generateAccessToken(userData);
-        const refreshToken = await Utils.generateRefreshToken(userData);
+        const token = await Tokens.generateAccessToken(userData);
+        const refreshToken = await Tokens.generateRefreshToken(userData);
 
         userData.token = token;
         userData.changePassword = result.user.changePassword
@@ -75,7 +76,7 @@ const upgradePassword = async (req, res) => {
 const forgotPassword = async (req, res) => {
     try {
         const useEmail = req.body.email;
-        const passwordGenerate = Utils.getPasswordRandom();
+        const passwordGenerate = Tokens.getPasswordRandom();
         const result = await UserService.getUserByEmail(useEmail);
         const passwordGenerated = bcrypt.hashSync(passwordGenerate, 10);
         const action = "forgot passowrd"
@@ -119,9 +120,9 @@ const loginStaffs = async (req, res) => {
         userData.id = Utils.encode(userData.id);
         userData.rol = result.user.rol?.name
 
-        const sessioId = Utils.getSessionRandom();
-        const token = await Utils.generateAccessToken(userData);
-        const refreshToken = await Utils.generateRefreshToken(userData);
+        const sessioId = Tokens.getSessionRandom();
+        const token = await Tokens.generateAccessToken(userData);
+        const refreshToken = await Tokens.generateRefreshToken(userData);
 
         userData.token = token;
         userData.changePassword = result.user.changePassword
@@ -145,7 +146,7 @@ const loginStaffs = async (req, res) => {
 const forgotPasswordStaff = async (req, res) => {
     try {
         const useEmail = req.body.email;
-        const passwordGenerate = Utils.getPasswordRandom();
+        const passwordGenerate = Tokens.getPasswordRandom();
         const staff = await Staffervice.getStaffByEmail(useEmail);
         const passwordGenerated = bcrypt.hashSync(passwordGenerate, 10);
 
