@@ -6,7 +6,12 @@ const initModels = require('./models/init.models');
 const routerApi = require('./routes');
 const path = require('path');
 const db = require('./utils/database');
-require('./utils/cronJobs');
+
+// node-cron holds background timers alive; scheduling them during tests
+// keeps the Jest process from exiting cleanly and can trigger jobs mid-run.
+if (process.env.NODE_ENV !== 'test') {
+    require('./utils/cronJobs');
+}
 
 const app = express();
 
@@ -26,7 +31,8 @@ db.authenticate()
 initModels();
 initMongoBd();
 
-db.sync({ alter: false })
+// Exposed so tests can await schema sync before firing requests.
+app.ready = db.sync({ alter: false })
     .then(() => console.log('Base de datos sincronizada'))
     .catch((error) => console.log(error));
 
