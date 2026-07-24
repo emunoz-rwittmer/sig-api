@@ -9,6 +9,7 @@ const router = Router();
  *   post:
  *     summary: Iniciar sesion como usuario administrativo
  *     tags: [Auth]
+ *     security: []
  *     requestBody:
  *       required: true
  *       content:
