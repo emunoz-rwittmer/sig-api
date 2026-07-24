@@ -2,7 +2,7 @@ const DateFormat = require('../../../src/utils/dateFormat');
 
 describe('dateFormat utils', () => {
     it('formatDateToLocal formatea una fecha como D/M/YYYY', () => {
-        expect(DateFormat.formatDateToLocal('2026-03-05')).toBe('5/3/2026');
+        expect(DateFormat.formatDateToLocal(new Date(2026, 2, 5))).toBe('5/3/2026');
     });
 
     it('formatMonthYear formatea una fecha como "D de mes del YYYY"', () => {

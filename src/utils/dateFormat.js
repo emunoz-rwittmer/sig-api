@@ -1,15 +1,5 @@
 function formatDateToLocal(date) {
-    let formattedDate;
-
-    // Handle string dates in ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss)
-    if (typeof date === 'string') {
-        const datePart = date.split('T')[0]; // Get just the YYYY-MM-DD part
-        const [year, month, day] = datePart.split('-');
-        formattedDate = new Date(year, month - 1, day);
-    } else {
-        formattedDate = new Date(date);
-    }
-
+    const formattedDate = new Date(date);
     const day = formattedDate.getDate();
     const month = formattedDate.getMonth() + 1; // Los meses empiezan desde 0
     const year = formattedDate.getFullYear();
