@@ -36,7 +36,7 @@ const shippingGuideRoutes = require('./operations/shippingGuide/shippingGuide.ro
 const bar = require('./bar/bar.routes');
 //Report
 const reportRoutes = require("./reports/reports.routes");
-const downloadsRoutes = require("./donwloads/donwloads.routes");
+const downloadsRoutes = require("./downloads/downloads.routes");
 
 
 const routerApi = (app) => {

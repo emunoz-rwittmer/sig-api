@@ -7,7 +7,7 @@ const Company = require('../../../models/catalogs/company.models');
 const { Sequelize, Op } = require('sequelize');
 const StockHistory = require('../../../models/operations/inventory/stockHistory.models');
 const Transaction = require('../../../models/operations/inventory/transaction.models');
-const Utils = require('../../../utils/Utils');
+const Quantity = require('../../../utils/quantity');
 
 class ProductService {
     static async findProduct(sku) {
@@ -301,7 +301,7 @@ class ProductService {
                 lock: t.LOCK.UPDATE
             });
 
-            const normalizedQty = Utils.normalizeQuantity(product, data.quantity);
+            const normalizedQty = Quantity.normalizeQuantity(product, data.quantity);
 
             const hasQuantityChange =
                 normalizedQty !== undefined &&
@@ -315,7 +315,7 @@ class ProductService {
                 diff = normalizedQty - currentPlain.quantity;
                 newQuantity = normalizedQty;
 
-                diffNormal = Utils.viewCorrectQuantity(product, diff)
+                diffNormal = Quantity.viewCorrectQuantity(product, diff)
             }
 
             await Stock.update({

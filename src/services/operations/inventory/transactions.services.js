@@ -4,7 +4,7 @@ const Transaction = require('../../../models/operations/inventory/transaction.mo
 const db = require('../../../utils/database');
 const orderItems = require('../../../models/operations/orders/orderItems.models');
 const Register = require('../../../models/operations/inventory/register.models');
-const Utils = require('../../../utils/Utils');
+const Quantity = require('../../../utils/quantity');
 
 class TransactionService {
 
@@ -51,7 +51,7 @@ class TransactionService {
                 lock: t.LOCK.UPDATE
             });
 
-            const normalizedQty = Utils.normalizeQuantity(product, quantity);
+            const normalizedQty = Quantity.normalizeQuantity(product, quantity);
 
             // Usar Math.round para evitar problemas de precisión al sumar decimales
             const currentQty = Number(stock.quantity) || 0;
@@ -194,7 +194,7 @@ class TransactionService {
                     lock: transaction.LOCK.UPDATE
                 });
 
-                const normalizedQty = Utils.normalizeQuantity(infoProduct, quantity);
+                const normalizedQty = Quantity.normalizeQuantity(infoProduct, quantity);
 
                 if (!stockFrom || stockFrom.quantity < normalizedQty) {
                     throw new Error(`Stock insuficiente para ${name}. Disponible: ${stockFrom?.quantity || 0}, Solicitado: ${normalizedQty}`);
@@ -221,7 +221,7 @@ class TransactionService {
                     lock: transaction.LOCK.UPDATE
                 });
 
-                const normalizedQty = Utils.normalizeQuantity(infoProduct, quantity);
+                const normalizedQty = Quantity.normalizeQuantity(infoProduct, quantity);
 
                 // Restar del almacén origen
                 stockFrom.quantity -= normalizedQty;
@@ -313,7 +313,7 @@ class TransactionService {
                         lock: transaction.LOCK.UPDATE
                     });
 
-                    const normalizedQty = Utils.normalizeQuantity(infoProduct, quantity);
+                    const normalizedQty = Quantity.normalizeQuantity(infoProduct, quantity);
 
                     // Usar Math.round para evitar problemas de precisión al sumar decimales
                     const currentQty = Number(stockToInstance.quantity) || 0;

@@ -2,8 +2,8 @@ const CruiseService = require('../../services/bar/cruise.services');
 const Utils = require('../../utils/Utils');
 const fs = require('fs');
 const path = require('path');
-const CruiseReportExcelService = require('../../services/bar/cruiseReportExcel.service');
-const CruiseReportPDFService = require('../../services/bar/cruiseReportPDF.service');
+const CruiseReportExcelService = require('../../services/bar/cruiseReportExcel.services');
+const CruiseReportPDFService = require('../../services/bar/cruiseReportPDF.services');
 const MailsWithAttachments = require('../../mails/mailsWithAttachments');
 const RequestService = require('../../services/operations/yachtRequest/yachtRequest.services');
 

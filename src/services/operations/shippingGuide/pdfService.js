@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const Utils = require('../../../utils/Utils');
+const DateFormat = require('../../../utils/dateFormat');
 
 exports.generateRemisionPDF = async (data, filePath) => {
   const { default: PDFDocument } = await import('pdfkit');
@@ -50,8 +50,8 @@ exports.generateRemisionPDF = async (data, filePath) => {
     .font('Helvetica-Bold')
     .text('TRASLADO', 50, fechasY)
     .font('Helvetica')
-    .text(`Inicio de traslado: ${Utils.formatMonthYear(data.dateStartTraslate)}`, 50, fechasY + 15)
-    .text(`Terminación de traslado: ${Utils.formatMonthYear(data.dateEndTraslate)}`, 50, fechasY + 30);
+    .text(`Inicio de traslado: ${DateFormat.formatMonthYear(data.dateStartTraslate)}`, 50, fechasY + 15)
+    .text(`Terminación de traslado: ${DateFormat.formatMonthYear(data.dateEndTraslate)}`, 50, fechasY + 30);
 
   // Bloque de la guía (derecha)
   doc

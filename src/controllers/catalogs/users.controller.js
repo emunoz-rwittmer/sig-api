@@ -1,5 +1,6 @@
 const UserService = require('../../services/catalogs/users.services');
 const Utils = require('../../utils/Utils');
+const Tokens = require('../../utils/tokens');
 const { sendEmail } = require('../../mails/mailer');
 const bcrypt = require("bcrypt");
 
@@ -36,7 +37,7 @@ const getUser = async (req, res) => {
 const createUser = async (req, res) => {
     try {
         const user = req.body;
-        const passwordGenerate = Utils.getPasswordRandom();
+        const passwordGenerate = Tokens.getPasswordRandom();
         user.password = passwordGenerate
         user.roleId = Utils.decode(user.roleId)
         const action = "new user"

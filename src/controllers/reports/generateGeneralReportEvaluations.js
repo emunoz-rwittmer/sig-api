@@ -1,9 +1,10 @@
 const xl = require("excel4node");
 const path = require("path");
 const fs = require("fs");
-const { formatDateToLocal } = require('../../utils/Utils');
+const { formatDateToLocal } = require('../../utils/dateFormat');
 const EvaluationService = require('../../services/operations/surveys/evaluations.services');
 const Utils = require('../../utils/Utils');
+const SurveyScoring = require('../../utils/surveyScoring');
 
 const generateGeneralReportEvaluations = async (req, res) => {
     try {
@@ -154,7 +155,7 @@ const generateGeneralReportEvaluations = async (req, res) => {
             ws.cell(row, 7).string(estado).style(infoStyle);
 
             // Obtén todas las respuestas de la evaluación
-            const respuestas = item.respuestas?.map(r => Utils.asignarPuntaje(r.answer)) || [];
+            const respuestas = item.respuestas?.map(r => SurveyScoring.asignarPuntaje(r.answer)) || [];
 
             // Llenar las 10 columnas de respuestas
             for (let i = 0; i < 10; i++) {

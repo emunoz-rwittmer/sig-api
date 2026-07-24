@@ -1,7 +1,7 @@
 const xl = require("excel4node");
 const path = require("path");
 const fs = require("fs");
-const { formatDateToLocal } = require('../../utils/Utils');
+const { formatDateToLocal } = require('../../utils/dateFormat');
 const ComentCardService = require("../../services/operations/comentCard/comentCard.services");
 const Utils = require("../../utils/Utils");
 

@@ -1,5 +1,5 @@
 const xl = require("excel4node");
-const { formatDateToLocal } = require("../../utils/Utils");
+const { formatDateToLocal } = require("../../utils/dateFormat");
 const Utils = require("../../utils/Utils");
 const WarehouseService = require("../../services/operations/inventory/warehouse.services");
 
