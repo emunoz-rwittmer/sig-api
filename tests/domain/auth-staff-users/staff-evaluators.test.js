@@ -18,13 +18,11 @@ afterAll(async () => {
     await shutdownTestApp();
 });
 
-async function createEvaluatorStaff() {
+async function createStaffWithPosition(position) {
     const departament = await createDepartment();
-    const position = await createPosition();
-    const { company } = await createCompanyWithYacht();
-    const staff = await Staff.create({
+    return Staff.create({
         firstName: 'Evaluador',
-        lastName: 'Uno',
+        lastName: `Test${Date.now()}${Math.floor(Math.random() * 1e6)}`,
         email: `evaluador-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.com`,
         cellPhone: '0966666666',
         password: 'Sup3rSecret!',
@@ -33,37 +31,48 @@ async function createEvaluatorStaff() {
         contractType: 'Fijo',
         active: true,
     });
-    await StaffCompany.create({ staffId: staff.id, companyId: company.id });
-    return { staff, departament, position, company };
 }
 
 describe('GET /api/staffs/send_form/evaluators', () => {
-    it('returns evaluators matching the encoded ids in search', async () => {
-        const { staff } = await createEvaluatorStaff();
+    // `search` is a comma-separated list of encoded POSITION ids to EXCLUDE
+    // (StaffService.getEvaluators does `positionId: { [Op.ne]: decodedSearch }`),
+    // not staff ids - verified empirically against the real service query.
+    it('excludes staff whose position id is in search and includes the rest', async () => {
+        const excludedPosition = await createPosition();
+        const includedPosition = await createPosition();
+        const excludedStaff = await createStaffWithPosition(excludedPosition);
+        const includedStaff = await createStaffWithPosition(includedPosition);
 
         const response = await request(app)
             .get('/api/staffs/send_form/evaluators')
-            .query({ search: Utils.encode(staff.id) })
+            .query({ search: Utils.encode(excludedPosition.id) })
             .set('Authorization', `Bearer ${token}`);
 
         expect(response.status).toBe(200);
-        expect(response.body).toHaveLength(1);
-        expect(response.body[0].id).toBe(Utils.encode(staff.id));
+        const ids = response.body.map((x) => x.id);
+        expect(ids).toContain(Utils.encode(includedStaff.id));
+        expect(ids).not.toContain(Utils.encode(excludedStaff.id));
     });
 
-    it('returns an empty array when search is not provided', async () => {
+    it('returns active staff when search is not provided (empty exclude list excludes nobody)', async () => {
+        const position = await createPosition();
+        const staff = await createStaffWithPosition(position);
+
         const response = await request(app)
             .get('/api/staffs/send_form/evaluators')
             .set('Authorization', `Bearer ${token}`);
 
         expect(response.status).toBe(200);
-        expect(response.body).toEqual([]);
+        expect(response.body.map((x) => x.id)).toContain(Utils.encode(staff.id));
     });
 });
 
 describe('GET /api/staffs/send_form/evaluatorsByFilters', () => {
     it('filters evaluators by companyId and positionId', async () => {
-        const { staff, position, company } = await createEvaluatorStaff();
+        const position = await createPosition();
+        const { company } = await createCompanyWithYacht();
+        const staff = await createStaffWithPosition(position);
+        await StaffCompany.create({ staffId: staff.id, companyId: company.id });
 
         const response = await request(app)
             .get('/api/staffs/send_form/evaluatorsByFilters')
@@ -79,26 +88,39 @@ describe('GET /api/staffs/send_form/evaluatorsByFilters', () => {
 });
 
 describe('GET /api/staffs/send_form/evaluateds', () => {
-    it('returns evaluated staff matching the encoded ids in search', async () => {
-        const { staff } = await createEvaluatorStaff();
+    // `search` here is a list of encoded POSITION ids to INCLUDE
+    // (StaffService.getEvaluateds does `positionId: { [Op.in]: decodedSearch }`).
+    it('returns staff whose position id is in search', async () => {
+        const targetPosition = await createPosition();
+        const otherPosition = await createPosition();
+        const targetStaff = await createStaffWithPosition(targetPosition);
+        const otherStaff = await createStaffWithPosition(otherPosition);
 
         const response = await request(app)
             .get('/api/staffs/send_form/evaluateds')
-            .query({ search: Utils.encode(staff.id) })
+            .query({ search: Utils.encode(targetPosition.id) })
             .set('Authorization', `Bearer ${token}`);
 
         expect(response.status).toBe(200);
-        expect(response.body).toHaveLength(1);
+        const ids = response.body.map((x) => x.id);
+        expect(ids).toContain(Utils.encode(targetStaff.id));
+        expect(ids).not.toContain(Utils.encode(otherStaff.id));
     });
 });
 
 describe('GET /api/staffs/send_form/evaluatedsByFilters', () => {
-    it('filters evaluated staff by companyId', async () => {
-        const { staff, company } = await createEvaluatorStaff();
+    // The controller passes the decoded `search` array (position ids) as this
+    // endpoint's positional `positionId` service argument - `search` must be
+    // provided or the resulting `Op.in: []` matches nothing.
+    it('filters evaluated staff by position ids in search and by companyId', async () => {
+        const position = await createPosition();
+        const { company } = await createCompanyWithYacht();
+        const staff = await createStaffWithPosition(position);
+        await StaffCompany.create({ staffId: staff.id, companyId: company.id });
 
         const response = await request(app)
             .get('/api/staffs/send_form/evaluatedsByFilters')
-            .query({ companyId: Utils.encode(company.id) })
+            .query({ search: Utils.encode(position.id), companyId: Utils.encode(company.id) })
             .set('Authorization', `Bearer ${token}`);
 
         expect(response.status).toBe(200);
