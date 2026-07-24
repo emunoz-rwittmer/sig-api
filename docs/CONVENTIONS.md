@@ -11,7 +11,7 @@ El estándar oficial usa `AppError` (`src/errors/AppError.js`) y el
 middleware `errorHandler` (`src/middlewares/errorHandler.middleware.js`),
 ambos construidos en Fase 0 y ya registrados en `src/app.js`.
 
-**Antes (patrón legado, todavía presente en la mayoría de controllers):**
+**Antes (patrón legado, todavía presente en controllers sin refactorizar):**
 
 ```js
 try {
@@ -22,7 +22,7 @@ try {
 }
 ```
 
-**Convención nueva (para código nuevo o tocado):**
+**Convención (adoptada por primera vez en Fase 2, dominio auth/staff/users):**
 
 ```js
 const AppError = require('../errors/AppError');
@@ -32,10 +32,28 @@ const getAll = async (req, res, next) => {
         const result = await Service.getAll();
         res.status(200).json(result);
     } catch (error) {
-        next(error instanceof AppError ? error : new AppError(error.message, 400));
+        next(error);
+    }
+};
+
+const getOne = async (req, res, next) => {
+    try {
+        const result = await Service.getById(req.params.id);
+        if (!result) throw new AppError('Recurso no encontrado', 404);
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
     }
 };
 ```
+
+Regla: un caso de error de negocio identificable (no encontrado,
+credenciales inválidas, validación de campos, etc.) lanza `new
+AppError(mensaje, statusCode)` con el status HTTP correcto (400, 401, 403,
+404, ...). Cualquier otro error (fallo de DB, excepción inesperada) se pasa
+tal cual con `next(error)` — `errorHandler` ya default-ea a 500 para
+cualquier error que no sea instancia de `AppError`, así que **no** hace
+falta envolver todo en un `AppError` genérico de 400.
 
 La respuesta de error resultante tiene esta forma:
 
@@ -43,8 +61,11 @@ La respuesta de error resultante tiene esta forma:
 { "error": { "message": "mensaje descriptivo", "code": "AppError" } }
 ```
 
+(`code` es `'INTERNAL_ERROR'` en vez de `'AppError'` cuando el status es
+500 por un error no clasificado.)
+
 El retrofit de los controllers existentes al patrón nuevo se hace dominio
-por dominio en Fase 2, no de una vez.
+por dominio en Fase 2. Dominios ya retrofiteados: `auth`, `staff`, `users`.
 
 ## Sufijo de archivos de servicios
 
