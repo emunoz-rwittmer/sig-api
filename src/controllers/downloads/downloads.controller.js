@@ -172,7 +172,7 @@ const downloadreporteExcel = async (req, res) => {
 };
 
 
-const DonwloadController = {
+const DownloadController = {
     downloadReglamento,
     downloadFormato,
     downloadSolicitud,
@@ -181,4 +181,4 @@ const DonwloadController = {
     downloadreporteExcel
 }
 
-module.exports = DonwloadController 
+module.exports = DownloadController
