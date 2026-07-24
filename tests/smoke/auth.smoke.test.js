@@ -1,22 +1,12 @@
 const request = require('supertest');
 const { bootTestApp, shutdownTestApp } = require('../helpers/testApp');
-const { TEST_USER } = require('../helpers/auth');
-const Roles = require('../../src/models/catalogs/roles.models');
-const Users = require('../../src/models/catalogs/user.models');
+const { createTestUser, TEST_USER } = require('../helpers/auth');
 
 let app;
 
 beforeAll(async () => {
     app = await bootTestApp();
-    const role = await Roles.create({ name: 'admin' });
-    await Users.create({
-        firstName: 'Test',
-        lastName: 'Admin',
-        email: TEST_USER.email,
-        password: TEST_USER.password,
-        roleId: role.id,
-        active: true,
-    });
+    await createTestUser();
 });
 
 afterAll(async () => {

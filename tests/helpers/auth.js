@@ -7,7 +7,7 @@ const TEST_USER = {
     password: 'Sup3rSecret!',
 };
 
-async function createAuthenticatedUser(app) {
+async function createTestUser() {
     const role = await Roles.create({ name: 'admin' });
     await Users.create({
         firstName: 'Test',
@@ -17,6 +17,10 @@ async function createAuthenticatedUser(app) {
         roleId: role.id,
         active: true,
     });
+}
+
+async function createAuthenticatedUser(app) {
+    await createTestUser();
 
     const response = await request(app)
         .post('/api/auth/login')
@@ -29,4 +33,4 @@ async function createAuthenticatedUser(app) {
     return response.body.token;
 }
 
-module.exports = { createAuthenticatedUser, TEST_USER };
+module.exports = { createAuthenticatedUser, createTestUser, TEST_USER };
