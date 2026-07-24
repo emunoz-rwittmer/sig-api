@@ -8,8 +8,8 @@ const CruiseService = require('../../services/bar/cruise.services');
 const ProductBar = require('../../models/bar/productBar.models');
 const Utils = require('../../utils/Utils');
 const { sendBarConsumption, sendInvoiceEmail } = require('../../mails/mailer');
-const { passengerInvoicePDF } = require('../../services/bar/passengerInvoicePDF.service');
-const { generateConsumerCardReportExcel } = require('../../services/bar/consumerCardReportExcel.service');
+const { passengerInvoicePDF } = require('../../services/bar/passengerInvoicePDF.services');
+const { generateConsumerCardReportExcel } = require('../../services/bar/consumerCardReportExcel.services');
 const Yacht = require('../../models/catalogs/yacht.models');
 
 // Constantes
