@@ -210,9 +210,97 @@ router.put('/update/documentation/:staff_id', uploadPdfFile, StaffController.upl
 router.delete('/:staff_id',StaffController.deleteStaff);
 
 //evaluators and evaluated
+/**
+ * @openapi
+ * /staffs/send_form/evaluators:
+ *   get:
+ *     summary: Listar evaluadores por IDs
+ *     tags: [Staff]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Lista de IDs codificados separados por coma
+ *     responses:
+ *       200:
+ *         description: Lista de evaluadores
+ */
 router.get('/send_form/evaluators',StaffController.getEvaluators);
+
+/**
+ * @openapi
+ * /staffs/send_form/evaluatorsByFilters:
+ *   get:
+ *     summary: Listar evaluadores filtrados por empresa/departamento/posicion
+ *     tags: [Staff]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: companyId
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: departamentId
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: positionId
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Lista de evaluadores filtrada
+ */
 router.get('/send_form/evaluatorsByFilters',StaffController.getEvaluatorsByFilters);
+
+/**
+ * @openapi
+ * /staffs/send_form/evaluateds:
+ *   get:
+ *     summary: Listar evaluados por IDs
+ *     tags: [Staff]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Lista de evaluados
+ */
 router.get('/send_form/evaluateds',StaffController.getEvaluateds);
+
+/**
+ * @openapi
+ * /staffs/send_form/evaluatedsByFilters:
+ *   get:
+ *     summary: Listar evaluados filtrados por empresa
+ *     tags: [Staff]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: companyId
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Lista de evaluados filtrada
+ */
 router.get('/send_form/evaluatedsByFilters',StaffController.getEvaluatedsByFilters);
 
 

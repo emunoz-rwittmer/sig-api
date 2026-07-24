@@ -12,17 +12,18 @@ async function createPosition(name = 'Analista') {
 }
 
 async function createCompanyWithYacht(companyName = 'Test Company', yachtName = 'Test Yacht') {
+    const uniqueSuffix = `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
     const company = await Company.create({
         name: companyName,
-        ruc: '1234567890001',
+        ruc: `12345678${Date.now().toString().slice(-5)}`,
         logo: '/uploads/companies/test-logo.png',
         adress: 'Av. Test 123',
     });
     const yacht = await Yacht.create({
         companyId: company.id,
         name: yachtName,
-        email: `${yachtName.toLowerCase().replace(/\s+/g, '')}@example.com`,
-        code: 'YT-001',
+        email: `${yachtName.toLowerCase().replace(/\s+/g, '')}-${uniqueSuffix}@example.com`,
+        code: `YT-${uniqueSuffix}`,
         color: '#FFFFFF',
     });
     return { company, yacht };
