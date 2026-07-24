@@ -4,7 +4,7 @@ const Tokens = require('../../utils/tokens');
 const { sendEmail } = require('../../mails/mailer');
 const bcrypt = require("bcrypt");
 
-const getAllUsers = async (req, res) => {
+const getAllUsers = async (req, res, next) => {
     try {
         const result = await UserService.getAll();
         if (result instanceof Array) {
@@ -15,26 +15,25 @@ const getAllUsers = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        console.error(error);
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const getUser = async (req, res) => {
+const getUser = async (req, res, next) => {
     try {
         const userId = Utils.decode(req.params.user_id);
         const result = await UserService.getUserById(userId);
         if (result instanceof Object) {
-            result.id = Utils.encode(result.id);
-            result.role_id = Utils.encode(result.role_id);
+            result.dataValues.id = Utils.encode(result.id);
+            result.roleId = Utils.encode(result.roleId);
         }
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const createUser = async (req, res) => {
+const createUser = async (req, res, next) => {
     try {
         const user = req.body;
         const passwordGenerate = Tokens.getPasswordRandom();
@@ -42,18 +41,16 @@ const createUser = async (req, res) => {
         user.roleId = Utils.decode(user.roleId)
         const action = "new user"
         const result = await UserService.createUser(user);
-        if (result) {
-            sendEmail(result, passwordGenerate, action);
-            res.status(200).json({ data: 'resource created successfully' });
-        }
+        sendEmail(result, passwordGenerate, action);
+        res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
 
 
-const updateUser = async (req, res) => {
+const updateUser = async (req, res, next) => {
     try {
         const userId = Utils.decode(req.params.user_id);
         const user = req.body;
@@ -64,12 +61,11 @@ const updateUser = async (req, res) => {
         });
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        console.log(error)
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
-const deleteUser = async (req, res) => {
+const deleteUser = async (req, res, next) => {
     try {
         const userId = Utils.decode(req.params.user_id);
         const result = await UserService.delete({
@@ -77,8 +73,7 @@ const deleteUser = async (req, res) => {
         });
         res.status(200).json({ data: 'resource deleted successfully' })
     } catch (error) {
-
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 

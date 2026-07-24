@@ -36,7 +36,7 @@ class UserService {
         try {
             const result = await Users.findOne({
                 where: { id },
-                attributes: ['first_name', 'last_name', 'email', 'active', 'role_id'],
+                attributes: ['id', 'firstName', 'lastName', 'email', 'active', 'roleId'],
                 include: {
                     model: Roles,
                     as: 'user_rol',
