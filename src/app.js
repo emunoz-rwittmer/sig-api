@@ -8,6 +8,7 @@ const path = require('path');
 const db = require('./utils/database');
 const validateEnv = require('./config/env');
 const errorHandler = require('./middlewares/errorHandler.middleware');
+const setupSwagger = require('./config/swagger');
 
 validateEnv();
 
@@ -41,6 +42,8 @@ app.ready = db.sync({ alter: false })
     .catch((error) => console.log(error));
 
 routerApi(app);
+
+setupSwagger(app);
 
 app.use(errorHandler);
 
