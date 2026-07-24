@@ -6,6 +6,9 @@ const initModels = require('./models/init.models');
 const routerApi = require('./routes');
 const path = require('path');
 const db = require('./utils/database');
+const validateEnv = require('./config/env');
+
+validateEnv();
 
 // node-cron holds background timers alive; scheduling them during tests
 // keeps the Jest process from exiting cleanly and can trigger jobs mid-run.
