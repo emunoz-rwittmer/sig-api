@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const Utils = require('../../utils/Utils');
+const DateFormat = require('../../utils/dateFormat');
 const sharp = require('sharp');
 
 require('dotenv').config();
@@ -40,8 +40,8 @@ exports.generateCruiseReportPDF = async (cruise, passengers, cortecyCards = [], 
     doc.text(`Nombre: ${cruise.name}`);
     doc.text(`Yacht: ${cruise.yacht?.name || 'N/A'}`);
     doc.text(`Itinerario: ${cruise.itinerary}`);
-    doc.text(`Inicio: ${Utils.formatDateToLocal(cruise.startDate)}`);
-    doc.text(`Fin: ${Utils.formatDateToLocal(cruise.endDate)}`);
+    doc.text(`Inicio: ${DateFormat.formatDateToLocal(cruise.startDate)}`);
+    doc.text(`Fin: ${DateFormat.formatDateToLocal(cruise.endDate)}`);
     doc.text(`Barman: ${cruise.barman}`);
 
     const consumerPassengers = passengers.filter(
@@ -221,7 +221,7 @@ exports.generateCruiseReportPDF = async (cruise, passengers, cortecyCards = [], 
         doc.text(`Total: $${Number(card.totalCount || 0).toFixed(2)}`);
         doc.text(`Tipo: ${card.type || 'N/A'}`);
         doc.text(`Estado: ${card.status || 'Activa'}`);
-        doc.text(`Creada: ${card.createdAt ? Utils.formatDateToLocal(card.createdAt) : 'N/A'}`);
+        doc.text(`Creada: ${card.createdAt ? DateFormat.formatDateToLocal(card.createdAt) : 'N/A'}`);
         if (card.observation) {
           doc.text(`Observación: ${card.observation}`);
         }
@@ -280,7 +280,7 @@ exports.generateCruiseReportPDF = async (cruise, passengers, cortecyCards = [], 
       .moveDown(0.5)
       .font('Helvetica')
       .fontSize(9)
-      .text(`Generado: ${Utils.formatDateToLocal(new Date())}`, { align: 'center' })
+      .text(`Generado: ${DateFormat.formatDateToLocal(new Date())}`, { align: 'center' })
       .text(`Crucero: ${cruise.name}`, { align: 'center' })
       .text(`Pasajeros con Consumer Cards: ${consumerPassengers.length}`, { align: 'center' })
       .text(`Cortecy Cards: ${cortecyCards.length}`, { align: 'center' });
