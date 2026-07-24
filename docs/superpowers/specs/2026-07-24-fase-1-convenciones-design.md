@@ -58,7 +58,7 @@ utilidad pura (sin estado, sin acceso a DB), agrupados por responsabilidad:
 | Archivo nuevo | Funciones que recibe | Call sites a actualizar |
 |---|---|---|
 | `src/utils/tokens.js` | `getPasswordRandom`, `generateAccessToken`, `generateRefreshToken`, `getSessionRandom` | `src/controllers/catalogs/auth.controller.js`, `src/controllers/catalogs/staff.controller.js`, `src/controllers/catalogs/users.controller.js`, `src/middlewares/auth.middleware.js` |
-| `src/utils/dateFormat.js` | `formatDateToLocal`, `formatMonthYear` | `src/services/bar/cruiseReportPDF.service.js`, `src/services/operations/shippingGuide/pdfService.js` |
+| `src/utils/dateFormat.js` | `formatDateToLocal`, `formatMonthYear` | `src/services/bar/cruiseReportPDF.service.js`, `src/services/operations/shippingGuide/pdfService.js`, `src/controllers/reports/generateGeneralReportEvaluations.js`, `src/controllers/reports/generateReportComentCards.js`, `src/controllers/reports/generateTransactionsExcel.js`, `src/controllers/reports/generatReportEvaluationsByEmployed.js` |
 | `src/utils/quantity.js` | `normalizeQuantity`, `viewCorrectQuantity` | `src/services/operations/inventory/products.services.js`, `src/services/operations/inventory/transactions.services.js`, `src/controllers/operations/inventory/products.controller.js`, `src/controllers/operations/inventory/warehouse.controller.js`, `src/controllers/operations/yachtRequest/yachtRequest.controller.js` |
 | `src/utils/surveyScoring.js` | `asignarPuntaje` | `src/controllers/reports/generateGeneralReportEvaluations.js` |
 
