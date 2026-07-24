@@ -177,11 +177,12 @@ incluyendo los nuevos status codes de error de la sección 1.
 - Tests nuevos por endpoint según la sección 4, usando
   `bootTestApp`/`shutdownTestApp`/`createAuthenticatedUser` de
   `tests/helpers/` (Fase 0).
-- Los smoke tests existentes de `auth.smoke.test.js` (login exitoso, login
-  con password inválido) siguen siendo válidos pero probablemente
-  necesiten actualizar sus aserciones de forma de respuesta de error si
-  verifican el body de un 400 (a confirmar en el plan, revisando el
-  archivo).
+- El smoke test existente `tests/smoke/auth.smoke.test.js` ("rejects an
+  invalid password") verifica `expect(response.status).toBe(400)` — con el
+  mapeo de la sección 1, credenciales inválidas pasan a ser 401. Este test
+  se actualiza como parte de este sub-proyecto (`toBe(400)` → `toBe(401)`).
+  El otro test del archivo (login exitoso) no verifica ningún caso de
+  error, no necesita cambios.
 
 ## Criterios de éxito
 
