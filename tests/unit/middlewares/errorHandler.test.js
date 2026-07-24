@@ -1,0 +1,33 @@
+const errorHandler = require('../../../src/middlewares/errorHandler.middleware');
+const AppError = require('../../../src/errors/AppError');
+
+function mockRes() {
+    return {
+        statusCode: null,
+        body: null,
+        status(code) { this.statusCode = code; return this; },
+        json(payload) { this.body = payload; return this; },
+    };
+}
+
+describe('errorHandler middleware', () => {
+    it('responds with the AppError statusCode and name as code', () => {
+        const res = mockRes();
+        const err = new AppError('No encontrado', 404);
+
+        errorHandler(err, {}, res, () => {});
+
+        expect(res.statusCode).toBe(404);
+        expect(res.body).toEqual({ error: { message: 'No encontrado', code: 'AppError' } });
+    });
+
+    it('defaults to 500/INTERNAL_ERROR for a plain Error', () => {
+        const res = mockRes();
+        const err = new Error('boom');
+
+        errorHandler(err, {}, res, () => {});
+
+        expect(res.statusCode).toBe(500);
+        expect(res.body).toEqual({ error: { message: 'boom', code: 'INTERNAL_ERROR' } });
+    });
+});
