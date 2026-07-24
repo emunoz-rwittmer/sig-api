@@ -4,6 +4,7 @@ const WarehouseService = require('../../../services/operations/inventory/warehou
 const RequestService = require('../../../services/operations/yachtRequest/yachtRequest.services');
 const YachtRequestService = require('../../../services/operations/yachtRequest/yachtRequest.services');
 const Utils = require('../../../utils/Utils');
+const Quantity = require('../../../utils/quantity');
 
 const getAllRequests = async (req, res) => {
     try {
@@ -28,7 +29,7 @@ const getRequestById = async (req, res) => {
             result.id = Utils.encode(result.id);
             result.warehouseId = Utils.encode(result.warehouseId);
             result.requestItems.map(x => (
-                x.stock = Utils.viewCorrectQuantity(x.configuracion?.product, x.stock)
+                x.stock = Quantity.viewCorrectQuantity(x.configuracion?.product, x.stock)
             ))
         }
 

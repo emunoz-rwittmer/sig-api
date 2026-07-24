@@ -2,6 +2,7 @@ const { Console } = require('escpos');
 const WarehouseService = require('../../../services/operations/inventory/warehouse.services');
 const RequestService = require('../../../services/operations/yachtRequest/yachtRequest.services');
 const Utils = require('../../../utils/Utils');
+const Quantity = require('../../../utils/quantity');
 
 const getAllWarehouses = async (req, res) => {
     try {
@@ -57,7 +58,7 @@ const getStockProduct = async (req, res) => {
     try {
         const stockId = Utils.decode(req.params.stock_id);
         const result = await WarehouseService.getStockProduct(stockId);
-        result.quantity = await Utils.viewCorrectQuantity(result.product, result.quantity)
+        result.quantity = await Quantity.viewCorrectQuantity(result.product, result.quantity)
         res.status(200).json(result);
     } catch (error) {
         res.status(400).json(error.message || 'Error inesperado');

@@ -1,5 +1,6 @@
 const ProductService = require('../../../services/operations/inventory/products.services');
 const Utils = require('../../../utils/Utils');
+const Quantity = require('../../../utils/quantity');
 
 const findProduct = async (req, res) => {
     try {
@@ -56,8 +57,8 @@ const getProductsByWarehouse = async (req, res) => {
                 x.id = Utils.encode(x.id);
                 x.companyId = Utils.encode(x.companyId);
                 x.productId = Utils.encode(x.productId);
-                x.quantity = Utils.viewCorrectQuantity(x.product, x.quantity)
-                x.totalBarConsumption = Utils.viewCorrectQuantity(x.product, x.totalBarConsumption)
+                x.quantity = Quantity.viewCorrectQuantity(x.product, x.quantity)
+                x.totalBarConsumption = Quantity.viewCorrectQuantity(x.product, x.totalBarConsumption)
 
             });
         }
