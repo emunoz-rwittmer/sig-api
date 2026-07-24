@@ -47,6 +47,15 @@ implementación independiente.
   (`auth.controller.js:146-167`) no envían ninguna respuesta HTTP cuando el
   email/usuario buscado no existe — el bloque `if (result) { ... }` no
   tiene `else`, así que la request queda colgada hasta timeout del cliente.
+- **Segundo bug nuevo encontrado en esta revisión:** `UserService.getUserById`
+  (`src/services/catalogs/users.services.js:35-51`, usado por `GET
+  /users/:user_id`) selecciona `attributes: ['first_name', 'last_name',
+  'email', 'active', 'role_id']` — nombres de columna snake_case, no los
+  nombres de atributo camelCase que usa Sequelize en el resto del código —
+  y no incluye `id` en absoluto. El controller hace `result.id =
+  Utils.encode(result.id)` sobre un `id` inexistente y nunca lee
+  `first_name`/`last_name`/`role_id` (que sí vienen, pero con esos nombres
+  crudos). El endpoint responde datos incompletos hoy.
 - **`staff.services` (`src/services/catalogs/staff.services.js`, 502
   líneas) se reimporta en 8 controllers**, 5 de ellos fuera de este dominio
   (`orders`, `evaluations`, `forms`, `yachtRequest`, `regulations`). Es un
@@ -120,6 +129,16 @@ flujo de verificación de token en este sub-proyecto.
 Cuando `UserService.getUserByEmail`/`Staffervice.getStaffByEmail` no
 encuentra el registro, en vez de no responder nada se lanza `throw new
 AppError('Usuario no encontrado', 404)`.
+
+### 3b. Fix del bug de `UserService.getUserById`
+
+`src/services/catalogs/users.services.js:35-51` cambia su `attributes` de
+`['first_name', 'last_name', 'email', 'active', 'role_id']` a `['id',
+'firstName', 'lastName', 'email', 'active', 'roleId']` (nombres de
+atributo de Sequelize, no de columna). El controller `getUser` no cambia —
+ya esperaba `result.id`/`result.role_id`... salvo que `role_id` (snake)
+también se corrige a `roleId` en el controller para que coincida con el
+attribute name correcto.
 
 ### 4. Tests profundos (23 endpoints)
 
