@@ -7,6 +7,7 @@ const routerApi = require('./routes');
 const path = require('path');
 const db = require('./utils/database');
 const validateEnv = require('./config/env');
+const errorHandler = require('./middlewares/errorHandler.middleware');
 
 validateEnv();
 
@@ -41,5 +42,6 @@ app.ready = db.sync({ alter: false })
 
 routerApi(app);
 
+app.use(errorHandler);
 
 module.exports = app;
