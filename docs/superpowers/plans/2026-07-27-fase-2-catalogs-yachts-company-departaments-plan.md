@@ -202,7 +202,7 @@ const getYacht = async (req, res, next) => {
         if (!result) {
             throw new AppError('Yate no encontrado', 404);
         }
-        result.id = Utils.encode(result.id);
+        result.dataValues.id = Utils.encode(result.dataValues.id);
         result.companyId = Utils.encode(result.companyId);
         res.status(200).json(result);
     } catch (error) {
@@ -614,7 +614,7 @@ const getCompany = async (req, res, next) => {
         if (!result) {
             throw new AppError('Empresa no encontrada', 404);
         }
-        result.id = Utils.encode(result.id);
+        result.dataValues.id = Utils.encode(result.dataValues.id);
         res.status(200).json(result);
     } catch (error) {
         next(error);
@@ -1119,7 +1119,7 @@ const getDepartament = async (req, res, next) => {
         if (!result) {
             throw new AppError('Departamento no encontrado', 404);
         }
-        result.id = Utils.encode(result.id);
+        result.dataValues.id = Utils.encode(result.dataValues.id);
         res.status(200).json(result);
     } catch (error) {
         next(error);
@@ -1133,7 +1133,7 @@ const getProcessById = async (req, res, next) => {
         if (!result) {
             throw new AppError('Proceso no encontrado', 404);
         }
-        result.id = Utils.encode(result.id);
+        result.dataValues.id = Utils.encode(result.dataValues.id);
         res.status(200).json(result);
     } catch (error) {
         next(error);
