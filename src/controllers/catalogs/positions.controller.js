@@ -1,7 +1,8 @@
 const PositionService = require('../../services/catalogs/positions.services');
 const Utils = require('../../utils/Utils');
+const AppError = require('../../errors/AppError');
 
-const getPositions = async (req, res) => {
+const getPositions = async (req, res, next) => {
     try {
         const result = await PositionService.getAll();
         if (result instanceof Array) {
@@ -11,24 +12,25 @@ const getPositions = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const getPosition = async (req, res) => {
+const getPosition = async (req, res, next) => {
     try {
         const positionId = Utils.decode(req.params.position_id);
         const result = await PositionService.getPositionById(positionId);
-        if (result instanceof Object) {
-            result.id = Utils.encode(result.id);
+        if (!result) {
+            throw new AppError('Posición no encontrada', 404);
         }
+        result.dataValues.id = Utils.encode(result.dataValues.id);
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const createPosition = async (req, res) => {
+const createPosition = async (req, res, next) => {
     try {
         const position = req.body;
         const result = await PositionService.createPosition(position);
@@ -36,12 +38,11 @@ const createPosition = async (req, res) => {
             res.status(200).json({ data: 'resource created successfully' });
         }
     } catch (error) {
-
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
-const updatePosition = async (req, res) => {
+const updatePosition = async (req, res, next) => {
     try {
         const positionId = Utils.decode(req.params.position_id);
         const position = req.body;
@@ -51,18 +52,17 @@ const updatePosition = async (req, res) => {
         });
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
-const deletePosition = async (req, res) => {
+const deletePosition = async (req, res, next) => {
     try {
         const positionId = Utils.decode(req.params.position_id);
         const result = await PositionService.delete(positionId);
         res.status(200).json({ data: result })
     } catch (error) {
-
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 

@@ -29,22 +29,6 @@ class DocumentService {
         }
     }
 
-    static async getDocumentsById(arrayIds) {
-        try {
-            const result = await Documentation.findAll({
-                where: {
-                    id: {
-                        [Op.in]: arrayIds
-                    }
-                },
-                attributes: ['id', 'name']
-            });
-            return result;
-        } catch (error) {
-            throw error;
-        }
-    }
-
     static async createDocument(document) {
         const transaction = await db.transaction();
         try {

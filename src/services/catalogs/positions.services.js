@@ -25,20 +25,6 @@ class PositionService {
         }
     }
 
-    static async getPositionsById(arrayIds) {
-        try {
-            const result = await Positions.findAll({
-                where: { id: {
-                    [Op.in]: arrayIds
-                } },
-                attributes: ['id','name']
-            });
-            return result;
-        } catch (error) {
-            throw error;
-        }
-    }
-
     static async createPosition(position) {
         try {
             const result = await Positions.create(position);
