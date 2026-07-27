@@ -1,7 +1,8 @@
 const YachtService = require('../../services/catalogs/yachts.services');
 const Utils = require('../../utils/Utils');
+const AppError = require('../../errors/AppError');
 
-const getAllYachts = async (req, res) => {
+const getAllYachts = async (req, res, next) => {
     try {
         const result = await YachtService.getAll();
         if (result instanceof Array) {
@@ -12,25 +13,26 @@ const getAllYachts = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const getYacht = async (req, res) => {
+const getYacht = async (req, res, next) => {
     try {
         const yachtId = Utils.decode(req.params.yacht_id);
         const result = await YachtService.getYachtById(yachtId);
-        if (result instanceof Object) {
-            result.id = Utils.encode(result.id);
-            result.companyId = Utils.encode(result.companyId);
+        if (!result) {
+            throw new AppError('Yate no encontrado', 404);
         }
+        result.dataValues.id = Utils.encode(result.dataValues.id);
+        result.dataValues.companyId = Utils.encode(result.dataValues.companyId);
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const createYacht = async (req, res) => {
+const createYacht = async (req, res, next) => {
     try {
         const yacht = req.body;
         yacht.companyId = Utils.decode(yacht.companyId)
@@ -38,11 +40,11 @@ const createYacht = async (req, res) => {
 
         res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
-const updateYacht = async (req, res) => {
+const updateYacht = async (req, res, next) => {
     try {
         const yachtId = Utils.decode(req.params.yacht_id);
         const yacht = req.body;
@@ -53,11 +55,11 @@ const updateYacht = async (req, res) => {
         });
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
-const deleteYacht = async (req, res) => {
+const deleteYacht = async (req, res, next) => {
     try {
         const yachtId = Utils.decode(req.params.yacht_id);
         await YachtService.delete({
@@ -65,8 +67,7 @@ const deleteYacht = async (req, res) => {
         });
         res.status(200).json({ data: 'resource deleted successfully' })
     } catch (error) {
-
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 

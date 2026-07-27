@@ -38,20 +38,6 @@ class DepartamentService {
         }
     }
 
-    static async getDepartamentsById(arrayIds) {
-        try {
-            const result = await Departaments.findAll({
-                where: { id: {
-                    [Op.in]: arrayIds
-                } },
-                attributes: ['id','name']
-            });
-            return result;
-        } catch (error) {
-            throw error;
-        }
-    }
-
     static async createDepartament(departament) {
         try {
             const result = await Departaments.create(departament);
