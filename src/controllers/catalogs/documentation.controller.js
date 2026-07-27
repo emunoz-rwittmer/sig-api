@@ -1,7 +1,8 @@
 const DocumentService = require('../../services/catalogs/documentation.services');
 const Utils = require('../../utils/Utils');
+const AppError = require('../../errors/AppError');
 
-const getDocuments = async (req, res) => {
+const getDocuments = async (req, res, next) => {
     try {
         const result = await DocumentService.getAll();
         if (result instanceof Array) {
@@ -11,59 +12,58 @@ const getDocuments = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const getDocument = async (req, res) => {
+const getDocument = async (req, res, next) => {
     try {
         const documentId = Utils.decode(req.params.document_id);
         const result = await DocumentService.getDocumentById(documentId);
-        if (result instanceof Object) {
-            result.id = Utils.encode(result.id);
+        if (!result) {
+            throw new AppError('Documento no encontrado', 404);
         }
+        result.dataValues.id = Utils.encode(result.dataValues.id);
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const createDocument = async (req, res) => {
+const createDocument = async (req, res, next) => {
     try {
-        const document = req.body;        
+        const document = req.body;
         // Asegurar que positions sea un array
         if (!Array.isArray(document.positions)) {
             document.positions = [document.positions];
         }
-        
+
         const result = await DocumentService.createDocument(document);
         res.status(200).json({ data: 'resource created successfully', documentId: result.id });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
-const updateDocument = async (req, res) => {
+const updateDocument = async (req, res, next) => {
     try {
         const documentId = Utils.decode(req.params.document_id);
         const document = req.body;
-        document.positions = document.positions;
         delete document.id;
         await DocumentService.updateDocument(document, documentId);
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
-const deleteDocument = async (req, res) => {
+const deleteDocument = async (req, res, next) => {
     try {
         const documentId = Utils.decode(req.params.document_id);
         const result = await DocumentService.delete(documentId);
         res.status(200).json({ data: result })
     } catch (error) {
-
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
@@ -76,4 +76,4 @@ const DocumentsController = {
     deleteDocument
 }
 
-module.exports = DocumentsController 
+module.exports = DocumentsController
