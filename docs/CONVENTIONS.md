@@ -65,7 +65,8 @@ La respuesta de error resultante tiene esta forma:
 500 por un error no clasificado.)
 
 El retrofit de los controllers existentes al patrón nuevo se hace dominio
-por dominio en Fase 2. Dominios ya retrofiteados: `auth`, `staff`, `users`.
+por dominio en Fase 2. Dominios ya retrofiteados: `auth`, `staff`, `users`,
+`yachts`, `company`, `departaments`.
 
 ## Sufijo de archivos de servicios
 

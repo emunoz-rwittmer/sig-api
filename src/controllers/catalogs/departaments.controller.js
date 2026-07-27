@@ -1,7 +1,8 @@
 const DepartamentService = require('../../services/catalogs/departaments.services');
 const Utils = require('../../utils/Utils');
+const AppError = require('../../errors/AppError');
 
-const getDepartaments = async (req, res) => {
+const getDepartaments = async (req, res, next) => {
     try {
         const result = await DepartamentService.getAll();
         if (result instanceof Array) {
@@ -11,37 +12,39 @@ const getDepartaments = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const getDepartament = async (req, res) => {
+const getDepartament = async (req, res, next) => {
     try {
         const departamentId = Utils.decode(req.params.departament_id);
         const result = await DepartamentService.getDepartamentById(departamentId);
-        if (result instanceof Object) {
-            result.id = Utils.encode(result.id);
+        if (!result) {
+            throw new AppError('Departamento no encontrado', 404);
         }
+        result.dataValues.id = Utils.encode(result.dataValues.id);
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const getProcessById = async (req, res) => {
+const getProcessById = async (req, res, next) => {
     try {
         const departamentId = Utils.decode(req.params.departament_id);
         const result = await DepartamentService.getProcessById(departamentId);
-        if (result instanceof Object) {
-            result.id = Utils.encode(result.id);
+        if (!result) {
+            throw new AppError('Proceso no encontrado', 404);
         }
+        result.dataValues.id = Utils.encode(result.dataValues.id);
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const createDepartament = async (req, res) => {
+const createDepartament = async (req, res, next) => {
     try {
         const departament = req.body;
         const result = await DepartamentService.createDepartament(departament);
@@ -49,12 +52,11 @@ const createDepartament = async (req, res) => {
             res.status(200).json({ data: 'resource created successfully' });
         }
     } catch (error) {
-        
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
-const updateDepartament = async (req, res) => {
+const updateDepartament = async (req, res, next) => {
     try {
         const departamentId = Utils.decode(req.params.departament_id);
         const departament = req.body;
@@ -64,18 +66,17 @@ const updateDepartament = async (req, res) => {
         });
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
-const deleteDepartament = async (req, res) => {
+const deleteDepartament = async (req, res, next) => {
     try {
         const departamentId = Utils.decode(req.params.departament_id);
         const result = await DepartamentService.delete(departamentId);
         res.status(200).json({ data: result })
     } catch (error) {
-        
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
@@ -89,4 +90,4 @@ const DepartamentsController = {
     deleteDepartament
 }
 
-module.exports = DepartamentsController 
+module.exports = DepartamentsController
