@@ -48,6 +48,10 @@ const createDocument = async (req, res, next) => {
 const updateDocument = async (req, res, next) => {
     try {
         const documentId = Utils.decode(req.params.document_id);
+        const existing = await DocumentService.getDocumentById(documentId);
+        if (!existing) {
+            throw new AppError('Documento no encontrado', 404);
+        }
         const document = req.body;
         delete document.id;
         await DocumentService.updateDocument(document, documentId);

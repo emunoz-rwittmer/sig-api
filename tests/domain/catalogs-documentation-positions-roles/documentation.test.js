@@ -161,6 +161,16 @@ describe('PUT /api/documentation/updateDocument/:document_id', () => {
         expect(staffDocsForNew).toHaveLength(1);
         expect(staffDocsForNew[0].status).toBe('pending');
     });
+
+    it('returns 404 when the document does not exist', async () => {
+        const response = await request(app)
+            .put(`/api/documentation/updateDocument/${Utils.encode(999999999)}`)
+            .set('Authorization', `Bearer ${token}`)
+            .send({ name: 'No existe', description: '', required: false, positions: [] });
+
+        expect(response.status).toBe(404);
+        expect(response.body.error.message).toBe('Documento no encontrado');
+    });
 });
 
 describe('DELETE /api/documentation/:document_id', () => {

@@ -62,7 +62,6 @@ const deletePosition = async (req, res, next) => {
         const result = await PositionService.delete(positionId);
         res.status(200).json({ data: result })
     } catch (error) {
-
         next(error);
     }
 }

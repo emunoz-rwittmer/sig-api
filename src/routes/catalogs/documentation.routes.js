@@ -132,6 +132,8 @@ router.post('/createDocument', DocumentsController.createDocument);
  *     responses:
  *       200:
  *         description: Documento actualizado
+ *       404:
+ *         description: Documento no encontrado
  */
 router.put('/updateDocument/:document_id', DocumentsController.updateDocument);
 
