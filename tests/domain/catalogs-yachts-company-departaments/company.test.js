@@ -92,6 +92,21 @@ describe('PUT /api/companies/updateCompany/:company_id', () => {
         expect(company.name).toBe('Company Actualizada');
         expect(company.logo).toBe('/uploads/companies/test-logo.png');
     });
+
+    it('updates a company with JSON body (no multipart) without error', async () => {
+        const company = await createBasicCompany({ name: `Company JSON Update ${Date.now()}` });
+        const newName = `Company Updated JSON ${Date.now()}`;
+
+        const response = await request(app)
+            .put(`/api/companies/updateCompany/${Utils.encode(company.id)}`)
+            .set('Authorization', `Bearer ${token}`)
+            .send({ name: newName });
+
+        expect(response.status).toBe(200);
+        await company.reload();
+        expect(company.name).toBe(newName);
+        expect(company.logo).toBe('/uploads/companies/test-logo.png');
+    });
 });
 
 describe('DELETE /api/companies/:company_id', () => {

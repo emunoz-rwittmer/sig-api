@@ -50,7 +50,7 @@ const updateCompany = async (req, res, next) => {
     try {
         const companyId = Utils.decode(req.params.company_id);
         const company = req.body;
-        if (req.files.length > 0) {
+        if (req.files && req.files.length > 0) {
             company.logo = `/uploads/companies/${req.files[0].filename}`
         }
         await CompanyService.updateCompany(company, {
