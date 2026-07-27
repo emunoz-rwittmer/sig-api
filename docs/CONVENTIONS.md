@@ -66,7 +66,7 @@ La respuesta de error resultante tiene esta forma:
 
 El retrofit de los controllers existentes al patrón nuevo se hace dominio
 por dominio en Fase 2. Dominios ya retrofiteados: `auth`, `staff`, `users`,
-`yachts`, `company`, `departaments`.
+`yachts`, `company`, `departaments`, `documentation`, `positions`, `roles`.
 
 ## Sufijo de archivos de servicios
 
