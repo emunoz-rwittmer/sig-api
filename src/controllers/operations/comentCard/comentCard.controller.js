@@ -1,190 +1,287 @@
-const { re } = require('mathjs');
 const ComentCardService = require('../../../services/operations/comentCard/comentCard.services');
+const AppError = require('../../../errors/AppError');
 const Utils = require('../../../utils/Utils');
-const XLSX = require('xlsx');
-const dayjs = require('dayjs');
 
-const getAllComentCards = async (req, res) => {
+const decodeId = (value, fieldName) => {
+    let id;
+    try {
+        id = Utils.decode(value);
+    } catch {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    return id;
+};
+
+const decodeOptionalId = (value, fieldName) => {
+    if (!value || value === 'undefined' || value === 'null') {
+        return undefined;
+    }
+    return decodeId(value, fieldName);
+};
+
+const requireValidDate = (value, fieldName) => {
+    if (!value || Number.isNaN(new Date(value).getTime())) {
+        throw new AppError(`${fieldName} inválida`, 400);
+    }
+    return value;
+};
+
+const validateQuestions = (questions) => {
+    questions.forEach((question) => {
+        if (
+            !question ||
+            typeof question.title !== 'string' ||
+            !question.title.trim() ||
+            typeof question.type !== 'string' ||
+            !question.type.trim()
+        ) {
+            throw new AppError('Cada pregunta debe incluir title y type', 400);
+        }
+        if (question.id !== undefined && (!Number.isInteger(question.id) || question.id <= 0)) {
+            throw new AppError('ID de pregunta inválido', 400);
+        }
+        if (question.options !== undefined && !Array.isArray(question.options)) {
+            throw new AppError('options debe ser un array', 400);
+        }
+    });
+};
+
+const encodeInstanceField = (instance, field) => {
+    if (instance?.dataValues?.[field] !== undefined) {
+        instance.dataValues[field] = Utils.encode(instance.dataValues[field]);
+    }
+};
+
+const getAllComentCards = async (req, res, next) => {
     try {
         const result = await ComentCardService.getAll();
-        if (result instanceof Array) {
-            result.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
-                x.dataValues.cardId = Utils.encode(x.dataValues.cardId);
-                x.dataValues.yachtId = Utils.encode(x.dataValues.yachtId);
-            });
-        }
+        result.forEach((cardYacht) => {
+            encodeInstanceField(cardYacht, 'id');
+            encodeInstanceField(cardYacht, 'cardId');
+            encodeInstanceField(cardYacht, 'yachtId');
+        });
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
-}
+};
 
-const getComentCard = async (req, res) => {
+const getComentCard = async (req, res, next) => {
     try {
-        const formId = Utils.decode(req.params.card_id);
+        const formId = decodeId(req.params.card_id, 'ID de comment card');
         const result = await ComentCardService.getComentCardById(formId);
-        if (result instanceof Object) {
-            result.dataValues.id = Utils.encode(result.dataValues.id);
-            result.dataValues.yates.map(item => (
-                item.yate.dataValues.id = Utils.encode(item.yate.dataValues.id)
-            ))
+        if (!result) {
+            throw new AppError('Comment card no encontrada', 404);
         }
+
+        encodeInstanceField(result, 'id');
+        result.yates.forEach((item) => encodeInstanceField(item.yate, 'id'));
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
-}
+};
 
-const createComentCard = async (req, res) => {
+const createComentCard = async (req, res, next) => {
     try {
-        const data = req.body;
-        await ComentCardService.createComentCard(data);
+        const { name, preguntas } = req.body;
+        if (typeof name !== 'string' || !name.trim() || !Array.isArray(preguntas)) {
+            throw new AppError('name y preguntas son obligatorios', 400);
+        }
+        validateQuestions(preguntas);
+
+        await ComentCardService.createComentCard({ name: name.trim(), preguntas });
         res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
-}
+};
 
-const updateComentCard = async (req, res) => {
+const updateComentCard = async (req, res, next) => {
     try {
-        const formId = Utils.decode(req.params.card_id);
+        const formId = decodeId(req.params.card_id, 'ID de comment card');
         const { preguntas, name } = req.body;
-        await ComentCardService.updateComentCard({ preguntas, name, formId });
+        if (typeof name !== 'string' || !name.trim() || !Array.isArray(preguntas)) {
+            throw new AppError('name y preguntas son obligatorios', 400);
+        }
+        validateQuestions(preguntas);
 
+        const existing = await ComentCardService.getComentCardById(formId);
+        if (!existing) {
+            throw new AppError('Comment card no encontrada', 404);
+        }
+        const existingQuestionIds = new Set(existing.preguntas.map((question) => question.id));
+        if (preguntas.some((question) => question.id && !existingQuestionIds.has(question.id))) {
+            throw new AppError('Una pregunta no pertenece a la comment card', 400);
+        }
+
+        await ComentCardService.updateComentCard({
+            preguntas,
+            name: name.trim(),
+            formId,
+        });
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        console.log(error)
-        res.status(400).json(error.message);
+        next(error);
     }
-}
+};
 
-const deleteComentCard = async (req, res) => {
+const deleteComentCard = async (req, res, next) => {
     try {
-        const formId = Utils.decode(req.params.card_id);
-        const result = await ComentCardService.delete({
-            where: { id: formId }
-        });
-        res.status(200).json({ data: 'resource deleted successfully' })
+        const formId = decodeId(req.params.card_id, 'ID de comment card');
+        const deleted = await ComentCardService.delete(formId);
+        if (!deleted) {
+            throw new AppError('Comment card no encontrada', 404);
+        }
+        res.status(200).json({ data: 'resource deleted successfully' });
     } catch (error) {
-
-        res.status(400).json(error.message);
+        next(error);
     }
-}
+};
 
-// YACHT COMMENT CARD
-
-const getYachtsWithComentCard = async (req, res) => {
+const getYachtsWithComentCard = async (req, res, next) => {
     try {
-        const cardId = Utils.decode(req.params.card_id);
+        const cardId = decodeId(req.params.card_id, 'ID de comment card');
         const result = await ComentCardService.getYachtsWithComentCard(cardId);
-        if (result instanceof Array) {
-            result.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
-                x.dataValues.yate.dataValues.id = Utils.encode(x.dataValues.yate.dataValues.id);
-            });
-        }
+        result.forEach((cardYacht) => {
+            encodeInstanceField(cardYacht, 'id');
+            encodeInstanceField(cardYacht.yate, 'id');
+        });
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
-}
+};
 
-const getAllAccessLinks = async (req, res) => {
+const getAllAccessLinks = async (req, res, next) => {
     try {
-        const cardyachtId = Utils.decode(req.params.card_yacht_id);
-        const result = await ComentCardService.getAllAccessLinks(cardyachtId);
-        if (result instanceof Array) {
-            result.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
-            });
-        }
+        const cardYachtId = decodeId(req.params.card_yacht_id, 'ID de relación comment card/yate');
+        const result = await ComentCardService.getAllAccessLinks(cardYachtId);
+        result.forEach((accessLink) => encodeInstanceField(accessLink, 'id'));
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
-}
+};
 
-const getAllComentCardsForLink = async (req, res) => {
+const getAllComentCardsForLink = async (req, res, next) => {
     try {
-        const cardQrId = Utils.decode(req.params.link_id);
+        const cardQrId = decodeId(req.params.link_id, 'ID de link');
         const result = await ComentCardService.getAllComentCardsForLink(cardQrId);
-        if (result instanceof Array) {
-            result.map((x) => {
-                x.id = Utils.encode(x.id);
-            });
-        }
+        result.forEach((response) => {
+            response.id = Utils.encode(response.id);
+        });
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
-}
+};
 
-//public access link
-const getComentCardByQr = async (req, res) => {
+const getComentCardByQr = async (req, res, next) => {
     try {
-        const qr = Utils.decode(req.params.comet_card_qr);
-        const result = await ComentCardService.getComentCardByQr(qr);
-        if (result instanceof Object) {
-            result.dataValues.id = Utils.encode(result.dataValues.id);
+        const qrId = decodeId(req.params.comet_card_qr, 'ID de QR');
+        const result = await ComentCardService.getComentCardByQr(qrId);
+        if (!result) {
+            throw new AppError('Link de comment card no encontrado', 404);
         }
+        encodeInstanceField(result, 'id');
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
-}
+};
 
-const getComentCardByDates = async (req, res) => {
+const getComentCardByDates = async (req, res, next) => {
     try {
-        const yachtId = Utils.decode(req.params.yacht_id);
-        const { toDay } = req.query;
+        const yachtId = decodeId(req.params.yacht_id, 'ID de yate');
+        const toDay = requireValidDate(req.query.toDay, 'Fecha');
         const result = await ComentCardService.getComentCardByDates(yachtId, toDay);
+        if (!result) {
+            throw new AppError('Link de comment card no encontrado para la fecha indicada', 404);
+        }
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
-}
+};
 
-const respondComentCard = async (req, res) => {
+const respondComentCard = async (req, res, next) => {
     try {
-        const cometCardQr = Utils.decode(req.params.comet_card_qr);
+        const cardQrId = decodeId(req.params.comet_card_qr, 'ID de QR');
         const { answers, cabin, name, readPolitics } = req.body;
-        const passenger = { name, cabin, readPolitics, cometCardQr };
+        if (!answers || typeof answers !== 'object' || Array.isArray(answers)) {
+            throw new AppError('answers debe ser un objeto', 400);
+        }
+        if (typeof name !== 'string' || !name.trim() || cabin === undefined || cabin === null) {
+            throw new AppError('name y cabin son obligatorios', 400);
+        }
 
-        const responsesToInsert = Object.entries(answers).map(([questionId, answer]) => {
-            if (answer !== null && answer !== undefined) {
-                return {
-                    questionId: Number(questionId),
-                    answer,
-                };
-            }
-            return null;
-        })
-            .filter(Boolean);
+        const accessLink = await ComentCardService.getComentCardByQr(cardQrId);
+        if (!accessLink) {
+            throw new AppError('Link de comment card no encontrado', 404);
+        }
 
-        await ComentCardService.respondComentCard({ responsesToInsert, passenger });
+        const responsesToInsert = Object.entries(answers)
+            .filter(([, answer]) => answer !== null && answer !== undefined)
+            .map(([questionId, answer]) => {
+                const parsedQuestionId = Number(questionId);
+                if (!Number.isInteger(parsedQuestionId) || parsedQuestionId <= 0) {
+                    throw new AppError('ID de pregunta inválido', 400);
+                }
+                return { questionId: parsedQuestionId, answer };
+            });
+        const allowedQuestionIds = new Set(
+            accessLink.card_yacht.coment_card.preguntas.map((question) => question.id)
+        );
+        if (responsesToInsert.some(({ questionId }) => !allowedQuestionIds.has(questionId))) {
+            throw new AppError('Una pregunta no pertenece a la comment card', 400);
+        }
+
+        await ComentCardService.respondComentCard({
+            responsesToInsert,
+            passenger: {
+                name: name.trim(),
+                cabin,
+                readPolitics,
+                cardQrId,
+            },
+        });
         res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
-        console.log(error)
-        res.status(400).json(error.message);
+        next(error);
     }
-}
+};
 
-const getReportingByYacht = async (req, res) => {
+const getReportingByYacht = async (req, res, next) => {
     try {
-        const yachtId = Utils.decode(req.params.yacht_id);
-        const startDate = req.query.startDate;
-        const endDate = req.query.endDate;
-        const result = await ComentCardService.getReportingByYacht(yachtId, startDate, endDate);
+        const yachtId = decodeOptionalId(req.params.yacht_id, 'ID de yate');
+        const { startDate, endDate } = req.query;
+        const hasStartDate = Boolean(startDate && startDate !== 'undefined' && startDate !== 'null');
+        const hasEndDate = Boolean(endDate && endDate !== 'undefined' && endDate !== 'null');
+
+        if (hasStartDate !== hasEndDate) {
+            throw new AppError('startDate y endDate deben enviarse juntos', 400);
+        }
+        if (hasStartDate) {
+            requireValidDate(startDate, 'startDate');
+            requireValidDate(endDate, 'endDate');
+        }
+
+        const result = await ComentCardService.getReportingByYacht(
+            yachtId,
+            hasStartDate ? startDate : undefined,
+            hasEndDate ? endDate : undefined
+        );
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
-}
+};
 
-
-
-const ComentCardController = {
+module.exports = {
     getAllComentCards,
     getComentCard,
     createComentCard,
@@ -196,6 +293,5 @@ const ComentCardController = {
     getComentCardByQr,
     getComentCardByDates,
     getReportingByYacht,
-    respondComentCard
-}
-module.exports = ComentCardController
+    respondComentCard,
+};

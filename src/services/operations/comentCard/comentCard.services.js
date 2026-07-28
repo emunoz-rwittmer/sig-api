@@ -7,94 +7,74 @@ const ComentCardAnswers = require('../../../models/operations/comentCard/comentC
 const ComentCardQuestions = require('../../../models/operations/comentCard/comentCardQuestions.models');
 const ComentCardRespond = require('../../../models/operations/comentCard/comentCardRespond.models');
 const db = require('../../../utils/database');
-require('dotenv').config();
 
+const questionPayload = (question, comentCardId) => ({
+    title: question.title,
+    type: question.type,
+    required: Boolean(question.required),
+    scaleMin: question.scaleMin ?? null,
+    scaleMax: question.scaleMax ?? null,
+    options: Array.isArray(question.options) ? question.options : [],
+    comentCardId,
+});
 
 class ComentCardService {
-    static async getAll() {
-        try {
-            const result = await ComentCardYacht.findAll({
-                include: [
-                    {
-                        model: ComentCard,
-                        as: 'coment_card',
-                    },
-                    {
+    static getAll() {
+        return ComentCardYacht.findAll({
+            include: [
+                {
+                    model: ComentCard,
+                    as: 'coment_card',
+                },
+                {
+                    model: Yacht,
+                    as: 'yate',
+                },
+            ],
+        });
+    }
+
+    static getComentCardById(id) {
+        return ComentCard.findOne({
+            where: { id },
+            attributes: ['id', 'name', 'createdAt'],
+            include: [
+                {
+                    model: ComentCardQuestions,
+                    as: 'preguntas',
+                },
+                {
+                    model: ComentCardYacht,
+                    as: 'yates',
+                    attributes: ['id'],
+                    include: [{
                         model: Yacht,
                         as: 'yate',
-                    }
-                ]
-            });
-            return result;
-        } catch (error) {
-            throw error;
-        }
+                        attributes: ['id', 'name'],
+                    }],
+                },
+            ],
+        });
     }
 
-    static async getComentCardById(id) {
-        try {
-            const result = await ComentCard.findOne({
-                where: { id },
-                attributes: ['id', 'name', 'createdAt'],
-                include: [
-                    {
-                        model: ComentCardQuestions,
-                        as: 'preguntas',
-                    },
-                    {
-                        model: ComentCardYacht,
-                        as: 'yates',
-                        attributes: ['id'],
-                        include: [{
-                            model: Yacht,
-                            as: 'yate',
-                            attributes: ['id', 'name']
-                        }]
-                    }
-                ]
-            });
-            return result;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    static async createComentCard(data) {
-        const transaction = await db.transaction();
-        try {
-            const result = await ComentCard.create(data, { transaction });
-
-            if (!result) {
-                throw new Error('No se pudo crear coment card');
+    static createComentCard(data) {
+        return db.transaction(async (transaction) => {
+            const comentCard = await ComentCard.create(
+                { name: data.name },
+                { transaction }
+            );
+            const questions = data.preguntas.map((question) =>
+                questionPayload(question, comentCard.id)
+            );
+            if (questions.length) {
+                await ComentCardQuestions.bulkCreate(questions, { transaction });
             }
-
-            const questions = data.preguntas.map(pregunta => {
-                const opciones = Array.isArray(pregunta.options)
-                    ? pregunta.options
-                    : [];
-
-                return {
-                    ...pregunta,
-                    comentCardId: result.id,
-                    opciones
-                };
-            });
-
-            await ComentCardQuestions.bulkCreate(questions, { transaction });
-
-            await transaction.commit();
-            return result;
-        } catch (error) {
-            await transaction.rollback();
-            throw new Error(error.message);
-        }
+            return comentCard;
+        });
     }
 
-    static async updateComentCard(info) {
-        const { preguntas = [], name, formId } = info;
-        const transaction = await db.transaction();
-
-        try {
+    static updateComentCard({ preguntas = [], name, formId }) {
+        return db.transaction(async (transaction) => {
             await ComentCard.update(
                 { name },
                 {
@@ -103,320 +83,244 @@ class ComentCardService {
                 }
             );
 
-            await Promise.all(
-                preguntas.map(async (pregunta) => {
-                    const opciones = Array.isArray(pregunta.options)
-                        ? pregunta.options
-                        : [];
-
-                    const payload = {
-                        title: pregunta.title,
-                        type: pregunta.type,
-                        required: pregunta.required,
-                        opciones,
+            await Promise.all(preguntas.map((question) => {
+                const payload = questionPayload(question, formId);
+                if (!question.id) {
+                    return ComentCardQuestions.create(payload, { transaction });
+                }
+                return ComentCardQuestions.update(payload, {
+                    where: {
+                        id: question.id,
                         comentCardId: formId,
-                    };
-
-                    if (!pregunta.id) {
-                        return ComentCardQuestions.create(payload, { transaction });
-                    }
-
-                    return ComentCardQuestions.update(
-                        payload,
-                        {
-                            where: { id: pregunta.id },
-                            transaction,
-                        }
-                    );
-                })
-            );
-            await transaction.commit();
+                    },
+                    transaction,
+                });
+            }));
             return true;
-        } catch (error) {
-            await transaction.rollback();
-            throw error;
-        }
+        });
     }
 
-
-    static async delete(id) {
-        try {
-            const result = await ComentCard.destroy(id);
-            return result;
-        } catch (error) {
-            throw error;
-        }
+    static delete(id) {
+        return ComentCard.destroy({ where: { id } });
     }
 
-    // COMMENT CARD YACHT
-    static async getYachtsWithComentCard(cardId) {
-        try {
-            const result = await ComentCardYacht.findAll({
-                where: { cardId },
-                attributes: ['id', 'createdAt'],
-                include: [
-                    {
-                        model: Yacht,
-                        as: 'yate',
-                        attributes: ['id', 'name']
-                    },
-                    {
-                        model: ComentCardQR,
-                        as: 'links_acceso',
-                        attributes: ['id']
-                    },
-
-                ]
-            });
-            return result;
-        } catch (error) {
-            throw error;
-        }
+    static getYachtsWithComentCard(cardId) {
+        return ComentCardYacht.findAll({
+            where: { cardId },
+            attributes: ['id', 'createdAt'],
+            include: [
+                {
+                    model: Yacht,
+                    as: 'yate',
+                    attributes: ['id', 'name'],
+                },
+                {
+                    model: ComentCardQR,
+                    as: 'links_acceso',
+                    attributes: ['id'],
+                },
+            ],
+        });
     }
 
-    static async getAllAccessLinks(comentCardYachtId) {
-        try {
-            const result = await ComentCardQR.findAll({
-                where: { comentCardYachtId },
-                attributes: [
-                    'id',
-                    'access_link',
-                    'code',
-                    'name',
-                    'start_date',
-                    'end_date',
-                    'createdAt',
-                ],
-                include: [
-                    {
-                        model: ComentCardRespond,
-                        as: 'respuestas_coment_card',
-                        include: [
-                            {
-                                model: ComentCardAnswers,
-                                as: 'respuestas',
-                                include: [
-                                    {
-                                        model: ComentCardQuestions,
-                                        as: 'pregunta',
-                                    },
-                                ],
-                            },
-                        ]
-                    },
-                ],
-                order: [['start_date', 'DESC']],
-            });
-
-            return result;
-        } catch (error) {
-            throw error;
-        }
+    static getAllAccessLinks(comentCardYachtId) {
+        return ComentCardQR.findAll({
+            where: { comentCardYachtId },
+            attributes: [
+                'id',
+                'access_link',
+                'code',
+                'name',
+                'start_date',
+                'end_date',
+                'createdAt',
+            ],
+            include: [
+                {
+                    model: ComentCardRespond,
+                    as: 'respuestas_coment_card',
+                    include: [
+                        {
+                            model: ComentCardAnswers,
+                            as: 'respuestas',
+                            include: [
+                                {
+                                    model: ComentCardQuestions,
+                                    as: 'pregunta',
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+            order: [['start_date', 'DESC']],
+        });
     }
 
     static async getAllComentCardsForLink(cardQrId) {
-        try {
-            const result = await ComentCardRespond.findAll({
-                where: { cardQrId },
-                attributes: [
-                    'id',
-                    'nombre_completo',
-                    'cabin',
-                    'isSubmited',
-                    'createdAt',
-                ],
-                include: [
-                    {
-                        model: ComentCardAnswers,
-                        attributes: ['answer'],
-                        as: 'respuestas',
-                        include: [
-                            {
-                                model: ComentCardQuestions,
-                                attributes: ['id', 'title'],
-                                as: 'pregunta',
-                            },
-                        ],
-                    },
-                ]
-            });
-
-            // Ordenar manualmente las respuestas por el id de la pregunta
-            const orderedResult = result.map(respond => {
-                const sortedRespuestas = [...respond.respuestas].sort((a, b) => {
-                    return a.pregunta.id - b.pregunta.id;
-                });
-                return {
-                    ...respond.toJSON(),
-                    respuestas: sortedRespuestas
-                };
-            });
-            return orderedResult;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    static async getComentCardByQr(id) {
-        try {
-            const result = await ComentCardQR.findOne({
-                where: { id },
-                //attributes: ['id', 'comentCardYachtId', 'startDate'],
-                include: [
-                    {
-                        model: ComentCardYacht,
-                        as: 'card_yacht',
-                        attributes: ['id'],
-                        include: [{
-                            model: ComentCard,
-                            as: 'coment_card',
-                            attributes: ['id', 'name'],
-                            include: [{
-                                model: ComentCardQuestions,
-                                as: 'preguntas',
-                                attributes: ['id', 'title', 'type', 'required', 'scaleMin', 'scaleMax', 'options']
-                            }]
-                        }]
-                    },
-
-                ]
-            });
-
-            return result;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    static async getComentCardByDates(comentCardYachtId, toDay) {
-        const date = new Date(toDay);
-        date.setUTCHours(0, 0, 0, 0); // para evitar desfases de zona
-
-        try {
-            const result = await ComentCardQR.findOne({
-                where: {
-                    comentCardYachtId,
-                    [Op.and]: [
-                        Sequelize.where(
-                            Sequelize.literal(`DATE_ADD(start_date, INTERVAL 1 DAY)`),
-                            { [Op.lte]: date }
-                        ),
-                        { endDate: { [Op.gte]: date } }
-                    ]
-                },
-                attributes: ['accessLink', 'startDate', 'endDate'],
-                include: [
-                    {
-                        model: ComentCardYacht,
-                        as: 'card_yacht',
-                        attributes: ['id'],
-                        include: [{
-                            model: Yacht,
-                            as: 'yate',
-                            attributes: ['code'],
-                        }]
-                    },
-                ]
-            });
-
-            return result;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    static async respondComentCard(info) {
-        const { responsesToInsert, passenger } = info;
-        const transaction = await db.transaction();
-        try {
-            const result = await ComentCardRespond.create(
+        const result = await ComentCardRespond.findAll({
+            where: { cardQrId },
+            attributes: [
+                'id',
+                'nombre_completo',
+                'cabin',
+                'isSubmited',
+                'createdAt',
+            ],
+            include: [
                 {
-                    cardQrId: passenger.cometCardQr,
+                    model: ComentCardAnswers,
+                    attributes: ['answer'],
+                    as: 'respuestas',
+                    include: [
+                        {
+                            model: ComentCardQuestions,
+                            attributes: ['id', 'title'],
+                            as: 'pregunta',
+                        },
+                    ],
+                },
+            ],
+        });
+
+        return result.map((response) => {
+            const plainResponse = response.toJSON();
+            plainResponse.respuestas.sort((first, second) =>
+                first.pregunta.id - second.pregunta.id
+            );
+            return plainResponse;
+        });
+    }
+
+    static getComentCardByQr(id) {
+        return ComentCardQR.findOne({
+            where: { id },
+            include: [
+                {
+                    model: ComentCardYacht,
+                    as: 'card_yacht',
+                    attributes: ['id'],
+                    include: [{
+                        model: ComentCard,
+                        as: 'coment_card',
+                        attributes: ['id', 'name'],
+                        include: [{
+                            model: ComentCardQuestions,
+                            as: 'preguntas',
+                            attributes: ['id', 'title', 'type', 'required', 'scaleMin', 'scaleMax', 'options'],
+                        }],
+                    }],
+                },
+            ],
+        });
+    }
+
+    static getComentCardByDates(yachtId, toDay) {
+        const date = new Date(toDay);
+        date.setUTCHours(0, 0, 0, 0);
+
+        return ComentCardQR.findOne({
+            where: {
+                [Op.and]: [
+                    Sequelize.where(
+                        Sequelize.literal('DATE_ADD(start_date, INTERVAL 1 DAY)'),
+                        { [Op.lte]: date }
+                    ),
+                    { endDate: { [Op.gte]: date } },
+                ],
+            },
+            attributes: ['accessLink', 'startDate', 'endDate'],
+            include: [
+                {
+                    model: ComentCardYacht,
+                    as: 'card_yacht',
+                    attributes: ['id'],
+                    where: { yachtId },
+                    required: true,
+                    include: [{
+                        model: Yacht,
+                        as: 'yate',
+                        attributes: ['code'],
+                    }],
+                },
+            ],
+        });
+    }
+
+    static respondComentCard({ responsesToInsert, passenger }) {
+        return db.transaction(async (transaction) => {
+            const response = await ComentCardRespond.create(
+                {
+                    cardQrId: passenger.cardQrId,
                     fullName: passenger.name,
                     cabin: passenger.cabin,
                     readPolitics: passenger.readPolitics,
-                    isSubmited: true
-                }, { transaction });
+                    isSubmited: true,
+                },
+                { transaction }
+            );
 
-            if (!result) {
-                throw new Error('No se pudo crear coment card');
+            if (responsesToInsert.length) {
+                await ComentCardAnswers.bulkCreate(
+                    responsesToInsert.map((answer) => ({
+                        respuestaId: response.id,
+                        ...answer,
+                    })),
+                    { transaction }
+                );
             }
-
-            await Promise.all(responsesToInsert.map((respuesta) =>
-                ComentCardAnswers.create({
-                    respuestaId: result.id,
-                    ...respuesta
-                }, { transaction })
-            ));
-
-            await transaction.commit();
-            return result;
-        } catch (error) {
-            await transaction.rollback();
-            throw new Error(error.message);
-        }
+            return response;
+        });
     }
 
-    static async getReportingByYacht(yachtId, startDate, endDate) {
-        try {
+    static getReportingByYacht(yachtId, startDate, endDate) {
+        const whereYacht = yachtId ? { yachtId } : {};
+        const whereDates = startDate && endDate
+            ? { startDate: { [Op.between]: [new Date(startDate), new Date(endDate)] } }
+            : {};
 
-            const whereYacht = {};
-            if (yachtId && yachtId !== "undefined" && yachtId !== "null") {
-                whereYacht.yachtId = yachtId;
-            }
-
-            const whereDates = {};
-            if ((startDate && (startDate !== "undefined" && startDate !== 'null')) && (endDate && (endDate !== "undefined" && endDate !== 'null'))) {
-                whereDates.startDate = {
-                    [Op.between]: [new Date(startDate), new Date(endDate)]
-                };
-            }
-
-            const result = await ComentCardRespond.findAll({
-                include: [
-                    {
-                        model: ComentCardQR,
-                        as: "coment_card",
-                        where: whereDates,
-                        required: true,
-                        attributes: ['code', 'name', 'startDate', 'endDate'],
-                        include: [
-                            {
-                                model: ComentCardYacht,
-                                as: "card_yacht",
-                                required: true,
-                                where: whereYacht,
-                                include: [
-                                    {
-                                        model: Yacht,
-                                        as: "yate",
-                                        required: true,
-                                        attributes: ['name'],
-                                    }]
-                            },]
-                    },
-                    {
-                        model: ComentCardAnswers,
-                        as: "respuestas",
-                        required: true,
-                        attributes: ['id', 'answer'],
-                        include: [
-                            {
-                                model: ComentCardQuestions,
-                                as: "pregunta",
-                                required: true,
-                                attributes: ['id', 'title'],
-                            },]
-                    },
-                ],
-            })
-            return result;
-        } catch (error) {
-            throw error;
-        }
+        return ComentCardRespond.findAll({
+            include: [
+                {
+                    model: ComentCardQR,
+                    as: 'coment_card',
+                    where: whereDates,
+                    required: true,
+                    attributes: ['code', 'name', 'startDate', 'endDate'],
+                    include: [
+                        {
+                            model: ComentCardYacht,
+                            as: 'card_yacht',
+                            required: true,
+                            where: whereYacht,
+                            include: [
+                                {
+                                    model: Yacht,
+                                    as: 'yate',
+                                    required: true,
+                                    attributes: ['name'],
+                                },
+                            ],
+                        },
+                    ],
+                },
+                {
+                    model: ComentCardAnswers,
+                    as: 'respuestas',
+                    required: true,
+                    attributes: ['id', 'answer'],
+                    include: [
+                        {
+                            model: ComentCardQuestions,
+                            as: 'pregunta',
+                            required: true,
+                            attributes: ['id', 'title'],
+                        },
+                    ],
+                },
+            ],
+        });
     }
-
-
 }
 
 module.exports = ComentCardService;
