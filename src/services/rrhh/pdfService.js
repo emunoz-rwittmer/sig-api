@@ -16,6 +16,12 @@ async function generateAndSavePDF(htmlContent, filePath, result, staffSignature,
     .replace('{valor_numero}', result.valor_numero)
     .replace('{numero_cuotas}', result.numero_cuotas)
     .replace('{motivo_prestamo}', result.motivo_prestamo)
+    
+    .replace('{periodo_vacaciones}', result.periodo_vacaciones)
+    .replace('{dias_vacaciones}', result.dias_vacaciones)
+    .replace('{inicio_vacaciones}', result.inicio_vacaciones)
+    .replace('{fin_vacaciones}', result.fin_vacaciones)
+
     .replace('{adjuntar_documento}', '')
     .replace('{vuelo_uno}', `Ruta: ${result.vuelo_uno}`)
     .replace('{fecha_vuelo_uno}', `Fecha: ${result.fecha_vuelo_uno}`)
