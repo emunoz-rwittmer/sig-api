@@ -121,7 +121,8 @@ const generateReportComentCards = async (req, res) => {
         });
 
         const baseHeaders = [
-            "Cogigo Crucero",
+            "Codigo Crucero",
+            "Crucero",
             "Yate",
             "Pasajero",
             "Cabina",
@@ -130,7 +131,7 @@ const generateReportComentCards = async (req, res) => {
             "Fecha fin crucero",
         ];
 
-        const defaultWidths = [10, 25, 30, 10, 25, 25, 25];
+        const defaultWidths = [10, 30, 25, 30, 10, 25, 25, 25];
         defaultWidths.forEach((w, i) => ws.column(i + 1).setWidth(w));
 
         baseHeaders.slice(7).forEach((_, i) => {
@@ -194,6 +195,7 @@ const generateReportComentCards = async (req, res) => {
             const row = 11 + idx;
             const style = idx % 2 === 0 ? infoZebraStyle : infoStyle;
             const id = item.coment_card?.code || "";
+            const cruise = item.coment_card?.name || "";
             const yate = item.coment_card.card_yacht.yate?.name || "";
             const pasajero = item.fullName || "";
             const cabina = item.cabin || "";
@@ -203,12 +205,13 @@ const generateReportComentCards = async (req, res) => {
 
             // Datos base
             ws.cell(row, 1).string(id).style(style);
-            ws.cell(row, 2).string(yate).style(style);
-            ws.cell(row, 3).string(pasajero).style(style);
-            ws.cell(row, 4).number(cabina).style(style);
-            ws.cell(row, 5).string(fecha_contestacion).style(style);
-            ws.cell(row, 6).string(startDate).style(style);
-            ws.cell(row, 7).string(endDate).style(style);
+            ws.cell(row, 2).string(cruise).style(style);
+            ws.cell(row, 3).string(yate).style(style);
+            ws.cell(row, 4).string(pasajero).style(style);
+            ws.cell(row, 5).number(cabina).style(style);
+            ws.cell(row, 6).string(fecha_contestacion).style(style);
+            ws.cell(row, 7).string(startDate).style(style);
+            ws.cell(row, 8).string(endDate).style(style);
 
 
             // === RESPUESTAS DINÁMICAS ===
