@@ -85,7 +85,8 @@ La respuesta de error resultante tiene esta forma:
 El retrofit de los controllers existentes al patrón nuevo se hace dominio
 por dominio en Fase 2. Dominios ya retrofiteados: `auth`, `staff`, `users`,
 `yachts`, `company`, `departaments`, `documentation`, `positions`, `roles`.
-Dominios de operaciones ya retrofiteados: `comentCard`.
+Dominios de operaciones ya retrofiteados: `comentCard`. Dominios de RRHH ya
+retrofiteados: `formats` (`regulations` y `trading` quedan pendientes).
 
 ## Validación de identificadores codificados
 
