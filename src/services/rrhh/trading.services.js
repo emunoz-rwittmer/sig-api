@@ -1,11 +1,19 @@
 
 const Trading = require('../../models/rrhh/trading.models');
+const { Sequelize } = require('sequelize');
 
 class TradingService {
     static async getAll() {
         try {
             const result = await Trading.findAll({
                 attributes: ['id', 'name', 'url', 'type', 'createdAt'],
+                order: [
+                    [
+                        Sequelize.literal('CASE WHEN id = 16 THEN 0 ELSE 1 END'),
+                        'ASC'
+                    ],
+                    ['id', 'ASC']
+                ]
             });
 
             return result;
