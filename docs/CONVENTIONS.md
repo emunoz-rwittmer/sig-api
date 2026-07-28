@@ -5,6 +5,24 @@ Este documento registra las convenciones establecidas en Fase 1 del refactor
 a código **nuevo o tocado** de aquí en adelante — no implican un retrofit
 automático del código existente.
 
+## Flujo Git por dominio
+
+Cada dominio o subproyecto del refactor se desarrolla en una rama propia,
+creada antes de empezar a registrar cambios. El nombre sigue el patrón
+`refactor/fase-<n>-<dominio>` (por ejemplo,
+`refactor/fase-2-operations-coment-card`).
+
+Los cambios se guardan en commits pequeños y coherentes por responsabilidad
+(implementación, pruebas/documentación y correcciones posteriores cuando
+aplique). Al terminar y verificar el dominio:
+
+1. Publicar la rama en `origin`.
+2. Abrir un pull request contra `trunk`.
+3. Incluir en el PR un resumen de cambios, bugs corregidos y verificaciones
+   ejecutadas.
+
+No mezclar archivos locales o cambios ajenos al dominio en sus commits.
+
 ## Manejo de errores y respuestas HTTP
 
 El estándar oficial usa `AppError` (`src/errors/AppError.js`) y el
@@ -67,6 +85,72 @@ La respuesta de error resultante tiene esta forma:
 El retrofit de los controllers existentes al patrón nuevo se hace dominio
 por dominio en Fase 2. Dominios ya retrofiteados: `auth`, `staff`, `users`,
 `yachts`, `company`, `departaments`, `documentation`, `positions`, `roles`.
+Dominios de operaciones ya retrofiteados: `comentCard`.
+
+## Validación de identificadores codificados
+
+Los parámetros de ruta que contienen IDs codificados con hashids se validan
+inmediatamente después de `Utils.decode`. `decode` puede devolver `undefined`
+o lanzar ante una entrada malformada; ambos casos son errores de entrada y
+deben producir un `AppError` con status 400, no llegar como `undefined` a
+Sequelize ni convertirse en un 500 accidental.
+
+```js
+const decodeId = (value, fieldName) => {
+    let id;
+    try {
+        id = Utils.decode(value);
+    } catch {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    return id;
+};
+```
+
+Mientras no exista un middleware compartido de parámetros, este helper puede
+vivir local al controller. No agregar validación HTTP a `Utils.js`: ese módulo
+se mantiene limitado a `encode`/`decode`.
+
+## Transacciones Sequelize
+
+Para código nuevo o tocado se prefieren las transacciones administradas:
+
+```js
+return db.transaction(async (transaction) => {
+    const parent = await Parent.create(data, { transaction });
+    await Child.bulkCreate(children, { transaction });
+    return parent;
+});
+```
+
+Sequelize hace `commit` cuando el callback termina y `rollback` cuando lanza.
+Esto evita duplicar `commit`/`rollback` y, especialmente, evita el antipatrón
+`throw new Error(error.message)`, que elimina el tipo, stack y metadata del
+error original. Para inserts homogéneos usar `bulkCreate` en vez de un
+`Promise.all(Model.create(...))`.
+
+## Atributos de modelo y nombres de columnas
+
+Cuando un modelo declara, por ejemplo, `options` con
+`field: 'opciones'`, los payloads de `create`/`update` deben usar el nombre del
+**atributo Sequelize** (`options`). El nombre físico (`opciones`) se reserva
+para SQL, asociaciones antiguas o selecciones que deliberadamente preservan
+un contrato de respuesta legado.
+
+Antes de cambiar un nombre usado en `attributes`, comprobar también la forma
+JSON pública: reemplazar `nombre_completo` por `fullName`, aunque ambos apunten
+a la misma columna, cambia el contrato exitoso del endpoint.
+
+## Validación de relaciones en payloads
+
+Una foreign key válida no demuestra que el recurso pertenezca al agregado que
+se está modificando. Al actualizar hijos o registrar respuestas, comprobar que
+sus IDs pertenezcan al padre indicado (por ejemplo, que una pregunta enviada
+pertenezca a la comment card del QR). La restricción FK solo garantiza que la
+pregunta existe; sin esta validación se pueden mezclar datos entre formularios.
 
 ## Sufijo de archivos de servicios
 
