@@ -1,8 +1,10 @@
 const path = require('path');
+const fs = require('fs');
 const xl = require("excel4node");
 const { formatDateToLocal } = require('../../utils/dateFormat');
+const AppError = require('../../errors/AppError');
 
-const generatReportEvaluationsByEmployed = async (req, res) => {
+const generatReportEvaluationsByEmployed = async (req, res, next) => {
     try {
         var fechaActual = new Date();
         var options = { day: '2-digit', month: '2-digit', year: 'numeric' };
@@ -19,6 +21,10 @@ const generatReportEvaluationsByEmployed = async (req, res) => {
 
         const { reportingEvaluationsByCrewState, dataForReport } = req.body
 
+        if (!Array.isArray(dataForReport?.averageReviews)) {
+            throw new AppError('dataForReport.averageReviews es requerido', 400);
+        }
+
         //COLUMNS
         ws.column(1).setWidth(25);
         ws.column(2).setWidth(40);
@@ -28,25 +34,28 @@ const generatReportEvaluationsByEmployed = async (req, res) => {
         ws.column(6).setWidth(15);
 
         //ADD IMAGE
-        ws.addImage({
-            path: path.join(__dirname, `../../../uploads/companies/logo_rwittmer.png`),
-            type: "picture",
-            position: {
-                type: 'twoCellAnchor',
-                from: {
-                    col: 1, // Columna de inicio
-                    colOff: 0, // Desplazamiento horizontal en celdas
-                    row: 1, // Fila de inicio
-                    rowOff: 0, // Desplazamiento vertical en celdas
+        const logoPath = path.join(__dirname, `../../../uploads/companies/logo_rwittmer.png`);
+        if (fs.existsSync(logoPath)) {
+            ws.addImage({
+                path: logoPath,
+                type: "picture",
+                position: {
+                    type: 'twoCellAnchor',
+                    from: {
+                        col: 1, // Columna de inicio
+                        colOff: 0, // Desplazamiento horizontal en celdas
+                        row: 1, // Fila de inicio
+                        rowOff: 0, // Desplazamiento vertical en celdas
+                    },
+                    to: {
+                        col: 2, // Columna de final
+                        colOff: 0, // Desplazamiento horizontal en celdas
+                        row: 5, // Fila de final
+                        rowOff: 0, // Desplazamiento vertical en celdas
+                    },
                 },
-                to: {
-                    col: 2, // Columna de final
-                    colOff: 0, // Desplazamiento horizontal en celdas
-                    row: 5, // Fila de final
-                    rowOff: 0, // Desplazamiento vertical en celdas
-                },
-            },
-        });
+            });
+        }
         var titleStyle = wb.createStyle({
             alignment: {
                 horizontal: ["center"],
@@ -124,8 +133,7 @@ const generatReportEvaluationsByEmployed = async (req, res) => {
         );
         wb.write(`report.xlsx`, res);
     } catch (error) {
-        
-        res.status(400).json(error.message)
+        next(error);
     }
 
 }

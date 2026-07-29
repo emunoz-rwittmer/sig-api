@@ -2,8 +2,22 @@ const xl = require("excel4node");
 const { formatDateToLocal } = require("../../utils/dateFormat");
 const Utils = require("../../utils/Utils");
 const WarehouseService = require("../../services/operations/inventory/warehouse.services");
+const AppError = require("../../errors/AppError");
 
-const generateTransactionsExcel = async (req, res) => {
+const decodeId = (value, fieldName) => {
+    let id;
+    try {
+        id = Utils.decode(value);
+    } catch {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    return id;
+};
+
+const generateTransactionsExcel = async (req, res, next) => {
     try {
 
         var fechaActual = new Date();
@@ -13,13 +27,14 @@ const generateTransactionsExcel = async (req, res) => {
         });
         var ws = wb.addWorksheet("pedidos");
 
-        const stockId = Utils.decode(req.params.stock_id);
+        const stockId = decodeId(req.params.stock_id, 'stock_id');
         const result = await WarehouseService.getStockProduct(stockId);
-        const transactions = result?.product?.transactions
 
-        if (!result || result === 0) {
-            return res.status(400).json({ message: "No hay items en la orden." });
+        if (!result) {
+            throw new AppError('Stock no encontrado', 404);
         }
+
+        const transactions = result?.product?.transactions
 
         //COLUMNS
         ws.column(1).setWidth(25);
@@ -101,8 +116,7 @@ const generateTransactionsExcel = async (req, res) => {
         );
         wb.write(`report.xlsx`, res);
     } catch (error) {
-        console.log(error)
-        res.status(400).json(error.message)
+        next(error);
     }
 
 }

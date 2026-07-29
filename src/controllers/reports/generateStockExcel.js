@@ -1,6 +1,7 @@
 const xl = require("excel4node");
+const AppError = require("../../errors/AppError");
 
-const generateStockExcel = async (req, res) => {
+const generateStockExcel = async (req, res, next) => {
     try {
         var fechaActual = new Date();
         var options = { day: '2-digit', month: '2-digit', year: 'numeric' };
@@ -16,8 +17,8 @@ const generateStockExcel = async (req, res) => {
 
         const data = req.body
 
-        if (!data || data === 0) {
-            return res.status(400).json({ message: "No hay items en la orden." });
+        if (!Array.isArray(data?.products)) {
+            throw new AppError('products es requerido', 400);
         }
 
         const getObservation = (quantity, min, max) => {
@@ -164,8 +165,7 @@ const generateStockExcel = async (req, res) => {
         );
         wb.write(`report.xlsx`, res);
     } catch (error) {
-        console.log(error)
-        res.status(400).json(error.message)
+        next(error);
     }
 
 }

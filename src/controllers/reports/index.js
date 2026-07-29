@@ -1,4 +1,3 @@
-const { generateRequestExcel } = require("./generateRequestExcel");
 const { generateOrderExcel } = require("./generateOrderExcel");
 const { generateStockExcel } = require("./generateStockExcel");
 const { generateTransactionsExcel } = require('./generateTransactionsExcel');
@@ -7,7 +6,6 @@ const { generatReportEvaluationsByEmployed } = require("./generatReportEvaluatio
 const { generateReportComentCards } = require("./generateReportComentCards");
 
 const excelReports = {
-    generateRequestExcel,
     generateOrderExcel,
     generateStockExcel,
     generateTransactionsExcel,
