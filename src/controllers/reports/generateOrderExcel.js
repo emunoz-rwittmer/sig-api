@@ -1,9 +1,24 @@
 const path = require('path');
+const fs = require('fs');
 const xl = require("excel4node");
 const Utils = require("../../utils/Utils");
 const ReportService = require("../../services/reports/reports.services");
+const AppError = require("../../errors/AppError");
 
-const generateOrderExcel = async (req, res) => {
+const decodeId = (value, fieldName) => {
+    let id;
+    try {
+        id = Utils.decode(value);
+    } catch {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    return id;
+};
+
+const generateOrderExcel = async (req, res, next) => {
     try {
         var fechaActual = new Date();
         var options = { day: '2-digit', month: '2-digit', year: 'numeric' };
@@ -16,12 +31,16 @@ const generateOrderExcel = async (req, res) => {
             dateFormat: "dd/mm/yyyy hh:mm:ss",
         });
         var ws = wb.addWorksheet("pedidos");
-        const order_id = Utils.decode(req.params.order_id);
+        const order_id = decodeId(req.params.order_id, 'order_id');
         const result = await ReportService.getOrderReport(order_id);
+
+        if (!result) {
+            throw new AppError('Orden no encontrada', 404);
+        }
 
         // Verifica que result.orderItems no esté vacío o undefined
         if (!result.orderItems || result.orderItems.length === 0) {
-            return res.status(400).json({ message: "No hay items en la orden." });
+            throw new AppError('No hay items en la orden.', 400);
         }
 
         //COLUMNS
@@ -33,25 +52,30 @@ const generateOrderExcel = async (req, res) => {
         ws.column(6).setWidth(15);
 
         //ADD IMAGE
-        ws.addImage({
-            path: path.join(__dirname, `../../..${result.company?.logo}`),
-            type: "picture",
-            position: {
-                type: 'twoCellAnchor',
-                from: {
-                    col: 1, // Columna de inicio
-                    colOff: 0, // Desplazamiento horizontal en celdas
-                    row: 1, // Fila de inicio
-                    rowOff: 0, // Desplazamiento vertical en celdas
+        const logoPath = result.company?.logo
+            ? path.join(__dirname, `../../..${result.company.logo}`)
+            : null;
+        if (logoPath && fs.existsSync(logoPath)) {
+            ws.addImage({
+                path: logoPath,
+                type: "picture",
+                position: {
+                    type: 'twoCellAnchor',
+                    from: {
+                        col: 1, // Columna de inicio
+                        colOff: 0, // Desplazamiento horizontal en celdas
+                        row: 1, // Fila de inicio
+                        rowOff: 0, // Desplazamiento vertical en celdas
+                    },
+                    to: {
+                        col: 2, // Columna de final
+                        colOff: 0, // Desplazamiento horizontal en celdas
+                        row: 5, // Fila de final
+                        rowOff: 0, // Desplazamiento vertical en celdas
+                    },
                 },
-                to: {
-                    col: 2, // Columna de final
-                    colOff: 0, // Desplazamiento horizontal en celdas
-                    row: 5, // Fila de final
-                    rowOff: 0, // Desplazamiento vertical en celdas
-                },
-            },
-        });
+            });
+        }
         var titleStyle = wb.createStyle({
             alignment: {
                 horizontal: ["center"],
@@ -108,7 +132,7 @@ const generateOrderExcel = async (req, res) => {
             .string(`FECHA DE SOLICITUD: ${fechaFormateada(result.createdAt)}`)
 
 
-        // CABECERA DETALLE 
+        // CABECERA DETALLE
         ws.cell(13, 1).string("Producto").style(headerLeftWrapStyle);
         ws.cell(13, 2).string("Cantidad").style(headerLeftWrapStyle);
         ws.cell(13, 3).string("Estatus").style(headerLeftWrapStyle);
@@ -129,7 +153,7 @@ const generateOrderExcel = async (req, res) => {
         );
         wb.write(`report.xlsx`, res);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 
 }

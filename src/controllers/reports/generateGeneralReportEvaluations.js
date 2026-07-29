@@ -5,8 +5,22 @@ const { formatDateToLocal } = require('../../utils/dateFormat');
 const EvaluationService = require('../../services/operations/surveys/evaluations.services');
 const Utils = require('../../utils/Utils');
 const SurveyScoring = require('../../utils/surveyScoring');
+const AppError = require('../../errors/AppError');
 
-const generateGeneralReportEvaluations = async (req, res) => {
+const decodeId = (value, fieldName) => {
+    let id;
+    try {
+        id = Utils.decode(value);
+    } catch {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    return id;
+};
+
+const generateGeneralReportEvaluations = async (req, res, next) => {
     try {
         const fechaActual = new Date();
         const options = { day: "2-digit", month: "2-digit", year: "numeric" };
@@ -15,13 +29,13 @@ const generateGeneralReportEvaluations = async (req, res) => {
         const wb = new xl.Workbook();
         const ws = wb.addWorksheet("reporte general");
 
-        const companyId = Utils.decode(req.params.company_id);
+        const companyId = decodeId(req.params.company_id, 'company_id');
         const startDate = req.query.startDate;
         const endDate = req.query.endDate;
 
         const result = await EvaluationService.getEvaluationsByCompany(companyId, startDate, endDate)
         if (!result || result.length === 0) {
-            return res.status(400).json("No hay registros.");
+            throw new AppError('No hay registros.', 400);
         }
 
         // === COLORES POR FORMULARIO ===
@@ -96,25 +110,28 @@ const generateGeneralReportEvaluations = async (req, res) => {
         });
 
         //ADD IMAGE
-        ws.addImage({
-            path: path.join(__dirname, `../../../uploads/companies/logo_rwittmer.png`),
-            type: "picture",
-            position: {
-                type: 'twoCellAnchor',
-                from: {
-                    col: 1, // Columna de inicio
-                    colOff: 0, // Desplazamiento horizontal en celdas
-                    row: 1, // Fila de inicio
-                    rowOff: 0, // Desplazamiento vertical en celdas
+        const logoPath = path.join(__dirname, `../../../uploads/companies/logo_rwittmer.png`);
+        if (fs.existsSync(logoPath)) {
+            ws.addImage({
+                path: logoPath,
+                type: "picture",
+                position: {
+                    type: 'twoCellAnchor',
+                    from: {
+                        col: 1, // Columna de inicio
+                        colOff: 0, // Desplazamiento horizontal en celdas
+                        row: 1, // Fila de inicio
+                        rowOff: 0, // Desplazamiento vertical en celdas
+                    },
+                    to: {
+                        col: 2, // Columna de final
+                        colOff: 0, // Desplazamiento horizontal en celdas
+                        row: 6, // Fila de final
+                        rowOff: 0, // Desplazamiento vertical en celdas
+                    },
                 },
-                to: {
-                    col: 2, // Columna de final
-                    colOff: 0, // Desplazamiento horizontal en celdas
-                    row: 6, // Fila de final
-                    rowOff: 0, // Desplazamiento vertical en celdas
-                },
-            },
-        });
+            });
+        }
 
         //TITULOS
         ws.cell(4, 1, 4, 4, true).string('REPORTE GENERAL DE DESEMPEÑO').style(titleStyle);
@@ -181,8 +198,7 @@ const generateGeneralReportEvaluations = async (req, res) => {
             });
         });
     } catch (error) {
-        console.error("Error al generar Excel:", error);
-        res.status(500).json({ error: error.message });
+        next(error);
     }
 
 }
