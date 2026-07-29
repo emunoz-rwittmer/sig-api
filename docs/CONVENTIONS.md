@@ -85,8 +85,8 @@ La respuesta de error resultante tiene esta forma:
 El retrofit de los controllers existentes al patrón nuevo se hace dominio
 por dominio en Fase 2. Dominios ya retrofiteados: `auth`, `staff`, `users`,
 `yachts`, `company`, `departaments`, `documentation`, `positions`, `roles`.
-Dominios de operaciones ya retrofiteados: `comentCard`. Dominios de RRHH ya
-retrofiteados: `formats` (`regulations` y `trading` quedan pendientes).
+Dominios de operaciones ya retrofiteados: `comentCard`. Dominio RRHH completo:
+`formats`, `regulations`, `trading`.
 
 ## Validación de identificadores codificados
 
@@ -114,6 +114,21 @@ const decodeId = (value, fieldName) => {
 Mientras no exista un middleware compartido de parámetros, este helper puede
 vivir local al controller. No agregar validación HTTP a `Utils.js`: ese módulo
 se mantiene limitado a `encode`/`decode`.
+
+## Codificación de IDs en la respuesta (PK-encoding)
+
+Al reasignar el id codificado (hashid) de una instancia Sequelize antes de
+serializar la respuesta, usar siempre el atributo interno:
+
+```js
+result.dataValues.id = Utils.encode(result.dataValues.id);
+```
+
+`result.id = Utils.encode(result.id)` (sin `.dataValues`) es un no-op sobre el
+campo PK: la asignación no se refleja en el JSON que `res.json` serializa, y el
+endpoint devuelve el id numérico crudo en vez del hashid. Este bug ya apareció
+de forma independiente en dos dominios distintos (`catalogs` y `rrhh/trading`)
+antes de documentarse aquí.
 
 ## Transacciones Sequelize
 

@@ -1,4 +1,3 @@
-const { mode } = require('mathjs');
 const Company = require('../../models/catalogs/company.models');
 const Departaments = require('../../models/catalogs/departament.models');
 const Positions = require('../../models/catalogs/positions.models');
@@ -162,7 +161,6 @@ class RegulationService {
             await transaction.commit();
             return result;
         } catch (error) {
-            console.error('Error creating regulation:', error);
             await transaction.rollback();
             throw error;
         }
@@ -205,7 +203,7 @@ class RegulationService {
         try {
             const result = await StaffReadRegulation.findOne({ where: { id } });
             if (result) {
-                result.update({ read: true })
+                await result.update({ read: true })
             }
             return result;
         } catch (error) {
