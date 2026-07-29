@@ -86,7 +86,9 @@ El retrofit de los controllers existentes al patrón nuevo se hace dominio
 por dominio en Fase 2. Dominios ya retrofiteados: `auth`, `staff`, `users`,
 `yachts`, `company`, `departaments`, `documentation`, `positions`, `roles`.
 Dominios de operaciones ya retrofiteados: `comentCard`. Dominio RRHH completo:
-`formats`, `regulations`, `trading`.
+`formats`, `regulations`, `trading`. Dominio `reports` retrofiteado (6
+endpoints; `GET /reports/request/:request_id` se eliminó por dead code
+irreparable, confirmado por el usuario).
 
 ## Validación de identificadores codificados
 
@@ -129,6 +131,18 @@ campo PK: la asignación no se refleja en el JSON que `res.json` serializa, y el
 endpoint devuelve el id numérico crudo en vez del hashid. Este bug ya apareció
 de forma independiente en dos dominios distintos (`catalogs` y `rrhh/trading`)
 antes de documentarse aquí.
+
+## Guard de imagen antes de `addImage`/paths de archivo
+
+Cualquier `ws.addImage({ path, ... })` (excel4node) o inserción de imagen
+equivalente en generación de PDF debe comprobar `fs.existsSync(path)` antes
+de usar el archivo. Un logo faltante en disco no debería tumbar el reporte
+completo (excel4node revienta de forma síncrona vía `image-size` si el
+archivo no existe); si falta, se omite la imagen y se genera el resto del
+contenido igual. Patrón ya usado en
+`src/services/operations/shippingGuide/pdfService.js` y
+`src/services/bar/cruiseReportPDF.services.js`; aplicado también en
+`src/controllers/reports/*.js`.
 
 ## Transacciones Sequelize
 
