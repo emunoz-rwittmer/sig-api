@@ -20,6 +20,8 @@ const ComentCardQR = require('../../../src/models/operations/comentCard/cardQR.m
 const ComentCardRespond = require('../../../src/models/operations/comentCard/comentCardRespond.models');
 const ComentCardAnswers = require('../../../src/models/operations/comentCard/comentCardAnswers.models');
 const Utils = require('../../../src/utils/Utils');
+const Positions = require('../../../src/models/catalogs/positions.models');
+const Staffervice = require('../../../src/services/catalogs/staff.services');
 
 let app;
 let token;
@@ -220,6 +222,36 @@ describe('Reports — evaluations general report', () => {
 
         expect(response.status).toBe(400);
         expect(response.body.error.message).toBe('No hay registros.');
+    });
+});
+
+describe('Staffervice — getPositionByLastName', () => {
+    it('devuelve el nombre del cargo para un apellido existente', async () => {
+        const departament = await createDepartment();
+        const position = await createPosition(`Capataz ${suffix()}`);
+        const lastName = `Chavez${suffix()} Ortiz`;
+
+        await Staff.create({
+            firstName: 'Rene Alberto',
+            lastName,
+            email: `staff-lookup-${suffix()}@example.com`,
+            cellPhone: '0987654321',
+            password: 'Sup3rSecret!',
+            departamentId: departament.id,
+            positionId: position.id,
+            contractType: 'Fijo',
+            active: true,
+        });
+
+        const cargo = await Staffervice.getPositionByLastName(lastName);
+
+        expect(cargo).toBe(position.name);
+    });
+
+    it('devuelve null cuando no existe personal activo con ese apellido', async () => {
+        const cargo = await Staffervice.getPositionByLastName(`Apellido Inexistente ${suffix()}`);
+
+        expect(cargo).toBeNull();
     });
 });
 

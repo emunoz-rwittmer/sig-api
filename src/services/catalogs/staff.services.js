@@ -64,6 +64,26 @@ class Staffervice {
         }
     }
 
+    static async getPositionByLastName(lastName) {
+        try {
+            if (!lastName) return null;
+
+            const staff = await Staff.findOne({
+                where: { lastName, active: true },
+                attributes: ['id', 'lastName'],
+                include: [{
+                    model: Positions,
+                    as: 'staff_position',
+                    attributes: ['id', 'name'],
+                }],
+            });
+
+            return staff?.staff_position?.name || null;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     static async getStaffCompanies(staffId) {
         try {
             const result = await StaffCompany.findAll({
