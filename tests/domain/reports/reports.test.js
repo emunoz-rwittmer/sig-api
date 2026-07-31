@@ -22,6 +22,7 @@ const ComentCardAnswers = require('../../../src/models/operations/comentCard/com
 const Utils = require('../../../src/utils/Utils');
 const Positions = require('../../../src/models/catalogs/positions.models');
 const Staffervice = require('../../../src/services/catalogs/staff.services');
+const XLSX = require('xlsx');
 
 let app;
 let token;
@@ -252,6 +253,108 @@ describe('Staffervice — getPositionByLastName', () => {
         const cargo = await Staffervice.getPositionByLastName(`Apellido Inexistente ${suffix()}`);
 
         expect(cargo).toBeNull();
+    });
+});
+
+describe('Reports — evaluations general report — cargo, fecha, yate y tipos de respuesta', () => {
+    it('resuelve el cargo del evaluado, formatea fecha/yate y respeta el tipo de cada respuesta', async () => {
+        const caseSuffix = suffix();
+        const { company } = await createCompanyWithYacht(`Eval Fixes Company ${caseSuffix}`, 'TIP TOP II');
+        const departament = await createDepartment();
+        const position = await createPosition(`Marinero ${caseSuffix}`);
+        const evaluatedLastName = `Fixes${caseSuffix} Ramirez`;
+
+        await Staff.create({
+            firstName: 'Sofia Elena',
+            lastName: evaluatedLastName,
+            email: `staff-fixes-${caseSuffix}@example.com`,
+            cellPhone: '0912345678',
+            password: 'Sup3rSecret!',
+            departamentId: departament.id,
+            positionId: position.id,
+            contractType: 'Fijo',
+            active: true,
+        });
+
+        const form = await Form.create({ name: `Form Fixes ${caseSuffix}`, positions: [] });
+        const scaleQuestion = await FormQuestion.create({
+            formId: form.id,
+            title: 'Calificacion general',
+            type: 'scale',
+        });
+        const textQuestion = await FormQuestion.create({
+            formId: form.id,
+            title: 'Comentario adicional',
+            type: 'text',
+        });
+
+        const matchedRespond = await FormRespond.create({
+            companyId: company.id,
+            formId: form.id,
+            state: 'FINALIZADO',
+            evaluator: 'Evaluador Fixes',
+            evaluated: `Sofia Elena ${evaluatedLastName}`,
+            expirationDate: new Date('2026-08-01'),
+        });
+        await FormAnswers.create({ respuestaId: matchedRespond.id, questionId: scaleQuestion.id, answer: '5' });
+        await FormAnswers.create({ respuestaId: matchedRespond.id, questionId: textQuestion.id, answer: 'Buen trabajo en general' });
+
+        const unmatchedRespond = await FormRespond.create({
+            companyId: company.id,
+            formId: form.id,
+            state: 'FINALIZADO',
+            evaluator: 'Evaluador Fixes',
+            evaluated: `Persona SinCargo${caseSuffix} Ficticia`,
+            expirationDate: new Date('2026-08-01'),
+        });
+        await FormAnswers.create({ respuestaId: unmatchedRespond.id, questionId: scaleQuestion.id, answer: 'Excelente' });
+
+        const response = await auth(
+            request(app).get(`/api/reports/evaluations/generalReport/${Utils.encode(company.id)}`)
+        ).buffer(true).parse((res, callback) => {
+            const chunks = [];
+            res.on('data', (chunk) => chunks.push(chunk));
+            res.on('end', () => callback(null, Buffer.concat(chunks)));
+        });
+
+        expect(response.status).toBe(200);
+
+        const workbook = XLSX.read(response.body, { type: 'buffer', cellDates: true, cellNF: true });
+        const sheet = workbook.Sheets['reporte general'];
+
+        const findRowByEvaluado = (evaluadoValue) => {
+            for (let row = 11; row <= 30; row += 1) {
+                const cell = sheet[`C${row}`];
+                if (cell && cell.v === evaluadoValue) return row;
+            }
+            return null;
+        };
+
+        const matchedRow = findRowByEvaluado(`Sofia Elena ${evaluatedLastName}`);
+        const unmatchedRow = findRowByEvaluado(`Persona SinCargo${caseSuffix} Ficticia`);
+
+        expect(matchedRow).not.toBeNull();
+        expect(unmatchedRow).not.toBeNull();
+
+        // Cargo: match real vs. sin match
+        expect(sheet[`D${matchedRow}`].v).toBe(position.name);
+        expect(sheet[`D${unmatchedRow}`].v).toBe('Sin Datos');
+
+        // Yate: capitalizado
+        expect(sheet[`E${matchedRow}`].v).toBe('Tip Top II');
+
+        // Fecha: formato de fecha real en vez de serial crudo
+        expect(sheet[`F${matchedRow}`].z).toBe('dd/mm/yyyy');
+
+        // Respuestas: numerica como number, texto como string
+        expect(sheet[`H${matchedRow}`].t).toBe('n');
+        expect(sheet[`H${matchedRow}`].v).toBe(5);
+        expect(sheet[`I${matchedRow}`].t).toBe('s');
+        expect(sheet[`I${matchedRow}`].v).toBe('Buen trabajo en general');
+
+        // Sin tercera respuesta: columna vacia, no texto de relleno
+        const emptyCell = sheet[`J${matchedRow}`];
+        expect(!emptyCell || emptyCell.v === '' || emptyCell.v === undefined).toBe(true);
     });
 });
 

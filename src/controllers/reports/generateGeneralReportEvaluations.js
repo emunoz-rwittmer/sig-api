@@ -6,6 +6,8 @@ const EvaluationService = require('../../services/operations/surveys/evaluations
 const Utils = require('../../utils/Utils');
 const SurveyScoring = require('../../utils/surveyScoring');
 const AppError = require('../../errors/AppError');
+const Staffervice = require('../../services/catalogs/staff.services');
+const { extractApellido, capitalizeYachtName } = require('../../utils/reportFormatting');
 
 const decodeId = (value, fieldName) => {
     let id;
@@ -54,6 +56,11 @@ const generateGeneralReportEvaluations = async (req, res, next) => {
 
         const infoStyle = wb.createStyle({
             font: { color: "#000000" },
+        });
+
+        const dateStyle = wb.createStyle({
+            font: { color: "#000000" },
+            numberFormat: "dd/mm/yyyy",
         });
 
         const formTitleStyles = colors.map(color =>
@@ -150,6 +157,16 @@ const generateGeneralReportEvaluations = async (req, res, next) => {
             ws.cell(10, i + 1).string(h).style(headerStyle);
         });
 
+        // === RESOLVER CARGO DEL EVALUADO (una consulta por apellido unico) ===
+        const uniqueApellidos = [...new Set(
+            result.map(item => extractApellido(item.evaluated)).filter(Boolean)
+        )];
+
+        const cargoEntries = await Promise.all(
+            uniqueApellidos.map(async apellido => [apellido, await Staffervice.getPositionByLastName(apellido)])
+        );
+        const cargoMap = new Map(cargoEntries);
+
         // === CONTENIDO ===
         // Llenar las filas con los datos
         result.forEach((item, idx) => {
@@ -157,31 +174,33 @@ const generateGeneralReportEvaluations = async (req, res, next) => {
             const formulario = item.formulario?.name || "Sin Datos";
             const evaluador = item.evaluator;
             const evaluado = item.evaluated;
-            const empresa = item.empresa?.name || "N/A";
-            const yate = item.empresa?.yacht?.name || "N/A";
-            const fecha = formatDateToLocal(item.updatedAt) || "Sin Datos";
+            const cargo = cargoMap.get(extractApellido(evaluado)) || "Sin Datos";
+            const yate = capitalizeYachtName(item.empresa?.yacht?.name) || "N/A";
+            const fecha = item.updatedAt;
             const estado = item.state || "Sin Datos";
 
             // Datos base
             ws.cell(row, 1).string(formulario).style(infoStyle);
             ws.cell(row, 2).string(evaluador).style(infoStyle);
             ws.cell(row, 3).string(evaluado).style(infoStyle);
-            ws.cell(row, 4).string(empresa).style(infoStyle);
+            ws.cell(row, 4).string(cargo).style(infoStyle);
             ws.cell(row, 5).string(yate).style(infoStyle);
-            ws.cell(row, 6).string(fecha).style(infoStyle);
+            ws.cell(row, 6).date(fecha).style(dateStyle);
             ws.cell(row, 7).string(estado).style(infoStyle);
 
             // Obtén todas las respuestas de la evaluación
             const respuestas = item.respuestas?.map(r => SurveyScoring.asignarPuntaje(r.answer)) || [];
 
-            // Llenar las 10 columnas de respuestas
+            // Llenar las 10 columnas de respuestas, respetando el tipo (numero vs texto)
             for (let i = 0; i < 10; i++) {
                 const respuesta = respuestas[i];
-                const valorFinal =
-                    respuesta === null || respuesta === undefined || respuesta === ''
-                        ? "Sin respuesta"
-                        : respuesta;
-                ws.cell(row, 8 + i).string(String(valorFinal)).style(infoStyle);
+                if (respuesta === null || respuesta === undefined || respuesta === '') {
+                    ws.cell(row, 8 + i).string('').style(infoStyle);
+                } else if (typeof respuesta === 'number') {
+                    ws.cell(row, 8 + i).number(respuesta).style(infoStyle);
+                } else {
+                    ws.cell(row, 8 + i).string(String(respuesta)).style(infoStyle);
+                }
             }
         });
 
