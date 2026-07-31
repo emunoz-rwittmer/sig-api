@@ -1,7 +1,7 @@
 const xl = require("excel4node");
 const path = require("path");
 const fs = require("fs");
-const { formatDateToLocal } = require('../../utils/dateFormat');
+const { formatDateToLocal, normalizeDateToDayStart } = require('../../utils/dateFormat');
 const EvaluationService = require('../../services/operations/surveys/evaluations.services');
 const Utils = require('../../utils/Utils');
 const SurveyScoring = require('../../utils/surveyScoring');
@@ -200,7 +200,7 @@ const generateGeneralReportEvaluations = async (req, res, next) => {
             if (fecha === null || fecha === undefined) {
                 ws.cell(row, 6).string("Sin Datos").style(infoStyle);
             } else {
-                ws.cell(row, 6).date(fecha).style(dateStyle);
+                ws.cell(row, 6).date(normalizeDateToDayStart(fecha)).style(dateStyle);
             }
             ws.cell(row, 7).string(estado).style(infoStyle);
 

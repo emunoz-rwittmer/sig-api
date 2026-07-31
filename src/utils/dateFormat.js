@@ -6,6 +6,15 @@ function formatDateToLocal(date) {
     return `${day}/${month}/${year}`;
 }
 
+function normalizeDateToDayStart(dateValue) {
+    if (!dateValue) return null;
+
+    const normalizedDate = new Date(dateValue);
+    normalizedDate.setHours(0, 0, 0, 0);
+
+    return normalizedDate;
+}
+
 function formatMonthYear(dateValue) {
     if (!dateValue) return '';
 
@@ -28,4 +37,4 @@ function formatMonthYear(dateValue) {
     return `${dayStr} de ${monthStr} del ${yearStr}`;
 }
 
-module.exports = { formatDateToLocal, formatMonthYear };
+module.exports = { formatDateToLocal, normalizeDateToDayStart, formatMonthYear };
