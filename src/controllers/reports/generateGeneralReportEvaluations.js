@@ -58,10 +58,10 @@ const generateGeneralReportEvaluations = async (req, res, next) => {
             font: { color: "#000000" },
         });
 
-        // const dateStyle = wb.createStyle({
-        //     font: { color: "#000000" },
-        //     numberFormat: "dd/mm/yyyy",
-        // });
+        const dateStyle = wb.createStyle({
+            font: { color: "#000000" },
+            numberFormat: "dd-mmm-yyyy",
+        });
 
         const formTitleStyles = colors.map(color =>
             wb.createStyle({
@@ -200,7 +200,7 @@ const generateGeneralReportEvaluations = async (req, res, next) => {
             if (fecha === null || fecha === undefined) {
                 ws.cell(row, 6).string("Sin Datos").style(infoStyle);
             } else {
-                ws.cell(row, 6).date(normalizeDateToDayStart(fecha)).style(infoStyle);
+                ws.cell(row, 6).date(normalizeDateToDayStart(fecha)).style(dateStyle);
             }
             ws.cell(row, 7).string(estado).style(infoStyle);
 
