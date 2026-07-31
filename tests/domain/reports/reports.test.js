@@ -322,6 +322,9 @@ describe('Reports — evaluations general report — cargo, fecha, yate y tipos 
         const workbook = XLSX.read(response.body, { type: 'buffer', cellDates: true, cellNF: true });
         const sheet = workbook.Sheets['reporte general'];
 
+        // Encabezado: la columna D debe decir "Cargo", no "Empresa"
+        expect(sheet['D10'].v).toBe('Cargo');
+
         const findRowByEvaluado = (evaluadoValue) => {
             for (let row = 11; row <= 30; row += 1) {
                 const cell = sheet[`C${row}`];

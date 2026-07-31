@@ -87,7 +87,7 @@ const generateGeneralReportEvaluations = async (req, res, next) => {
             "Formulario	",
             "Evaluador",
             "Evaluado",
-            "Empresa",
+            "Cargo",
             "Yate",
             "Fecha",
             "Estado",
@@ -185,7 +185,11 @@ const generateGeneralReportEvaluations = async (req, res, next) => {
             ws.cell(row, 3).string(evaluado).style(infoStyle);
             ws.cell(row, 4).string(cargo).style(infoStyle);
             ws.cell(row, 5).string(yate).style(infoStyle);
-            ws.cell(row, 6).date(fecha).style(dateStyle);
+            if (fecha === null || fecha === undefined) {
+                ws.cell(row, 6).string("Sin Datos").style(infoStyle);
+            } else {
+                ws.cell(row, 6).date(fecha).style(dateStyle);
+            }
             ws.cell(row, 7).string(estado).style(infoStyle);
 
             // Obtén todas las respuestas de la evaluación
