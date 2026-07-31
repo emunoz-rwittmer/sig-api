@@ -87,3 +87,25 @@ las columnas del Excel generado. Se corrigen los 5 sin tocar el resto del contro
   (pedido explícito del usuario).
 - No se resuelve el caso de evaluados con nombres que no sigan el patrón 2+2
   palabras (quedará como "Sin Datos" si no matchea, mismo tratamiento que "sin cargo").
+
+## Correcciones post-implementación
+
+- **Header de la columna Cargo:** este documento afirmaba (línea 16 original) que
+  el header ya decía "Cargo". Eso era incorrecto — una lectura contaminada por
+  cambios sin commitear de otra sesión, en el checkout original (no el worktree).
+  El header real en el código committeado decía **"Empresa"** y el contenido de
+  esa columna era `item.empresa?.name || "N/A"` (el nombre de la empresa, no un
+  string fijo "Testeandos"). La implementación corrigió el header a "Cargo" para
+  que coincida con el contenido (pedido explícito del usuario), y lo cubre con una
+  aserción de test sobre la celda `D10`.
+- **Lookup de cargo — de apellido a nombre completo:** la revisión final detectó
+  que resolver el cargo solo por `Staff.lastName` (vía `getPositionByLastName`) es
+  ambiguo: dos empleados activos distintos pueden compartir los mismos 2 apellidos,
+  y `findOne` devolvería uno arbitrario, atribuyendo el cargo equivocado en el
+  reporte sin ninguna señal de error. También quedaba una consulta por apellido
+  único en vez de una sola consulta batch. Se reemplazó por
+  `Staffervice.getPositionsByFullNames(namePairs)`, que hace **una sola consulta**
+  matcheando `{firstName, lastName}` (nombre y apellido completos) vía `Op.or`,
+  eliminando la ambigüedad y el N+1 en el mismo cambio. Cubierto por un test que
+  crea dos miembros de staff activos con el mismo apellido y verifica que cada uno
+  recibe su propio cargo correcto.
