@@ -7,7 +7,7 @@ const Utils = require('../../utils/Utils');
 const SurveyScoring = require('../../utils/surveyScoring');
 const AppError = require('../../errors/AppError');
 const Staffervice = require('../../services/catalogs/staff.services');
-const { extractApellido, capitalizeYachtName } = require('../../utils/reportFormatting');
+const { extractApellido, capitalizeYachtName, extractNombres } = require('../../utils/reportFormatting');
 
 const decodeId = (value, fieldName) => {
     let id;
@@ -157,15 +157,27 @@ const generateGeneralReportEvaluations = async (req, res, next) => {
             ws.cell(10, i + 1).string(h).style(headerStyle);
         });
 
-        // === RESOLVER CARGO DEL EVALUADO (una consulta por apellido unico) ===
-        const uniqueApellidos = [...new Set(
-            result.map(item => extractApellido(item.evaluated)).filter(Boolean)
-        )];
+        // === RESOLVER CARGO DEL EVALUADO (una sola consulta batch, nombre+apellido) ===
+        const uniqueEvaluados = [...new Set(result.map(item => item.evaluated).filter(Boolean))];
 
-        const cargoEntries = await Promise.all(
-            uniqueApellidos.map(async apellido => [apellido, await Staffervice.getPositionByLastName(apellido)])
+        const namePairs = uniqueEvaluados
+            .map(evaluado => ({
+                fullName: evaluado,
+                firstName: extractNombres(evaluado),
+                lastName: extractApellido(evaluado),
+            }))
+            .filter(({ firstName, lastName }) => firstName && lastName);
+
+        const cargoByFullName = await Staffervice.getPositionsByFullNames(
+            namePairs.map(({ firstName, lastName }) => ({ firstName, lastName }))
         );
-        const cargoMap = new Map(cargoEntries);
+
+        const cargoMap = new Map(
+            namePairs.map(({ fullName, firstName, lastName }) => [
+                fullName,
+                cargoByFullName.get(`${firstName} ${lastName}`) || null,
+            ])
+        );
 
         // === CONTENIDO ===
         // Llenar las filas con los datos
@@ -174,7 +186,7 @@ const generateGeneralReportEvaluations = async (req, res, next) => {
             const formulario = item.formulario?.name || "Sin Datos";
             const evaluador = item.evaluator;
             const evaluado = item.evaluated;
-            const cargo = cargoMap.get(extractApellido(evaluado)) || "Sin Datos";
+            const cargo = cargoMap.get(evaluado) || "Sin Datos";
             const yate = capitalizeYachtName(item.empresa?.yacht?.name) || "N/A";
             const fecha = item.updatedAt;
             const estado = item.state || "Sin Datos";

@@ -226,33 +226,57 @@ describe('Reports — evaluations general report', () => {
     });
 });
 
-describe('Staffervice — getPositionByLastName', () => {
-    it('devuelve el nombre del cargo para un apellido existente', async () => {
+describe('Staffervice — getPositionsByFullNames', () => {
+    it('devuelve el cargo correcto para cada nombre completo, incluso con apellidos compartidos', async () => {
         const departament = await createDepartment();
-        const position = await createPosition(`Capataz ${suffix()}`);
-        const lastName = `Chavez${suffix()} Ortiz`;
+        const positionA = await createPosition(`Capataz ${suffix()}`);
+        const positionB = await createPosition(`Timonel ${suffix()}`);
+        const sharedLastName = `Chavez${suffix()} Ortiz`;
 
         await Staff.create({
             firstName: 'Rene Alberto',
-            lastName,
-            email: `staff-lookup-${suffix()}@example.com`,
+            lastName: sharedLastName,
+            email: `staff-lookup-a-${suffix()}@example.com`,
             cellPhone: '0987654321',
             password: 'Sup3rSecret!',
             departamentId: departament.id,
-            positionId: position.id,
+            positionId: positionA.id,
+            contractType: 'Fijo',
+            active: true,
+        });
+        await Staff.create({
+            firstName: 'Monica Fernanda',
+            lastName: sharedLastName,
+            email: `staff-lookup-b-${suffix()}@example.com`,
+            cellPhone: '0987654322',
+            password: 'Sup3rSecret!',
+            departamentId: departament.id,
+            positionId: positionB.id,
             contractType: 'Fijo',
             active: true,
         });
 
-        const cargo = await Staffervice.getPositionByLastName(lastName);
+        const cargoMap = await Staffervice.getPositionsByFullNames([
+            { firstName: 'Rene Alberto', lastName: sharedLastName },
+            { firstName: 'Monica Fernanda', lastName: sharedLastName },
+        ]);
 
-        expect(cargo).toBe(position.name);
+        expect(cargoMap.get(`Rene Alberto ${sharedLastName}`)).toBe(positionA.name);
+        expect(cargoMap.get(`Monica Fernanda ${sharedLastName}`)).toBe(positionB.name);
     });
 
-    it('devuelve null cuando no existe personal activo con ese apellido', async () => {
-        const cargo = await Staffervice.getPositionByLastName(`Apellido Inexistente ${suffix()}`);
+    it('no incluye entradas para nombres sin match', async () => {
+        const cargoMap = await Staffervice.getPositionsByFullNames([
+            { firstName: 'Nombre', lastName: `Inexistente ${suffix()}` },
+        ]);
 
-        expect(cargo).toBeNull();
+        expect(cargoMap.size).toBe(0);
+    });
+
+    it('devuelve un Map vacio si no se pasan nombres', async () => {
+        const cargoMap = await Staffervice.getPositionsByFullNames([]);
+
+        expect(cargoMap.size).toBe(0);
     });
 });
 

@@ -8,6 +8,13 @@ const extractApellido = (fullName) => {
     return words.slice(-2).join(' ');
 };
 
+const extractNombres = (fullName) => {
+    if (!fullName || typeof fullName !== 'string') return '';
+    const words = fullName.trim().split(/\s+/).filter(Boolean);
+    if (words.length <= 2) return '';
+    return words.slice(0, -2).join(' ');
+};
+
 const capitalizeYachtName = (name) => {
     if (!name || typeof name !== 'string') return name;
     return name
@@ -22,4 +29,4 @@ const capitalizeYachtName = (name) => {
         .join(' ');
 };
 
-module.exports = { extractApellido, capitalizeYachtName };
+module.exports = { extractApellido, capitalizeYachtName, extractNombres };

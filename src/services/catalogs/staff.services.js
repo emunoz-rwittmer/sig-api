@@ -64,13 +64,16 @@ class Staffervice {
         }
     }
 
-    static async getPositionByLastName(lastName) {
+    static async getPositionsByFullNames(namePairs) {
         try {
-            if (!lastName) return null;
+            if (!namePairs || namePairs.length === 0) return new Map();
 
-            const staff = await Staff.findOne({
-                where: { lastName, active: true },
-                attributes: ['id', 'lastName'],
+            const staff = await Staff.findAll({
+                where: {
+                    active: true,
+                    [Op.or]: namePairs.map(({ firstName, lastName }) => ({ firstName, lastName })),
+                },
+                attributes: ['id', 'firstName', 'lastName'],
                 include: [{
                     model: Positions,
                     as: 'staff_position',
@@ -78,7 +81,9 @@ class Staffervice {
                 }],
             });
 
-            return staff?.staff_position?.name || null;
+            return new Map(
+                staff.map(s => [`${s.firstName} ${s.lastName}`, s.staff_position?.name || null])
+            );
         } catch (error) {
             throw error;
         }

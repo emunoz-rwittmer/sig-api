@@ -1,4 +1,4 @@
-const { extractApellido, capitalizeYachtName } = require('../../../src/utils/reportFormatting');
+const { extractApellido, capitalizeYachtName, extractNombres } = require('../../../src/utils/reportFormatting');
 
 describe('reportFormatting utils', () => {
     describe('extractApellido', () => {
@@ -18,6 +18,23 @@ describe('reportFormatting utils', () => {
 
         it('ignora espacios extra entre palabras', () => {
             expect(extractApellido('Ana   Maria   Lopez   Ruiz')).toBe('Lopez Ruiz');
+        });
+    });
+
+    describe('extractNombres', () => {
+        it('toma las primeras 2 palabras como nombres (patron 2 nombres + 2 apellidos)', () => {
+            expect(extractNombres('Juan Carlos Perez Gomez')).toBe('Juan Carlos');
+        });
+
+        it('devuelve string vacio si hay 2 o menos palabras (no se puede separar nombres de apellidos)', () => {
+            expect(extractNombres('Madonna')).toBe('');
+            expect(extractNombres('Ana Lopez')).toBe('');
+        });
+
+        it('devuelve string vacio para input vacio o no-string', () => {
+            expect(extractNombres('')).toBe('');
+            expect(extractNombres(null)).toBe('');
+            expect(extractNombres(undefined)).toBe('');
         });
     });
 
