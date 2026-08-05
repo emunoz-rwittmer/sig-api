@@ -98,8 +98,9 @@ archivos reales bajo `uploads/__test_downloads__/`, eliminados en `afterAll`.
 Cubre los seis downloads persistidos, el reporte Excel generado, hashids
 inválidos, recursos/archivos ausentes, MIME desconocido, filenames sin ID,
 traversal, separadores Windows, sanitización de nombres y JWT ausente. La suite
-pasó tres veces en aislamiento; el happy path del Excel también comprueba la
-firma ZIP `PK` y la eliminación del temporal.
+pasó tres veces en aislamiento: una corrida con 39 pruebas antes de agregar el
+happy path del Excel y dos corridas finales con 40 pruebas. Ese happy path
+también comprueba la firma ZIP `PK` y la eliminación del temporal.
 
 ## Hallazgos fuera de alcance
 

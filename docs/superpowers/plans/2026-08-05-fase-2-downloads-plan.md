@@ -74,7 +74,8 @@ errores.
   sanitización, backslashes y JWT ausente.
 - [x] Cubrir generación exitosa, descarga y limpieza del Excel de consumer
   cards, además de sus casos 400/404.
-- [x] Ejecutar la suite tres veces en aislamiento: 40/40 en verde.
+- [x] Ejecutar la suite tres veces en aislamiento: una corrida con 39/39 antes
+  de agregar el happy path del Excel y dos corridas finales con 40/40 en verde.
 - [x] Confirmar que no quedaron fixtures bajo `uploads/`.
 - [x] Commit `a934327`.
 
@@ -92,14 +93,21 @@ errores.
   `beforeAll` porque el pool de Sequelize estaba drenando, antes de servir la
   UI. El parseo directo de swagger-jsdoc sí confirmó los 7 paths; el fallo de
   infraestructura queda registrado para la verificación final.
-- [ ] Commit de Swagger y documentación.
+- [x] Commit de Swagger y documentación (`e6936bd`).
 
 ## Task 7: Cierre
 
-- [ ] Ejecutar `npm test` completo.
-- [ ] Ejecutar `npm run lint`.
-- [ ] Hacer verificación manual con datos reales si el entorno dispone de ellos.
-- [ ] Comprobar `git status` y ausencia de archivos temporales en `uploads/`.
+- [x] Ejecutar `npm test` completo. La suite global sigue roja por timeouts
+  preexistentes de `beforeAll`: al superar los 15 segundos, `afterAll` cierra
+  Sequelize mientras `bootTestApp` continúa y aparece el error secundario
+  `pool is draining and cannot accept work`. El smoke de Swagger sí pasó dentro
+  de la corrida global.
+- [x] Ejecutar `npm run lint`. El lint global conserva errores preexistentes en
+  dominios ajenos. El único error introducido por downloads (`no-control-regex`)
+  se corrigió; controller, middleware y rutas de downloads pasan ESLint.
+- [x] Verificar las descargas con fixtures reales de DB/disco: 40/40 pruebas de
+  dominio y 3/3 del middleware en verde tras el ajuste final del sanitizer.
+- [x] Comprobar `git status` y ausencia de archivos temporales en `uploads/`.
 - [ ] Publicar la rama y abrir PR contra `trunk`, previa confirmación por ser
   acciones externas.
 

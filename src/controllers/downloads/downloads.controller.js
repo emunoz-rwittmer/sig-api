@@ -25,8 +25,14 @@ const decodeId = (value, fieldName) => {
 };
 
 const sanitizeFilenameBase = (value) => {
-    const cleaned = String(value ?? '')
-        .replace(/[\x00-\x1f\x7f/\\?%*:|"<>]/g, '')
+    const invalidFilenameChars = '/\\?%*:|"<>';
+    const withoutInvalidChars = Array.from(String(value ?? ''))
+        .filter((character) => {
+            const code = character.charCodeAt(0);
+            return code > 31 && code !== 127 && !invalidFilenameChars.includes(character);
+        })
+        .join('');
+    const cleaned = withoutInvalidChars
         .replace(/\s+/g, '_')
         .replace(/^[._]+|[._]+$/g, '')
         .slice(0, 100);
