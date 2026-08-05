@@ -11,9 +11,23 @@ const { sendBarConsumption, sendInvoiceEmail } = require('../../mails/mailer');
 const { passengerInvoicePDF } = require('../../services/bar/passengerInvoicePDF.services');
 const { generateConsumerCardReportExcel } = require('../../services/bar/consumerCardReportExcel.services');
 const Yacht = require('../../models/catalogs/yacht.models');
+const AppError = require('../../errors/AppError');
 
 // Constantes
 const UPLOADS_BASE_PATH = path.resolve(__dirname, '../../../uploads');
+
+const decodeId = (value, fieldName) => {
+    let id;
+    try {
+        id = Utils.decode(value);
+    } catch {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    return id;
+};
 
 const getAllConsumer = async (req, res) => {
     try {
@@ -261,10 +275,10 @@ const updateCortecyCard = async (req, res) => {
     }
 }
 
-const exportConsumerCardReport = async (req, res) => {
+const exportConsumerCardReport = async (req, res, next) => {
     try {
         const { year, start, end } = req.query;
-        const yachtId = Utils.decode(req.query.yachtId);
+        const yachtId = decodeId(req.query.yachtId, 'yachtId');
 
         // Obtener información del yate
         const yacht = await Yacht.findByPk(yachtId, {
@@ -272,7 +286,7 @@ const exportConsumerCardReport = async (req, res) => {
         });
 
         if (!yacht) {
-            return res.status(404).json({ error: 'Yacht not found' });
+            throw new AppError('Yate no encontrado', 404);
         }
 
         // Obtener consumer cards y cortecy cards filtradas
@@ -300,8 +314,7 @@ const exportConsumerCardReport = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error generating report:', error);
-        res.status(400).json({ error: error.message });
+        next(error);
     }
 };
 

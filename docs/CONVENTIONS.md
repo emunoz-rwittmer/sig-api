@@ -88,7 +88,9 @@ por dominio en Fase 2. Dominios ya retrofiteados: `auth`, `staff`, `users`,
 Dominios de operaciones ya retrofiteados: `comentCard`. Dominio RRHH completo:
 `formats`, `regulations`, `trading`. Dominio `reports` retrofiteado (6
 endpoints; `GET /reports/request/:request_id` se eliminó por dead code
-irreparable, confirmado por el usuario).
+irreparable, confirmado por el usuario). Dominio `downloads` retrofiteado (7
+endpoints); se restauró `FormatService.getRequestById`, eliminado erróneamente
+como dead code mientras `downloadSolicitud` todavía lo consumía.
 
 ## Validación de identificadores codificados
 
@@ -143,6 +145,43 @@ contenido igual. Patrón ya usado en
 `src/services/operations/shippingGuide/pdfService.js` y
 `src/services/bar/cruiseReportPDF.services.js`; aplicado también en
 `src/controllers/reports/*.js`.
+
+## Descarga de archivos desde disco
+
+Todo endpoint que sirve una ruta almacenada en DB debe aplicar estas reglas
+antes de iniciar la respuesta:
+
+1. Comprobar `fs.existsSync(absolutePath)` antes de `res.download` o
+   `res.sendFile`. Un registro válido no garantiza que el archivo siga en
+   disco.
+2. `mime.lookup()` devuelve `false` para extensiones desconocidas, no `null`.
+   Usar siempre `mime.lookup(path) || 'application/octet-stream'`. No derivar
+   la extensión con `mime.extension(mime.lookup(path))`: para tipos
+   desconocidos produce `false`; preservar la extensión real con
+   `path.extname(path)`.
+3. Resolver la ruta con `path.resolve(PROJECT_ROOT, '.' + relativePath)` y
+   comprobar que el resultado permanezca estrictamente bajo `uploads/`.
+   `path.join` no protege contra traversal: colapsa `..` en silencio.
+4. El `filename` de `Content-Disposition` debe derivarse del nombre público del
+   recurso y nunca incluir el ID numérico interno.
+5. Normalizar `\\` a `/` en las rutas leídas de DB para soportar registros
+   históricos guardados desde Windows.
+6. En el callback de `res.download` o `res.sendFile`, comprobar
+   `res.headersSent` antes de llamar `next(err)`. Si los headers ya salieron,
+   no se puede responder con JSON: cerrar/destruir la conexión o delegar al
+   final handler de Express.
+
+Los helpers que coordinan `res`, `fs` y MIME pueden permanecer locales al
+controller mientras tengan un único consumidor; no son utilidades puras para
+`src/utils/`.
+
+## Eliminación de métodos aparentemente muertos
+
+Antes de eliminar un método de service por "dead code", buscar su nombre en
+todo `src/`, no solo dentro del dominio en refactor. La eliminación de
+`FormatService.getRequestById` sin revisar `downloads.controller.js` dejó
+`GET /downloads/staff/request/:request_id/download` completamente roto hasta
+que el método fue restaurado.
 
 ## Transacciones Sequelize
 
