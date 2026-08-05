@@ -1,173 +1,164 @@
 const RegulationService = require('../../services/rrhh/regulations.services');
 const FormatService = require('../../services/rrhh/formats.services');
 const ShippingGuideService = require('../../services/operations/shippingGuide/shippingGuide.services');
+const CruiseService = require('../../services/bar/cruise.services');
 const Utils = require('../../utils/Utils');
+const AppError = require('../../errors/AppError');
 const path = require('path');
 const fs = require('fs');
 const mime = require('mime-types');
-const CruiseService = require('../../services/bar/cruise.services');
 
-const downloadReglamento = async (req, res) => {
+const PROJECT_ROOT = path.resolve(__dirname, '../../../');
+const UPLOADS_ROOT = path.join(PROJECT_ROOT, 'uploads');
+
+const decodeId = (value, fieldName) => {
+    let id;
     try {
-        const ruleId = Utils.decode(req.params.rule_id);
+        id = Utils.decode(value);
+    } catch {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    return id;
+};
+
+const sanitizeFilenameBase = (value) => {
+    const cleaned = String(value ?? '')
+        .replace(/[\x00-\x1f\x7f/\\?%*:|"<>]/g, '')
+        .replace(/\s+/g, '_')
+        .replace(/^[._]+|[._]+$/g, '')
+        .slice(0, 100);
+    return cleaned || 'archivo';
+};
+
+const sendFileDownload = (res, next, { relativePath, filenameBase, missingFileMessage }) => {
+    if (!relativePath) throw new AppError(missingFileMessage, 404);
+
+    // Registros historicos guardados en Windows traen backslashes.
+    const normalized = String(relativePath).replace(/\\/g, '/');
+    const withLeadingSlash = normalized.startsWith('/') ? normalized : `/${normalized}`;
+    const absolutePath = path.resolve(PROJECT_ROOT, `.${withLeadingSlash}`);
+
+    // path.join colapsa '..' en silencio; sin este guard un dato corrupto
+    // en DB sirve cualquier archivo del disco.
+    if (!absolutePath.startsWith(UPLOADS_ROOT + path.sep)) {
+        throw new AppError('Archivo no encontrado', 404);
+    }
+    if (!fs.existsSync(absolutePath)) {
+        throw new AppError('Archivo no encontrado', 404);
+    }
+
+    // mime.lookup devuelve false (no null) para extensiones desconocidas.
+    res.setHeader('Content-Type', mime.lookup(absolutePath) || 'application/octet-stream');
+    const extension = path.extname(absolutePath).toLowerCase();
+
+    res.download(absolutePath, `${sanitizeFilenameBase(filenameBase)}${extension}`, (err) => {
+        if (!err) return;
+        if (res.headersSent) {
+            console.error('Error enviando archivo tras iniciar la respuesta:', err);
+            return res.destroy();
+        }
+        next(err);
+    });
+};
+
+const downloadReglamento = async (req, res, next) => {
+    try {
+        const ruleId = decodeId(req.params.rule_id, 'rule_id');
         const regulation = await RegulationService.getRegulationById(ruleId);
-        const relativePath = regulation.dataValues.file;
+        if (!regulation) throw new AppError('Reglamento no encontrado', 404);
 
-        if (!relativePath) {
-            return res.status(404).json({ message: 'El reglamento no tiene archivo asociado' });
-        }
-
-        const absolutePath = path.join(__dirname, '../../../', relativePath);
-
-        if (!fs.existsSync(absolutePath)) {
-            return res.status(404).json({ message: 'Archivo no encontrado' });
-        }
-
-        const mimeType = mime.lookup(absolutePath);  // puede devolver null si no encuentra
-        const extension = mime.extension(mimeType);
-
-        const filename = `reglamento-${ruleId}.${extension}`; // o usa el nombre original si lo prefieres
-
-        res.setHeader('Content-Type', mimeType);
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.sendFile(absolutePath);
+        sendFileDownload(res, next, {
+            relativePath: regulation.dataValues.file,
+            filenameBase: regulation.dataValues.name,
+            missingFileMessage: 'El reglamento no tiene archivo asociado',
+        });
     } catch (error) {
-        console.log(error);
-        res.status(400).json({ message: error.message });
+        next(error);
     }
 };
 
-const downloadFormato = async (req, res) => {
+const downloadFormato = async (req, res, next) => {
     try {
-        const formatId = Utils.decode(req.params.format_id);
+        const formatId = decodeId(req.params.format_id, 'format_id');
         const format = await FormatService.getDoctorFormat(formatId);
-        const relativePath = format.dataValues.file;
+        if (!format) throw new AppError('Formato médico no encontrado', 404);
 
-        if (!relativePath) {
-            return res.status(404).json({ message: 'El formato no tiene archivo asociado' });
-        }
-
-        const absolutePath = path.join(__dirname, '../../../', relativePath);
-        res.download(absolutePath, (err) => {
-            if (err) {
-                res.status(500).send('Error al descargar el archivo');
-            }
+        sendFileDownload(res, next, {
+            relativePath: format.dataValues.file,
+            filenameBase: format.dataValues.name,
+            missingFileMessage: 'El formato médico no tiene archivo asociado',
         });
     } catch (error) {
-        console.log(error);
-        res.status(400).json(error.message);
+        next(error);
     }
 };
 
-const downloadSolicitud = async (req, res) => {
+const downloadSolicitud = async (req, res, next) => {
     try {
-        const requestId = Utils.decode(req.params.request_id);
-        const format = await FormatService.getRequestById(requestId);
-        const relativePath = format.dataValues.file;
+        const requestId = decodeId(req.params.request_id, 'request_id');
+        const request = await FormatService.getRequestById(requestId);
+        if (!request) throw new AppError('Solicitud no encontrada', 404);
 
-        if (!relativePath) {
-            return res.status(404).json({ message: 'El formato no tiene archivo asociado' });
-        }
-
-        const absolutePath = path.join(__dirname, '../../../', relativePath);
-        res.download(absolutePath, (err) => {
-            if (err) {
-                console.log(err)
-                res.status(500).send('Error al descargar el archivo');
-            }
+        sendFileDownload(res, next, {
+            relativePath: request.dataValues.file,
+            filenameBase: `Solicitud_${request.dataValues.name}`,
+            missingFileMessage: 'La solicitud no tiene archivo asociado',
         });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 };
 
-const downloadGuiaRemision = async (req, res) => {
+const downloadGuiaRemision = async (req, res, next) => {
     try {
-        const guideId = Utils.decode(req.params.guide_id);
-        const regulation = await ShippingGuideService.getShippingGuideById(guideId);
-        const relativePath = regulation.dataValues.file;
+        const guideId = decodeId(req.params.guide_id, 'guide_id');
+        const guide = await ShippingGuideService.getShippingGuideById(guideId);
+        if (!guide) throw new AppError('Guía de remisión no encontrada', 404);
 
-        if (!relativePath) {
-            return res.status(404).json({ message: 'la guia no tiene archivo asociado' });
-        }
-
-        const absolutePath = path.join(__dirname, '../../../', relativePath);
-
-        if (!fs.existsSync(absolutePath)) {
-            return res.status(404).json({ message: 'Archivo no encontrado' });
-        }
-
-        const mimeType = mime.lookup(absolutePath);  // puede devolver null si no encuentra
-        const extension = mime.extension(mimeType);
-
-        const filename = `guia_remision_${regulation.counter}.${extension}`;
-
-        res.setHeader('Content-Type', mimeType);
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.sendFile(absolutePath);
+        sendFileDownload(res, next, {
+            relativePath: guide.dataValues.file,
+            filenameBase: `guia_remision_${guide.dataValues.counter}`,
+            missingFileMessage: 'La guía de remisión no tiene archivo asociado',
+        });
     } catch (error) {
-        console.log(error);
-        res.status(400).json({ message: error.message });
+        next(error);
     }
 };
 
-const downloadreportePdf = async (req, res) => {
+const downloadreportePdf = async (req, res, next) => {
     try {
-        const cruiseid = Utils.decode(req.params.cruise_id);
-        const cruise = await CruiseService.getCruiseById(cruiseid);
-        const relativePath = cruise.urlPDFReport;
+        const cruiseId = decodeId(req.params.cruise_id, 'cruise_id');
+        // getCruiseById devuelve un objeto plano, no una instancia Sequelize.
+        const cruise = await CruiseService.getCruiseById(cruiseId);
+        if (!cruise) throw new AppError('Crucero no encontrado', 404);
 
-        if (!relativePath) {
-            throw new Error('la crucero no tiene archivo asociado');
-        }
-
-        const absolutePath = path.join(__dirname, '../../../', relativePath);
-
-        if (!fs.existsSync(absolutePath)) {
-            throw new Error('Archivo no encontrado');
-        }
-
-        const mimeType = mime.lookup(absolutePath);  // puede devolver null si no encuentra
-        const extension = mime.extension(mimeType);
-
-        const filename = `reporte_crucero_${cruise.code}.${extension}`;
-
-        res.setHeader('Content-Type', mimeType);
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.sendFile(absolutePath);
+        sendFileDownload(res, next, {
+            relativePath: cruise.urlPDFReport,
+            filenameBase: `reporte_crucero_${cruise.code}`,
+            missingFileMessage: 'El crucero no tiene reporte PDF asociado',
+        });
     } catch (error) {
-        console.log(error);
-        res.status(400).json(error.message);
+        next(error);
     }
 };
 
-const downloadreporteExcel = async (req, res) => {
+const downloadreporteExcel = async (req, res, next) => {
     try {
-        const cruiseid = Utils.decode(req.params.cruise_id);
-        const cruise = await CruiseService.getCruiseById(cruiseid);
-        const relativePath = cruise.urlExcelReport;
+        const cruiseId = decodeId(req.params.cruise_id, 'cruise_id');
+        // getCruiseById devuelve un objeto plano, no una instancia Sequelize.
+        const cruise = await CruiseService.getCruiseById(cruiseId);
+        if (!cruise) throw new AppError('Crucero no encontrado', 404);
 
-        if (!relativePath) {
-            throw new Error('la crucero no tiene archivo asociado');
-        }
-
-        const absolutePath = path.join(__dirname, '../../../', relativePath);
-
-        if (!fs.existsSync(absolutePath)) {
-            throw new Error('Archivo no encontrado');
-        }
-
-        const mimeType = mime.lookup(absolutePath);  // puede devolver null si no encuentra
-        const extension = mime.extension(mimeType);
-
-        const filename = `reporte_crucero_${cruise.code}.${extension}`;
-
-        res.setHeader('Content-Type', mimeType);
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.sendFile(absolutePath);
+        sendFileDownload(res, next, {
+            relativePath: cruise.urlExcelReport,
+            filenameBase: `reporte_crucero_${cruise.code}`,
+            missingFileMessage: 'El crucero no tiene reporte Excel asociado',
+        });
     } catch (error) {
-        console.log(error);
-        res.status(400).json(error.message);
+        next(error);
     }
 };
 
