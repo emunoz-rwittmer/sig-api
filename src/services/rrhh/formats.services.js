@@ -124,6 +124,15 @@ class FormatService {
         }
     }
 
+    static async getRequestById(requestId) {
+        try {
+            const result = await RequestStaffs.findOne({ where: { id: requestId } });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     static async createRequesForStaff(data) {
         try {
             const { compania, yate, name, formatId, staffId, file } = data;
