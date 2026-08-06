@@ -504,7 +504,7 @@ const generateWeeklyEvaluationCrew = async () => {
         console.log("Periodo:", periodWeek);
         console.log("======================================");
 
-        sendEmailEvaluationCrew();
+        //sendEmailEvaluationCrew();
 
     } catch (error) {
         console.error("Error ejecutando cron job de evaluaciones:", error);
