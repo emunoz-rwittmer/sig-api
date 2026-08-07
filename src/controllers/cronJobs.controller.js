@@ -318,14 +318,16 @@ const generateWeeklyEvaluationCrew = async () => {
         }
         const periodWeek = `${evaluationWeekStart.format('YYYY-MM-DD')}_${evaluationWeekStart.clone().add(7, 'days').format('YYYY-MM-DD')}`;
         const expirationDate = now.clone().add(3, "days").toDate();
-        const endOfEvaluationWeek = evaluationWeekStart.clone().add(7, 'days');
         const evaluationRunAt = now.toDate();
         const startOfToday = now.clone().startOf('day');
         const startOfTomorrow = startOfToday.clone().add(1, 'day');
 
         const embarkedStaff = await ShipmentDates.findAll({
             where: {
-                shipmentDate: { [Op.lt]: endOfEvaluationWeek.toDate() },
+                // "now" debe caer dentro de [shipmentDate, dischargeDate]: solo cuenta
+                // quien ya esta embarcado al momento de disparar la tarea. Quien todavia
+                // no llega (shipmentDate futuro) se evalua la semana siguiente, ya embarcado.
+                shipmentDate: { [Op.lte]: evaluationRunAt },
                 [Op.or]: [
                     { dischargeDate: null },
                     { dischargeDate: { [Op.gte]: evaluationRunAt } }
@@ -377,7 +379,7 @@ const generateWeeklyEvaluationCrew = async () => {
             const positionName = staff.staff_position.name;
             const fullName = `${staff.firstName} ${staff.lastName}`;
 
-            if (positionName === "Capitan") {
+            if (positionName === "Capitán") {
                 captainByCompany[companyId] = {
                     ...staff.toJSON(),
                     fullName

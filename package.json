@@ -7,6 +7,7 @@
     "start": "node ./src/server.js",
     "dev": "nodemon ./src/server.js",
     "seed": "node ./src/seeders/seed.js",
+    "diagnose:weekly-eval": "node ./src/scripts/diagnoseWeeklyEvaluationCrew.js",
     "test": "jest --runInBand",
     "test:watch": "jest --watch --runInBand",
     "lint": "eslint src",
