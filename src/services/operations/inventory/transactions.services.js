@@ -12,13 +12,6 @@ class TransactionService {
         const t = await db.transaction();
 
         try {
-            const quantity = Number(stockData.quantity);
-
-            // Validar cantidad válida y mayor a 0
-            if (!Number.isFinite(quantity) || quantity <= 0) {
-                throw new Error('Cantidad debe ser un número mayor a 0');
-            }
-
             // Validar producto
             if (!productData || !productData.sku) {
                 throw new Error('Datos de producto inválidos');
@@ -29,6 +22,18 @@ class TransactionService {
                 throw new Error('Almacén no especificado');
             }
 
+            const quantity = Number(stockData.quantity);
+
+            // Validar cantidad válida y mayor a 0
+            if (!Number.isFinite(quantity) || quantity <= 0) {
+                throw new Error('Cantidad debe ser un número mayor a 0');
+            }
+
+            const productAttributes = {
+                ...productData,
+                type: 'DISCRETE'
+            };
+
             let product = await Product.findOne({
                 where: { sku: productData.sku },
                 transaction: t,
@@ -36,7 +41,7 @@ class TransactionService {
             });
 
             if (!product) {
-                product = await Product.create(productData, { transaction: t });
+                product = await Product.create(productAttributes, { transaction: t });
             }
 
             const whereStock = {
@@ -54,7 +59,7 @@ class TransactionService {
             const normalizedQty = Quantity.normalizeQuantity(product, quantity);
 
             // Usar Math.round para evitar problemas de precisión al sumar decimales
-            const currentQty = Number(stock.quantity) || 0;
+            const currentQty = Number(stock?.quantity) || 0;
             const newQty = Math.round((currentQty + normalizedQty) * 100) / 100;
 
             if (stock) {
