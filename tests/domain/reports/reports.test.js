@@ -577,6 +577,30 @@ describe('Reports — comment cards report', () => {
         expect(response.status).toBe(200);
         expect(response.headers['content-disposition']).toContain('attachment');
     });
+
+    it('returns comment cards from every yacht when yacht_id is "null" (opcion "Todos" del front)', async () => {
+        const { qr, questions } = await createCommentCardFixture();
+        const submitted = await ComentCardRespond.create({
+            cardQrId: qr.id,
+            fullName: 'Pasajero Reporte',
+            cabin: 12,
+            isSubmited: true,
+        });
+        await ComentCardAnswers.create({
+            respuestaId: submitted.id,
+            questionId: questions[0].id,
+            answer: '5',
+        });
+
+        const response = await auth(
+            request(app)
+                .get('/api/reports/comentCards/generateReport/null')
+                .query({ startDate: '2026-07-01', endDate: '2026-07-11' })
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.headers['content-disposition']).toContain('attachment');
+    });
 });
 
 describe('Reports — request excel removed', () => {
