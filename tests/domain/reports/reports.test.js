@@ -254,6 +254,36 @@ describe('Reports — evaluations general report', () => {
         expect(response.status).toBe(200);
         expect(response.headers['content-disposition']).toContain('attachment');
     });
+
+    it('returns evaluations from every company when company_id is "all" (opcion "Todos" del front)', async () => {
+        const { company } = await createCompanyWithYacht(`Eval AllOption Company ${suffix()}`);
+        const form = await Form.create({ name: `Form ${suffix()}`, positions: [] });
+        const question = await FormQuestion.create({
+            formId: form.id,
+            title: '¿Cómo calificarías?',
+            type: 'scale',
+        });
+        const respond = await FormRespond.create({
+            companyId: company.id,
+            formId: form.id,
+            state: 'FINALIZADO',
+            evaluator: 'Evaluador Test',
+            evaluated: 'Evaluado Test',
+            expirationDate: new Date('2026-08-01'),
+        });
+        await FormAnswers.create({
+            respuestaId: respond.id,
+            questionId: question.id,
+            answer: '5',
+        });
+
+        const response = await auth(
+            request(app).get('/api/reports/evaluations/generalReport/all')
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.headers['content-disposition']).toContain('attachment');
+    });
 });
 
 describe('Staffervice — getPositionsByFullNames', () => {

@@ -7,7 +7,7 @@ const Utils = require("../../utils/Utils");
 const AppError = require("../../errors/AppError");
 
 const decodeId = (value, fieldName) => {
-    if (!value || value === 'undefined' || value === 'null') {
+    if (!value || value === 'undefined' || value === 'null' || value === 'all') {
         return undefined;
     }
     let id;

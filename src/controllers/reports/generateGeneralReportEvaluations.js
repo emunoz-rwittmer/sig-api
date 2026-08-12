@@ -10,7 +10,7 @@ const Staffervice = require('../../services/catalogs/staff.services');
 const { extractApellido, capitalizeYachtName, extractNombres } = require('../../utils/reportFormatting');
 
 const decodeId = (value, fieldName) => {
-    if (!value || value === 'undefined' || value === 'null') {
+    if (!value || value === 'undefined' || value === 'null' || value === 'all') {
         return undefined;
     }
     let id;
