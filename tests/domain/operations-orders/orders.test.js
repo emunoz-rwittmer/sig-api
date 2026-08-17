@@ -137,3 +137,46 @@ describe('GET /api/orders/:order_id — orden por ID', () => {
         expect(response.status).toBe(403);
     });
 });
+
+describe('PUT /api/orders/:order_id — actualizar orden', () => {
+    it('devuelve 200 al actualizar la orden', async () => {
+        const order = await createOrderFixture();
+
+        const response = await auth(
+            request(app)
+                .put(`/api/orders/${Utils.encode(order.id)}`)
+                .send({ status: 'procesado' })
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toBe('resource updated successfully');
+    });
+
+    it('devuelve 400 con hashid inválido', async () => {
+        const response = await auth(
+            request(app).put('/api/orders/not-a-hashid').send({ status: 'procesado' })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 404 cuando la orden no existe', async () => {
+        const response = await auth(
+            request(app)
+                .put(`/api/orders/${Utils.encode(999999)}`)
+                .send({ status: 'procesado' })
+        );
+
+        expect(response.status).toBe(404);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app)
+            .put('/api/orders/any-id')
+            .send({});
+
+        expect(response.status).toBe(403);
+    });
+});

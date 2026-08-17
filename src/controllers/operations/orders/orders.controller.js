@@ -85,18 +85,17 @@ const createOrder = async (req, res) => {
     }
 }
 
-const updateOrder = async (req, res) => {
+const updateOrder = async (req, res, next) => {
     try {
-        const orderId = Utils.decode(req.params.order_id);
-        const data = req.body
-        await OrderService.updateOrder(data, {
-            where: { id: orderId }
+        const orderId = decodeId(req.params.order_id, 'order_id');
+        const data = req.body;
+        const [affectedRows] = await OrderService.updateOrder(data, {
+            where: { id: orderId },
         });
-
+        if (affectedRows === 0) throw new AppError('Orden no encontrada', 404);
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
