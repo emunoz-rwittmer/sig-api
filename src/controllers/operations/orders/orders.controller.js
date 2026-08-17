@@ -99,13 +99,14 @@ const updateOrder = async (req, res, next) => {
     }
 }
 
-const deleteItem = async (req, res) => {
+const deleteItem = async (req, res, next) => {
     try {
-        const itemId = Utils.decode(req.params.item_id);
+        const itemId = decodeId(req.params.item_id, 'item_id');
         const result = await OrderService.deleteItem(itemId);
-        res.status(200).json({ data: result })
+        if (!result) throw new AppError('Item no encontrado', 404);
+        res.status(200).json({ data: result });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 

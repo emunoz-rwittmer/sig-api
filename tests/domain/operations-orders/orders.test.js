@@ -180,3 +180,41 @@ describe('PUT /api/orders/:order_id — actualizar orden', () => {
         expect(response.status).toBe(403);
     });
 });
+
+describe('DELETE /api/orders/deleteItem/:item_id — eliminar item', () => {
+    it('devuelve 200 al eliminar el item', async () => {
+        const order = await createOrderFixture();
+        const item = await createOrderItemFixture(order.id);
+
+        const response = await auth(
+            request(app).delete(`/api/orders/deleteItem/${Utils.encode(item.id)}`)
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toBe('resource deleted successfully');
+    });
+
+    it('devuelve 400 con hashid inválido', async () => {
+        const response = await auth(
+            request(app).delete('/api/orders/deleteItem/not-a-hashid')
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 404 cuando el item no existe', async () => {
+        const response = await auth(
+            request(app).delete(`/api/orders/deleteItem/${Utils.encode(999999)}`)
+        );
+
+        expect(response.status).toBe(404);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).delete('/api/orders/deleteItem/any-id');
+
+        expect(response.status).toBe(403);
+    });
+});
