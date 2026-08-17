@@ -100,3 +100,40 @@ describe('GET /api/orders — lista de órdenes', () => {
         expect(response.status).toBe(403);
     });
 });
+
+describe('GET /api/orders/:order_id — orden por ID', () => {
+    it('devuelve 200 con la orden encontrada', async () => {
+        const order = await createOrderFixture();
+
+        const response = await auth(
+            request(app).get(`/api/orders/${Utils.encode(order.id)}`)
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body).toHaveProperty('id');
+    });
+
+    it('devuelve 400 con hashid inválido', async () => {
+        const response = await auth(
+            request(app).get('/api/orders/not-a-hashid')
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 404 cuando la orden no existe', async () => {
+        const response = await auth(
+            request(app).get(`/api/orders/${Utils.encode(999999)}`)
+        );
+
+        expect(response.status).toBe(404);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).get('/api/orders/any-id');
+
+        expect(response.status).toBe(403);
+    });
+});

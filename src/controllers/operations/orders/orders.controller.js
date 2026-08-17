@@ -4,6 +4,20 @@ const CompanyService = require('../../../services/catalogs/company.services');
 const XLSX = require('xlsx');
 const { sendEmailNewOrder, sendConfirmationEmail, sendDispatchEmail } = require('../../../mails/mailer');
 const Staffervice = require('../../../services/catalogs/staff.services');
+const AppError = require('../../../errors/AppError');
+
+const decodeId = (value, fieldName) => {
+    let id;
+    try {
+        id = Utils.decode(value);
+    } catch {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    return id;
+};
 
 const getAllOrders = async (req, res) => {
     try {
@@ -20,17 +34,15 @@ const getAllOrders = async (req, res) => {
     }
 }
 
-const getOrderById = async (req, res) => {
+const getOrderById = async (req, res, next) => {
     try {
-        const orderId = Utils.decode(req.params.order_id);
-        const result = await OrderService.getOrderById(orderId)
-        if (result instanceof Object) {
-            result.id = Utils.encode(result.id);
-        }
+        const orderId = decodeId(req.params.order_id, 'order_id');
+        const result = await OrderService.getOrderById(orderId);
+        if (!result) throw new AppError('Orden no encontrada', 404);
+        result.id = Utils.encode(result.id);
         res.status(200).json(result);
     } catch (error) {
-
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
