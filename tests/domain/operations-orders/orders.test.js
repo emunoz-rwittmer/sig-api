@@ -218,3 +218,63 @@ describe('DELETE /api/orders/deleteItem/:item_id — eliminar item', () => {
         expect(response.status).toBe(403);
     });
 });
+
+describe('POST /api/orders — crear orden', () => {
+    it('devuelve 200 al crear una orden con Excel válido', async () => {
+        const { company } = await createCompanyWithYacht(`PostCo-${suffix()}`);
+        const staff = await createStaffFixture();
+        const excelBuffer = createExcelBuffer();
+
+        const response = await auth(
+            request(app)
+                .post('/api/orders')
+                .field('companyId', Utils.encode(company.id))
+                .field('userId', Utils.encode(staff.id))
+                .field('name', `Pedido-${suffix()}`)
+                .field('status', 'en espera')
+                .field('guide', `GUIDE-${suffix()}`)
+                .attach('file', excelBuffer, 'pedido.xlsx')
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toBe('resource created successfully');
+    });
+
+    it('devuelve 400 sin archivo Excel', async () => {
+        const { company } = await createCompanyWithYacht(`PostCo-${suffix()}`);
+        const staff = await createStaffFixture();
+
+        const response = await auth(
+            request(app)
+                .post('/api/orders')
+                .field('companyId', Utils.encode(company.id))
+                .field('userId', Utils.encode(staff.id))
+                .field('status', 'en espera')
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 400 con companyId hashid inválido', async () => {
+        const excelBuffer = createExcelBuffer();
+
+        const response = await auth(
+            request(app)
+                .post('/api/orders')
+                .field('companyId', 'not-a-hashid')
+                .field('userId', 'not-a-hashid')
+                .field('status', 'en espera')
+                .attach('file', excelBuffer, 'pedido.xlsx')
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).post('/api/orders');
+
+        expect(response.status).toBe(403);
+    });
+});

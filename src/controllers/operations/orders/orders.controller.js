@@ -19,7 +19,7 @@ const decodeId = (value, fieldName) => {
     return id;
 };
 
-const getAllOrders = async (req, res) => {
+const getAllOrders = async (req, res, next) => {
     try {
         const result = await OrderService.getAllOrders();
         if (result instanceof Array) {
@@ -30,7 +30,7 @@ const getAllOrders = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
@@ -46,13 +46,14 @@ const getOrderById = async (req, res, next) => {
     }
 }
 
-const createOrder = async (req, res) => {
+const createOrder = async (req, res, next) => {
     try {
-        const data = req.body;
-        data.companyId = Utils.decode(data.companyId)
-        data.userId = Utils.decode(data.userId)
+        if (!req.file) throw new AppError('Archivo Excel requerido', 400);
 
-        const file = req.file;
+        const data = req.body;
+        data.companyId = decodeId(data.companyId, 'companyId');
+        data.userId = decodeId(data.userId, 'userId');
+
         const fieldMapping = {
             'sku': 'sku',
             'product': 'product',
@@ -60,7 +61,7 @@ const createOrder = async (req, res) => {
             'originalQuantity': 'originalQuantity',
         };
 
-        const workbook = XLSX.readFile(file.path);
+        const workbook = XLSX.readFile(req.file.path);
         const sheet_name_list = workbook.SheetNames;
         const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheet_name_list[0]]);
         const mappedData = jsonData.map(row => {
@@ -74,14 +75,14 @@ const createOrder = async (req, res) => {
 
         await OrderService.createOrder(data, mappedData);
 
-        const company = await CompanyService.getCompanyById(data.companyId)
-        const staff = await Staffervice.getStaffById(data.userId)
-        action = 'pedido'
+        const company = await CompanyService.getCompanyById(data.companyId);
+        const staff = await Staffervice.getStaffById(data.userId);
+        const action = 'pedido';
         sendEmailNewOrder(company.name);
-        sendConfirmationEmail(action, company.name, staff)
+        sendConfirmationEmail(action, company.name, staff);
         res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
