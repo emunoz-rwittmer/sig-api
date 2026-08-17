@@ -63,7 +63,7 @@ const generateGeneralReportEvaluations = async (req, res, next) => {
 
         const dateStyle = wb.createStyle({
             font: { color: "#000000" },
-            numberFormat: "dd-mmm-yyyy",
+            numberFormat: "dd/mm/yyyy",
         });
 
         const formTitleStyles = colors.map(color =>
