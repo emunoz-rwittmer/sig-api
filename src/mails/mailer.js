@@ -1,3 +1,4 @@
+const fs = require('fs').promises;
 const Mails = require('./mailTemplates');
 const MailsConfirmation = require('./mailConfirmation');
 const MailsOrder = require('./mailOrder');
@@ -6,22 +7,22 @@ require('dotenv').config();
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-const sendEmail = (user, passwordGenerated, action, userCopy, bodyMail) => {
-    const htmlContentNewUser = Mails.htmlNewUser(user, passwordGenerated)
-    const htmlContentForgotPassword = Mails.htmlForgotPassword(user, passwordGenerated)
-    const htmlContentNewEvaluations = Mails.htmlContentNewEvaluations(user.dataValues)
-    const htmlContentRetoalimentationEvaluation = Mails.htmlContentRetoalimentationEvaluation(bodyMail)
-    const msg = {
-        to: user.email, // Change to your recipient
-        from: 'notify-sig@rwittmer.com', // Change to your verified sender
-        cc: action === 'retroalimetation' ? userCopy.email : "",
-        subject: action === "new user" ? 'Acceso sistema interno' :
-            action === 'forgot passowrd' ? 'Restablecimiento de contraseña' :
-                action === 'retroalimetation' ? 'Retroalimentación evaluaciones de desempeño' : 'Evaluación de desempeño',
-        html: action === "new user" ? htmlContentNewUser :
-            action === 'new evaluation' ? htmlContentNewEvaluations :
-                action === 'retroalimetation' ? htmlContentRetoalimentationEvaluation : htmlContentForgotPassword
-    }
+const FROM_EMAIL = 'notify-sig@rwittmer.com';
+
+const RECIPIENTS = {
+    edison: 'edison@tiptoptravel.ec',
+    belen: 'belen@rwittmer.com',
+    edwin: 'edwin@rwittmer.com',
+    fabian: 'fabian@rwittmer.com',
+    pablo: 'pablo@rwittmer.com',
+    enrique: 'enrique@rwittmer.com',
+    mirian: 'mirian@rwittmer.com',
+    marjuri: 'marjuri@rwittmer.com',
+    rosa: 'rosa@tiptoptravel.ec',
+    javier: 'javier@tiptoptravel.ec',
+};
+
+const sendMail = (msg) =>
     sgMail
         .send(msg)
         .then(() => {
@@ -29,40 +30,68 @@ const sendEmail = (user, passwordGenerated, action, userCopy, bodyMail) => {
         })
         .catch((error) => {
             console.error(error)
-        })
+        });
+
+const EMAIL_ACTIONS = {
+    'new user': {
+        subject: 'Acceso sistema interno',
+        buildHtml: (user, passwordGenerated) => Mails.htmlNewUser(user, passwordGenerated),
+    },
+    'forgot passowrd': {
+        subject: 'Restablecimiento de contraseña',
+        buildHtml: (user, passwordGenerated) => Mails.htmlForgotPassword(user, passwordGenerated),
+    },
+    'new evaluation': {
+        subject: 'Evaluación de desempeño',
+        buildHtml: (user) => Mails.htmlContentNewEvaluations(user.dataValues),
+    },
+    'retroalimetation': {
+        subject: 'Retroalimentación evaluaciones de desempeño',
+        buildHtml: (_user, _passwordGenerated, _userCopy, bodyMail) => Mails.htmlContentRetoalimentationEvaluation(bodyMail),
+    },
+};
+
+// Acción por defecto: replica el fallback original (subject de evaluación + html de forgot password)
+// para cualquier action no reconocida.
+const DEFAULT_EMAIL_ACTION = {
+    subject: 'Evaluación de desempeño',
+    buildHtml: (user, passwordGenerated) => Mails.htmlForgotPassword(user, passwordGenerated),
+};
+
+const sendEmail = (user, passwordGenerated, action, userCopy, bodyMail) => {
+    const { subject, buildHtml } = EMAIL_ACTIONS[action] || DEFAULT_EMAIL_ACTION;
+    const msg = {
+        to: user.email,
+        from: FROM_EMAIL,
+        cc: action === 'retroalimetation' ? userCopy.email : "",
+        subject,
+        html: buildHtml(user, passwordGenerated, userCopy, bodyMail),
+    };
+    return sendMail(msg);
 }
 
 const sendEmailCommentCard = () => {
-    const htmlContentCommentCards = Mails.htmlContentCommentCards()
-    const msg = {
-        to: 'edison@tiptoptravel.ec',
-        from: 'notify-sig@rwittmer.com',
+    const html = Mails.htmlContentCommentCards()
+    return sendMail({
+        to: RECIPIENTS.edison,
+        from: FROM_EMAIL,
         subject: 'Comment Cards creadas con exito',
-        html: htmlContentCommentCards
-    }
-    sgMail
-        .send(msg)
-        .then(() => {
-            console.log('Email sent')
-        })
-        .catch((error) => {
-            console.error(error)
-        })
+        html,
+    });
 }
 
 const sendInvoiceEmail = async (data) => {
-    const fs = require('fs').promises;
-    const htmlContentCommentCards = MailsConfirmation.htmlInvoicePassenger(data)
-    
+    const html = MailsConfirmation.htmlInvoicePassenger(data)
+
     try {
         const fileContent = await fs.readFile(data.invoicePath);
         const base64Content = fileContent.toString('base64');
-        
+
         const msg = {
             to: data.passengerEmail,
-            from: 'notify-sig@rwittmer.com',
+            from: FROM_EMAIL,
             subject: 'Bar Notification',
-            html: htmlContentCommentCards,
+            html,
             attachments: [
                 {
                     content: base64Content,
@@ -72,160 +101,108 @@ const sendInvoiceEmail = async (data) => {
                 },
             ],
         }
-        await sgMail.send(msg);
-        console.log('Email sent')
+        await sendMail(msg);
     } catch (error) {
         console.error(error)
     }
 }
 
 const sendBarConsumption = (data) => {
-    const htmlContentCommentCards = MailsConfirmation.htmlConsumoRealizado(data)
-    const msg = {
+    const html = MailsConfirmation.htmlConsumoRealizado(data)
+    return sendMail({
         to: data.passengerEmail,
-        from: 'notify-sig@rwittmer.com',
+        from: FROM_EMAIL,
         subject: 'Bar Consumption Notification',
-        html: htmlContentCommentCards
-    }
-    sgMail
-        .send(msg)
-        .then(() => {
-            console.log('Email sent')
-        })
-        .catch((error) => {
-            console.error(error)
-        })
+        html,
+    });
 }
 
 const sendEmailEvaluationCrew = () => {
-    const htmlContentNewEvaluations = Mails.htmlContentNewEvaluations()
-    const msg = {
-        to: 'belen@rwittmer.com',
-        from: 'notify-sig@rwittmer.com',
-        cc: 'edison@tiptoptravel.ec',
+    const html = Mails.htmlContentNewEvaluations()
+    return sendMail({
+        to: RECIPIENTS.belen,
+        from: FROM_EMAIL,
+        cc: RECIPIENTS.edison,
         subject: 'Evaluaciónes de desempeño creadas y enviadas',
-        html: htmlContentNewEvaluations
-    }
-    sgMail
-        .send(msg)
-        .then(() => {
-            console.log('Email sent')
-        })
-        .catch((error) => {
-            console.error(error)
-        })
+        html,
+    });
 }
 
 const sendEmailPasswordStaff = (user, passwordGenerated) => {
-    const htmlContentForgotPassword = Mails.htmlStaffForgotPassword(user, passwordGenerated)
-    const msg = {
-        to: user.email, // Change to your recipient
-        from: 'notify-sig@rwittmer.com', // Change to your verified sender
+    const html = Mails.htmlStaffForgotPassword(user, passwordGenerated)
+    return sendMail({
+        to: user.email,
+        from: FROM_EMAIL,
         subject: 'Restablecimiento de contraseña',
-        html: htmlContentForgotPassword
-    }
-    sgMail
-        .send(msg)
-        .then(() => {
-            console.log('Email sent')
-        })
-        .catch((error) => {
-            console.error(error)
-        })
+        html,
+    });
 }
 
 const sendEmailNewOrder = (companyName) => {
-    const htmlContentNewOrder = MailsOrder.htmlNewOrder(companyName)
-    const msg = {
-        to: 'edwin@rwittmer.com', // Change to your recipient
-        from: 'notify-sig@rwittmer.com', // Change to your verified sender
-        cc: 'belen@rwittmer.com',
+    const html = MailsOrder.htmlNewOrder(companyName)
+    return sendMail({
+        to: RECIPIENTS.edwin,
+        from: FROM_EMAIL,
+        cc: RECIPIENTS.belen,
         subject: 'Pedido recibido',
-        html: htmlContentNewOrder
-    }
-    sgMail
-        .send(msg)
-        .then(() => {
-            console.log('Email sent')
-        })
-        .catch((error) => {
-            console.error(error)
-        })
+        html,
+    });
 }
 
 const sendEmailNewRequest = (companyName) => {
-    const htmlContentNewRequest = MailsOrder.htmlNewRequest(companyName)
-    const msg = {
-        to: 'fabian@rwittmer.com', // Change to your recipient
-        from: 'notify-sig@rwittmer.com', // Change to your verified sender
-        cc: 'pablo@rwittmer.com',
+    const html = MailsOrder.htmlNewRequest(companyName)
+    return sendMail({
+        to: RECIPIENTS.fabian,
+        from: FROM_EMAIL,
+        cc: RECIPIENTS.pablo,
         subject: 'Requerimiento recibido',
-        html: htmlContentNewRequest
-    }
-    sgMail
-        .send(msg)
-        .then(() => {
-            console.log('Email sent')
-        })
-        .catch((error) => {
-            console.error(error)
-        })
+        html,
+    });
 }
 
 const sendConfirmationEmail = (action, companyName, user) => {
-    const htmlContentNewOrder = MailsConfirmation.htmlConfirmationOrder(action, companyName, user.dataValues)
-    const msg = {
-        to: user.email, // Change to your recipient
-        from: 'notify-sig@rwittmer.com', // Change to your verified sender
+    const html = MailsConfirmation.htmlConfirmationOrder(action, companyName, user.dataValues)
+    return sendMail({
+        to: user.email,
+        from: FROM_EMAIL,
         subject: `Su ${action} se envio correctamente`,
-        html: htmlContentNewOrder
-    }
-    sgMail
-        .send(msg)
-        .then(() => {
-            console.log('Email sent')
-        })
-        .catch((error) => {
-            console.error(error)
-        })
+        html,
+    });
 }
 
 const sendDispatchEmail = (action, content) => {
-    const htmlDispatch = MailsConfirmation.htmlDispatch(action, content.dataValues)
-    const msg = {
-        to: content.responsible.email, // Change to your recipient
-        from: 'notify-sig@rwittmer.com', // Change to your verified sender
+    const html = MailsConfirmation.htmlDispatch(action, content.dataValues)
+    return sendMail({
+        to: content.responsible.email,
+        from: FROM_EMAIL,
         subject: `Su ${action} ha sido despachado`,
-        html: htmlDispatch
-    }
-    sgMail
-        .send(msg)
-        .then(() => {
-            console.log('Email sent')
-        })
-        .catch((error) => {
-            console.error(error)
-        })
+        html,
+    });
 }
+
+// formatId -> constructor de la lista de CC. Agregar un nuevo formato con CC
+// especial solo requiere añadir una entrada aquí, sin tocar sendEmailNuevaSolicitud.
+const FORMAT_CC_MAP = {
+    1: () => [RECIPIENTS.javier, RECIPIENTS.mirian, RECIPIENTS.marjuri, RECIPIENTS.rosa],
+    2: () => [RECIPIENTS.javier, RECIPIENTS.mirian, RECIPIENTS.marjuri, RECIPIENTS.rosa],
+    10: (yachtEmail) => [RECIPIENTS.mirian, `${yachtEmail}`],
+};
 
 const sendEmailNuevaSolicitud = async (formatId, dataMail, adjuntos, yachtEmail) => {
     try {
-        const htmlFirmaContrato = MailsSolicitudes.htmlNuevaSolicitud(dataMail);
+        const html = MailsSolicitudes.htmlNuevaSolicitud(dataMail);
 
         const msg = {
-            to: ['belen@rwittmer.com'],
-            from: 'notify-sig@rwittmer.com',
+            to: [RECIPIENTS.belen],
+            from: FROM_EMAIL,
             subject: `${dataMail.formato} de ${dataMail.staff}`,
-            html: htmlFirmaContrato,
+            html,
             attachments: adjuntos,
         };
 
-        if (formatId === 1 || formatId === 2) {
-            msg.cc = ['javier@tiptoptravel.ec', 'mirian@rwittmer.com', 'marjuri@rwittmer.com', 'rosa@tiptoptravel.ec'];
-        }
-
-        if (formatId === 10) {
-            msg.cc = ['mirian@rwittmer.com', `${yachtEmail}`];
+        const buildCc = FORMAT_CC_MAP[formatId];
+        if (buildCc) {
+            msg.cc = buildCc(yachtEmail);
         }
 
         await sgMail.send(msg);
@@ -236,32 +213,23 @@ const sendEmailNuevaSolicitud = async (formatId, dataMail, adjuntos, yachtEmail)
 };
 
 const sendEmailConfirmacion = (dataMail) => {
-
-    const htmlFirmaContrato = MailsSolicitudes.htmlConfirmacionLectura(dataMail);
-    const msg = {
-        to: 'belen@rwittmer.com', // Change to your recipient
-        from: 'notify-sig@rwittmer.com', // Change to your verified sender
+    const html = MailsSolicitudes.htmlConfirmacionLectura(dataMail);
+    return sendMail({
+        to: RECIPIENTS.belen,
+        from: FROM_EMAIL,
         subject: 'Confirmación de lectura',
-        html: htmlFirmaContrato,
-    }
-    sgMail
-        .send(msg)
-        .then(() => {
-            console.log('Email sent')
-        })
-        .catch((error) => {
-            console.log(error)
-        })
+        html,
+    });
 }
 
 const sendEmailGuiaRemisionCreada = (dataMail, fileName, filePath) => {
     const html = MailsSolicitudes.htmlGuiaRemisionCreada(dataMail);
-    const msg = {
-        to: 'belen@rwittmer.com', // Change to your recipient
-        from: 'notify-sig@rwittmer.com', // Change to your verified sender
-        cc: 'enrique@rwittmer.com',
+    return sendMail({
+        to: RECIPIENTS.belen,
+        from: FROM_EMAIL,
+        cc: RECIPIENTS.enrique,
         subject: 'Confirmación de guía de remisión',
-        html: html,
+        html,
         attachments: [
             {
                 content: filePath, // contenido en base64
@@ -270,15 +238,7 @@ const sendEmailGuiaRemisionCreada = (dataMail, fileName, filePath) => {
                 disposition: 'attachment',
             },
         ],
-    }
-    sgMail
-        .send(msg)
-        .then(() => {
-            console.log('Email sent')
-        })
-        .catch((error) => {
-            console.log(error)
-        })
+    });
 }
 
 module.exports = {
