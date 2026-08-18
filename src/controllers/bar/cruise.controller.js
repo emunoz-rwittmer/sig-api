@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const CruiseReportExcelService = require('../../services/bar/cruiseReportExcel.services');
 const CruiseReportPDFService = require('../../services/bar/cruiseReportPDF.services');
-const MailsWithAttachments = require('../../mails/mailsWithAttachments');
+const MailsWithAttachments = require('../../mails/mailAttachments');
 const RequestService = require('../../services/operations/yachtRequest/yachtRequest.services');
 
 

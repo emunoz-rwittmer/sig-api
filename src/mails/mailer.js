@@ -1,7 +1,7 @@
-const Mails = require('./mails');
-const MailsConfirmation = require('./mailsOfConfirmation');
-const MailsOrder = require('./mailsOrder');
-const MailsSolicitudes = require('./mailsSolicitudes');
+const Mails = require('./mailTemplates');
+const MailsConfirmation = require('./mailConfirmation');
+const MailsOrder = require('./mailOrder');
+const MailsSolicitudes = require('./mailRequests');
 require('dotenv').config();
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
