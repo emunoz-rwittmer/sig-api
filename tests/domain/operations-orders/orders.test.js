@@ -1,0 +1,280 @@
+jest.mock('../../../src/mails/mailer', () => ({
+    sendEmailNewOrder: jest.fn(),
+    sendConfirmationEmail: jest.fn(),
+    sendDispatchEmail: jest.fn(),
+}));
+
+const request = require('supertest');
+const XLSX = require('xlsx');
+const { bootTestApp, shutdownTestApp } = require('../../helpers/testApp');
+const { createAuthenticatedUser } = require('../../helpers/auth');
+const { createDepartment, createPosition, createCompanyWithYacht } = require('../../helpers/staffFixtures');
+const Staff = require('../../../src/models/catalogs/staff.models');
+const Order = require('../../../src/models/operations/orders/order.models');
+const orderItems = require('../../../src/models/operations/orders/orderItems.models');
+const Utils = require('../../../src/utils/Utils');
+
+let app;
+let token;
+let fixtureCounter = 0;
+
+const auth = (httpRequest) => httpRequest.set('Authorization', `Bearer ${token}`);
+const suffix = () => {
+    fixtureCounter += 1;
+    return `${Date.now()}-${fixtureCounter}`;
+};
+
+beforeAll(async () => {
+    app = await bootTestApp();
+    token = await createAuthenticatedUser(app);
+}, 60000);
+
+afterAll(async () => {
+    await shutdownTestApp();
+});
+
+async function createStaffFixture() {
+    const dept = await createDepartment(`Dept-${suffix()}`);
+    const pos = await createPosition(`Pos-${suffix()}`);
+    const s = suffix();
+    return Staff.create({
+        firstName: 'TEST',
+        lastName: `Orders${s}`,
+        email: `orders-test-${s}@example.com`,
+        cellPhone: '0966666666',
+        password: 'Sup3rSecret!',
+        departamentId: dept.id,
+        positionId: pos.id,
+        contractType: 'Fijo',
+        active: true,
+    });
+}
+
+async function createOrderFixture(overrides = {}) {
+    const { company } = await createCompanyWithYacht(`Order Company ${suffix()}`);
+    const staff = await createStaffFixture();
+    return Order.create({
+        companyId: company.id,
+        userId: staff.id,
+        name: `Pedido-${suffix()}`,
+        status: 'en espera',
+        guide: `GUIDE-${suffix()}`,
+        ...overrides,
+    });
+}
+
+async function createOrderItemFixture(orderId, overrides = {}) {
+    return orderItems.create({
+        orderId,
+        product: `Producto-${suffix()}`,
+        sku: `SKU-${suffix()}`,
+        quantity: 10,
+        originalQuantity: 10,
+        status: 'en espera',
+        ...overrides,
+    });
+}
+
+function createExcelBuffer() {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet([
+        { sku: 'SKU-001', product: 'Producto Test', quantity: 5, originalQuantity: 5 },
+    ]);
+    XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+    return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+}
+
+describe('GET /api/orders — lista de órdenes', () => {
+    it('devuelve 200 con la lista de órdenes', async () => {
+        await createOrderFixture();
+
+        const response = await auth(request(app).get('/api/orders'));
+
+        expect(response.status).toBe(200);
+        expect(Array.isArray(response.body)).toBe(true);
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).get('/api/orders');
+
+        expect(response.status).toBe(403);
+    });
+});
+
+describe('GET /api/orders/:order_id — orden por ID', () => {
+    it('devuelve 200 con la orden encontrada', async () => {
+        const order = await createOrderFixture();
+
+        const response = await auth(
+            request(app).get(`/api/orders/${Utils.encode(order.id)}`)
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body).toHaveProperty('id');
+    });
+
+    it('devuelve 400 con hashid inválido', async () => {
+        const response = await auth(
+            request(app).get('/api/orders/not-a-hashid')
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 404 cuando la orden no existe', async () => {
+        const response = await auth(
+            request(app).get(`/api/orders/${Utils.encode(999999)}`)
+        );
+
+        expect(response.status).toBe(404);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).get('/api/orders/any-id');
+
+        expect(response.status).toBe(403);
+    });
+});
+
+describe('PUT /api/orders/:order_id — actualizar orden', () => {
+    it('devuelve 200 al actualizar la orden', async () => {
+        const order = await createOrderFixture();
+
+        const response = await auth(
+            request(app)
+                .put(`/api/orders/${Utils.encode(order.id)}`)
+                .send({ status: 'procesado' })
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toBe('resource updated successfully');
+    });
+
+    it('devuelve 400 con hashid inválido', async () => {
+        const response = await auth(
+            request(app).put('/api/orders/not-a-hashid').send({ status: 'procesado' })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 404 cuando la orden no existe', async () => {
+        const response = await auth(
+            request(app)
+                .put(`/api/orders/${Utils.encode(999999)}`)
+                .send({ status: 'procesado' })
+        );
+
+        expect(response.status).toBe(404);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app)
+            .put('/api/orders/any-id')
+            .send({});
+
+        expect(response.status).toBe(403);
+    });
+});
+
+describe('DELETE /api/orders/deleteItem/:item_id — eliminar item', () => {
+    it('devuelve 200 al eliminar el item', async () => {
+        const order = await createOrderFixture();
+        const item = await createOrderItemFixture(order.id);
+
+        const response = await auth(
+            request(app).delete(`/api/orders/deleteItem/${Utils.encode(item.id)}`)
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toBe('resource deleted successfully');
+    });
+
+    it('devuelve 400 con hashid inválido', async () => {
+        const response = await auth(
+            request(app).delete('/api/orders/deleteItem/not-a-hashid')
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 404 cuando el item no existe', async () => {
+        const response = await auth(
+            request(app).delete(`/api/orders/deleteItem/${Utils.encode(999999)}`)
+        );
+
+        expect(response.status).toBe(404);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).delete('/api/orders/deleteItem/any-id');
+
+        expect(response.status).toBe(403);
+    });
+});
+
+describe('POST /api/orders — crear orden', () => {
+    it('devuelve 200 al crear una orden con Excel válido', async () => {
+        const { company } = await createCompanyWithYacht(`PostCo-${suffix()}`);
+        const staff = await createStaffFixture();
+        const excelBuffer = createExcelBuffer();
+
+        const response = await auth(
+            request(app)
+                .post('/api/orders')
+                .field('companyId', Utils.encode(company.id))
+                .field('userId', Utils.encode(staff.id))
+                .field('name', `Pedido-${suffix()}`)
+                .field('status', 'en espera')
+                .field('guide', `GUIDE-${suffix()}`)
+                .attach('file', excelBuffer, 'pedido.xlsx')
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toBe('resource created successfully');
+    });
+
+    it('devuelve 400 sin archivo Excel', async () => {
+        const { company } = await createCompanyWithYacht(`PostCo-${suffix()}`);
+        const staff = await createStaffFixture();
+
+        const response = await auth(
+            request(app)
+                .post('/api/orders')
+                .field('companyId', Utils.encode(company.id))
+                .field('userId', Utils.encode(staff.id))
+                .field('status', 'en espera')
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 400 con companyId hashid inválido', async () => {
+        const excelBuffer = createExcelBuffer();
+
+        const response = await auth(
+            request(app)
+                .post('/api/orders')
+                .field('companyId', 'not-a-hashid')
+                .field('userId', 'not-a-hashid')
+                .field('status', 'en espera')
+                .attach('file', excelBuffer, 'pedido.xlsx')
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).post('/api/orders');
+
+        expect(response.status).toBe(403);
+    });
+});
