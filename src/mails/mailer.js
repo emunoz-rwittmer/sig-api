@@ -37,7 +37,6 @@ const sendEmailCommentCard = () => {
     const msg = {
         to: 'edison@tiptoptravel.ec',
         from: 'notify-sig@rwittmer.com',
-        //cc: 'edison@tiptoptravel.ec',
         subject: 'Comment Cards creadas con exito',
         html: htmlContentCommentCards
     }

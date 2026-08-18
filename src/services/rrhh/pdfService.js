@@ -16,7 +16,7 @@ async function generateAndSavePDF(htmlContent, filePath, result, staffSignature,
     .replace('{valor_numero}', result.valor_numero)
     .replace('{numero_cuotas}', result.numero_cuotas)
     .replace('{motivo_prestamo}', result.motivo_prestamo)
-    
+
     .replace('{periodo_vacaciones}', result.periodo_vacaciones)
     .replace('{dias_vacaciones}', result.dias_vacaciones)
     .replace('{inicio_vacaciones}', result.inicio_vacaciones)
@@ -27,15 +27,15 @@ async function generateAndSavePDF(htmlContent, filePath, result, staffSignature,
     .replace('{fecha_vuelo_uno}', `Fecha: ${result.fecha_vuelo_uno}`)
     .replace('{vuelo_dos}', `Ruta: ${result.vuelo_dos}`)
     .replace('{fecha_vuelo_dos}', `Fecha: ${result.fecha_vuelo_dos}`)
-    .replace('{nombre_persona}', result.nombre_persona)
-    .replace('{cedula_persona}', result.cedula_persona)
+    .replace('{nombre_persona}', result.nombre_persona || '')
+    .replace('{cedula_persona}', result.cedula_persona || '')
     .replace('{firma_rrhh}', firmaRRHH)
     .replace('{firma_colaborador}', firmaColaborador)
 
-    .replace('{fecha_desembarque}', result.fecha_desembarque|| '')
-    .replace('{fecha_ingreso}', result.fecha_ingreso|| '')
+    .replace('{fecha_desembarque}', result.fecha_desembarque || '')
+    .replace('{fecha_ingreso}', result.fecha_ingreso || '')
 
-    .replace('{relevo_colaborador}', result.relevo_colaborador|| '')
+    .replace('{relevo_colaborador}', result.relevo_colaborador || '')
     .replace('{relevo_cargo}', result.relevo_cargo)
     .replace('{relevo_telf}', result.relevo_telf || '')
     .replace('{relevo_correo}', result.relevo_correo || '')

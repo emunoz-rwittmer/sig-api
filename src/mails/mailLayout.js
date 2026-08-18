@@ -97,7 +97,7 @@ const mailLayout = ({ title, bodyHtml, button = null, imageWidth = 200 }) => {
                     <p>Atentamente</p>
                     <h3>Rolf Wittmer</h3>
                 </div>
-                <p><strong>Rolf Wittmer</strong> © 2025 — Todos los derechos reservados</p>
+                <p><strong>Rolf Wittmer</strong> © ${new Date().getFullYear()} — Todos los derechos reservados</p>
               </div>
           </div>
         </body>
