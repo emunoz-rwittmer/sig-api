@@ -82,3 +82,39 @@ npm run dev
 
 Then visit `http://localhost:3000/api/docs` to view the Swagger UI documentation for all available endpoints.
  
+## Email Templates
+
+All transactional emails live in `src/mails` and share a single reusable layout. Every template is rendered with the blue Rolf Wittmer standard (Segoe UI font, `#004aad` accent, centered logo, standard footer) via the `mailLayout()` helper — there is no duplicated `<style>`/`<head>` markup across templates.
+
+### Layout helper
+
+`src/mails/mailLayout.js` exports `mailLayout({ title, bodyHtml, button, imageWidth })`:
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `title` | string | Main heading (`<h2>`) |
+| `bodyHtml` | string | Email body in HTML (paragraphs, lists, etc.) |
+| `button` | `{ text, href }` \| `null` | Optional CTA button |
+| `imageWidth` | number | Logo width in px (default `200`) |
+
+Returns the full HTML string for the email.
+
+### Template modules
+
+| File | Class | Templates |
+|------|-------|-----------|
+| `mailTemplates.js` | `MailTemplates` | `htmlNewUser`, `htmlStaffForgotPassword`, `htmlForgotPassword`, `htmlContentNewEvaluations`, `htmlContentCommentCards`, `htmlContentRetoalimentationEvaluation` |
+| `mailConfirmation.js` | `MailConfirmation` | `htmlConfirmationOrder`, `htmlDispatch`, `htmlConsumoRealizado`, `htmlInvoicePassenger` |
+| `mailOrder.js` | `MailOrder` | `htmlNewOrder`, `htmlNewRequest` |
+| `mailRequests.js` | `MailRequests` | `htmlNuevaSolicitud`, `htmlConfirmacionLectura`, `htmlGuiaRemisionCreada` |
+| `mailAttachments.js` | — | `sendEmailWithAttachments`, `sendCruiseReportEmail` (with file attachments) |
+
+### Sending emails
+
+`src/mails/mailer.js` wraps the templates with SendGrid (`@sendgrid/mail`) and exposes the `send*` functions consumed by the controllers (e.g. `sendEmail`, `sendEmailNewOrder`, `sendEmailNuevaSolicitud`, `sendInvoiceEmail`, `sendEmailCommentCard`). To add a new email, create a template method that calls `mailLayout(...)` and expose a `send*` wrapper in `mailer.js`.
+
+### Adding a new email
+
+1. Add a static method to the relevant template module that returns `mailLayout({ ... })`.
+2. Add a `send*` function in `mailer.js` that builds the `msg` object and calls `sgMail.send(msg)`.
+3. Import and call it from the corresponding controller.
