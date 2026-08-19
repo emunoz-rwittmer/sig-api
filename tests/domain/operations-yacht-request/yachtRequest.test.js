@@ -234,3 +234,66 @@ describe('POST /api/requests — crear solicitud', () => {
         expect(response.status).toBe(403);
     });
 });
+
+// =========================================================================
+// PUT /api/requests/:request_id
+// =========================================================================
+
+describe('PUT /api/requests/:request_id — actualizar solicitud', () => {
+    it('devuelve 200 al actualizar la solicitud', async () => {
+        const req = await createRequestFixture();
+
+        const response = await auth(
+            request(app)
+                .put(`/api/requests/${Utils.encode(req.id)}`)
+                .send({ status: 'Procesado' })
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toBe('resource updated successfully');
+    });
+
+    it('devuelve 400 con hashid inválido', async () => {
+        const response = await auth(
+            request(app).put('/api/requests/not-a-hashid').send({ status: 'Procesado' })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 404 cuando la solicitud no existe', async () => {
+        const response = await auth(
+            request(app)
+                .put(`/api/requests/${Utils.encode(999999)}`)
+                .send({ status: 'Procesado' })
+        );
+
+        expect(response.status).toBe(404);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 400 cuando un item tiene cantidad inválida', async () => {
+        const req = await createRequestFixture();
+        const product = await createProductFixture();
+        const config = await createProductConfigFixture(product.id);
+        const item = await createRequestItemFixture(req.id, config.id);
+
+        const response = await auth(
+            request(app)
+                .put(`/api/requests/${Utils.encode(req.id)}`)
+                .send({ items: [{ id: item.id, quantity: -1 }] })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app)
+            .put('/api/requests/any-id')
+            .send({});
+
+        expect(response.status).toBe(403);
+    });
+});
