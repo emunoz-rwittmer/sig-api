@@ -186,6 +186,8 @@ const FORMAT_CC_MAP = {
     1: () => [RECIPIENTS.javier, RECIPIENTS.mirian, RECIPIENTS.marjuri, RECIPIENTS.rosa],
     2: () => [RECIPIENTS.javier, RECIPIENTS.mirian, RECIPIENTS.marjuri, RECIPIENTS.rosa],
     10: (yachtEmail) => [RECIPIENTS.mirian, `${yachtEmail}`],
+    11: () => [RECIPIENTS.mirian],
+    12: () => [RECIPIENTS.mirian],
 };
 
 const sendEmailNuevaSolicitud = async (formatId, dataMail, adjuntos, yachtEmail) => {
