@@ -135,3 +135,48 @@ describe('GET /api/requests — lista de solicitudes', () => {
         expect(response.status).toBe(403);
     });
 });
+
+// =========================================================================
+// GET /api/requests/:request_id
+// =========================================================================
+
+describe('GET /api/requests/:request_id — solicitud por ID', () => {
+    it('devuelve 200 con la solicitud encontrada', async () => {
+        const req = await createRequestFixture();
+        const product = await createProductFixture();
+        const config = await createProductConfigFixture(product.id);
+        await createRequestItemFixture(req.id, config.id);
+
+        const response = await auth(
+            request(app).get(`/api/requests/${Utils.encode(req.id)}`)
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body).toHaveProperty('id');
+        expect(response.body.requestItems).toHaveLength(1);
+    });
+
+    it('devuelve 400 con hashid inválido', async () => {
+        const response = await auth(
+            request(app).get('/api/requests/not-a-hashid')
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 404 cuando la solicitud no existe', async () => {
+        const response = await auth(
+            request(app).get(`/api/requests/${Utils.encode(999999)}`)
+        );
+
+        expect(response.status).toBe(404);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).get('/api/requests/any-id');
+
+        expect(response.status).toBe(403);
+    });
+});
