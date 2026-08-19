@@ -180,3 +180,57 @@ describe('GET /api/requests/:request_id — solicitud por ID', () => {
         expect(response.status).toBe(403);
     });
 });
+
+// =========================================================================
+// POST /api/requests — crear solicitud
+// =========================================================================
+
+describe('POST /api/requests — crear solicitud', () => {
+    it('devuelve 200 al crear una solicitud', async () => {
+        const { yacht } = await createCompanyWithYacht(`PostYacht-${suffix()}`);
+        const warehouse = await createWarehouseFixture(yacht.id);
+        const staff = await createStaffFixture();
+        const product = await createProductFixture();
+        const config = await createProductConfigFixture(product.id);
+
+        const response = await auth(
+            request(app)
+                .post('/api/requests')
+                .send({
+                    warehouseId: Utils.encode(warehouse.id),
+                    userId: Utils.encode(staff.id),
+                    name: `Requerimiento-${suffix()}`,
+                    group: 'inventory_request',
+                    status: 'Pendiente',
+                    products: [
+                        { configurationId: config.id, stock: 5, order: 0, quantity: 3 },
+                    ],
+                })
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toBe('resource created successfully');
+    });
+
+    it('devuelve 400 con warehouseId hashid inválido', async () => {
+        const response = await auth(
+            request(app)
+                .post('/api/requests')
+                .send({
+                    warehouseId: 'not-a-hashid',
+                    userId: 'not-a-hashid',
+                    status: 'Pendiente',
+                    products: [],
+                })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).post('/api/requests').send({});
+
+        expect(response.status).toBe(403);
+    });
+});
