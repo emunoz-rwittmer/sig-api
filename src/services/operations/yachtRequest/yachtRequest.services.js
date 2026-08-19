@@ -7,6 +7,7 @@ const RequestItems = require('../../../models/operations/yachtRequest/requestIte
 const ProductConfiguration = require('../../../models/operations/inventory/productConfiguration');
 const Product = require('../../../models/operations/inventory/product.models');
 const Stock = require('../../../models/operations/inventory/stock.models');
+const AppError = require('../../../errors/AppError');
 
 class RequestService {
     static async getAllRequests() {
@@ -72,6 +73,8 @@ class RequestService {
                     ]
                 ]
             });
+
+            if (!result) return null;
 
             const currentPlain = result.get({ plain: true });
             if (currentPlain.group === 'drink_request') {
@@ -178,7 +181,7 @@ class RequestService {
             for (const item of data.items) {
                 const quantity = parseInt(item.quantity, 10);
                 if (isNaN(quantity) || quantity < 0) {
-                    throw new Error(`Invalid quantity for item ${item.id}`);
+                    throw new AppError(`Invalid quantity for item ${item.id}`, 400);
                 }
             }
         }
