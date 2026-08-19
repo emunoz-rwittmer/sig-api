@@ -228,6 +228,27 @@ describe('POST /api/requests — crear solicitud', () => {
         expect(response.body.error.code).toBe('AppError');
     });
 
+    it('devuelve 400 cuando products no es un arreglo', async () => {
+        const { yacht } = await createCompanyWithYacht(`PostYacht-${suffix()}`);
+        const warehouse = await createWarehouseFixture(yacht.id);
+        const staff = await createStaffFixture();
+
+        const response = await auth(
+            request(app)
+                .post('/api/requests')
+                .send({
+                    warehouseId: Utils.encode(warehouse.id),
+                    userId: Utils.encode(staff.id),
+                    name: `Requerimiento-${suffix()}`,
+                    group: 'inventory_request',
+                    status: 'Pendiente',
+                })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
     it('devuelve 403 sin JWT', async () => {
         const response = await request(app).post('/api/requests').send({});
 

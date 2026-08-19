@@ -58,6 +58,10 @@ const createRequest = async (req, res, next) => {
         data.warehouseId = decodeId(data.warehouseId, 'warehouseId');
         data.userId = decodeId(data.userId, 'userId');
 
+        if (!Array.isArray(data.products)) {
+            throw new AppError('products debe ser un arreglo', 400);
+        }
+
         await YachtRequestService.createRequest(data)
         const warehouse = await WarehouseService.getWarehouseById(data.warehouseId)
         const staff = await Staffervice.getStaffById(data.userId)
