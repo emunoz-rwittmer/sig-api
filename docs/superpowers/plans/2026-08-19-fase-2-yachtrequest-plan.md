@@ -185,10 +185,10 @@ describe('GET /api/requests — lista de solicitudes', () => {
         expect(Array.isArray(response.body)).toBe(true);
     });
 
-    it('devuelve 401 sin JWT', async () => {
+    it('devuelve 403 sin JWT', async () => {
         const response = await request(app).get('/api/requests');
 
-        expect(response.status).toBe(401);
+        expect(response.status).toBe(403);
     });
 });
 ```
@@ -198,7 +198,7 @@ describe('GET /api/requests — lista de solicitudes', () => {
 ```bash
 npm test -- --testPathPattern=operations-yacht-request
 ```
-Esperado: 2/2 PASS — `getAllRequests` ya devuelve 200 y el JWT ya bloquea con 401.
+Esperado: 2/2 PASS — `getAllRequests` ya devuelve 200 y el JWT ya bloquea con 403.
 
 - [ ] **Step 4: Corregir los dos bugs de `src/services/operations/yachtRequest/yachtRequest.services.js`**
 
@@ -546,7 +546,7 @@ git commit -m "refactor: retrofit yachtRequest a AppError/next(error) + fixes de
 
 ---
 
-## Task 2: Tests de `getRequestById` (200, 400 hashid, 404, 401)
+## Task 2: Tests de `getRequestById` (200, 400 hashid, 404, 403)
 
 **Files:**
 - Modify: `tests/domain/operations-yacht-request/yachtRequest.test.js`
@@ -597,10 +597,10 @@ describe('GET /api/requests/:request_id — solicitud por ID', () => {
         expect(response.body.error.code).toBe('AppError');
     });
 
-    it('devuelve 401 sin JWT', async () => {
+    it('devuelve 403 sin JWT', async () => {
         const response = await request(app).get('/api/requests/any-id');
 
-        expect(response.status).toBe(401);
+        expect(response.status).toBe(403);
     });
 });
 ```
@@ -616,12 +616,12 @@ Esperado: 6/6 PASS.
 
 ```bash
 git add tests/domain/operations-yacht-request/yachtRequest.test.js
-git commit -m "test: cubrir GET /api/requests/:request_id (200, 400, 404, 401)"
+git commit -m "test: cubrir GET /api/requests/:request_id (200, 400, 404, 403)"
 ```
 
 ---
 
-## Task 3: Tests de `createRequest` (200, 400 hashid, 401)
+## Task 3: Tests de `createRequest` (200, 400 hashid, 403)
 
 **Files:**
 - Modify: `tests/domain/operations-yacht-request/yachtRequest.test.js`
@@ -680,10 +680,10 @@ describe('POST /api/requests — crear solicitud', () => {
         expect(response.body.error.code).toBe('AppError');
     });
 
-    it('devuelve 401 sin JWT', async () => {
+    it('devuelve 403 sin JWT', async () => {
         const response = await request(app).post('/api/requests').send({});
 
-        expect(response.status).toBe(401);
+        expect(response.status).toBe(403);
     });
 });
 ```
@@ -699,12 +699,12 @@ Esperado: 9/9 PASS.
 
 ```bash
 git add tests/domain/operations-yacht-request/yachtRequest.test.js
-git commit -m "test: cubrir POST /api/requests (200, 400 hashid, 401)"
+git commit -m "test: cubrir POST /api/requests (200, 400 hashid, 403)"
 ```
 
 ---
 
-## Task 4: Tests de `updateRequest` (200, 400 hashid, 404, 400 cantidad inválida, 401)
+## Task 4: Tests de `updateRequest` (200, 400 hashid, 404, 400 cantidad inválida, 403)
 
 **Files:**
 - Modify: `tests/domain/operations-yacht-request/yachtRequest.test.js`
@@ -770,12 +770,12 @@ describe('PUT /api/requests/:request_id — actualizar solicitud', () => {
         expect(response.body.error.code).toBe('AppError');
     });
 
-    it('devuelve 401 sin JWT', async () => {
+    it('devuelve 403 sin JWT', async () => {
         const response = await request(app)
             .put('/api/requests/any-id')
             .send({});
 
-        expect(response.status).toBe(401);
+        expect(response.status).toBe(403);
     });
 });
 ```
@@ -791,7 +791,7 @@ Esperado: 14/14 PASS.
 
 ```bash
 git add tests/domain/operations-yacht-request/yachtRequest.test.js
-git commit -m "test: cubrir PUT /api/requests/:request_id (200, 400, 404, 400 cantidad, 401)"
+git commit -m "test: cubrir PUT /api/requests/:request_id (200, 400, 404, 400 cantidad, 403)"
 ```
 
 ---
