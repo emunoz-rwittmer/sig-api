@@ -91,15 +91,24 @@ Cambios puntuales por endpoint:
    error de sintaxis en vez de un 400 claro. Con `decodeId` validando antes
    de llegar al service, este caso nunca alcanza el `Sequelize.literal`.
 
-4. **`affectedRows` no verificado en `updateProduct` y `switchConfirguration`:**
-   `Product.update(...)` y `ProductConfiguration.update(...)` devuelven
-   `[affectedRowsCount]` — un array, siempre truthy en JavaScript incluso
-   cuando `affectedRowsCount` es `0`. Ninguno de los dos controllers revisa
-   este valor, así que actualizar un `product_id`/`configuration_id`
-   inexistente responde 200 "actualizado" sin haber tocado ninguna fila. El
-   propio dominio `yachtRequest` (mismo repo) ya estandarizó el fix: `if
-   (affectedRows === 0) throw new AppError('... no encontrado', 404)`. Se
-   aplica el mismo patrón aquí para ambos endpoints.
+4. **Operaciones sobre id inexistente responden 200 en vez de 404, en cuatro
+   endpoints:**
+   - `updateProduct`: `Product.update(...)` devuelve `[affectedRowsCount]` —
+     un array, siempre truthy en JavaScript incluso cuando
+     `affectedRowsCount` es `0`. El controller nunca revisa este valor.
+   - `switchConfirguration`: mismo problema con
+     `ProductConfiguration.update(...)`.
+   - `getProduct`: `ProductService.getProductById` devuelve `null` si no
+     existe; el controller lo serializa igual con `res.status(200)`.
+   - `deleteProduct`: `Product.destroy(...)` devuelve `0` (falsy) si no hay
+     coincidencia; el service retorna `undefined` en ese caso y el
+     controller responde `200 { data: undefined }`.
+
+   El propio dominio `yachtRequest` (mismo repo) ya estandarizó el fix para
+   este patrón: `if (affectedRows === 0) throw new AppError('... no
+   encontrado', 404)` / `if (!result) throw new AppError(..., 404)`. Se
+   aplica el mismo idiom aquí, consistente con el objetivo explícito de este
+   retrofit (clasificar correctamente 400/404/500).
 
 ## Contrato HTTP
 
@@ -121,6 +130,8 @@ central:
 | `quantity`/`responsable` inválidos en `updateStock` | 400 (accidental, error crudo de MySQL/Sequelize) | 400 (explícito, `AppError`) |
 | `product_id` inexistente en `updateProduct` | 200 (silencioso, 0 filas afectadas) | 404 |
 | `configuration_id` inexistente en `switchConfirguration` | 200 (silencioso, 0 filas afectadas) | 404 |
+| `product_id` inexistente en `getProduct` | 200 con `null` | 404 |
+| `product_id` inexistente en `deleteProduct` | 200 con `data: undefined` | 404 |
 | Error inesperado (DB, etc.) | 400 | 500 |
 
 ## Cambios conscientes de contrato
@@ -131,8 +142,9 @@ central:
   el modelo Sequelize permite `sku: null`. En la práctica el frontend siempre
   lo envía; el cambio solo formaliza esa expectativa con un `AppError`
   explícito en vez de un `TypeError` accidental.
-- `updateProduct` y `switchConfirguration` pasan de 200 silencioso a 404 sobre
-  un id inexistente, consistente con el patrón ya usado en `yachtRequest`.
+- `updateProduct`, `switchConfirguration`, `getProduct` y `deleteProduct`
+  pasan de 200 silencioso a 404 sobre un id inexistente, consistente con el
+  patrón ya usado en `yachtRequest`.
 - El resto de la forma de respuesta exitosa (incluyendo paths, query params y
   nombres de campos) no cambia.
 
@@ -164,8 +176,18 @@ planeada:
 - `updateProduct` sobre `product_id` inexistente → 404 (antes: 200 silencioso).
 - `switchConfirguration` sobre `configuration_id` inexistente → 404 (antes:
   200 silencioso).
+- `getProduct` sobre `product_id` inexistente → 404 (antes: 200 con `null`).
+- `deleteProduct` sobre `product_id` inexistente → 404 (antes: 200 con
+  `data: undefined`).
 - PK-encoding: `getProduct` devuelve `id` como hashid, no como entero crudo.
 - JWT ausente → 403.
+
+Nota: los dos ítems de `getProduct`/`deleteProduct` no formaban parte de la
+pregunta inicial sobre contrato, pero surgieron durante la revisión
+sistemática del patrón `if (!result) throw AppError 404` contra los diez
+endpoints y son directamente el objetivo declarado del retrofit (clasificar
+400/404/500 correctamente); se documentan aquí en vez de dejarlos como
+hallazgo fuera de alcance.
 
 ## Hallazgos fuera de alcance
 
