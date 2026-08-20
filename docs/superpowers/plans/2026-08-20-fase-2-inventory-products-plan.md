@@ -1407,17 +1407,20 @@ used by `downloads`/`yachtRequest`.
 
 - [ ] **Step 2: Run the full repo test suite to confirm no cross-domain regressions**
 
-Run: `npx jest --runInBand --testPathIgnorePatterns='/\.claude/'`
+Run: `npx jest --runInBand --roots tests`
 Expected: all suites PASS, including `tests/domain/operations-orders`,
 `tests/domain/operations-yacht-request`, and `tests/smoke/orders.smoke.test.js`.
-The `--testPathIgnorePatterns` flag is required — a bare `npx jest
---runInBand` also sweeps up `.claude/worktrees/*/tests/**/*.test.js` from
-unrelated leftover worktrees (the repo's `testMatch` is
-`**/tests/**/*.test.js`), which can fail for reasons that have nothing to do
-with this domain. A positional path argument like `npx jest ./tests` does
-**not** exclude it either — Jest treats positional args as a substring/regex
-filter over the full resolved paths, and `.claude/worktrees/.../tests/...`
-still contains `/tests/`, so it still matches.
+`--roots tests` is required — a bare `npx jest --runInBand` also sweeps up
+`.claude/worktrees/*/tests/**/*.test.js` from unrelated leftover worktrees
+(the repo's `testMatch` is `**/tests/**/*.test.js`), which can fail for
+reasons that have nothing to do with this domain. A positional path argument
+like `npx jest ./tests` does **not** exclude it either — Jest treats
+positional args as a substring/regex filter over the full resolved paths,
+and `.claude/worktrees/.../tests/...` still contains `/tests/`, so it still
+matches. `--testPathIgnorePatterns` was also tried and did not exclude it in
+this environment. `--roots tests` restricts Jest's file-search root instead
+of filtering after the fact, and was verified with `npx jest --listTests
+--roots tests | grep -c '\.claude'` → `0`.
 
 - [ ] **Step 3: Re-read the diff against the spec's contract table**
 
