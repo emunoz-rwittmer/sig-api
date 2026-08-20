@@ -57,9 +57,9 @@ const getProductsWithConfigurations = async (req, res, next) => {
     }
 }
 
-const getProductsByWarehouse = async (req, res) => {
+const getProductsByWarehouse = async (req, res, next) => {
     try {
-        const warehouseId = Utils.decode(req.params.warehouse_id)
+        const warehouseId = decodeId(req.params.warehouse_id, 'warehouse_id');
         const result = await ProductService.getProductsByWarehouse(warehouseId);
 
         if (result instanceof Array) {
@@ -74,8 +74,7 @@ const getProductsByWarehouse = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        console.log(error)
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 

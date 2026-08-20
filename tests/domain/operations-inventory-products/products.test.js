@@ -412,3 +412,40 @@ describe('PUT /api/products/configurations/switchConfiguration/:configuration_id
         expect(response.status).toBe(403);
     });
 });
+
+// =========================================================================
+// GET /api/products/:warehouse_id/stocks
+// =========================================================================
+
+describe('GET /api/products/:warehouse_id/stocks — stock por warehouse', () => {
+    it('devuelve 200 con el stock del warehouse', async () => {
+        const { company, yacht } = await createCompanyWithYacht(`StockCo-${suffix()}`);
+        const warehouse = await createWarehouseFixture(yacht.id);
+        const product = await createProductFixture();
+        await createStockFixture(product.id, warehouse.id, company.id);
+
+        const response = await auth(
+            request(app).get(`/api/products/${Utils.encode(warehouse.id)}/stocks`)
+        );
+
+        expect(response.status).toBe(200);
+        expect(Array.isArray(response.body)).toBe(true);
+        expect(response.body).toHaveLength(1);
+        expect(response.body[0].product.sku).toBe(product.sku);
+    });
+
+    it('devuelve 400 con hashid inválido', async () => {
+        const response = await auth(
+            request(app).get('/api/products/not-a-hashid/stocks')
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).get('/api/products/any-id/stocks');
+
+        expect(response.status).toBe(403);
+    });
+});
