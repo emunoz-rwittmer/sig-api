@@ -41,7 +41,7 @@ const getProducts = async (req, res, next) => {
     }
 }
 
-const getProductsWithConfigurations = async (req, res) => {
+const getProductsWithConfigurations = async (req, res, next) => {
     try {
         const result = await ProductService.getProductsWithConfigurations();
         if (result instanceof Array) {
@@ -53,7 +53,7 @@ const getProductsWithConfigurations = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 

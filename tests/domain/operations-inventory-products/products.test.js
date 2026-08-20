@@ -190,3 +190,27 @@ describe('GET /api/products/findProduct/:sku — buscar por SKU', () => {
         expect(response.status).toBe(403);
     });
 });
+
+// =========================================================================
+// GET /api/products/allProductsWithConfigurations
+// =========================================================================
+
+describe('GET /api/products/allProductsWithConfigurations', () => {
+    it('devuelve 200 con las configuraciones activas', async () => {
+        const product = await createProductFixture();
+        await createProductConfigFixture(product.id);
+
+        const response = await auth(
+            request(app).get('/api/products/allProductsWithConfigurations')
+        );
+
+        expect(response.status).toBe(200);
+        expect(Array.isArray(response.body)).toBe(true);
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).get('/api/products/allProductsWithConfigurations');
+
+        expect(response.status).toBe(403);
+    });
+});
