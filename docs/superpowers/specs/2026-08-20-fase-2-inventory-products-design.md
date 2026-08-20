@@ -91,6 +91,16 @@ Cambios puntuales por endpoint:
    error de sintaxis en vez de un 400 claro. Con `decodeId` validando antes
    de llegar al service, este caso nunca alcanza el `Sequelize.literal`.
 
+4. **`affectedRows` no verificado en `updateProduct` y `switchConfirguration`:**
+   `Product.update(...)` y `ProductConfiguration.update(...)` devuelven
+   `[affectedRowsCount]` — un array, siempre truthy en JavaScript incluso
+   cuando `affectedRowsCount` es `0`. Ninguno de los dos controllers revisa
+   este valor, así que actualizar un `product_id`/`configuration_id`
+   inexistente responde 200 "actualizado" sin haber tocado ninguna fila. El
+   propio dominio `yachtRequest` (mismo repo) ya estandarizó el fix: `if
+   (affectedRows === 0) throw new AppError('... no encontrado', 404)`. Se
+   aplica el mismo patrón aquí para ambos endpoints.
+
 ## Contrato HTTP
 
 La respuesta exitosa no cambia de forma. Los errores usan el estándar
@@ -109,6 +119,8 @@ central:
 | `sku` ausente en create/update | 400 (accidental, `TypeError`) | 400 (explícito, `AppError`) |
 | `Stock` no encontrado en `updateStock` | 400 (accidental) | 404 |
 | `quantity`/`responsable` inválidos en `updateStock` | 400 (accidental, error crudo de MySQL/Sequelize) | 400 (explícito, `AppError`) |
+| `product_id` inexistente en `updateProduct` | 200 (silencioso, 0 filas afectadas) | 404 |
+| `configuration_id` inexistente en `switchConfirguration` | 200 (silencioso, 0 filas afectadas) | 404 |
 | Error inesperado (DB, etc.) | 400 | 500 |
 
 ## Cambios conscientes de contrato
@@ -119,6 +131,8 @@ central:
   el modelo Sequelize permite `sku: null`. En la práctica el frontend siempre
   lo envía; el cambio solo formaliza esa expectativa con un `AppError`
   explícito en vez de un `TypeError` accidental.
+- `updateProduct` y `switchConfirguration` pasan de 200 silencioso a 404 sobre
+  un id inexistente, consistente con el patrón ya usado en `yachtRequest`.
 - El resto de la forma de respuesta exitosa (incluyendo paths, query params y
   nombres de campos) no cambia.
 
@@ -147,6 +161,9 @@ planeada:
   de 500), y verificación de que `Stock.quantity` no cambia y no se crea
   ninguna `Transaction`.
 - `updateStock` con `responsable` ausente → 400 explícito.
+- `updateProduct` sobre `product_id` inexistente → 404 (antes: 200 silencioso).
+- `switchConfirguration` sobre `configuration_id` inexistente → 404 (antes:
+  200 silencioso).
 - PK-encoding: `getProduct` devuelve `id` como hashid, no como entero crudo.
 - JWT ausente → 403.
 
