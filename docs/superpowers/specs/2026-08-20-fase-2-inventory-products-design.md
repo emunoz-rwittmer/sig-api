@@ -132,7 +132,7 @@ central:
 |---|---|---:|
 | Token ausente o inválido | 403 | 403 (sin cambio) |
 | `findProduct` sin resultado | 400 | 404 |
-| Hashid inválido en cualquier param | 500 / comportamiento indefinido | 400 |
+| Hashid inválido en cualquier param | 400 (mensaje crudo sin clasificar) | 400 |
 | SKU duplicado en `createProduct` | 400 (accidental, vía excepción) | 400 (explícito, `AppError`) |
 | `sku` ausente en create/update | 400 (accidental, `TypeError`) | 400 (explícito, `AppError`) |
 | `Stock` no encontrado en `updateStock` | 400 (accidental) | 404 |
@@ -142,6 +142,7 @@ central:
 | `product_id` inexistente en `getProduct` | 200 con `null` | 404 |
 | `product_id` inexistente en `deleteProduct` | 200 con `data: undefined` | 404 |
 | Error inesperado (DB, etc.) | 400 | 500 |
+| `userId` ausente en `updateStock` | 200 (min/max-only update succeeded silently without attributing a user) | 400 |
 
 ## Cambios conscientes de contrato
 
@@ -154,6 +155,18 @@ central:
 - `updateProduct`, `switchConfirguration`, `getProduct` y `deleteProduct`
   pasan de 200 silencioso a 404 sobre un id inexistente, consistente con el
   patrón ya usado en `yachtRequest`.
+- `getProduct` (`GET /api/products/:product_id`) ahora devuelve `id` como
+  hashid (string) en vez del id numérico crudo — ver "Bug 1: PK-encoding
+  no-op" más arriba; se registra también aquí por ser un cambio de forma de
+  respuesta visible para el consumidor.
+- `updateStock` ahora exige `userId` en **toda** llamada, no solo en las que
+  modifican `quantity`: el controller decodifica `data.userId` de forma
+  incondicional con `decodeId`, así que un update de solo `min`/`max` que
+  antes podía pasar con `userId` ausente (200, sin atribuir el cambio a
+  nadie, porque `Transaction.create` — el único consumidor de `userId` — ni
+  siquiera se invocaba) ahora responde `400`. Es un endurecimiento de
+  contrato intencional: toda modificación de stock, incluidas las de solo
+  `min`/`max`, debe quedar atribuida a un usuario.
 - El resto de la forma de respuesta exitosa (incluyendo paths, query params y
   nombres de campos) no cambia.
 
@@ -218,3 +231,20 @@ hallazgo fuera de alcance.
   `CLIENT_FOUND_ROWS` reporta `affectedRows: 0` en ese caso. No se toca aquí
   por ser un dominio ya cerrado, pero queda registrado para un futuro fix en
   `yachtRequest`.
+- `ProductConfiguration.update(data, ...)` (en `switchConfirguration`) y
+  `Stock.update({ ...data, quantity }, ...)` (en `updateStock`) pasan el
+  body de la petición directo a `update` de Sequelize, permitiendo que un
+  cliente setee campos que no deberían ser escribibles (p. ej. `productId`,
+  `companyId`, `warehouseId`) — mass assignment. Es comportamiento
+  preexistente, no relacionado con este retrofit; queda fuera de alcance
+  arreglarlo aquí.
+- `ProductService.delete` (en `products.services.js`) llama a
+  `Product.destroy(...)` directamente; si el producto tiene `stocks` o
+  `transactions` dependientes (sin `ON DELETE CASCADE` en esas
+  asociaciones), MySQL lanza un error de constraint de FK que `next(error)`
+  clasifica como 500 con un mensaje crudo de la DB, en vez de un 4xx claro
+  como "no se puede eliminar un producto con stock o movimientos
+  asociados". Es un gap real pero se juzgó razonable diferirlo como
+  seguimiento nombrado en vez de arreglarlo en este pase; el fix probable a
+  futuro es envolver el `destroy` en un `try/catch` de
+  `SequelizeForeignKeyConstraintError` y lanzar `AppError(msg, 409)`.

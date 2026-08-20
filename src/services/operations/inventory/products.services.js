@@ -144,7 +144,6 @@ class ProductService {
             return currentPlain;
 
         } catch (error) {
-            console.log(error)
             throw error;
         }
     }

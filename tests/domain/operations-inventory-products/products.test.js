@@ -443,6 +443,20 @@ describe('GET /api/products/:warehouse_id/stocks — stock por warehouse', () =>
         expect(response.body.error.code).toBe('AppError');
     });
 
+    it('devuelve 400 (no 500) cuando el producto CONSUMABLE no tiene presentationQuantity', async () => {
+        const { company, yacht } = await createCompanyWithYacht(`StockCo-${suffix()}`);
+        const warehouse = await createWarehouseFixture(yacht.id);
+        const product = await createProductFixture({ type: 'CONSUMABLE', presentationQuantity: null });
+        await createStockFixture(product.id, warehouse.id, company.id);
+
+        const response = await auth(
+            request(app).get(`/api/products/${Utils.encode(warehouse.id)}/stocks`)
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
     it('devuelve 403 sin JWT', async () => {
         const response = await request(app).get('/api/products/any-id/stocks');
 
@@ -545,6 +559,32 @@ describe('PUT /api/products/upadate/stock/:stock_id — actualizar stock', () =>
             request(app)
                 .put(`/api/products/upadate/stock/${Utils.encode(stock.id)}`)
                 .send({ quantity: 15, userId: Utils.encode(staff.id) })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 400 (no 500) cuando el producto CONSUMABLE no tiene presentationQuantity', async () => {
+        const { stock, staff } = await buildStockScenario({ type: 'CONSUMABLE', presentationQuantity: null });
+
+        const response = await auth(
+            request(app)
+                .put(`/api/products/upadate/stock/${Utils.encode(stock.id)}`)
+                .send({ quantity: 15, responsable: 'Tester', userId: Utils.encode(staff.id) })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 400 cuando falta userId (userId es obligatorio en toda actualización de stock)', async () => {
+        const { stock } = await buildStockScenario();
+
+        const response = await auth(
+            request(app)
+                .put(`/api/products/upadate/stock/${Utils.encode(stock.id)}`)
+                .send({ quantity: 15, responsable: 'Tester' })
         );
 
         expect(response.status).toBe(400);
