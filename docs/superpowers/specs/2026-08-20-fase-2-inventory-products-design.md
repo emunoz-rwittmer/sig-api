@@ -54,16 +54,34 @@ Cambios puntuales por endpoint:
    `rrhh/trading` (ver `docs/CONVENTIONS.md`). Fix:
    `result.dataValues.id = Utils.encode(result.dataValues.id)`.
 
-2. **Corrupción de datos en `updateStock`:** `normalizeQuantity(product,
-   data.quantity)` se invoca incondicionalmente aunque `data.quantity` no
-   venga en el payload (por ejemplo, al actualizar solo `min`/`max`). Para
-   productos `DISCRETE`, `normalizeQuantity` hace `Number(undefined)` →
-   `NaN`. La comparación posterior `normalizedQty !== undefined &&
-   normalizedQty !== currentPlain.quantity` es `true` para `NaN` (nunca es
-   igual a nada, ni siquiera a sí mismo), así que el flujo trata esto como un
-   cambio real: escribe `Stock.quantity = NaN` y crea una `Transaction`
-   fantasma con `quantity: NaN` y `type: 'OUT'`. Fix: solo normalizar y
-   calcular el diff cuando `data.quantity !== undefined`.
+2. **Regresión de clasificación de errores en `updateStock`** (corregido tras
+   verificación empírica contra la DB real; ver nota abajo): `updateStock` no
+   valida explícitamente que `quantity` sea un número finito ni que
+   `responsable` esté presente antes de tocar la base de datos. Hoy, un
+   payload inválido (falta `quantity`, falta `responsable`, o `quantity` no
+   numérico) revienta con un error crudo de Sequelize/MySQL —
+   `SequelizeValidationError` (`notNull Violation: stock_history.quantity
+   cannot be null`) o `SequelizeDatabaseError` (`Incorrect integer value:
+   'abc' for column 'quantity'`) — que el catch-all actual reporta como 400
+   por accidente, exponiendo además el mensaje técnico crudo de MySQL. La
+   transacción protege la integridad: verificado empíricamente que ante
+   ambos payloads inválidos `Stock.quantity` permanece sin cambios y no se
+   crea ninguna `Transaction` (rollback completo). Pero **al migrar a
+   `next(error)` sin agregar validación explícita, estos errores no
+   clasificados caerían a 500** en vez de 400 — una regresión respecto al
+   comportamiento actual. Fix: validar explícitamente `quantity` (número
+   finito) y `responsable` (string no vacío) al inicio de `updateStock` y
+   lanzar `AppError(msg, 400)` antes de tocar la base de datos.
+
+   > **Nota de verificación:** la versión original de este documento describía
+   > este punto como una corrupción silenciosa (`Stock.quantity = NaN`
+   > persistido). Se verificó empíricamente con un script contra la DB real
+   > que la transacción de Sequelize revierte por completo en ambos casos
+   > (`quantity` ausente y `quantity` no numérico) gracias a las columnas
+   > `NOT NULL`/tipadas de `stock_history`, así que no hay corrupción
+   > persistente. El hallazgo se corrigió a lo que sí se comprobó: una
+   > regresión de clasificación de errores (400 accidental hoy → 500 tras el
+   > retrofit si no se agrega validación explícita).
 
 3. **SQL crudo sin validar `warehouseId`** en `getProductsByWarehouse`: el id
    decodificado se interpola directo en tres `Sequelize.literal(...)` para
@@ -90,6 +108,7 @@ central:
 | SKU duplicado en `createProduct` | 400 (accidental, vía excepción) | 400 (explícito, `AppError`) |
 | `sku` ausente en create/update | 400 (accidental, `TypeError`) | 400 (explícito, `AppError`) |
 | `Stock` no encontrado en `updateStock` | 400 (accidental) | 404 |
+| `quantity`/`responsable` inválidos en `updateStock` | 400 (accidental, error crudo de MySQL/Sequelize) | 400 (explícito, `AppError`) |
 | Error inesperado (DB, etc.) | 400 | 500 |
 
 ## Cambios conscientes de contrato
@@ -124,9 +143,10 @@ planeada:
 - SKU duplicado en `createProduct` → 400.
 - `sku` ausente en create/update → 400.
 - `updateStock` sobre `stock_id` inexistente → 404.
-- Regresión específica del bug `NaN`: `updateStock` actualizando solo
-  `min`/`max` sobre un producto `DISCRETE`, verificando que `quantity` no
-  cambie y no se cree una `Transaction`.
+- `updateStock` con `quantity` ausente o no numérico → 400 explícito (en vez
+  de 500), y verificación de que `Stock.quantity` no cambia y no se crea
+  ninguna `Transaction`.
+- `updateStock` con `responsable` ausente → 400 explícito.
 - PK-encoding: `getProduct` devuelve `id` como hashid, no como entero crudo.
 - JWT ausente → 403.
 
