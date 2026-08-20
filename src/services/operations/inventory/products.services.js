@@ -186,6 +186,11 @@ class ProductService {
         const transaction = await db.transaction();
 
         try {
+            const existing = await Product.findByPk(id, { transaction });
+            if (!existing) {
+                throw new AppError('Producto no encontrado', 404);
+            }
+
             const result = await Product.update(
                 {
                     name: product.name,

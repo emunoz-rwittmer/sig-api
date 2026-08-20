@@ -262,3 +262,75 @@ describe('POST /api/products/createProduct — crear producto', () => {
         expect(response.status).toBe(403);
     });
 });
+
+// =========================================================================
+// PUT /api/products/updateProduct/:product_id
+// =========================================================================
+
+describe('PUT /api/products/updateProduct/:product_id — actualizar producto', () => {
+    it('devuelve 200 al actualizar el producto', async () => {
+        const product = await createProductFixture();
+
+        const response = await auth(
+            request(app)
+                .put(`/api/products/updateProduct/${Utils.encode(product.id)}`)
+                .send({ name: 'Actualizado', sku: product.sku, type: 'DISCRETE', unit: 'unidad' })
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toBe('resource updated successfully');
+    });
+
+    it('devuelve 200 al reenviar los mismos valores (update idempotente)', async () => {
+        const product = await createProductFixture();
+
+        const response = await auth(
+            request(app)
+                .put(`/api/products/updateProduct/${Utils.encode(product.id)}`)
+                .send({ name: product.name, sku: product.sku, type: 'DISCRETE', unit: 'unidad' })
+        );
+
+        expect(response.status).toBe(200);
+    });
+
+    it('devuelve 400 con hashid inválido', async () => {
+        const response = await auth(
+            request(app)
+                .put('/api/products/updateProduct/not-a-hashid')
+                .send({ name: 'X', sku: 'X', type: 'DISCRETE' })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 400 cuando falta sku', async () => {
+        const product = await createProductFixture();
+
+        const response = await auth(
+            request(app)
+                .put(`/api/products/updateProduct/${Utils.encode(product.id)}`)
+                .send({ name: 'X', type: 'DISCRETE' })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 404 cuando el producto no existe', async () => {
+        const response = await auth(
+            request(app)
+                .put(`/api/products/updateProduct/${Utils.encode(999999)}`)
+                .send({ name: 'X', sku: `X-${suffix()}`, type: 'DISCRETE' })
+        );
+
+        expect(response.status).toBe(404);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).put('/api/products/updateProduct/any-id').send({});
+
+        expect(response.status).toBe(403);
+    });
+});

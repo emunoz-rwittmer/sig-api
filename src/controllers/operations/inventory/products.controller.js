@@ -107,15 +107,18 @@ const createProduct = async (req, res, next) => {
     }
 }
 
-const updateProduct = async (req, res) => {
+const updateProduct = async (req, res, next) => {
     try {
-        const productId = Utils.decode(req.params.product_id);
+        const productId = decodeId(req.params.product_id, 'product_id');
         const product = req.body;
+        if (!product.sku) {
+            throw new AppError('sku es requerido', 400);
+        }
         product.sku = product.sku.replace(/^0+/, '');
         await ProductService.updateProduct(product, productId);
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
