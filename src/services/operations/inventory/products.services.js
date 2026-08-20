@@ -272,10 +272,14 @@ class ProductService {
         }
     }
 
-    static async switchConfirguration(data, id) {
+    static async switchConfirguration(data, configurationId) {
         try {
-            const result = await ProductConfiguration.update(data, id);
-            return result;
+            const existing = await ProductConfiguration.findByPk(configurationId);
+            if (!existing) {
+                throw new AppError('Configuración no encontrada', 404);
+            }
+            await ProductConfiguration.update(data, { where: { id: configurationId } });
+            return true;
         } catch (error) {
             throw error;
         }

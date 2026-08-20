@@ -133,19 +133,14 @@ const deleteProduct = async (req, res, next) => {
 }
 
 
-const switchConfirguration = async (req, res) => {
+const switchConfirguration = async (req, res, next) => {
     try {
-
         const configurationId = req.params.configuration_id;
         const data = req.body
-        const result = await ProductService.switchConfirguration(data, {
-            where: { id: configurationId }
-        });
-        if (result) {
-            res.status(200).json({ data: 'resource updated successfully' });
-        }
+        await ProductService.switchConfirguration(data, configurationId);
+        res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 

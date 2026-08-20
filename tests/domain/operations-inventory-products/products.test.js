@@ -373,3 +373,42 @@ describe('DELETE /api/products/:product_id — eliminar producto', () => {
         expect(response.status).toBe(403);
     });
 });
+
+// =========================================================================
+// PUT /api/products/configurations/switchConfiguration/:configuration_id
+// =========================================================================
+
+describe('PUT /api/products/configurations/switchConfiguration/:configuration_id', () => {
+    it('devuelve 200 al actualizar la configuración', async () => {
+        const product = await createProductFixture();
+        const config = await createProductConfigFixture(product.id);
+
+        const response = await auth(
+            request(app)
+                .put(`/api/products/configurations/switchConfiguration/${config.id}`)
+                .send({ active: false })
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toBe('resource updated successfully');
+    });
+
+    it('devuelve 404 cuando la configuración no existe', async () => {
+        const response = await auth(
+            request(app)
+                .put('/api/products/configurations/switchConfiguration/999999')
+                .send({ active: false })
+        );
+
+        expect(response.status).toBe(404);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app)
+            .put('/api/products/configurations/switchConfiguration/1')
+            .send({});
+
+        expect(response.status).toBe(403);
+    });
+});
