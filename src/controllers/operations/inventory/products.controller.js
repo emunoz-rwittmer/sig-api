@@ -143,16 +143,15 @@ const switchConfirguration = async (req, res, next) => {
     }
 }
 
-const updateStock = async (req, res) => {
+const updateStock = async (req, res, next) => {
     try {
-
-        const stockId = Utils.decode(req.params.stock_id);
+        const stockId = decodeId(req.params.stock_id, 'stock_id');
         const data = req.body
-        data.userId = Utils.decode(data.userId);
+        data.userId = decodeId(data.userId, 'userId');
         await ProductService.updateStock(stockId, data);
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 

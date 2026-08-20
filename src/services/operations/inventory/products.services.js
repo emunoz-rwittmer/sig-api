@@ -286,13 +286,20 @@ class ProductService {
     }
 
     static async updateStock(id, data) {
+        if (data.quantity === undefined || data.quantity === null || !Number.isFinite(Number(data.quantity))) {
+            throw new AppError('quantity inválida', 400);
+        }
+        if (!data.responsable) {
+            throw new AppError('responsable es requerido', 400);
+        }
+
         const t = await db.transaction();
 
         try {
             const current = await Stock.findByPk(id, { transaction: t });
 
             if (!current) {
-                throw new Error('Stock no encontrado');
+                throw new AppError('Stock no encontrado', 404);
             }
 
             const currentPlain = current.get({ plain: true });

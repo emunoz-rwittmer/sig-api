@@ -449,3 +449,111 @@ describe('GET /api/products/:warehouse_id/stocks — stock por warehouse', () =>
         expect(response.status).toBe(403);
     });
 });
+
+// =========================================================================
+// PUT /api/products/upadate/stock/:stock_id
+// =========================================================================
+
+describe('PUT /api/products/upadate/stock/:stock_id — actualizar stock', () => {
+    async function buildStockScenario(productOverrides = {}) {
+        const { company, yacht } = await createCompanyWithYacht(`StockUpCo-${suffix()}`);
+        const warehouse = await createWarehouseFixture(yacht.id);
+        const product = await createProductFixture(productOverrides);
+        const staff = await createStaffFixture();
+        const stock = await createStockFixture(product.id, warehouse.id, company.id);
+        return { company, yacht, warehouse, product, staff, stock };
+    }
+
+    it('devuelve 200 y crea una Transaction al aumentar la cantidad', async () => {
+        const { stock, staff } = await buildStockScenario();
+
+        const response = await auth(
+            request(app)
+                .put(`/api/products/upadate/stock/${Utils.encode(stock.id)}`)
+                .send({ quantity: 15, min: stock.min, max: stock.max, responsable: 'Tester', userId: Utils.encode(staff.id) })
+        );
+
+        expect(response.status).toBe(200);
+
+        const transactions = await Transaction.findAll({ where: { productId: stock.productId } });
+        expect(transactions).toHaveLength(1);
+        expect(transactions[0].type).toBe('IN');
+    });
+
+    it('devuelve 400 con hashid inválido en stock_id', async () => {
+        const { staff } = await buildStockScenario();
+
+        const response = await auth(
+            request(app)
+                .put('/api/products/upadate/stock/not-a-hashid')
+                .send({ quantity: 15, responsable: 'Tester', userId: Utils.encode(staff.id) })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 404 cuando el stock no existe', async () => {
+        const { staff } = await buildStockScenario();
+
+        const response = await auth(
+            request(app)
+                .put(`/api/products/upadate/stock/${Utils.encode(999999)}`)
+                .send({ quantity: 15, responsable: 'Tester', userId: Utils.encode(staff.id) })
+        );
+
+        expect(response.status).toBe(404);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 400 cuando falta quantity, sin corromper el stock existente', async () => {
+        const { stock, staff } = await buildStockScenario();
+
+        const response = await auth(
+            request(app)
+                .put(`/api/products/upadate/stock/${Utils.encode(stock.id)}`)
+                .send({ min: 9, responsable: 'Tester', userId: Utils.encode(staff.id) })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+
+        const refreshed = await Stock.findByPk(stock.id);
+        expect(Number(refreshed.quantity)).toBe(Number(stock.quantity));
+
+        const transactions = await Transaction.findAll({ where: { productId: stock.productId } });
+        expect(transactions).toHaveLength(0);
+    });
+
+    it('devuelve 400 cuando quantity no es numérico', async () => {
+        const { stock, staff } = await buildStockScenario();
+
+        const response = await auth(
+            request(app)
+                .put(`/api/products/upadate/stock/${Utils.encode(stock.id)}`)
+                .send({ quantity: 'abc', responsable: 'Tester', userId: Utils.encode(staff.id) })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 400 cuando falta responsable', async () => {
+        const { stock, staff } = await buildStockScenario();
+
+        const response = await auth(
+            request(app)
+                .put(`/api/products/upadate/stock/${Utils.encode(stock.id)}`)
+                .send({ quantity: 15, userId: Utils.encode(staff.id) })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).put('/api/products/upadate/stock/any-id').send({});
+
+        expect(response.status).toBe(403);
+    });
+});
