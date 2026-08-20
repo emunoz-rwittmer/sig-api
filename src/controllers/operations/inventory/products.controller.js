@@ -122,14 +122,13 @@ const updateProduct = async (req, res, next) => {
     }
 }
 
-const deleteProduct = async (req, res) => {
+const deleteProduct = async (req, res, next) => {
     try {
-        const productId = Utils.decode(req.params.product_id);
+        const productId = decodeId(req.params.product_id, 'product_id');
         const result = await ProductService.delete(productId);
         res.status(200).json({ data: result })
     } catch (error) {
-
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 

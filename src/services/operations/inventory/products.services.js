@@ -263,9 +263,10 @@ class ProductService {
             const result = await Product.destroy({
                 where: { id: productId }
             });
-            if (result) {
-                return 'resource deleted successfully'
+            if (!result) {
+                throw new AppError('Producto no encontrado', 404);
             }
+            return 'resource deleted successfully'
         } catch (error) {
             throw error;
         }

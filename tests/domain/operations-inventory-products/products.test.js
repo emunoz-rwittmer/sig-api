@@ -334,3 +334,42 @@ describe('PUT /api/products/updateProduct/:product_id — actualizar producto', 
         expect(response.status).toBe(403);
     });
 });
+
+// =========================================================================
+// DELETE /api/products/:product_id
+// =========================================================================
+
+describe('DELETE /api/products/:product_id — eliminar producto', () => {
+    it('devuelve 200 al eliminar el producto', async () => {
+        const product = await createProductFixture();
+
+        const response = await auth(
+            request(app).delete(`/api/products/${Utils.encode(product.id)}`)
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toBe('resource deleted successfully');
+    });
+
+    it('devuelve 400 con hashid inválido', async () => {
+        const response = await auth(request(app).delete('/api/products/not-a-hashid'));
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 404 cuando el producto no existe', async () => {
+        const response = await auth(
+            request(app).delete(`/api/products/${Utils.encode(999999)}`)
+        );
+
+        expect(response.status).toBe(404);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).delete('/api/products/any-id');
+
+        expect(response.status).toBe(403);
+    });
+});
