@@ -1,6 +1,20 @@
 const ProductService = require('../../../services/operations/inventory/products.services');
 const Utils = require('../../../utils/Utils');
 const Quantity = require('../../../utils/quantity');
+const AppError = require('../../../errors/AppError');
+
+const decodeId = (value, fieldName) => {
+    let id;
+    try {
+        id = Utils.decode(value);
+    } catch {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    return id;
+};
 
 const findProduct = async (req, res) => {
     try {
@@ -17,7 +31,7 @@ const findProduct = async (req, res) => {
     }
 }
 
-const getProducts = async (req, res) => {
+const getProducts = async (req, res, next) => {
     try {
         const result = await ProductService.getAll();
         if (result instanceof Array) {
@@ -27,7 +41,7 @@ const getProducts = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
@@ -69,16 +83,15 @@ const getProductsByWarehouse = async (req, res) => {
     }
 }
 
-const getProduct = async (req, res) => {
+const getProduct = async (req, res, next) => {
     try {
-        const productId = Utils.decode(req.params.product_id);
+        const productId = decodeId(req.params.product_id, 'product_id');
         const result = await ProductService.getProductById(productId);
-        if (result instanceof Object) {
-            result.id = Utils.encode(result.id);
-        }
+        if (!result) throw new AppError('Producto no encontrado', 404);
+        result.dataValues.id = Utils.encode(result.dataValues.id);
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
