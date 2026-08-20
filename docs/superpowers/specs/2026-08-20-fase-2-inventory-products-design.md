@@ -15,9 +15,10 @@ separados del subárbol `operations/inventory`, igual que se hizo con
 `catalogs` y `rrhh`.
 
 El objetivo es adoptar `AppError`/`next(error)`, clasificar correctamente
-400, 404 y 500, corregir un bug de PK-encoding recurrente, corregir una
-corrupción de datos en `updateStock`, y cubrir el dominio con tests reales de
-DB.
+400, 404 y 500 (incluyendo cuatro endpoints que hoy responden 200 sobre un id
+inexistente), corregir un bug de PK-encoding recurrente, corregir una
+regresión de clasificación de errores en `updateStock`, y cubrir el dominio
+con tests reales de DB.
 
 ## Diseño
 
