@@ -158,3 +158,35 @@ describe('GET /api/products/:product_id — producto por ID', () => {
         expect(response.status).toBe(403);
     });
 });
+
+// =========================================================================
+// GET /api/products/findProduct/:sku
+// =========================================================================
+
+describe('GET /api/products/findProduct/:sku — buscar por SKU', () => {
+    it('devuelve 200 con el producto encontrado', async () => {
+        const product = await createProductFixture();
+
+        const response = await auth(
+            request(app).get(`/api/products/findProduct/${product.sku}`)
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.sku).toBe(product.sku);
+    });
+
+    it('devuelve 404 cuando el sku no existe', async () => {
+        const response = await auth(
+            request(app).get(`/api/products/findProduct/NOPE-${suffix()}`)
+        );
+
+        expect(response.status).toBe(404);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).get('/api/products/findProduct/any-sku');
+
+        expect(response.status).toBe(403);
+    });
+});

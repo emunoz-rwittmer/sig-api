@@ -16,18 +16,14 @@ const decodeId = (value, fieldName) => {
     return id;
 };
 
-const findProduct = async (req, res) => {
+const findProduct = async (req, res, next) => {
     try {
         const sku = req.params.sku.replace(/^0+/, '');
         const result = await ProductService.findProduct(sku);
-        if (result) {
-            res.status(200).json({ data: result });
-        } else {
-            res.status(400).json(`Producto no encontrado para sku: ${sku}`)
-        }
+        if (!result) throw new AppError(`Producto no encontrado para sku: ${sku}`, 404);
+        res.status(200).json({ data: result });
     } catch (error) {
-
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
