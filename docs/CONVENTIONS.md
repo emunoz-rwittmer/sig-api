@@ -90,7 +90,8 @@ Dominios de operaciones ya retrofiteados: `comentCard`. Dominio RRHH completo:
 endpoints; `GET /reports/request/:request_id` se eliminó por dead code
 irreparable, confirmado por el usuario). Dominio `downloads` retrofiteado (7
 endpoints); se restauró `FormatService.getRequestById`, eliminado erróneamente
-como dead code mientras `downloadSolicitud` todavía lo consumía.
+como dead code mientras `downloadSolicitud` todavía lo consumía. Dominio
+`inventory/products` retrofiteado (10 endpoints).
 
 ## Validación de identificadores codificados
 

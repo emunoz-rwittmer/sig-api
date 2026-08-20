@@ -1,0 +1,250 @@
+# Fase 2 — Dominio Inventory/Products — diseño
+
+**Fecha:** 2026-08-20
+**Estado:** Implementado
+
+## Contexto y alcance
+
+El dominio expone diez rutas protegidas bajo `/api/products`
+(`authJwt.verifyToken`, sin `isAdmin`), implementadas en
+`products.controller.js` / `products.services.js` / `products.routes.js`.
+Cubre CRUD de productos, sus configuraciones por pax, consulta de stock por
+warehouse y actualización de stock con generación de transacciones. No se
+tocan `registers`, `transactions` ni `warehouse` — quedan como dominios
+separados del subárbol `operations/inventory`, igual que se hizo con
+`catalogs` y `rrhh`.
+
+El objetivo es adoptar `AppError`/`next(error)`, clasificar correctamente
+400, 404 y 500 (incluyendo cuatro endpoints que hoy responden 200 sobre un id
+inexistente), corregir un bug de PK-encoding recurrente, corregir una
+regresión de clasificación de errores en `updateStock`, y cubrir el dominio
+con tests reales de DB.
+
+## Diseño
+
+Retrofit completo a `AppError` + `next(error)` en los diez handlers del
+controller. Se agrega un helper local `decodeId` (mismo patrón que
+`downloads`/`yachtRequest`) que valida los hashids de `product_id`,
+`warehouse_id`, `stock_id` y `data.userId` antes de que lleguen a Sequelize o
+a SQL crudo — `decode` puede devolver `undefined` ante una entrada
+malformada, y hoy ese `undefined` se propaga sin control.
+
+Cambios puntuales por endpoint:
+
+- `findProduct`: sin resultado → `AppError(msg, 404)` en vez de 400.
+- `createProduct`: `sku` ausente → `AppError('sku requerido', 400)` explícito
+  en vez de un `TypeError` accidental por `.replace()` sobre `undefined`.
+  SKU duplicado → `AppError(msg, 400)` en vez de `Error` genérico (que hoy
+  cae en 400 por el catch-all, pero dejaría de hacerlo al migrar a
+  `next(error)`).
+- `updateProduct`: mismo guard de `sku` requerido que `createProduct`.
+- `getProduct`, `updateProduct`, `deleteProduct`, `getProductsByWarehouse`,
+  `updateStock`: hashid inválido en cualquier parámetro → `AppError(msg,
+  400)` vía `decodeId`, en vez de propagar `undefined`.
+- `updateStock`: `Stock` no encontrado → `AppError('Stock no encontrado',
+  404)` en vez de `Error` genérico.
+- Resto de errores no identificables (fallo de DB, etc.) se delegan tal cual
+  con `next(error)`; `errorHandler` los clasifica como 500.
+
+## Bugs a corregir
+
+1. **PK-encoding no-op en `getProduct`:** `result.id = Utils.encode(result.id)`
+   sin `.dataValues` — la asignación no se refleja en el JSON serializado por
+   `res.json`, así que el endpoint devuelve el id numérico crudo en vez del
+   hashid. Mismo bug ya documentado independientemente en `catalogs` y
+   `rrhh/trading` (ver `docs/CONVENTIONS.md`). Fix:
+   `result.dataValues.id = Utils.encode(result.dataValues.id)`.
+
+2. **Regresión de clasificación de errores en `updateStock`** (corregido tras
+   verificación empírica contra la DB real; ver nota abajo): `updateStock` no
+   valida explícitamente que `quantity` sea un número finito ni que
+   `responsable` esté presente antes de tocar la base de datos. Hoy, un
+   payload inválido (falta `quantity`, falta `responsable`, o `quantity` no
+   numérico) revienta con un error crudo de Sequelize/MySQL —
+   `SequelizeValidationError` (`notNull Violation: stock_history.quantity
+   cannot be null`) o `SequelizeDatabaseError` (`Incorrect integer value:
+   'abc' for column 'quantity'`) — que el catch-all actual reporta como 400
+   por accidente, exponiendo además el mensaje técnico crudo de MySQL. La
+   transacción protege la integridad: verificado empíricamente que ante
+   ambos payloads inválidos `Stock.quantity` permanece sin cambios y no se
+   crea ninguna `Transaction` (rollback completo). Pero **al migrar a
+   `next(error)` sin agregar validación explícita, estos errores no
+   clasificados caerían a 500** en vez de 400 — una regresión respecto al
+   comportamiento actual. Fix: validar explícitamente `quantity` (número
+   finito) y `responsable` (string no vacío) al inicio de `updateStock` y
+   lanzar `AppError(msg, 400)` antes de tocar la base de datos.
+
+   > **Nota de verificación:** la versión original de este documento describía
+   > este punto como una corrupción silenciosa (`Stock.quantity = NaN`
+   > persistido). Se verificó empíricamente con un script contra la DB real
+   > que la transacción de Sequelize revierte por completo en ambos casos
+   > (`quantity` ausente y `quantity` no numérico) gracias a las columnas
+   > `NOT NULL`/tipadas de `stock_history`, así que no hay corrupción
+   > persistente. El hallazgo se corrigió a lo que sí se comprobó: una
+   > regresión de clasificación de errores (400 accidental hoy → 500 tras el
+   > retrofit si no se agrega validación explícita).
+
+3. **SQL crudo sin validar `warehouseId`** en `getProductsByWarehouse`: el id
+   decodificado se interpola directo en tres `Sequelize.literal(...)` para
+   las subconsultas de `totalIncome`/`totalOutcome`/`totalBarConsumption`.
+   Hoy, un `warehouse_id` con hashid malformado produce `undefined`
+   interpolado como literal SQL (`= undefined`), rompiendo la consulta con un
+   error de sintaxis en vez de un 400 claro. Con `decodeId` validando antes
+   de llegar al service, este caso nunca alcanza el `Sequelize.literal`.
+
+4. **Operaciones sobre id inexistente responden 200 en vez de 404, en cuatro
+   endpoints:**
+   - `updateProduct`: `Product.update(...)` devuelve `[affectedRowsCount]` —
+     un array, siempre truthy en JavaScript incluso cuando
+     `affectedRowsCount` es `0`. El controller nunca revisa este valor.
+   - `switchConfirguration`: mismo problema con
+     `ProductConfiguration.update(...)`.
+   - `getProduct`: `ProductService.getProductById` devuelve `null` si no
+     existe; el controller lo serializa igual con `res.status(200)`.
+   - `deleteProduct`: `Product.destroy(...)` devuelve `0` (falsy) si no hay
+     coincidencia; el service retorna `undefined` en ese caso y el
+     controller responde `200 { data: undefined }`.
+
+   Fix: `getProduct` y `deleteProduct` ya siguen (o pasan a seguir) el patrón
+   `if (!result) throw new AppError(..., 404)`. Para `updateProduct` y
+   `switchConfirguration` **no** se usa `affectedRows` como señal de
+   "no encontrado": se verificó empíricamente contra la DB real que MySQL
+   reporta `affectedRows: 0` tanto cuando el id no existe como cuando existe
+   pero los valores enviados son idénticos a los actuales (update
+   idempotente, sin `CLIENT_FOUND_ROWS` habilitado en la conexión de
+   `src/utils/database.js`). Usar `affectedRows === 0 → 404` produciría
+   falsos 404 en actualizaciones legítimas sin cambios reales. En su lugar,
+   ambos endpoints adoptan el patrón "buscar primero" que ya usa
+   `updateStock` en este mismo archivo: `findByPk` antes del `update`, y
+   `AppError(..., 404)` si no existe, independientemente de cuántas filas
+   reporte `affectedRows`.
+
+## Contrato HTTP
+
+La respuesta exitosa no cambia de forma. Los errores usan el estándar
+central:
+
+```json
+{ "error": { "message": "mensaje descriptivo", "code": "AppError|INTERNAL_ERROR" } }
+```
+
+| Caso | Antes | Después |
+|---|---|---:|
+| Token ausente o inválido | 403 | 403 (sin cambio) |
+| `findProduct` sin resultado | 400 | 404 |
+| Hashid inválido en cualquier param | 400 (mensaje crudo sin clasificar) | 400 |
+| SKU duplicado en `createProduct` | 400 (accidental, vía excepción) | 400 (explícito, `AppError`) |
+| `sku` ausente en create/update | 400 (accidental, `TypeError`) | 400 (explícito, `AppError`) |
+| `Stock` no encontrado en `updateStock` | 400 (accidental) | 404 |
+| `quantity`/`responsable` inválidos en `updateStock` | 400 (accidental, error crudo de MySQL/Sequelize) | 400 (explícito, `AppError`) |
+| `product_id` inexistente en `updateProduct` | 200 (silencioso, 0 filas afectadas) | 404 |
+| `configuration_id` inexistente en `switchConfirguration` | 200 (silencioso, 0 filas afectadas) | 404 |
+| `product_id` inexistente en `getProduct` | 200 con `null` | 404 |
+| `product_id` inexistente en `deleteProduct` | 200 con `data: undefined` | 404 |
+| Error inesperado (DB, etc.) | 400 | 500 |
+| `userId` ausente en `updateStock` | 200 (min/max-only update succeeded silently without attributing a user) | 400 |
+
+## Cambios conscientes de contrato
+
+- `findProduct` pasa de 400 a 404 para "no encontrado" — consistente con el
+  resto de dominios retrofiteados.
+- `sku` pasa a ser requerido en el contrato de creación/actualización, aunque
+  el modelo Sequelize permite `sku: null`. En la práctica el frontend siempre
+  lo envía; el cambio solo formaliza esa expectativa con un `AppError`
+  explícito en vez de un `TypeError` accidental.
+- `updateProduct`, `switchConfirguration`, `getProduct` y `deleteProduct`
+  pasan de 200 silencioso a 404 sobre un id inexistente, consistente con el
+  patrón ya usado en `yachtRequest`.
+- `getProduct` (`GET /api/products/:product_id`) ahora devuelve `id` como
+  hashid (string) en vez del id numérico crudo — ver "Bug 1: PK-encoding
+  no-op" más arriba; se registra también aquí por ser un cambio de forma de
+  respuesta visible para el consumidor.
+- `updateStock` ahora exige `userId` en **toda** llamada, no solo en las que
+  modifican `quantity`: el controller decodifica `data.userId` de forma
+  incondicional con `decodeId`, así que un update de solo `min`/`max` que
+  antes podía pasar con `userId` ausente (200, sin atribuir el cambio a
+  nadie, porque `Transaction.create` — el único consumidor de `userId` — ni
+  siquiera se invocaba) ahora responde `400`. Es un endurecimiento de
+  contrato intencional: toda modificación de stock, incluidas las de solo
+  `min`/`max`, debe quedar atribuida a un usuario.
+- El resto de la forma de respuesta exitosa (incluyendo paths, query params y
+  nombres de campos) no cambia.
+
+## Seguridad preservada
+
+`/api/products` sigue protegido únicamente por `authJwt.verifyToken`, sin
+agregar ni retirar roles. `decodeId` es endurecimiento de validación de
+entrada, no un cambio de política de autorización.
+
+## Verificación
+
+Nueva suite `tests/domain/operations-inventory-products/products.test.js`
+(Sequelize real, siguiendo el patrón de `orders`/`yachtRequest`). Cobertura
+planeada:
+
+- Happy path de los diez endpoints (`getProducts`, `getProduct`,
+  `findProduct`, `getProductsWithConfigurations`, `getProductsByWarehouse`,
+  `createProduct`, `updateProduct`, `deleteProduct`,
+  `switchConfirguration`, `updateStock`).
+- Hashid inválido en cada parámetro que lo usa → 400.
+- `findProduct` sin resultado → 404.
+- SKU duplicado en `createProduct` → 400.
+- `sku` ausente en create/update → 400.
+- `updateStock` sobre `stock_id` inexistente → 404.
+- `updateStock` con `quantity` ausente o no numérico → 400 explícito (en vez
+  de 500), y verificación de que `Stock.quantity` no cambia y no se crea
+  ninguna `Transaction`.
+- `updateStock` con `responsable` ausente → 400 explícito.
+- `updateProduct` sobre `product_id` inexistente → 404 (antes: 200 silencioso).
+- `switchConfirguration` sobre `configuration_id` inexistente → 404 (antes:
+  200 silencioso).
+- `getProduct` sobre `product_id` inexistente → 404 (antes: 200 con `null`).
+- `deleteProduct` sobre `product_id` inexistente → 404 (antes: 200 con
+  `data: undefined`).
+- PK-encoding: `getProduct` devuelve `id` como hashid, no como entero crudo.
+- JWT ausente → 403.
+
+Nota: los dos ítems de `getProduct`/`deleteProduct` no formaban parte de la
+pregunta inicial sobre contrato, pero surgieron durante la revisión
+sistemática del patrón `if (!result) throw AppError 404` contra los diez
+endpoints y son directamente el objetivo declarado del retrofit (clasificar
+400/404/500 correctamente); se documentan aquí en vez de dejarlos como
+hallazgo fuera de alcance.
+
+## Hallazgos fuera de alcance
+
+- `switchConfirguration` no valida que `configuration_id` pertenezca a un
+  producto existente ni decodifica el id (los ids de `ProductConfiguration`
+  no se hashid-encodean en las respuestas, a diferencia de `Product`) — se
+  mantiene el comportamiento actual, fuera del alcance de este retrofit.
+- `updateProduct` reemplaza/borra configuraciones dentro de la misma
+  transacción sin validar que las `id` entrantes en `configurations`
+  pertenezcan al producto que se está actualizando — mismo patrón de riesgo
+  documentado en `CONVENTIONS.md` ("Validación de relaciones en payloads"),
+  pero no se aborda aquí para no ampliar el alcance del dominio.
+- `productsBar.controller.js` / `productsBar.services.js` (dominio `bar`) es
+  un dominio distinto que también maneja productos; no se toca.
+- `YachtRequestController.updateRequest` (`yachtRequest`, ya mergeado) usa
+  `if (affectedRows === 0) throw AppError(..., 404)`. Verificado
+  empíricamente en este dominio que ese patrón da falso 404 ante un update
+  idempotente (valores enviados idénticos a los actuales), porque MySQL sin
+  `CLIENT_FOUND_ROWS` reporta `affectedRows: 0` en ese caso. No se toca aquí
+  por ser un dominio ya cerrado, pero queda registrado para un futuro fix en
+  `yachtRequest`.
+- `ProductConfiguration.update(data, ...)` (en `switchConfirguration`) y
+  `Stock.update({ ...data, quantity }, ...)` (en `updateStock`) pasan el
+  body de la petición directo a `update` de Sequelize, permitiendo que un
+  cliente setee campos que no deberían ser escribibles (p. ej. `productId`,
+  `companyId`, `warehouseId`) — mass assignment. Es comportamiento
+  preexistente, no relacionado con este retrofit; queda fuera de alcance
+  arreglarlo aquí.
+- `ProductService.delete` (en `products.services.js`) llama a
+  `Product.destroy(...)` directamente; si el producto tiene `stocks` o
+  `transactions` dependientes (sin `ON DELETE CASCADE` en esas
+  asociaciones), MySQL lanza un error de constraint de FK que `next(error)`
+  clasifica como 500 con un mensaje crudo de la DB, en vez de un 4xx claro
+  como "no se puede eliminar un producto con stock o movimientos
+  asociados". Es un gap real pero se juzgó razonable diferirlo como
+  seguimiento nombrado en vez de arreglarlo en este pase; el fix probable a
+  futuro es envolver el `destroy` en un `try/catch` de
+  `SequelizeForeignKeyConstraintError` y lanzar `AppError(msg, 409)`.

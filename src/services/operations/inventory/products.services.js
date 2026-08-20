@@ -8,6 +8,7 @@ const { Sequelize, Op } = require('sequelize');
 const StockHistory = require('../../../models/operations/inventory/stockHistory.models');
 const Transaction = require('../../../models/operations/inventory/transaction.models');
 const Quantity = require('../../../utils/quantity');
+const AppError = require('../../../errors/AppError');
 
 class ProductService {
     static async findProduct(sku) {
@@ -143,7 +144,6 @@ class ProductService {
             return currentPlain;
 
         } catch (error) {
-            console.log(error)
             throw error;
         }
     }
@@ -158,7 +158,7 @@ class ProductService {
             });
 
             if (product) {
-                throw new Error(`El producto con el SKU: ${product.sku} ya existe`);
+                throw new AppError(`El producto con el SKU: ${product.sku} ya existe`, 400);
             }
 
             const result = await Product.create(data, { transaction });
@@ -185,6 +185,11 @@ class ProductService {
         const transaction = await db.transaction();
 
         try {
+            const existing = await Product.findByPk(id, { transaction });
+            if (!existing) {
+                throw new AppError('Producto no encontrado', 404);
+            }
+
             const result = await Product.update(
                 {
                     name: product.name,
@@ -257,31 +262,43 @@ class ProductService {
             const result = await Product.destroy({
                 where: { id: productId }
             });
-            if (result) {
-                return 'resource deleted successfully'
+            if (!result) {
+                throw new AppError('Producto no encontrado', 404);
             }
+            return 'resource deleted successfully'
         } catch (error) {
             throw error;
         }
     }
 
-    static async switchConfirguration(data, id) {
+    static async switchConfirguration(data, configurationId) {
         try {
-            const result = await ProductConfiguration.update(data, id);
-            return result;
+            const existing = await ProductConfiguration.findByPk(configurationId);
+            if (!existing) {
+                throw new AppError('Configuración no encontrada', 404);
+            }
+            await ProductConfiguration.update(data, { where: { id: configurationId } });
+            return true;
         } catch (error) {
             throw error;
         }
     }
 
     static async updateStock(id, data) {
+        if (data.quantity === undefined || data.quantity === null || !Number.isFinite(Number(data.quantity))) {
+            throw new AppError('quantity inválida', 400);
+        }
+        if (!data.responsable) {
+            throw new AppError('responsable es requerido', 400);
+        }
+
         const t = await db.transaction();
 
         try {
             const current = await Stock.findByPk(id, { transaction: t });
 
             if (!current) {
-                throw new Error('Stock no encontrado');
+                throw new AppError('Stock no encontrado', 404);
             }
 
             const currentPlain = current.get({ plain: true });

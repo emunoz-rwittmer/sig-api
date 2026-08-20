@@ -1,23 +1,33 @@
 const ProductService = require('../../../services/operations/inventory/products.services');
 const Utils = require('../../../utils/Utils');
 const Quantity = require('../../../utils/quantity');
+const AppError = require('../../../errors/AppError');
 
-const findProduct = async (req, res) => {
+const decodeId = (value, fieldName) => {
+    let id;
+    try {
+        id = Utils.decode(value);
+    } catch {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    return id;
+};
+
+const findProduct = async (req, res, next) => {
     try {
         const sku = req.params.sku.replace(/^0+/, '');
         const result = await ProductService.findProduct(sku);
-        if (result) {
-            res.status(200).json({ data: result });
-        } else {
-            res.status(400).json(`Producto no encontrado para sku: ${sku}`)
-        }
+        if (!result) throw new AppError(`Producto no encontrado para sku: ${sku}`, 404);
+        res.status(200).json({ data: result });
     } catch (error) {
-
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const getProducts = async (req, res) => {
+const getProducts = async (req, res, next) => {
     try {
         const result = await ProductService.getAll();
         if (result instanceof Array) {
@@ -27,11 +37,11 @@ const getProducts = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const getProductsWithConfigurations = async (req, res) => {
+const getProductsWithConfigurations = async (req, res, next) => {
     try {
         const result = await ProductService.getProductsWithConfigurations();
         if (result instanceof Array) {
@@ -43,13 +53,13 @@ const getProductsWithConfigurations = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const getProductsByWarehouse = async (req, res) => {
+const getProductsByWarehouse = async (req, res, next) => {
     try {
-        const warehouseId = Utils.decode(req.params.warehouse_id)
+        const warehouseId = decodeId(req.params.warehouse_id, 'warehouse_id');
         const result = await ProductService.getProductsByWarehouse(warehouseId);
 
         if (result instanceof Array) {
@@ -64,88 +74,84 @@ const getProductsByWarehouse = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        console.log(error)
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const getProduct = async (req, res) => {
+const getProduct = async (req, res, next) => {
     try {
-        const productId = Utils.decode(req.params.product_id);
+        const productId = decodeId(req.params.product_id, 'product_id');
         const result = await ProductService.getProductById(productId);
-        if (result instanceof Object) {
-            result.id = Utils.encode(result.id);
-        }
+        if (!result) throw new AppError('Producto no encontrado', 404);
+        result.dataValues.id = Utils.encode(result.dataValues.id);
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const createProduct = async (req, res) => {
+const createProduct = async (req, res, next) => {
     try {
         const product = req.body;
+        if (!product.sku) {
+            throw new AppError('sku es requerido', 400);
+        }
         product.sku = product.sku.replace(/^0+/, '');
         const result = await ProductService.createProduct(product);
         if (result) {
             res.status(200).json({ data: 'resource created successfully' });
         }
     } catch (error) {
-
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
-const updateProduct = async (req, res) => {
+const updateProduct = async (req, res, next) => {
     try {
-        const productId = Utils.decode(req.params.product_id);
+        const productId = decodeId(req.params.product_id, 'product_id');
         const product = req.body;
+        if (!product.sku) {
+            throw new AppError('sku es requerido', 400);
+        }
         product.sku = product.sku.replace(/^0+/, '');
         await ProductService.updateProduct(product, productId);
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
-const deleteProduct = async (req, res) => {
+const deleteProduct = async (req, res, next) => {
     try {
-        const productId = Utils.decode(req.params.product_id);
+        const productId = decodeId(req.params.product_id, 'product_id');
         const result = await ProductService.delete(productId);
         res.status(200).json({ data: result })
     } catch (error) {
-
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
 
-const switchConfirguration = async (req, res) => {
+const switchConfirguration = async (req, res, next) => {
     try {
-
         const configurationId = req.params.configuration_id;
         const data = req.body
-        const result = await ProductService.switchConfirguration(data, {
-            where: { id: configurationId }
-        });
-        if (result) {
-            res.status(200).json({ data: 'resource updated successfully' });
-        }
+        await ProductService.switchConfirguration(data, configurationId);
+        res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
-const updateStock = async (req, res) => {
+const updateStock = async (req, res, next) => {
     try {
-
-        const stockId = Utils.decode(req.params.stock_id);
+        const stockId = decodeId(req.params.stock_id, 'stock_id');
         const data = req.body
-        data.userId = Utils.decode(data.userId);
+        data.userId = decodeId(data.userId, 'userId');
         await ProductService.updateStock(stockId, data);
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 

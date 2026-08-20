@@ -1,7 +1,9 @@
+const AppError = require('../errors/AppError');
+
 function normalizeQuantity(product, quantity) {
     if (product?.type === 'CONSUMABLE') {
         if (!product.presentationQuantity) {
-            throw new Error(`Producto ${product.name} sin presentationQuantity`);
+            throw new AppError(`Producto ${product.name} sin presentationQuantity`, 400);
         }
 
         const qty = Number(quantity);
@@ -18,7 +20,7 @@ function normalizeQuantity(product, quantity) {
 function viewCorrectQuantity(product, quantity) {
     if (product?.type === 'CONSUMABLE') {
         if (!product?.presentationQuantity) {
-            throw new Error(`Producto ${product?.name} sin presentationQuantity`);
+            throw new AppError(`Producto ${product?.name} sin presentationQuantity`, 400);
         }
 
         return (quantity / product?.presentationQuantity).toFixed(2);
