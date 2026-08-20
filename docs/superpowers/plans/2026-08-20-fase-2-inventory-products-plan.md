@@ -1407,9 +1407,13 @@ used by `downloads`/`yachtRequest`.
 
 - [ ] **Step 2: Run the full repo test suite to confirm no cross-domain regressions**
 
-Run: `npx jest --runInBand`
+Run: `npx jest ./tests --runInBand`
 Expected: all suites PASS, including `tests/domain/operations-orders`,
 `tests/domain/operations-yacht-request`, and `tests/smoke/orders.smoke.test.js`.
+Scope to `./tests` explicitly — a bare `npx jest --runInBand` also sweeps up
+`.claude/worktrees/*/tests/**/*.test.js` from unrelated leftover worktrees
+(the repo's `testMatch` is `**/tests/**/*.test.js`), which can fail for
+reasons that have nothing to do with this domain.
 
 - [ ] **Step 3: Re-read the diff against the spec's contract table**
 
