@@ -104,11 +104,19 @@ Cambios puntuales por endpoint:
      coincidencia; el service retorna `undefined` en ese caso y el
      controller responde `200 { data: undefined }`.
 
-   El propio dominio `yachtRequest` (mismo repo) ya estandarizó el fix para
-   este patrón: `if (affectedRows === 0) throw new AppError('... no
-   encontrado', 404)` / `if (!result) throw new AppError(..., 404)`. Se
-   aplica el mismo idiom aquí, consistente con el objetivo explícito de este
-   retrofit (clasificar correctamente 400/404/500).
+   Fix: `getProduct` y `deleteProduct` ya siguen (o pasan a seguir) el patrón
+   `if (!result) throw new AppError(..., 404)`. Para `updateProduct` y
+   `switchConfirguration` **no** se usa `affectedRows` como señal de
+   "no encontrado": se verificó empíricamente contra la DB real que MySQL
+   reporta `affectedRows: 0` tanto cuando el id no existe como cuando existe
+   pero los valores enviados son idénticos a los actuales (update
+   idempotente, sin `CLIENT_FOUND_ROWS` habilitado en la conexión de
+   `src/utils/database.js`). Usar `affectedRows === 0 → 404` produciría
+   falsos 404 en actualizaciones legítimas sin cambios reales. En su lugar,
+   ambos endpoints adoptan el patrón "buscar primero" que ya usa
+   `updateStock` en este mismo archivo: `findByPk` antes del `update`, y
+   `AppError(..., 404)` si no existe, independientemente de cuántas filas
+   reporte `affectedRows`.
 
 ## Contrato HTTP
 
@@ -202,3 +210,10 @@ hallazgo fuera de alcance.
   pero no se aborda aquí para no ampliar el alcance del dominio.
 - `productsBar.controller.js` / `productsBar.services.js` (dominio `bar`) es
   un dominio distinto que también maneja productos; no se toca.
+- `YachtRequestController.updateRequest` (`yachtRequest`, ya mergeado) usa
+  `if (affectedRows === 0) throw AppError(..., 404)`. Verificado
+  empíricamente en este dominio que ese patrón da falso 404 ante un update
+  idempotente (valores enviados idénticos a los actuales), porque MySQL sin
+  `CLIENT_FOUND_ROWS` reporta `affectedRows: 0` en ese caso. No se toca aquí
+  por ser un dominio ya cerrado, pero queda registrado para un futuro fix en
+  `yachtRequest`.
