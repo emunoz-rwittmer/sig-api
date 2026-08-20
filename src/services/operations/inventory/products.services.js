@@ -8,6 +8,7 @@ const { Sequelize, Op } = require('sequelize');
 const StockHistory = require('../../../models/operations/inventory/stockHistory.models');
 const Transaction = require('../../../models/operations/inventory/transaction.models');
 const Quantity = require('../../../utils/quantity');
+const AppError = require('../../../errors/AppError');
 
 class ProductService {
     static async findProduct(sku) {
@@ -158,7 +159,7 @@ class ProductService {
             });
 
             if (product) {
-                throw new Error(`El producto con el SKU: ${product.sku} ya existe`);
+                throw new AppError(`El producto con el SKU: ${product.sku} ya existe`, 400);
             }
 
             const result = await Product.create(data, { transaction });

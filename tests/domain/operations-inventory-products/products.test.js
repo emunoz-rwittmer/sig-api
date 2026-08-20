@@ -214,3 +214,51 @@ describe('GET /api/products/allProductsWithConfigurations', () => {
         expect(response.status).toBe(403);
     });
 });
+
+// =========================================================================
+// POST /api/products/createProduct
+// =========================================================================
+
+describe('POST /api/products/createProduct — crear producto', () => {
+    it('devuelve 200 al crear un producto', async () => {
+        const s = suffix();
+        const response = await auth(
+            request(app)
+                .post('/api/products/createProduct')
+                .send({ name: `Nuevo-${s}`, sku: `NEW-${s}`, type: 'DISCRETE', unit: 'unidad' })
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toBe('resource created successfully');
+    });
+
+    it('devuelve 400 cuando falta sku', async () => {
+        const response = await auth(
+            request(app)
+                .post('/api/products/createProduct')
+                .send({ name: `SinSku-${suffix()}`, type: 'DISCRETE', unit: 'unidad' })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 400 cuando el sku ya existe', async () => {
+        const existing = await createProductFixture();
+
+        const response = await auth(
+            request(app)
+                .post('/api/products/createProduct')
+                .send({ name: `Dup-${suffix()}`, sku: existing.sku, type: 'DISCRETE', unit: 'unidad' })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).post('/api/products/createProduct').send({});
+
+        expect(response.status).toBe(403);
+    });
+});

@@ -91,17 +91,19 @@ const getProduct = async (req, res, next) => {
     }
 }
 
-const createProduct = async (req, res) => {
+const createProduct = async (req, res, next) => {
     try {
         const product = req.body;
+        if (!product.sku) {
+            throw new AppError('sku es requerido', 400);
+        }
         product.sku = product.sku.replace(/^0+/, '');
         const result = await ProductService.createProduct(product);
         if (result) {
             res.status(200).json({ data: 'resource created successfully' });
         }
     } catch (error) {
-
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
