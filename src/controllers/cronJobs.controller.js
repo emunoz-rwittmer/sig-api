@@ -21,6 +21,7 @@ const Passenger = require('../models/bar/passenger.models');
 const ConsumerCardCount = require('../models/bar/consumerCardCount.model');
 const ConsumerCard = require('../models/bar/consumerCard.models');
 const CortecyCard = require('../models/bar/cortecyCard.models');
+const { isWeeklyEvaluationCrewEnabled } = require('../utils/weeklyEvaluationCrewControl');
 
 
 function getWeekRange() {
@@ -376,6 +377,11 @@ const generateWeeklyEvaluationCrew = async () => {
 
             if (!staff || !staff.staff_position) continue;
 
+            if (Number.isInteger(companyId) && companyId > 0 &&
+                !isWeeklyEvaluationCrewEnabled({ companyId })) {
+                continue;
+            }
+
             const positionName = staff.staff_position.name;
             const fullName = `${staff.firstName} ${staff.lastName}`;
 
@@ -519,4 +525,4 @@ const CronJobs = {
     generateWeeklyEvaluationCrew
 }
 
-module.exports = CronJobs 
+module.exports = CronJobs;
