@@ -249,3 +249,48 @@ describe('DELETE /api/warehouse/:warehouse_id — eliminar bodega', () => {
         expect(response.status).toBe(403);
     });
 });
+
+// =========================================================================
+// GET /api/warehouse/:stock_id/stockProduct
+// =========================================================================
+
+describe('GET /api/warehouse/:stock_id/stockProduct', () => {
+    it('devuelve 200 con el stock y la cantidad correcta', async () => {
+        const warehouse = await createWarehouseFixture();
+        const product = await createProductFixture();
+        const stock = await createStockFixture(product.id, warehouse.id, null, { quantity: 15 });
+
+        const response = await auth(
+            request(app).get(`/api/warehouse/${Utils.encode(stock.id)}/stockProduct`)
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.quantity).toBe(15);
+        expect(response.body.product.name).toBe(product.name);
+        expect(response.body.warehouse.name).toBe(warehouse.name);
+    });
+
+    it('devuelve 400 con hashid inválido', async () => {
+        const response = await auth(
+            request(app).get('/api/warehouse/not-a-hashid/stockProduct')
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 404 cuando el stock no existe', async () => {
+        const response = await auth(
+            request(app).get(`/api/warehouse/${Utils.encode(999999)}/stockProduct`)
+        );
+
+        expect(response.status).toBe(404);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).get('/api/warehouse/any-id/stockProduct');
+
+        expect(response.status).toBe(403);
+    });
+});

@@ -73,14 +73,17 @@ const deleteWarehouse = async (req, res, next) => {
 }
 
 
-const getStockProduct = async (req, res) => {
+const getStockProduct = async (req, res, next) => {
     try {
-        const stockId = Utils.decode(req.params.stock_id);
+        const stockId = decodeId(req.params.stock_id, 'stock_id');
         const result = await WarehouseService.getStockProduct(stockId);
+        if (!result) {
+            throw new AppError('Stock no encontrado', 404);
+        }
         result.quantity = await Quantity.viewCorrectQuantity(result.product, result.quantity)
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message || 'Error inesperado');
+        next(error);
     }
 };
 
