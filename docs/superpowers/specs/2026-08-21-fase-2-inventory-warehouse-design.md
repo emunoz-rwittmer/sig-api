@@ -5,7 +5,7 @@
 
 ## Contexto y alcance
 
-El dominio expone cinco rutas protegidas bajo `/api/warehouses`
+El dominio expone cinco rutas protegidas bajo `/api/warehouse`
 (`authJwt.verifyToken`, sin `isAdmin`), implementadas en
 `warehouse.controller.js` / `warehouse.services.js` / `warehouse.routes.js`:
 `getAllWarehouses`, `createWarehouse`, `updateWarehouse`, `deleteWarehouse`,
@@ -75,7 +75,10 @@ controller. Se agrega un helper local `decodeId` (mismo patrón que
 - **`updateWarehouse`**: pasa al patrón "buscar primero" (`findByPk` antes
   de `update`) → `AppError('Bodega no encontrada', 404)` si no existe, en
   vez de ignorar el `affectedRowsCount` que hoy devuelve `Warehouse.update`.
-  Se agrega `decodeId` para `warehouse_id`.
+  Se agrega `decodeId` para `warehouse_id`. De paso se quita el
+  `console.log(error)` de debug que hoy tiene el `catch` del service —
+  ruido preexistente en el mismo bloque que se está tocando, mismo tipo de
+  hallazgo que quedó pendiente en el review final de `transactions`.
 - **`deleteWarehouse`**: el service ya calcula `if (result)` con el
   resultado de `Warehouse.destroy` (que es la cantidad de filas
   eliminadas), pero hoy solo lo usa para elegir el mensaje de éxito y nunca
@@ -144,7 +147,7 @@ usan el estándar central:
 
 ## Seguridad preservada
 
-`/api/warehouses` sigue protegido únicamente por `authJwt.verifyToken`,
+`/api/warehouse` sigue protegido únicamente por `authJwt.verifyToken`,
 sin agregar ni retirar roles. `decodeId` es endurecimiento de validación de
 entrada, no un cambio de política de autorización.
 
