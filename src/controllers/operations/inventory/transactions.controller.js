@@ -164,7 +164,7 @@ const incomeProductsRegister = async (req, res, next) => {
     }
 }
 
-const printRegister = async (req, res) => {
+const printRegister = async (req, res, next) => {
     try {
         const formattedCounter = req.body.counter
         const company = req.body.empresa?.name
@@ -182,7 +182,7 @@ const printRegister = async (req, res) => {
         }
 
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 

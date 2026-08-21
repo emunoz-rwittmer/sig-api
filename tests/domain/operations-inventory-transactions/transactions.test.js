@@ -675,3 +675,62 @@ describe('POST /api/transactions/incomeProductsRegister', () => {
         expect(response.status).toBe(403);
     });
 });
+
+// =========================================================================
+// PUT /api/transactions/printRegister
+// =========================================================================
+
+describe('PUT /api/transactions/printRegister', () => {
+    const printBody = () => ({
+        counter: '000-001',
+        empresa: { name: 'Empresa Test' },
+        responsable: { firstName: 'Ana', lastName: 'Perez' },
+        transactiones: [{ product: { name: 'Producto Test' }, quantity: 3 }],
+    });
+
+    it('devuelve 200 cuando el servicio de impresión responde 200', async () => {
+        const printSpy = jest.spyOn(axios, 'post').mockResolvedValueOnce({ status: 200 });
+
+        const response = await auth(
+            request(app).put('/api/transactions/printRegister').send(printBody())
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toBe('Transacción completada correctamente.');
+        printSpy.mockRestore();
+    });
+
+    it('devuelve 400 cuando el servicio de impresión responde distinto de 200', async () => {
+        const printSpy = jest.spyOn(axios, 'post').mockResolvedValueOnce({ status: 500 });
+
+        const response = await auth(
+            request(app).put('/api/transactions/printRegister').send(printBody())
+        );
+
+        expect(response.status).toBe(400);
+        printSpy.mockRestore();
+    });
+
+    it('devuelve 500 cuando el servicio de impresión falla (delegado al handler global)', async () => {
+        const printSpy = jest.spyOn(axios, 'post').mockRejectedValueOnce(new Error('print service unreachable'));
+
+        const response = await auth(
+            request(app).put('/api/transactions/printRegister').send(printBody())
+        );
+
+        expect(response.status).toBe(500);
+        expect(response.body).toEqual({
+            error: {
+                message: 'print service unreachable',
+                code: 'INTERNAL_ERROR',
+            },
+        });
+        printSpy.mockRestore();
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).put('/api/transactions/printRegister').send({});
+
+        expect(response.status).toBe(403);
+    });
+});
