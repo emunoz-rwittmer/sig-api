@@ -31,13 +31,22 @@ const getAllWarehouses = async (req, res, next) => {
     }
 }
 
-const createWarehouse = async (req, res) => {
+const createWarehouse = async (req, res, next) => {
     try {
         const data = req.body;
+        if (!data.name) {
+            throw new AppError('name es requerido', 400);
+        }
+        if (!data.location) {
+            throw new AppError('location es requerido', 400);
+        }
+        if (!data.type) {
+            throw new AppError('type es requerido', 400);
+        }
         await WarehouseService.createWarehouse(data);
         res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 

@@ -99,3 +99,61 @@ describe('GET /api/warehouse — lista de bodegas', () => {
         failure.mockRestore();
     });
 });
+
+// =========================================================================
+// POST /api/warehouse
+// =========================================================================
+
+describe('POST /api/warehouse — crear bodega', () => {
+    it('devuelve 200 al crear una bodega', async () => {
+        const s = suffix();
+
+        const response = await auth(
+            request(app)
+                .post('/api/warehouse')
+                .send({ name: `Nueva-${s}`, location: 'Cubierta 1', type: 'Yate' })
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toBe('resource created successfully');
+    });
+
+    it('devuelve 400 cuando falta name', async () => {
+        const response = await auth(
+            request(app)
+                .post('/api/warehouse')
+                .send({ location: 'Cubierta 1', type: 'Yate' })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 400 cuando falta location', async () => {
+        const response = await auth(
+            request(app)
+                .post('/api/warehouse')
+                .send({ name: `SinLocation-${suffix()}`, type: 'Yate' })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 400 cuando falta type', async () => {
+        const response = await auth(
+            request(app)
+                .post('/api/warehouse')
+                .send({ name: `SinType-${suffix()}`, location: 'Cubierta 1' })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).post('/api/warehouse').send({});
+
+        expect(response.status).toBe(403);
+    });
+});
