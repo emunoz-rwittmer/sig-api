@@ -118,7 +118,7 @@ class TransactionService {
 
             return {
                 success: true,
-                message: stock ? 'Stock actualizado y transacción registrada' : 'Producto, stock y transacción creados',
+                message: 'Stock actualizado y transacción registrada',
                 orderItemId,
                 productId: product.id,
                 transactionId: newTransaction.id
@@ -352,16 +352,6 @@ class TransactionService {
             throw new AppError('Elemento no encontrado', 404);
         }
         return orderItems.update(data, { where: { id: itemId } });
-    }
-
-    /**
-     * Valida y convierte cantidad a número
-     * @param {*} quantity - Cantidad a validar
-     * @returns {boolean} - true si la cantidad es válida y > 0
-     */
-    static validateQuantity(quantity) {
-        const num = Number(quantity);
-        return Number.isFinite(num) && num > 0;
     }
 
     static async incomeProductsRegister(transactionData) {

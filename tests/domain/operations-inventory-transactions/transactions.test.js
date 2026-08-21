@@ -40,6 +40,10 @@ afterAll(async () => {
     await shutdownTestApp();
 });
 
+afterEach(() => {
+    jest.restoreAllMocks();
+});
+
 // --- Helpers de fixtures --------------------------------------------------
 
 async function createStaffFixture() {
@@ -420,7 +424,6 @@ describe('POST /api/transactions/transactionBetweenWarehouse', () => {
 
         expect(response.status).toBe(200);
         expect(printSpy).toHaveBeenCalledTimes(1);
-        printSpy.mockRestore();
     });
 
     it('devuelve 400 cuando origen y destino son iguales', async () => {
@@ -697,7 +700,6 @@ describe('PUT /api/transactions/printRegister', () => {
 
         expect(response.status).toBe(200);
         expect(response.body.data).toBe('Transacción completada correctamente.');
-        printSpy.mockRestore();
     });
 
     it('devuelve 400 cuando el servicio de impresión responde distinto de 200', async () => {
@@ -708,7 +710,6 @@ describe('PUT /api/transactions/printRegister', () => {
         );
 
         expect(response.status).toBe(400);
-        printSpy.mockRestore();
     });
 
     it('devuelve 500 cuando el servicio de impresión falla (delegado al handler global)', async () => {
@@ -725,7 +726,6 @@ describe('PUT /api/transactions/printRegister', () => {
                 code: 'INTERNAL_ERROR',
             },
         });
-        printSpy.mockRestore();
     });
 
     it('devuelve 403 sin JWT', async () => {

@@ -103,7 +103,6 @@ const transactionWarehouse = async (req, res, next) => {
             res.status(200).json({ data: transactions.message });
         }
     } catch (error) {
-        console.log(error)
         next(error);
     }
 }
