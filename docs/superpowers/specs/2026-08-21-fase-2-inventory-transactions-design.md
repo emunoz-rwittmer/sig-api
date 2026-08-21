@@ -1,7 +1,7 @@
 # Fase 2 — Dominio Inventory/Transactions — diseño
 
 **Fecha:** 2026-08-21
-**Estado:** Propuesto
+**Estado:** Implementado
 
 ## Contexto y alcance
 
