@@ -42,12 +42,15 @@ class WarehouseService {
 
     static async updateWarehouse(data, id) {
         try {
+            const existing = await Warehouse.findByPk(id);
+            if (!existing) {
+                throw new AppError('Bodega no encontrada', 404);
+            }
             const result = await Warehouse.update(data, {
                 where: { id },
             });
             return result
         } catch (error) {
-            console.log(error)
             throw error;
         }
     }

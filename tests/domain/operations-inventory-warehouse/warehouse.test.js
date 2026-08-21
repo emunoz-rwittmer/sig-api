@@ -157,3 +157,53 @@ describe('POST /api/warehouse — crear bodega', () => {
         expect(response.status).toBe(403);
     });
 });
+
+// =========================================================================
+// PUT /api/warehouse/:warehouse_id
+// =========================================================================
+
+describe('PUT /api/warehouse/:warehouse_id — actualizar bodega', () => {
+    it('devuelve 200 al actualizar la bodega', async () => {
+        const warehouse = await createWarehouseFixture();
+
+        const response = await auth(
+            request(app)
+                .put(`/api/warehouse/${Utils.encode(warehouse.id)}`)
+                .send({ name: 'Actualizada', location: warehouse.location, type: warehouse.type })
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toBe('resource updated successfully');
+
+        const refreshed = await Warehouse.findByPk(warehouse.id);
+        expect(refreshed.name).toBe('Actualizada');
+    });
+
+    it('devuelve 400 con hashid inválido', async () => {
+        const response = await auth(
+            request(app)
+                .put('/api/warehouse/not-a-hashid')
+                .send({ name: 'X' })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 404 cuando la bodega no existe', async () => {
+        const response = await auth(
+            request(app)
+                .put(`/api/warehouse/${Utils.encode(999999)}`)
+                .send({ name: 'X' })
+        );
+
+        expect(response.status).toBe(404);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).put('/api/warehouse/any-id').send({});
+
+        expect(response.status).toBe(403);
+    });
+});

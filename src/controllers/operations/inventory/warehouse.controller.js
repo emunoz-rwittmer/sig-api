@@ -50,15 +50,15 @@ const createWarehouse = async (req, res, next) => {
     }
 }
 
-const updateWarehouse = async (req, res) => {
+const updateWarehouse = async (req, res, next) => {
     try {
-        const warehouseId = Utils.decode(req.params.warehouse_id);
+        const warehouseId = decodeId(req.params.warehouse_id, 'warehouse_id');
         const data = req.body;
         delete data.id
         await WarehouseService.updateWarehouse(data, warehouseId);
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
