@@ -15,19 +15,19 @@ class TransactionService {
         try {
             // Validar producto
             if (!productData || !productData.sku) {
-                throw new Error('Datos de producto inválidos');
+                throw new AppError('Datos de producto inválidos', 400);
             }
 
             // Validar almacén
             if (!stockData || !stockData.warehouseId) {
-                throw new Error('Almacén no especificado');
+                throw new AppError('Almacén no especificado', 400);
             }
 
             const quantity = Number(stockData.quantity);
 
             // Validar cantidad válida y mayor a 0
             if (!Number.isFinite(quantity) || quantity <= 0) {
-                throw new Error('Cantidad debe ser un número mayor a 0');
+                throw new AppError('Cantidad debe ser un número mayor a 0', 400);
             }
 
             const productAttributes = {
@@ -84,7 +84,7 @@ class TransactionService {
             });
 
             if (existsTransaction) {
-                throw new Error('Transacción duplicada: referenceId ya existe');
+                throw new AppError('Transacción duplicada: referenceId ya existe', 400);
             }
 
             const newTransaction = await Transaction.create(
@@ -103,7 +103,7 @@ class TransactionService {
             });
 
             if (!orderItem) {
-                throw new Error('Elemento de orden no encontrado');
+                throw new AppError('Elemento de orden no encontrado', 400);
             }
 
             await orderItem.update(

@@ -179,3 +179,142 @@ describe('PUT /api/transactions/updateStatusItem/:item_id', () => {
         expect(response.status).toBe(403);
     });
 });
+
+// =========================================================================
+// POST /api/transactions/productEntryInWarehouse/:warehouse_id
+// =========================================================================
+
+describe('POST /api/transactions/productEntryInWarehouse/:warehouse_id', () => {
+    it('devuelve 200 creando producto, stock y transacción nuevos', async () => {
+        const warehouse = await createWarehouseFixture();
+        const order = await createOrderFixture();
+        const item = await createOrderItemFixture(order.id);
+        const staff = await createStaffFixture();
+        const s = suffix();
+
+        const response = await auth(
+            request(app)
+                .post(`/api/transactions/productEntryInWarehouse/${warehouse.id}`)
+                .send({ id: item.id, product: `Producto-${s}`, sku: `NEW-${s}`, quantity: 5, user: Utils.encode(staff.id) })
+        );
+
+        expect(response.status).toBe(200);
+
+        const transactions = await Transaction.findAll({ where: { referenceId: `ORDER_ITEM_${item.id}` } });
+        expect(transactions).toHaveLength(1);
+        expect(transactions[0].type).toBe('IN');
+
+        const refreshedItem = await orderItems.findByPk(item.id);
+        expect(refreshedItem.status).toBe('ingresado');
+    });
+
+    it('devuelve 200 sumando a un stock existente', async () => {
+        const warehouse = await createWarehouseFixture();
+        const product = await createProductFixture();
+        await createStockFixture(product.id, warehouse.id, null, { quantity: 10 });
+        const order = await createOrderFixture();
+        const item = await createOrderItemFixture(order.id);
+        const staff = await createStaffFixture();
+
+        const response = await auth(
+            request(app)
+                .post(`/api/transactions/productEntryInWarehouse/${warehouse.id}`)
+                .send({ id: item.id, product: product.name, sku: product.sku, quantity: 5, user: Utils.encode(staff.id) })
+        );
+
+        expect(response.status).toBe(200);
+
+        const stock = await Stock.findOne({ where: { productId: product.id, warehouseId: warehouse.id } });
+        expect(Number(stock.quantity)).toBe(15);
+    });
+
+    it('devuelve 400 sin warehouseId/orderItemId', async () => {
+        const warehouse = await createWarehouseFixture();
+
+        const response = await auth(
+            request(app)
+                .post(`/api/transactions/productEntryInWarehouse/${warehouse.id}`)
+                .send({ product: 'X', sku: `X-${suffix()}`, quantity: 5 })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 400 con cantidad inválida', async () => {
+        const warehouse = await createWarehouseFixture();
+        const order = await createOrderFixture();
+        const item = await createOrderItemFixture(order.id);
+
+        const response = await auth(
+            request(app)
+                .post(`/api/transactions/productEntryInWarehouse/${warehouse.id}`)
+                .send({ id: item.id, product: 'X', sku: `X-${suffix()}`, quantity: 0 })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 400 sin sku', async () => {
+        const warehouse = await createWarehouseFixture();
+        const order = await createOrderFixture();
+        const item = await createOrderItemFixture(order.id);
+
+        const response = await auth(
+            request(app)
+                .post(`/api/transactions/productEntryInWarehouse/${warehouse.id}`)
+                .send({ id: item.id, product: 'X', quantity: 5 })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 400 cuando el orderItem no existe', async () => {
+        const warehouse = await createWarehouseFixture();
+        const staff = await createStaffFixture();
+        const s = suffix();
+
+        const response = await auth(
+            request(app)
+                .post(`/api/transactions/productEntryInWarehouse/${warehouse.id}`)
+                .send({ id: 999999, product: `Producto-${s}`, sku: `NEW-${s}`, quantity: 5, user: Utils.encode(staff.id) })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 400 con referenceId duplicado, sin corromper el stock', async () => {
+        const warehouse = await createWarehouseFixture();
+        const order = await createOrderFixture();
+        const item = await createOrderItemFixture(order.id);
+        const staff = await createStaffFixture();
+        const s = suffix();
+        const body = { id: item.id, product: `Producto-${s}`, sku: `NEW-${s}`, quantity: 5, user: Utils.encode(staff.id) };
+
+        const first = await auth(
+            request(app).post(`/api/transactions/productEntryInWarehouse/${warehouse.id}`).send(body)
+        );
+        expect(first.status).toBe(200);
+
+        const stockAfterFirst = await Stock.findOne({ where: { warehouseId: warehouse.id } });
+
+        const second = await auth(
+            request(app).post(`/api/transactions/productEntryInWarehouse/${warehouse.id}`).send(body)
+        );
+
+        expect(second.status).toBe(400);
+        expect(second.body.error.code).toBe('AppError');
+
+        const stockAfterSecond = await Stock.findByPk(stockAfterFirst.id);
+        expect(Number(stockAfterSecond.quantity)).toBe(Number(stockAfterFirst.quantity));
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).post('/api/transactions/productEntryInWarehouse/1').send({});
+
+        expect(response.status).toBe(403);
+    });
+});

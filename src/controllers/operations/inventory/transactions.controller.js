@@ -18,18 +18,22 @@ const decodeId = (value, fieldName) => {
     return id;
 };
 
-const productEntryInWarehouse = async (req, res) => {
+const productEntryInWarehouse = async (req, res, next) => {
     try {
         const warehouseId = Number(req.params.warehouse_id);
         const { id: orderItemId, product, sku, quantity, companyId, user } = req.body;
 
         if (!warehouseId || !orderItemId) {
-            return res.status(400).json({ message: 'Invalid warehouse or order item' });
+            throw new AppError('Invalid warehouse or order item', 400);
         }
 
         const parsedQuantity = Number(quantity);
         if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
-            return res.status(400).json({ message: 'Invalid quantity' });
+            throw new AppError('Invalid quantity', 400);
+        }
+
+        if (!sku) {
+            throw new AppError('sku es requerido', 400);
         }
 
         const productData = {
@@ -47,7 +51,7 @@ const productEntryInWarehouse = async (req, res) => {
             type: 'IN',
             warehouseToId: warehouseId,
             quantity: parsedQuantity,
-            userId: Utils.decode(user),
+            userId: user ? decodeId(user, 'user') : undefined,
             referenceId: `ORDER_ITEM_${orderItemId}`
         };
 
@@ -61,7 +65,7 @@ const productEntryInWarehouse = async (req, res) => {
         res.status(200).json({ data: result.message });
 
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 };
 
