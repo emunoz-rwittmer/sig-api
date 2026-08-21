@@ -3,6 +3,20 @@ const TransactionService = require('../../../services/operations/inventory/trans
 const Utils = require('../../../utils/Utils');
 const CompanyService = require('../../../services/catalogs/company.services');
 const Consecutivo = require('../../../models/catalogs/consecutivo.model');
+const AppError = require('../../../errors/AppError');
+
+const decodeId = (value, fieldName) => {
+    let id;
+    try {
+        id = Utils.decode(value);
+    } catch {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    return id;
+};
 
 const productEntryInWarehouse = async (req, res) => {
     try {
@@ -114,20 +128,14 @@ const incomeProductsInWarehouse = async (req, res) => {
     }
 }
 
-const updateStatusItem = async (req, res) => {
+const updateStatusItem = async (req, res, next) => {
     try {
-        const itemId = Utils.decode(req.params.item_id);
+        const itemId = decodeId(req.params.item_id, 'item_id');
         const data = req.body;
-        const result = await TransactionService.updateStatusItem(data, {
-            where: { id: itemId },
-        });
-        if (result) {
-            res.status(200).json({ data: 'resource updated successfully' });
-        }
-
+        await TransactionService.updateStatusItem(data, itemId);
+        res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 

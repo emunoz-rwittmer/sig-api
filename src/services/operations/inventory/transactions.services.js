@@ -5,6 +5,7 @@ const db = require('../../../utils/database');
 const orderItems = require('../../../models/operations/orders/orderItems.models');
 const Register = require('../../../models/operations/inventory/register.models');
 const Quantity = require('../../../utils/quantity');
+const AppError = require('../../../errors/AppError');
 
 class TransactionService {
 
@@ -345,16 +346,12 @@ class TransactionService {
         }
     }
 
-    static async updateStatusItem(data, id) {
-        try {
-            if (!id) {
-                throw new Error('ID del elemento no especificado');
-            }
-            const result = await orderItems.update(data, id);
-            return result;
-        } catch (error) {
-            throw error;
+    static async updateStatusItem(data, itemId) {
+        const existing = await orderItems.findByPk(itemId);
+        if (!existing) {
+            throw new AppError('Elemento no encontrado', 404);
         }
+        return orderItems.update(data, { where: { id: itemId } });
     }
 
     /**
