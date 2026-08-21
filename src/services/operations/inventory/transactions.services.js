@@ -138,11 +138,11 @@ class TransactionService {
         try {
             // Validaciones previas
             if (!Array.isArray(products) || products.length === 0) {
-                throw new Error('Productos no válidos');
+                throw new AppError('Productos no válidos', 400);
             }
 
             if (warehouseFromId === warehouseToId) {
-                throw new Error('El almacén de origen y destino no pueden ser iguales');
+                throw new AppError('El almacén de origen y destino no pueden ser iguales', 400);
             }
 
             // Consolidar productos y validar cantidades
@@ -165,7 +165,7 @@ class TransactionService {
             );
             // Validar que haya productos válidos después de consolidación
             if (consolidatedProducts.length === 0) {
-                throw new Error('No hay productos válidos para procesar');
+                throw new AppError('No hay productos válidos para procesar', 400);
             }
 
             const totalProducts = consolidatedProducts.reduce(
@@ -203,7 +203,7 @@ class TransactionService {
                 const normalizedQty = Quantity.normalizeQuantity(infoProduct, quantity);
 
                 if (!stockFrom || stockFrom.quantity < normalizedQty) {
-                    throw new Error(`Stock insuficiente para ${name}. Disponible: ${stockFrom?.quantity || 0}, Solicitado: ${normalizedQty}`);
+                    throw new AppError(`Stock insuficiente para ${name}. Disponible: ${stockFrom?.quantity || 0}, Solicitado: ${normalizedQty}`, 400);
                 }
             }
 
@@ -271,7 +271,7 @@ class TransactionService {
 
         } catch (error) {
             await transaction.rollback();
-            throw new Error(`Error en la transacción: ${error.message}`);
+            throw error;
         }
     }
 

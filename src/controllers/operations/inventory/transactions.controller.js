@@ -69,18 +69,15 @@ const productEntryInWarehouse = async (req, res, next) => {
     }
 };
 
-const transactionWarehouse = async (req, res) => {
+const transactionWarehouse = async (req, res, next) => {
     try {
         const { products, userName, location } = req.body;
-        const companyId = Utils.decode(req.body.companyId) || null;
-        const warehouseFromId = Utils.decode(req.body.warehouseFromId);
-        const warehouseToId = Utils.decode(req.body.warehouseToId);
-        const userId = Utils.decode(req.body.userId);
+        const companyId = req.body.companyId ? decodeId(req.body.companyId, 'companyId') : null;
+        const warehouseFromId = decodeId(req.body.warehouseFromId, 'warehouseFromId');
+        const warehouseToId = decodeId(req.body.warehouseToId, 'warehouseToId');
+        const userId = decodeId(req.body.userId, 'userId');
 
-        const consecutivo = await Consecutivo.findOne({ where: {} });
-        if (consecutivo === null) {
-            await Consecutivo.create({ valor: 1 });
-        }
+        const consecutivo = await Consecutivo.findOne({ where: {} }) ?? await Consecutivo.create({ valor: 1 });
 
         const formattedCounter = `000-${consecutivo.valor.toString().padStart(3, '0')}`;
         await Consecutivo.update({ valor: consecutivo.valor + 1 }, { where: {} });
@@ -107,7 +104,7 @@ const transactionWarehouse = async (req, res) => {
         }
     } catch (error) {
         console.log(error)
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 

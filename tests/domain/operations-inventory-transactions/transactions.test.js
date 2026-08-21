@@ -318,3 +318,188 @@ describe('POST /api/transactions/productEntryInWarehouse/:warehouse_id', () => {
         expect(response.status).toBe(403);
     });
 });
+
+// =========================================================================
+// POST /api/transactions/transactionBetweenWarehouse
+// =========================================================================
+
+describe('POST /api/transactions/transactionBetweenWarehouse', () => {
+    it('devuelve 200 moviendo stock entre bodegas y crea Register+Transaction', async () => {
+        await Consecutivo.destroy({ where: {} });
+        await Consecutivo.create({ valor: 1 });
+
+        const { company } = await createCompanyWithYacht(`TW-Co-${suffix()}`);
+        const from = await createWarehouseFixture();
+        const to = await createWarehouseFixture();
+        const product = await createProductFixture();
+        await createStockFixture(product.id, from.id, company.id, { quantity: 10 });
+        const staff = await createStaffFixture();
+
+        const response = await auth(
+            request(app)
+                .post('/api/transactions/transactionBetweenWarehouse')
+                .send({
+                    products: [{ id: product.id, name: product.name, quantity: 4 }],
+                    userName: 'Tester',
+                    location: 'GPS',
+                    companyId: Utils.encode(company.id),
+                    warehouseFromId: Utils.encode(from.id),
+                    warehouseToId: Utils.encode(to.id),
+                    userId: Utils.encode(staff.id),
+                })
+        );
+
+        expect(response.status).toBe(200);
+
+        const stockFrom = await Stock.findOne({ where: { productId: product.id, warehouseId: from.id } });
+        const stockTo = await Stock.findOne({ where: { productId: product.id, warehouseId: to.id } });
+        expect(Number(stockFrom.quantity)).toBe(6);
+        expect(Number(stockTo.quantity)).toBe(4);
+
+        const registers = await Register.findAll({ where: { companyId: company.id } });
+        expect(registers).toHaveLength(1);
+
+        const transactions = await Transaction.findAll({ where: { registerId: registers[0].id } });
+        expect(transactions).toHaveLength(1);
+        expect(transactions[0].type).toBe('OUT');
+    });
+
+    it('devuelve 200 cuando la tabla Consecutivo está vacía (fix del bug de crash)', async () => {
+        await Consecutivo.destroy({ where: {} });
+
+        const { company } = await createCompanyWithYacht(`TW-Empty-${suffix()}`);
+        const from = await createWarehouseFixture();
+        const to = await createWarehouseFixture();
+        const product = await createProductFixture();
+        await createStockFixture(product.id, from.id, company.id, { quantity: 10 });
+        const staff = await createStaffFixture();
+
+        const response = await auth(
+            request(app)
+                .post('/api/transactions/transactionBetweenWarehouse')
+                .send({
+                    products: [{ id: product.id, name: product.name, quantity: 2 }],
+                    userName: 'Tester',
+                    location: 'GPS',
+                    companyId: Utils.encode(company.id),
+                    warehouseFromId: Utils.encode(from.id),
+                    warehouseToId: Utils.encode(to.id),
+                    userId: Utils.encode(staff.id),
+                })
+        );
+
+        expect(response.status).toBe(200);
+
+        const consecutivo = await Consecutivo.findOne({ where: {} });
+        expect(consecutivo).not.toBeNull();
+        expect(consecutivo.valor).toBe(2);
+    });
+
+    it('devuelve 200 e imprime cuando location es UIO (axios mockeado)', async () => {
+        const { company } = await createCompanyWithYacht(`TW-UIO-${suffix()}`);
+        const from = await createWarehouseFixture();
+        const to = await createWarehouseFixture();
+        const product = await createProductFixture();
+        await createStockFixture(product.id, from.id, company.id, { quantity: 10 });
+        const staff = await createStaffFixture();
+        const printSpy = jest.spyOn(axios, 'post').mockResolvedValueOnce({ status: 200 });
+
+        const response = await auth(
+            request(app)
+                .post('/api/transactions/transactionBetweenWarehouse')
+                .send({
+                    products: [{ id: product.id, name: product.name, quantity: 1 }],
+                    userName: 'Tester',
+                    location: 'UIO',
+                    companyId: Utils.encode(company.id),
+                    warehouseFromId: Utils.encode(from.id),
+                    warehouseToId: Utils.encode(to.id),
+                    userId: Utils.encode(staff.id),
+                })
+        );
+
+        expect(response.status).toBe(200);
+        expect(printSpy).toHaveBeenCalledTimes(1);
+        printSpy.mockRestore();
+    });
+
+    it('devuelve 400 cuando origen y destino son iguales', async () => {
+        const { company } = await createCompanyWithYacht(`TW-Same-${suffix()}`);
+        const warehouse = await createWarehouseFixture();
+        const product = await createProductFixture();
+        const staff = await createStaffFixture();
+
+        const response = await auth(
+            request(app)
+                .post('/api/transactions/transactionBetweenWarehouse')
+                .send({
+                    products: [{ id: product.id, name: product.name, quantity: 1 }],
+                    userName: 'Tester',
+                    location: 'GPS',
+                    companyId: Utils.encode(company.id),
+                    warehouseFromId: Utils.encode(warehouse.id),
+                    warehouseToId: Utils.encode(warehouse.id),
+                    userId: Utils.encode(staff.id),
+                })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 400 cuando el stock de origen es insuficiente', async () => {
+        const { company } = await createCompanyWithYacht(`TW-Insuf-${suffix()}`);
+        const from = await createWarehouseFixture();
+        const to = await createWarehouseFixture();
+        const product = await createProductFixture();
+        await createStockFixture(product.id, from.id, company.id, { quantity: 1 });
+        const staff = await createStaffFixture();
+
+        const response = await auth(
+            request(app)
+                .post('/api/transactions/transactionBetweenWarehouse')
+                .send({
+                    products: [{ id: product.id, name: product.name, quantity: 5 }],
+                    userName: 'Tester',
+                    location: 'GPS',
+                    companyId: Utils.encode(company.id),
+                    warehouseFromId: Utils.encode(from.id),
+                    warehouseToId: Utils.encode(to.id),
+                    userId: Utils.encode(staff.id),
+                })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 400 sin productos válidos', async () => {
+        const { company } = await createCompanyWithYacht(`TW-Empty2-${suffix()}`);
+        const from = await createWarehouseFixture();
+        const to = await createWarehouseFixture();
+        const staff = await createStaffFixture();
+
+        const response = await auth(
+            request(app)
+                .post('/api/transactions/transactionBetweenWarehouse')
+                .send({
+                    products: [],
+                    userName: 'Tester',
+                    location: 'GPS',
+                    companyId: Utils.encode(company.id),
+                    warehouseFromId: Utils.encode(from.id),
+                    warehouseToId: Utils.encode(to.id),
+                    userId: Utils.encode(staff.id),
+                })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).post('/api/transactions/transactionBetweenWarehouse').send({});
+
+        expect(response.status).toBe(403);
+    });
+});
