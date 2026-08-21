@@ -26,7 +26,7 @@ function viewCorrectQuantity(product, quantity) {
         return (quantity / product?.presentationQuantity).toFixed(2);
     }
 
-    return Number(quantity);
+    return quantity;
 }
 
 module.exports = { normalizeQuantity, viewCorrectQuantity };

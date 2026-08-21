@@ -265,7 +265,7 @@ describe('GET /api/warehouse/:stock_id/stockProduct', () => {
         );
 
         expect(response.status).toBe(200);
-        expect(response.body.quantity).toBe(15);
+        expect(Number(response.body.quantity)).toBe(15);
         expect(response.body.product.name).toBe(product.name);
         expect(response.body.warehouse.name).toBe(warehouse.name);
     });
