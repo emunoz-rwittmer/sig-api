@@ -108,12 +108,12 @@ const transactionWarehouse = async (req, res, next) => {
     }
 }
 
-const incomeProductsInWarehouse = async (req, res) => {
+const incomeProductsInWarehouse = async (req, res, next) => {
     try {
         const { products } = req.body;
-        const warehouseToId = Utils.decode(req.body.warehouseToId)
-        const companyId = Utils.decode(req.body.companyId)
-        const userId = Utils.decode(req.body.userId)
+        const warehouseToId = decodeId(req.body.warehouseToId, 'warehouseToId')
+        const companyId = decodeId(req.body.companyId, 'companyId')
+        const userId = decodeId(req.body.userId, 'userId')
 
         const transactions = await TransactionService.incomeProductsInWarehouse({
             products,
@@ -125,7 +125,7 @@ const incomeProductsInWarehouse = async (req, res) => {
             res.status(200).json({ data: 'Transacción completada correctamente.' });
         }
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 

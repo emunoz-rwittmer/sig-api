@@ -283,7 +283,7 @@ class TransactionService {
         try {
             // Validar que haya productos
             if (!Array.isArray(products) || products.length === 0) {
-                throw new Error('No hay productos para procesar');
+                throw new AppError('No hay productos para procesar', 400);
             }
 
             // Filtrar productos con cantidad válida (> 0)
@@ -293,7 +293,7 @@ class TransactionService {
             });
 
             if (validProducts.length === 0) {
-                throw new Error('No hay productos válidos con cantidad mayor a 0');
+                throw new AppError('No hay productos válidos con cantidad mayor a 0', 400);
             }
 
             const transactionResults = await Promise.all(
@@ -342,7 +342,7 @@ class TransactionService {
             return transactionResults;
         } catch (error) {
             await transaction.rollback();
-            throw new Error(error.message);
+            throw error;
         }
     }
 

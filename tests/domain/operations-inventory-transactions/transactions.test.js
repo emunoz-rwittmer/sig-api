@@ -503,3 +503,62 @@ describe('POST /api/transactions/transactionBetweenWarehouse', () => {
         expect(response.status).toBe(403);
     });
 });
+
+// =========================================================================
+// POST /api/transactions/incomeProductsInWarehouse
+// =========================================================================
+
+describe('POST /api/transactions/incomeProductsInWarehouse', () => {
+    it('devuelve 200 creando/sumando stock', async () => {
+        const { company } = await createCompanyWithYacht(`IPW-Co-${suffix()}`);
+        const warehouse = await createWarehouseFixture();
+        const product = await createProductFixture();
+        const staff = await createStaffFixture();
+
+        const response = await auth(
+            request(app)
+                .post('/api/transactions/incomeProductsInWarehouse')
+                .send({
+                    products: [{ id: product.id, quantity: 8 }],
+                    warehouseToId: Utils.encode(warehouse.id),
+                    companyId: Utils.encode(company.id),
+                    userId: Utils.encode(staff.id),
+                })
+        );
+
+        expect(response.status).toBe(200);
+
+        const stock = await Stock.findOne({ where: { productId: product.id, warehouseId: warehouse.id } });
+        expect(Number(stock.quantity)).toBe(8);
+
+        const transactions = await Transaction.findAll({ where: { productId: product.id, warehouseToId: warehouse.id } });
+        expect(transactions).toHaveLength(1);
+        expect(transactions[0].type).toBe('IN');
+    });
+
+    it('devuelve 400 sin productos válidos', async () => {
+        const { company } = await createCompanyWithYacht(`IPW-Empty-${suffix()}`);
+        const warehouse = await createWarehouseFixture();
+        const staff = await createStaffFixture();
+
+        const response = await auth(
+            request(app)
+                .post('/api/transactions/incomeProductsInWarehouse')
+                .send({
+                    products: [],
+                    warehouseToId: Utils.encode(warehouse.id),
+                    companyId: Utils.encode(company.id),
+                    userId: Utils.encode(staff.id),
+                })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).post('/api/transactions/incomeProductsInWarehouse').send({});
+
+        expect(response.status).toBe(403);
+    });
+});
