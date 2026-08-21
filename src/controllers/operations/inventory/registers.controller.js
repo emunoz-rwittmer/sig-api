@@ -1,7 +1,7 @@
 const RegisterService = require('../../../services/operations/inventory/registers.services');
 const Utils = require('../../../utils/Utils');
 
-const getAllRegisters = async (req, res) => {
+const getAllRegisters = async (req, res, next) => {
     try {
         const result = await RegisterService.getAllRegisters();
         result.map(x => (
@@ -11,7 +11,7 @@ const getAllRegisters = async (req, res) => {
         ))
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
