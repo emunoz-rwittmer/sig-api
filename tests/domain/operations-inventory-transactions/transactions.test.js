@@ -562,3 +562,116 @@ describe('POST /api/transactions/incomeProductsInWarehouse', () => {
         expect(response.status).toBe(403);
     });
 });
+
+// =========================================================================
+// POST /api/transactions/incomeProductsRegister
+// =========================================================================
+
+describe('POST /api/transactions/incomeProductsRegister', () => {
+    it('devuelve 200 en el flujo normal', async () => {
+        const { company } = await createCompanyWithYacht(`IPR-Co-${suffix()}`);
+        const register = await createRegisterFixture({ companyId: company.id });
+        const product = await createProductFixture();
+        await createStockFixture(product.id, 9, company.id, { quantity: 20 });
+        const staff = await createStaffFixture();
+
+        const response = await auth(
+            request(app)
+                .post('/api/transactions/incomeProductsRegister')
+                .send({
+                    id: Utils.encode(register.id),
+                    companyId: Utils.encode(company.id),
+                    userId: Utils.encode(staff.id),
+                    transactiones: [{ quantity: 6, product: { id: product.id, name: product.name } }],
+                })
+        );
+
+        expect(response.status).toBe(200);
+
+        const stockFrom = await Stock.findOne({ where: { productId: product.id, warehouseId: 9, companyId: company.id } });
+        const stockTo = await Stock.findOne({ where: { productId: product.id, warehouseId: 2 } });
+        expect(Number(stockFrom.quantity)).toBe(14);
+        expect(Number(stockTo.quantity)).toBe(6);
+
+        const refreshedRegister = await Register.findByPk(register.id);
+        expect(refreshedRegister.isResived).toBe(true);
+    });
+
+    it('devuelve 400 cuando la cantidad cambió sin observations', async () => {
+        const { company } = await createCompanyWithYacht(`IPR-NoObs-${suffix()}`);
+        const register = await createRegisterFixture({ companyId: company.id });
+        const product = await createProductFixture();
+        const staff = await createStaffFixture();
+        const original = await Transaction.create({
+            productId: product.id,
+            userId: staff.id,
+            warehouseFromId: 9,
+            warehouseToId: 2,
+            quantity: 5,
+            type: 'OUT',
+        });
+
+        const response = await auth(
+            request(app)
+                .post('/api/transactions/incomeProductsRegister')
+                .send({
+                    id: Utils.encode(register.id),
+                    companyId: Utils.encode(company.id),
+                    userId: Utils.encode(staff.id),
+                    transactiones: [{ id: original.id, quantity: 9, product: { id: product.id, name: product.name } }],
+                })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 400 cuando la transacción original no existe', async () => {
+        const { company } = await createCompanyWithYacht(`IPR-NoOrig-${suffix()}`);
+        const register = await createRegisterFixture({ companyId: company.id });
+        const product = await createProductFixture();
+        const staff = await createStaffFixture();
+
+        const response = await auth(
+            request(app)
+                .post('/api/transactions/incomeProductsRegister')
+                .send({
+                    id: Utils.encode(register.id),
+                    companyId: Utils.encode(company.id),
+                    userId: Utils.encode(staff.id),
+                    transactiones: [{ id: 999999, quantity: 3, product: { id: product.id, name: product.name } }],
+                })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 400 cuando el stock de origen es insuficiente', async () => {
+        const { company } = await createCompanyWithYacht(`IPR-Insuf-${suffix()}`);
+        const register = await createRegisterFixture({ companyId: company.id });
+        const product = await createProductFixture();
+        await createStockFixture(product.id, 9, company.id, { quantity: 1 });
+        const staff = await createStaffFixture();
+
+        const response = await auth(
+            request(app)
+                .post('/api/transactions/incomeProductsRegister')
+                .send({
+                    id: Utils.encode(register.id),
+                    companyId: Utils.encode(company.id),
+                    userId: Utils.encode(staff.id),
+                    transactiones: [{ quantity: 5, product: { id: product.id, name: product.name } }],
+                })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).post('/api/transactions/incomeProductsRegister').send({});
+
+        expect(response.status).toBe(403);
+    });
+});

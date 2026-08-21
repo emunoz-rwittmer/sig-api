@@ -372,7 +372,7 @@ class TransactionService {
         try {
             // Validar que haya productos
             if (!Array.isArray(transactiones) || transactiones.length === 0) {
-                throw new Error('No hay productos para procesar');
+                throw new AppError('No hay productos para procesar', 400);
             }
 
             // Filtrar productos con cantidad válida (> 0)
@@ -382,7 +382,7 @@ class TransactionService {
             });
 
             if (validProducts.length === 0) {
-                throw new Error('No hay productos válidos con cantidad mayor a 0');
+                throw new AppError('No hay productos válidos con cantidad mayor a 0', 400);
             }
 
             const transactionResults = await Promise.all(validProducts.map(async (transac) => {
@@ -398,7 +398,7 @@ class TransactionService {
                     });
 
                     if (!originalTransaction) {
-                        throw new Error(`Transacción original no encontrada para el producto ${transac.product.name}`);
+                        throw new AppError(`Transacción original no encontrada para el producto ${transac.product.name}`, 400);
                     }
 
                     quantityDifference = quantity - originalTransaction.quantity;
@@ -408,17 +408,13 @@ class TransactionService {
                 const productId = transac.product.id;
 
                 if (quantityDifference !== 0 && !observations) {
-                    throw new Error(`La cantidad del producto ${transac.product.name} ha cambiado, debe ingresar observaciones`);
+                    throw new AppError(`La cantidad del producto ${transac.product.name} ha cambiado, debe ingresar observaciones`, 400);
                 }
 
                 if (originalTransaction && observations && observations.trim() !== '' && quantityDifference !== 0) {
 
                     originalTransaction.quantity = quantity;
                     await originalTransaction.save({ transaction });
-
-                    console.log('originalTransaction.warehouseFromId:', originalTransaction.warehouseFromId);
-
-                    console.log('companyId:', companyId);
 
                     const stockFromSource = await Stock.findOne({
                         where: {
@@ -430,15 +426,13 @@ class TransactionService {
                         lock: transaction.LOCK.UPDATE
                     });
 
-                    console.log('Stock encontrado en bodega origen:', stockFromSource);
-
                     if (!stockFromSource) {
-                        throw new Error(`Stock no encontrado para el producto ${transac.product.name} en bodega origen`);
+                        throw new AppError(`Stock no encontrado para el producto ${transac.product.name} en bodega origen`, 400);
                     }
 
                     stockFromSource.quantity -= quantityDifference;
                     if (stockFromSource.quantity < 0) {
-                        throw new Error(`Stock insuficiente en bodega origen para el producto ${transac.product.name}: No se puede restar diferencia de ${quantityDifference}`);
+                        throw new AppError(`Stock insuficiente en bodega origen para el producto ${transac.product.name}: No se puede restar diferencia de ${quantityDifference}`, 400);
                     }
 
                     await stockFromSource.save({ transaction });
@@ -472,10 +466,10 @@ class TransactionService {
                 });
 
                 if (!stockFrom) {
-                    throw new Error(`Stock no encontrado para el producto ${transac.product.name} en almacén origen`);
+                    throw new AppError(`Stock no encontrado para el producto ${transac.product.name} en almacén origen`, 400);
                 }
                 if (stockFrom.quantity < quantity) {
-                    throw new Error(`Stock insuficiente para el producto ${transac.product.name}: Disponible: ${stockFrom.quantity}, Solicitado: ${quantity}`);
+                    throw new AppError(`Stock insuficiente para el producto ${transac.product.name}: Disponible: ${stockFrom.quantity}, Solicitado: ${quantity}`, 400);
                 }
 
                 stockFrom.quantity -= quantity;
@@ -525,7 +519,7 @@ class TransactionService {
             return transactionResults;
         } catch (error) {
             await transaction.rollback();
-            throw new Error(error.message);
+            throw error;
         }
     }
 }
