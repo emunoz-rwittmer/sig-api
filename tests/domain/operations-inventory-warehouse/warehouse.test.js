@@ -207,3 +207,45 @@ describe('PUT /api/warehouse/:warehouse_id — actualizar bodega', () => {
         expect(response.status).toBe(403);
     });
 });
+
+// =========================================================================
+// DELETE /api/warehouse/:warehouse_id
+// =========================================================================
+
+describe('DELETE /api/warehouse/:warehouse_id — eliminar bodega', () => {
+    it('devuelve 200 al eliminar la bodega', async () => {
+        const warehouse = await createWarehouseFixture();
+
+        const response = await auth(
+            request(app).delete(`/api/warehouse/${Utils.encode(warehouse.id)}`)
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toBe('resource deleted successfully');
+
+        const refreshed = await Warehouse.findByPk(warehouse.id);
+        expect(refreshed).toBeNull();
+    });
+
+    it('devuelve 400 con hashid inválido', async () => {
+        const response = await auth(request(app).delete('/api/warehouse/not-a-hashid'));
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 404 cuando la bodega no existe', async () => {
+        const response = await auth(
+            request(app).delete(`/api/warehouse/${Utils.encode(999999)}`)
+        );
+
+        expect(response.status).toBe(404);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).delete('/api/warehouse/any-id');
+
+        expect(response.status).toBe(403);
+    });
+});

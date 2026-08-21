@@ -62,14 +62,13 @@ const updateWarehouse = async (req, res, next) => {
     }
 }
 
-const deleteWarehouse = async (req, res) => {
+const deleteWarehouse = async (req, res, next) => {
     try {
-        const warehouseId = Utils.decode(req.params.warehouse_id);
+        const warehouseId = decodeId(req.params.warehouse_id, 'warehouse_id');
         const result = await WarehouseService.deleteWarehouse(warehouseId);
         res.status(200).json({ data: result })
     } catch (error) {
-
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 

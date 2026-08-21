@@ -61,9 +61,10 @@ class WarehouseService {
             const result = await Warehouse.destroy({
                 where: { id }
             });
-            if (result) {
-                return 'resource deleted successfully'
+            if (!result) {
+                throw new AppError('Bodega no encontrada', 404);
             }
+            return 'resource deleted successfully'
         } catch (error) {
             throw error;
         }
