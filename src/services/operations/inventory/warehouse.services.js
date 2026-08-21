@@ -3,12 +3,10 @@ const Warehouse = require('../../../models/catalogs/wareHouse.models');
 const Stock = require('../../../models/operations/inventory/stock.models');
 const Transaction = require('../../../models/operations/inventory/transaction.models');
 const Product = require('../../../models/operations/inventory/product.models');
-const requestItems = require('../../../models/operations/yachtRequest/requestItems.models');
-const LaundryYacht = require('../../../models/operations/yachtRequest/laundryYacht');
-const Request = require('../../../models/operations/yachtRequest/request.models');
 const { Sequelize, Op } = require("sequelize");
 const db = require('../../../utils/database');
 const Company = require('../../../models/catalogs/company.models');
+const AppError = require('../../../errors/AppError');
 
 class WarehouseService {
 
@@ -169,20 +167,6 @@ class WarehouseService {
 
         } catch (error) {
             throw error;
-        }
-    }
-
-    static async updateStatusWarehouse(id, status) {
-        try {
-            const result = await Warehouse.update({
-                status
-            }, {
-                where: { id }
-            });
-            return result;
-        } catch (error) {
-            throw error;
-
         }
     }
 

@@ -1,10 +1,22 @@
-const { Console } = require('escpos');
 const WarehouseService = require('../../../services/operations/inventory/warehouse.services');
-const RequestService = require('../../../services/operations/yachtRequest/yachtRequest.services');
 const Utils = require('../../../utils/Utils');
 const Quantity = require('../../../utils/quantity');
+const AppError = require('../../../errors/AppError');
 
-const getAllWarehouses = async (req, res) => {
+const decodeId = (value, fieldName) => {
+    let id;
+    try {
+        id = Utils.decode(value);
+    } catch {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    return id;
+};
+
+const getAllWarehouses = async (req, res, next) => {
     try {
         let result = await WarehouseService.getAllWarehouses();
         const rol = req.userRol
@@ -15,8 +27,7 @@ const getAllWarehouses = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
