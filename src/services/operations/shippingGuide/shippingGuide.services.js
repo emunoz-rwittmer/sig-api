@@ -1,7 +1,23 @@
 const ShippingGuideItems = require('../../../models/operations/shippingGuide/shippingGuideItems.models');
 const ShippingGuide = require('../../../models/operations/shippingGuide/shippingGuide.models');
 const db = require('../../../utils/database');
+const Utils = require('../../../utils/Utils');
+const AppError = require('../../../errors/AppError');
+const fs = require('fs');
+const path = require('path');
 
+const decodeId = (value, fieldName) => {
+    let id;
+    try {
+        id = Utils.decode(value);
+    } catch {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    return id;
+};
 
 class ShippingGuideService {
     static async getShippingGuides() {
@@ -59,22 +75,31 @@ class ShippingGuideService {
         }
     }
 
-    static async updateShippingGuide(data) {
+    static async updateShippingGuide(data, guideId) {
         try {
             const results = await Promise.all(data.map(async (item) => {
+                const itemId = decodeId(item.id, 'item id');
                 const result = await ShippingGuideItems.update({
-                    product: item.product,
+                    detail: item.detail,
                     quantity: item.quantity,
-                    originalQuantity: item.originalQuantity,
                 },
                     {
-                        where: { id: Utils.decode(item.id) }
+                        where: { id: itemId, guideId }
                     });
                 return result;
             }));
             return results;
         } catch (error) {
 
+            throw error;
+        }
+    }
+
+    static async createItemsOfShippingGuide(items) {
+        try {
+            const result = await ShippingGuideItems.bulkCreate(items);
+            return result;
+        } catch (error) {
             throw error;
         }
     }
@@ -90,6 +115,36 @@ class ShippingGuideService {
         } catch (error) {
             throw error;
         }
+    }
+
+    static async deleteShippingGuide(id) {
+        const existing = await ShippingGuide.findByPk(id);
+        if (!existing) {
+            throw new AppError('Guía no encontrada', 404);
+        }
+
+        const filePath = existing.file;
+
+        const transaction = await db.transaction();
+        try {
+            await ShippingGuideItems.destroy({ where: { guideId: id }, transaction });
+            await ShippingGuide.destroy({ where: { id }, transaction });
+            await transaction.commit();
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
+
+        if (filePath) {
+            const absolutePath = path.resolve(path.join(__dirname, '../../../../'), `.${filePath}`);
+            try {
+                fs.unlinkSync(absolutePath);
+            } catch (error) {
+                console.error('No se pudo borrar el PDF de la guía eliminada:', error.message);
+            }
+        }
+
+        return 'resource deleted successfully';
     }
 
 }

@@ -1,7 +1,7 @@
 # Fase 2 — Dominio ShippingGuide — diseño
 
 **Fecha:** 2026-08-24
-**Estado:** Aprobado, pendiente de implementación
+**Estado:** Implementado
 
 ## Contexto y alcance
 

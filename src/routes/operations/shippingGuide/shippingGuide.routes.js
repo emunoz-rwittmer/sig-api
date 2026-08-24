@@ -7,6 +7,6 @@ router.get('/',ShippingGuideController.getShippingGuides);
 router.get('/:guide_id',ShippingGuideController.getShippingGuideById);
 router.post('/',  ShippingGuideController.createShippingGuide);
 router.put('/:guide_id', ShippingGuideController.updateShippingGuide);
-//router.delete('/:guide_id', ShippingGuideController.deleteShippingGuide);
+router.delete('/:guide_id', ShippingGuideController.deleteShippingGuide);
 
 module.exports = router;

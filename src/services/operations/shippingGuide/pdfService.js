@@ -1,9 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 const DateFormat = require('../../../utils/dateFormat');
+const PDFDocument = require('pdfkit');
 
 exports.generateRemisionPDF = async (data, filePath) => {
-  const { default: PDFDocument } = await import('pdfkit');
 
   const doc = new PDFDocument({ margin: 40 });
   const writeStream = fs.createWriteStream(filePath);
