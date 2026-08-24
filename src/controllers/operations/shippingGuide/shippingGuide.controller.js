@@ -3,10 +3,24 @@ const ShippingGuideService = require('../../../services/operations/shippingGuide
 const { generateRemisionPDF } = require('../../../services/operations/shippingGuide/pdfService');
 const { sendEmailGuiaRemisionCreada } = require('../../../mails/mailer');
 const Utils = require('../../../utils/Utils');
+const AppError = require('../../../errors/AppError');
 const fs = require('fs');
 const path = require('path');
 
-const getShippingGuides = async (req, res) => {
+const decodeId = (value, fieldName) => {
+    let id;
+    try {
+        id = Utils.decode(value);
+    } catch {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    return id;
+};
+
+const getShippingGuides = async (req, res, next) => {
     try {
         const result = await ShippingGuideService.getShippingGuides();
         if (result instanceof Array) {
@@ -16,7 +30,7 @@ const getShippingGuides = async (req, res) => {
         }
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 

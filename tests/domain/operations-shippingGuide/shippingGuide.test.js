@@ -1,0 +1,99 @@
+jest.mock('../../../src/mails/mailer', () => ({
+    sendEmailGuiaRemisionCreada: jest.fn(),
+}));
+
+const request = require('supertest');
+const { bootTestApp, shutdownTestApp } = require('../../helpers/testApp');
+const { createAuthenticatedUser } = require('../../helpers/auth');
+const ShippingGuide = require('../../../src/models/operations/shippingGuide/shippingGuide.models');
+const ShippingGuideItems = require('../../../src/models/operations/shippingGuide/shippingGuideItems.models');
+const Utils = require('../../../src/utils/Utils');
+const ShippingGuideService = require('../../../src/services/operations/shippingGuide/shippingGuide.services');
+const fs = require('fs');
+const path = require('path');
+
+let app;
+let token;
+let fixtureCounter = 0;
+
+const auth = (httpRequest) => httpRequest.set('Authorization', `Bearer ${token}`);
+const suffix = () => {
+    fixtureCounter += 1;
+    return `${Date.now()}-${fixtureCounter}`;
+};
+
+beforeAll(async () => {
+    app = await bootTestApp();
+    token = await createAuthenticatedUser(app);
+}, 60000);
+
+afterAll(async () => {
+    await shutdownTestApp();
+});
+
+// --- Helpers de fixtures --------------------------------------------------
+
+async function createShippingGuideFixture(overrides = {}) {
+    const s = suffix();
+    return ShippingGuide.create({
+        counter: `000-${s}`,
+        dateStartTraslate: new Date('2026-01-01'),
+        dateEndTraslate: new Date('2026-01-05'),
+        from: 'Santa Cruz',
+        to: 'Quito',
+        addressee: 'Cliente Test',
+        addresseeRuc: '0999999999',
+        carrier: 'Transportista Test',
+        carrierRuc: '0988888888',
+        carrierLicence: 'ABC-1234',
+        file: `/uploads/pdfs/guides/guia_remision_test-${s}.pdf`,
+        ...overrides,
+    });
+}
+
+async function createShippingGuideItemFixture(guideId, overrides = {}) {
+    return ShippingGuideItems.create({
+        guideId,
+        quantity: '10',
+        detail: 'Item de prueba',
+        ...overrides,
+    });
+}
+
+// =========================================================================
+// GET /api/shipping_guides
+// =========================================================================
+
+describe('GET /api/shipping_guides — listar guías de remisión', () => {
+    it('devuelve 200 con la lista de guías', async () => {
+        await createShippingGuideFixture();
+
+        const response = await auth(request(app).get('/api/shipping_guides'));
+
+        expect(response.status).toBe(200);
+        expect(Array.isArray(response.body)).toBe(true);
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).get('/api/shipping_guides');
+
+        expect(response.status).toBe(403);
+    });
+
+    it('delega fallas inesperadas al handler global de 500', async () => {
+        const failure = jest
+            .spyOn(ShippingGuideService, 'getShippingGuides')
+            .mockRejectedValueOnce(new Error('database unavailable'));
+
+        const response = await auth(request(app).get('/api/shipping_guides'));
+
+        expect(response.status).toBe(500);
+        expect(response.body).toEqual({
+            error: {
+                message: 'database unavailable',
+                code: 'INTERNAL_ERROR',
+            },
+        });
+        failure.mockRestore();
+    });
+});
