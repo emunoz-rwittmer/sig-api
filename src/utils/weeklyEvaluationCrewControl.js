@@ -1,6 +1,6 @@
 // Editar esta lista permite conservar el estado después de reiniciar el servicio.
 const initialWeeklyEvaluationCrewStatus = [
-    { companyId: 2, enabled: false }
+    { companyId: 1, enabled: false }
 ];
 
 function validateTarget(target) {
