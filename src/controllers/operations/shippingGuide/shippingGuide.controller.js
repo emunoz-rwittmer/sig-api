@@ -95,15 +95,24 @@ const createShippingGuide = async (req, res, next) => {
     }
 };
 
-const updateShippingGuide = async (req, res) => {
+const updateShippingGuide = async (req, res, next) => {
     try {
+        const guideId = decodeId(req.params.guide_id, 'guide_id');
+        const existing = await ShippingGuideService.getShippingGuideById(guideId);
+        if (!existing) {
+            throw new AppError('Guía no encontrada', 404);
+        }
 
-        const { body, params } = req;
+        const { body } = req;
 
         const ids = body.id;
         const products = body.product;
         const quantitys = body.quantity;
         const originalQuantitys = body.originalQuantity;
+
+        if (!Array.isArray(ids)) {
+            throw new AppError('id debe ser un arreglo', 400);
+        }
 
         const items = []
         for (let i = 0; i < ids.length; i++) {
@@ -125,10 +134,9 @@ const updateShippingGuide = async (req, res) => {
 
         const newItems = items.filter(item => item.id === "");
         if (newItems.length > 0) {
-            const orderId = Utils.decode(params.order_id);
             const itemsCreate = newItems.map(({ id, ...rest }) => ({
                 ...rest,
-                orderId: orderId
+                guideId: guideId
             }));
             await ShippingGuideService.createItemsOfShippingGuide(itemsCreate);
         }
@@ -139,7 +147,7 @@ const updateShippingGuide = async (req, res) => {
 
     } catch (error) {
 
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 

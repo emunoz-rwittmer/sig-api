@@ -1,6 +1,7 @@
 const ShippingGuideItems = require('../../../models/operations/shippingGuide/shippingGuideItems.models');
 const ShippingGuide = require('../../../models/operations/shippingGuide/shippingGuide.models');
 const db = require('../../../utils/database');
+const Utils = require('../../../utils/Utils');
 
 
 class ShippingGuideService {
@@ -75,6 +76,15 @@ class ShippingGuideService {
             return results;
         } catch (error) {
 
+            throw error;
+        }
+    }
+
+    static async createItemsOfShippingGuide(items) {
+        try {
+            const result = await ShippingGuideItems.bulkCreate(items);
+            return result;
+        } catch (error) {
             throw error;
         }
     }

@@ -209,3 +209,90 @@ describe('POST /api/shipping_guides — crear guía de remisión', () => {
         expect(response.status).toBe(403);
     });
 });
+
+// =========================================================================
+// PUT /api/shipping_guides/:guide_id
+// =========================================================================
+
+describe('PUT /api/shipping_guides/:guide_id — actualizar guía', () => {
+    it('devuelve 200 y actualiza un item existente', async () => {
+        const guide = await createShippingGuideFixture();
+        const item = await createShippingGuideItemFixture(guide.id, { quantity: '10', detail: 'Original' });
+
+        const response = await auth(
+            request(app)
+                .put(`/api/shipping_guides/${Utils.encode(guide.id)}`)
+                .send({
+                    id: [Utils.encode(item.id)],
+                    product: ['Producto actualizado'],
+                    quantity: ['20'],
+                    originalQuantity: ['10'],
+                })
+        );
+
+        expect(response.status).toBe(200);
+
+        const refreshed = await ShippingGuideItems.findByPk(item.id);
+        expect(refreshed.quantity).toBe('20');
+    });
+
+    it('devuelve 200 y crea un item nuevo asociado a la guía correcta', async () => {
+        const guide = await createShippingGuideFixture();
+
+        const response = await auth(
+            request(app)
+                .put(`/api/shipping_guides/${Utils.encode(guide.id)}`)
+                .send({
+                    id: [''],
+                    product: ['Producto nuevo'],
+                    quantity: ['5'],
+                    originalQuantity: ['5'],
+                })
+        );
+
+        expect(response.status).toBe(200);
+
+        const items = await ShippingGuideItems.findAll({ where: { guideId: guide.id } });
+        expect(items.length).toBe(1);
+        expect(items[0].quantity).toBe('5');
+    });
+
+    it('devuelve 400 con hashid inválido', async () => {
+        const response = await auth(
+            request(app).put('/api/shipping_guides/not-a-hashid').send({ id: [] })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 404 cuando la guía no existe', async () => {
+        const response = await auth(
+            request(app)
+                .put(`/api/shipping_guides/${Utils.encode(999999)}`)
+                .send({ id: [] })
+        );
+
+        expect(response.status).toBe(404);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 400 cuando id no es un arreglo', async () => {
+        const guide = await createShippingGuideFixture();
+
+        const response = await auth(
+            request(app)
+                .put(`/api/shipping_guides/${Utils.encode(guide.id)}`)
+                .send({ id: 'no-es-arreglo' })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).put('/api/shipping_guides/any-id').send({});
+
+        expect(response.status).toBe(403);
+    });
+});
