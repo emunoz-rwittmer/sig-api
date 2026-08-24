@@ -52,6 +52,18 @@ no se ve afectado.
    corrige a `params.guide_id`, y de paso se renombra la variable local
    de `orderId` a `guideId` (el nombre `orderId` es un resabio de copiar
    el patrón de `orders`, esta guía no tiene `Order` asociado).
+   **Addendum (encontrado al escribir el plan):** el mismo bloque llama
+   a `ShippingGuideService.createItemsOfShippingGuide(itemsCreate)`,
+   método que **no existe** en `shippingGuide.services.js` (el service
+   solo define `getShippingGuides`, `getShippingGuideById`,
+   `createShippingGuide`, `updateShippingGuide`, `deleteItem`). Aunque
+   se corrija el bug de `order_id`/`guide_id`, esta rama seguiría
+   fallando con `TypeError: ShippingGuideService.createItemsOfShippingGuide
+   is not a function`. Se agrega el método faltante
+   (`ShippingGuideItems.bulkCreate(items)`, mismo patrón que
+   `createShippingGuide` usa para sus propios `details`) — es un
+   requisito necesario para que el bug #2 (ya aprobado) quede
+   realmente corregido, no una feature nueva.
 3. **`ShippingGuideController.getShippingGuideById`**: si
    `ShippingGuideService.getShippingGuideById` devuelve `null` (guía no
    encontrada), la línea siguiente
@@ -105,10 +117,18 @@ repo) para los `Utils.decode(...)` de `guide_id`.
   `warehouse`. Se quita el `console.log(error)` de debug. `next(error)`
   en el catch.
 - **`updateShippingGuide`**: agrega `decodeId(req.params.guide_id,
-  'guide_id')`, guarda `Array.isArray(body.id)` → `AppError(msg, 400)`,
+  'guide_id')`, verifica que la guía exista vía
+  `ShippingGuideService.getShippingGuideById(guideId)` (reutilizando el
+  método ya existente, sin tocar su contrato) →
+  `AppError('Guía no encontrada', 404)` si es `null`, antes de tocar
+  ningún item — esto es lo que produce el 404 documentado en la tabla
+  de contrato HTTP más abajo, que hoy no existe en ninguna forma
+  (el endpoint "tiene éxito" en silencio sobre cualquier `guide_id`).
+  Además: guarda `Array.isArray(body.id)` → `AppError(msg, 400)`,
   corrige `params.order_id` → `params.guide_id` (bug #2), y
   `next(error)` en el catch. El service (`ShippingGuideService.
-  updateShippingGuide`) agrega el import de `Utils` (bug #1).
+  updateShippingGuide`) agrega el import de `Utils` (bug #1) y el
+  método `createItemsOfShippingGuide` (addendum del bug #2 arriba).
 - **`deleteShippingGuide`** (nuevo): `decodeId(req.params.guide_id,
   'guide_id')` → `ShippingGuideService.deleteShippingGuide(guideId)` →
   `AppError('Guía no encontrada', 404)` si no existe →
