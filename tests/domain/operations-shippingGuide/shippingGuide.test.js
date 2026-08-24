@@ -97,3 +97,44 @@ describe('GET /api/shipping_guides — listar guías de remisión', () => {
         failure.mockRestore();
     });
 });
+
+// =========================================================================
+// GET /api/shipping_guides/:guide_id
+// =========================================================================
+
+describe('GET /api/shipping_guides/:guide_id', () => {
+    it('devuelve 200 con la guía y sus items', async () => {
+        const guide = await createShippingGuideFixture();
+        await createShippingGuideItemFixture(guide.id, { detail: 'Caja de vino' });
+
+        const response = await auth(
+            request(app).get(`/api/shipping_guides/${Utils.encode(guide.id)}`)
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.counter).toBe(guide.counter);
+        expect(response.body.details.length).toBe(1);
+    });
+
+    it('devuelve 400 con hashid inválido', async () => {
+        const response = await auth(request(app).get('/api/shipping_guides/not-a-hashid'));
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 404 cuando la guía no existe', async () => {
+        const response = await auth(
+            request(app).get(`/api/shipping_guides/${Utils.encode(999999)}`)
+        );
+
+        expect(response.status).toBe(404);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).get('/api/shipping_guides/any-id');
+
+        expect(response.status).toBe(403);
+    });
+});

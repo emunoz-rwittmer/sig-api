@@ -34,14 +34,17 @@ const getShippingGuides = async (req, res, next) => {
     }
 }
 
-const getShippingGuideById = async (req, res) => {
+const getShippingGuideById = async (req, res, next) => {
     try {
-        const guideId = Utils.decode(req.params.guide_id);
+        const guideId = decodeId(req.params.guide_id, 'guide_id');
         const result = await ShippingGuideService.getShippingGuideById(guideId);
+        if (!result) {
+            throw new AppError('Guía no encontrada', 404);
+        }
         result.id = Utils.encode(result.id);
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
