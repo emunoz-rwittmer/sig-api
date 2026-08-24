@@ -108,29 +108,32 @@ const updateShippingGuide = async (req, res, next) => {
         const ids = body.id;
         const products = body.product;
         const quantitys = body.quantity;
-        const originalQuantitys = body.originalQuantity;
 
         if (!Array.isArray(ids)) {
             throw new AppError('id debe ser un arreglo', 400);
+        }
+        if (!Array.isArray(products) || products.length !== ids.length) {
+            throw new AppError('product debe ser un arreglo del mismo tamaño que id', 400);
+        }
+        if (!Array.isArray(quantitys) || quantitys.length !== ids.length) {
+            throw new AppError('quantity debe ser un arreglo del mismo tamaño que id', 400);
         }
 
         const items = []
         for (let i = 0; i < ids.length; i++) {
             const id = ids[i];
-            const product = products[i];
+            const detail = products[i];
             const quantity = quantitys[i];
-            const originalQuantity = originalQuantitys[i];
             const item = {
                 id,
-                product,
+                detail,
                 quantity,
-                originalQuantity,
             }
             items.push(item)
         }
 
         const itemsUpdate = items.filter(item => item.id !== "");
-        const result = await ShippingGuideService.updateShippingGuide(itemsUpdate);
+        const result = await ShippingGuideService.updateShippingGuide(itemsUpdate, guideId);
 
         const newItems = items.filter(item => item.id === "");
         if (newItems.length > 0) {

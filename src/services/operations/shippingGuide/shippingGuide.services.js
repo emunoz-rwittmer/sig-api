@@ -6,6 +6,18 @@ const AppError = require('../../../errors/AppError');
 const fs = require('fs');
 const path = require('path');
 
+const decodeId = (value, fieldName) => {
+    let id;
+    try {
+        id = Utils.decode(value);
+    } catch {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    return id;
+};
 
 class ShippingGuideService {
     static async getShippingGuides() {
@@ -63,16 +75,16 @@ class ShippingGuideService {
         }
     }
 
-    static async updateShippingGuide(data) {
+    static async updateShippingGuide(data, guideId) {
         try {
             const results = await Promise.all(data.map(async (item) => {
+                const itemId = decodeId(item.id, 'item id');
                 const result = await ShippingGuideItems.update({
-                    product: item.product,
+                    detail: item.detail,
                     quantity: item.quantity,
-                    originalQuantity: item.originalQuantity,
                 },
                     {
-                        where: { id: Utils.decode(item.id) }
+                        where: { id: itemId, guideId }
                     });
                 return result;
             }));

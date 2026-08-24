@@ -234,6 +234,7 @@ describe('PUT /api/shipping_guides/:guide_id — actualizar guía', () => {
 
         const refreshed = await ShippingGuideItems.findByPk(item.id);
         expect(refreshed.quantity).toBe('20');
+        expect(refreshed.detail).toBe('Producto actualizado');
     });
 
     it('devuelve 200 y crea un item nuevo asociado a la guía correcta', async () => {
@@ -255,6 +256,59 @@ describe('PUT /api/shipping_guides/:guide_id — actualizar guía', () => {
         const items = await ShippingGuideItems.findAll({ where: { guideId: guide.id } });
         expect(items.length).toBe(1);
         expect(items[0].quantity).toBe('5');
+        expect(items[0].detail).toBe('Producto nuevo');
+    });
+
+    it('devuelve 400 cuando product no es un arreglo del mismo tamaño que id', async () => {
+        const guide = await createShippingGuideFixture();
+
+        const response = await auth(
+            request(app)
+                .put(`/api/shipping_guides/${Utils.encode(guide.id)}`)
+                .send({ id: [''], quantity: ['5'] })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 400 cuando un item id (no el guide_id) es un hashid inválido', async () => {
+        const guide = await createShippingGuideFixture();
+
+        const response = await auth(
+            request(app)
+                .put(`/api/shipping_guides/${Utils.encode(guide.id)}`)
+                .send({
+                    id: ['not-a-hashid'],
+                    product: ['X'],
+                    quantity: ['1'],
+                })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('no actualiza items que pertenecen a otra guía', async () => {
+        const guideA = await createShippingGuideFixture();
+        const guideB = await createShippingGuideFixture();
+        const itemOfA = await createShippingGuideItemFixture(guideA.id, { quantity: '10', detail: 'Original A' });
+
+        const response = await auth(
+            request(app)
+                .put(`/api/shipping_guides/${Utils.encode(guideB.id)}`)
+                .send({
+                    id: [Utils.encode(itemOfA.id)],
+                    product: ['Intento de robo'],
+                    quantity: ['999'],
+                })
+        );
+
+        expect(response.status).toBe(200);
+
+        const stillOriginal = await ShippingGuideItems.findByPk(itemOfA.id);
+        expect(stillOriginal.quantity).toBe('10');
+        expect(stillOriginal.detail).toBe('Original A');
     });
 
     it('devuelve 400 con hashid inválido', async () => {
