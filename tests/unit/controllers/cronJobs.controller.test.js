@@ -61,10 +61,10 @@ describe('generateWeeklyEvaluationCrew', () => {
         ]);
     });
 
-    it('omite TipTop II y genera las evaluaciones de otros barcos', async () => {
+    it('omite companyId 1 y genera las evaluaciones de otros barcos', async () => {
         ShipmentDates.findAll.mockResolvedValue([
-            buildShipment({ companyId: 2, staffId: 1, positionId: 10, positionName: 'Capitán' }),
-            buildShipment({ companyId: 2, staffId: 2, positionId: 11, positionName: 'Marinero' }),
+            buildShipment({ companyId: 1, staffId: 1, positionId: 10, positionName: 'Capitán' }),
+            buildShipment({ companyId: 1, staffId: 2, positionId: 11, positionName: 'Marinero' }),
             buildShipment({ companyId: 4, staffId: 3, positionId: 10, positionName: 'Capitán' }),
             buildShipment({ companyId: 4, staffId: 4, positionId: 11, positionName: 'Marinero' })
         ]);

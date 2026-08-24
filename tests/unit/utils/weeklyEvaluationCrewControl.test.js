@@ -6,8 +6,8 @@ describe('weeklyEvaluationCrewControl utils', () => {
         control = require('../../../src/utils/weeklyEvaluationCrewControl');
     });
 
-    it('inicia TipTop II desactivado', () => {
-        expect(control.isWeeklyEvaluationCrewEnabled({ companyId: 2 })).toBe(false);
+    it('inicia companyId 1 desactivado', () => {
+        expect(control.isWeeklyEvaluationCrewEnabled({ companyId: 1 })).toBe(false);
     });
 
     it('habilita por defecto una compañía no configurada', () => {
