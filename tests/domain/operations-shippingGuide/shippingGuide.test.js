@@ -138,3 +138,74 @@ describe('GET /api/shipping_guides/:guide_id', () => {
         expect(response.status).toBe(403);
     });
 });
+
+// =========================================================================
+// POST /api/shipping_guides
+// =========================================================================
+
+describe('POST /api/shipping_guides — crear guía de remisión', () => {
+    const validPayload = () => ({
+        dateStartTraslate: '2026-02-01',
+        dateEndTraslate: '2026-02-05',
+        from: 'Santa Cruz',
+        to: 'Quito',
+        sale: true,
+        buy: false,
+        other: false,
+        addressee: 'Cliente Test',
+        addresseeRuc: '0999999999',
+        carrier: 'Transportista Test',
+        carrierRuc: '0988888888',
+        carrierLicence: 'ABC-1234',
+        details: [{ quantity: 5, detail: 'Caja de vino' }],
+    });
+
+    it('devuelve 200 al crear una guía', async () => {
+        const response = await auth(
+            request(app).post('/api/shipping_guides').send(validPayload())
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toBe('resource created successfully');
+
+        const created = await ShippingGuide.findOne({ where: {}, order: [['id', 'DESC']] });
+        expect(created).not.toBeNull();
+        expect(fs.existsSync(path.join(__dirname, '../../..', created.file))).toBe(true);
+    });
+
+    it('devuelve 400 cuando falta dateStartTraslate', async () => {
+        const payload = validPayload();
+        delete payload.dateStartTraslate;
+
+        const response = await auth(request(app).post('/api/shipping_guides').send(payload));
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 400 cuando falta dateEndTraslate', async () => {
+        const payload = validPayload();
+        delete payload.dateEndTraslate;
+
+        const response = await auth(request(app).post('/api/shipping_guides').send(payload));
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 400 cuando details está vacío', async () => {
+        const payload = validPayload();
+        payload.details = [];
+
+        const response = await auth(request(app).post('/api/shipping_guides').send(payload));
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).post('/api/shipping_guides').send({});
+
+        expect(response.status).toBe(403);
+    });
+});

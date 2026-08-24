@@ -48,9 +48,19 @@ const getShippingGuideById = async (req, res, next) => {
     }
 }
 
-const createShippingGuide = async (req, res) => {
+const createShippingGuide = async (req, res, next) => {
     try {
         const data = req.body;
+        if (!data.dateStartTraslate) {
+            throw new AppError('dateStartTraslate es requerido', 400);
+        }
+        if (!data.dateEndTraslate) {
+            throw new AppError('dateEndTraslate es requerido', 400);
+        }
+        if (!Array.isArray(data.details) || data.details.length === 0) {
+            throw new AppError('details debe tener al menos un item', 400);
+        }
+
         const [consecutivo] = await ShippingGuideCount.findOrCreate({
             where: {},
             defaults: { valor: 1 },
@@ -60,7 +70,6 @@ const createShippingGuide = async (req, res) => {
         await ShippingGuideCount.update(
             { valor: consecutivo.valor + 1 }, { where: {} }
         );
-
 
         data.counter = formattedCounter;
 
@@ -82,8 +91,7 @@ const createShippingGuide = async (req, res) => {
 
         res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
-        console.log(error)
-        res.status(400).json(error.message);
+        next(error);
     }
 };
 
