@@ -2,6 +2,9 @@ const ShippingGuideItems = require('../../../models/operations/shippingGuide/shi
 const ShippingGuide = require('../../../models/operations/shippingGuide/shippingGuide.models');
 const db = require('../../../utils/database');
 const Utils = require('../../../utils/Utils');
+const AppError = require('../../../errors/AppError');
+const fs = require('fs');
+const path = require('path');
 
 
 class ShippingGuideService {
@@ -100,6 +103,36 @@ class ShippingGuideService {
         } catch (error) {
             throw error;
         }
+    }
+
+    static async deleteShippingGuide(id) {
+        const existing = await ShippingGuide.findByPk(id);
+        if (!existing) {
+            throw new AppError('Guía no encontrada', 404);
+        }
+
+        const filePath = existing.file;
+
+        const transaction = await db.transaction();
+        try {
+            await ShippingGuideItems.destroy({ where: { guideId: id }, transaction });
+            await ShippingGuide.destroy({ where: { id }, transaction });
+            await transaction.commit();
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
+
+        if (filePath) {
+            const absolutePath = path.resolve(path.join(__dirname, '../../../../'), `.${filePath}`);
+            try {
+                fs.unlinkSync(absolutePath);
+            } catch (error) {
+                console.error('No se pudo borrar el PDF de la guía eliminada:', error.message);
+            }
+        }
+
+        return 'resource deleted successfully';
     }
 
 }

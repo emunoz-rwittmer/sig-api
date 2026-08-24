@@ -296,3 +296,68 @@ describe('PUT /api/shipping_guides/:guide_id — actualizar guía', () => {
         expect(response.status).toBe(403);
     });
 });
+
+// =========================================================================
+// DELETE /api/shipping_guides/:guide_id
+// =========================================================================
+
+describe('DELETE /api/shipping_guides/:guide_id — eliminar guía', () => {
+    it('devuelve 200, borra la guía, sus items y el PDF', async () => {
+        const s = suffix();
+        const filePath = `/uploads/pdfs/guides/guia_remision_delete-test-${s}.pdf`;
+        const absolutePath = path.join(__dirname, '../../..', filePath);
+        fs.writeFileSync(absolutePath, 'contenido de prueba');
+
+        const guide = await createShippingGuideFixture({ file: filePath });
+        await createShippingGuideItemFixture(guide.id);
+
+        const response = await auth(
+            request(app).delete(`/api/shipping_guides/${Utils.encode(guide.id)}`)
+        );
+
+        expect(response.status).toBe(200);
+
+        const refreshedGuide = await ShippingGuide.findByPk(guide.id);
+        expect(refreshedGuide).toBeNull();
+
+        const remainingItems = await ShippingGuideItems.findAll({ where: { guideId: guide.id } });
+        expect(remainingItems.length).toBe(0);
+
+        expect(fs.existsSync(absolutePath)).toBe(false);
+    });
+
+    it('devuelve 200 aunque el archivo PDF ya no exista en disco', async () => {
+        const guide = await createShippingGuideFixture({ file: '/uploads/pdfs/guides/no-existe.pdf' });
+
+        const response = await auth(
+            request(app).delete(`/api/shipping_guides/${Utils.encode(guide.id)}`)
+        );
+
+        expect(response.status).toBe(200);
+
+        const refreshedGuide = await ShippingGuide.findByPk(guide.id);
+        expect(refreshedGuide).toBeNull();
+    });
+
+    it('devuelve 400 con hashid inválido', async () => {
+        const response = await auth(request(app).delete('/api/shipping_guides/not-a-hashid'));
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 404 cuando la guía no existe', async () => {
+        const response = await auth(
+            request(app).delete(`/api/shipping_guides/${Utils.encode(999999)}`)
+        );
+
+        expect(response.status).toBe(404);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).delete('/api/shipping_guides/any-id');
+
+        expect(response.status).toBe(403);
+    });
+});

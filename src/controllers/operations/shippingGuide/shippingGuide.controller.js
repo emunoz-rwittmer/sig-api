@@ -152,12 +152,23 @@ const updateShippingGuide = async (req, res, next) => {
 }
 
 
+const deleteShippingGuide = async (req, res, next) => {
+    try {
+        const guideId = decodeId(req.params.guide_id, 'guide_id');
+        const result = await ShippingGuideService.deleteShippingGuide(guideId);
+        res.status(200).json({ data: result });
+    } catch (error) {
+        next(error);
+    }
+};
+
+
 const ShippingGuideController = {
 
     getShippingGuides,
     getShippingGuideById,
     createShippingGuide,
     updateShippingGuide,
-    //deleteShippingGuide,
+    deleteShippingGuide,
 }
 module.exports = ShippingGuideController
