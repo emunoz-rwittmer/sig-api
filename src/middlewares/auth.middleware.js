@@ -60,10 +60,18 @@ const isAdminOfSurveys = async (req, res, next) => {
     }
 }
 
+const hasAnyRole = (allowedRoles) => async (req, res, next) => {
+    if (allowedRoles.includes(req.userRol)) {
+        return next();
+    }
+    return res.status(403).json({ data: 'Rol no autorizado' });
+};
+
 const authJwt = {
     verifyToken,
     isAdmin,
-    isAdminOfSurveys
+    isAdminOfSurveys,
+    hasAnyRole
 };
 
 module.exports = authJwt;

@@ -76,7 +76,7 @@ const routerApi = (app) => {
   app.use("/api/levels", authJwt.verifyToken, levelRoutes);
   app.use("/api/strategy", authJwt.verifyToken, startegryRoutes);
   //REPORTS
-  app.use("/api/reports", authJwt.verifyToken, reportRoutes);
+  app.use("/api/reports", reportRoutes);
   app.use("/api/downloads", authJwt.verifyToken, downloadsRoutes);
   app.use("/api/bar", authJwt.verifyToken, bar)
 
