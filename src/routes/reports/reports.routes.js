@@ -1,6 +1,11 @@
 const { Router } = require('express');
 const excelReports = require ('../../controllers/reports');
+const powerbiReports = require('../../controllers/reports/powerbi.controller');
+const authJwt = require('../../middlewares/auth.middleware');
+const { verifyPowerBIDatasetKey } = require('../../middlewares/apiKey.middleware');
 const router = Router();
+
+const POWERBI_ALLOWED_ROLES = ['admin', 'psicologos', 'gerencia_gps', 'gerencia_uio'];
 
 /**
  * @openapi
@@ -30,7 +35,7 @@ const router = Router();
  *       404:
  *         description: Orden no encontrada
  */
-router.get('/order/:order_id', excelReports.generateOrderExcel);
+router.get('/order/:order_id', authJwt.verifyToken, excelReports.generateOrderExcel);
 
 /**
  * @openapi
@@ -65,7 +70,7 @@ router.get('/order/:order_id', excelReports.generateOrderExcel);
  *       400:
  *         description: products es requerido
  */
-router.post('/stockWarehouse', excelReports.generateStockExcel);
+router.post('/stockWarehouse', authJwt.verifyToken, excelReports.generateStockExcel);
 
 /**
  * @openapi
@@ -93,7 +98,7 @@ router.post('/stockWarehouse', excelReports.generateStockExcel);
  *       404:
  *         description: Stock no encontrado
  */
-router.get('/transactions/stock/:stock_id', excelReports.generateTransactionsExcel);
+router.get('/transactions/stock/:stock_id', authJwt.verifyToken, excelReports.generateTransactionsExcel);
 
 /**
  * @openapi
@@ -129,7 +134,7 @@ router.get('/transactions/stock/:stock_id', excelReports.generateTransactionsExc
  *       400:
  *         description: No hay registros
  */
-router.get('/evaluations/generalReport/:company_id', excelReports.generateGeneralReportEvaluations);
+router.get('/evaluations/generalReport/:company_id', authJwt.verifyToken, excelReports.generateGeneralReportEvaluations);
 
 /**
  * @openapi
@@ -162,7 +167,7 @@ router.get('/evaluations/generalReport/:company_id', excelReports.generateGenera
  *       400:
  *         description: dataForReport.averageReviews es requerido
  */
-router.post('/evaluations/reportByEmployed', excelReports.generatReportEvaluationsByEmployed);
+router.post('/evaluations/reportByEmployed', authJwt.verifyToken, excelReports.generatReportEvaluationsByEmployed);
 
 /**
  * @openapi
@@ -198,6 +203,66 @@ router.post('/evaluations/reportByEmployed', excelReports.generatReportEvaluatio
  *       400:
  *         description: No hay registros
  */
-router.get('/comentCards/generateReport/:yacht_id', excelReports.generateReportComentCards);
+router.get('/comentCards/generateReport/:yacht_id', authJwt.verifyToken, excelReports.generateReportComentCards);
+
+/**
+ * @openapi
+ * /reports/powerbi/{reportKey}/embed:
+ *   get:
+ *     summary: Obtener la configuración de embed (token corto) de un reporte Power BI
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: reportKey
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Clave del reporte configurada en POWERBI_REPORTS_MAP (ej. "desempeno")
+ *     responses:
+ *       200:
+ *         description: Configuración de embed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 embedUrl:
+ *                   type: string
+ *                 embedToken:
+ *                   type: string
+ *                 reportId:
+ *                   type: string
+ *                 expiration:
+ *                   type: string
+ *       403:
+ *         description: Token no proporcionado o rol no autorizado
+ *       404:
+ *         description: reportKey no configurado
+ */
+router.get('/powerbi/:reportKey/embed', authJwt.verifyToken, authJwt.hasAnyRole(POWERBI_ALLOWED_ROLES), powerbiReports.getPowerBIEmbedConfig);
+
+/**
+ * @openapi
+ * /reports/evaluations/powerbi-dataset:
+ *   get:
+ *     summary: Dataset JSON de evaluaciones para el refresco programado de Power BI Service
+ *     tags: [Reports]
+ *     security:
+ *       - powerbiApiKey: []
+ *     responses:
+ *       200:
+ *         description: Filas planas de evaluaciones
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *       401:
+ *         description: X-PowerBI-Key ausente o inválido
+ */
+router.get('/evaluations/powerbi-dataset', verifyPowerBIDatasetKey, powerbiReports.getEvaluationsPowerBIDataset);
 
 module.exports = router;
