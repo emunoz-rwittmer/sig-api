@@ -66,16 +66,18 @@ Query: `yate?` (id o nombre del yate; sin filtro = todos).
 ```
 
 ### 3.2 `GET /reports/desempeno/yates`
-Query: `yate?` (filtra KPIs y las series mensuales "actuales"; el promedio por yate y las small-multiples siempre muestran los 4 yates).
+Query: `yate?` (filtra `kpis`; `avgByYate` y `monthlyCalificacionByYate` siempre muestran los 4 yates).
+
+`monthlyCalificacion`/`monthlyCompliance` usan el **mismo shape multi-año que `overview`** (una serie por año, no una sola línea) — el mockup de Power BI mostraba una sola línea porque tenía el filtro de año fijo en la última pantalla capturada, pero el backend no asume "año actual"; el frontend decide qué año(s) graficar con la data completa.
 
 ```json
 {
   "avgByYate": [{ "yate": "Tip Top V", "calificacion": 4.7 }],
   "kpis": { "completadas": 1019, "caducadas": 98, "calificacion": 4.74, "compliancePercent": 91 },
-  "monthlyCalificacion": { "categories": [...], "series": [{ "name": "Tip Top V", "data": [...] }] },
-  "monthlyCompliance": { "categories": [...], "series": [{ "name": "Tip Top V", "data": [...] }] },
+  "monthlyCalificacion": { "categories": [...], "series": [{ "name": "2026", "data": [...] }] },
+  "monthlyCompliance": { "categories": [...], "series": [{ "name": "2026", "data": [...] }] },
   "monthlyCalificacionByYate": [
-    { "yate": "Koln", "categories": [...], "data": [...] }
+    { "yate": "Koln", "categories": [...], "series": [{ "name": "2026", "data": [...] }] }
   ]
 }
 ```
