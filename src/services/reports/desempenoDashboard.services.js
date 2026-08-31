@@ -165,6 +165,79 @@ async function getYates(yateFilter) {
     };
 }
 
+function groupRowsBy(rows, keyFn) {
+    const groups = new Map();
+    rows.forEach((row) => {
+        const key = keyFn(row);
+        if (!key) return;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(row);
+    });
+    return groups;
+}
+
+async function getPersonas({ yate, evaluado, funcion, anio } = {}) {
+    const allRows = await loadEvaluations();
+    const cargoMap = await buildCargoMap(allRows);
+
+    const rows = allRows.filter((row) => {
+        if (!matchesYate(row, yate)) return false;
+        if (evaluado && row.evaluated?.trim().toLowerCase() !== evaluado.trim().toLowerCase()) return false;
+        if (funcion && (cargoMap.get(row.evaluated) || '').toLowerCase() !== funcion.trim().toLowerCase()) return false;
+        if (anio && evaluationDate(row).getFullYear() !== Number(anio)) return false;
+        return true;
+    });
+
+    const monthIndexesPresent = [...new Set(rows.map((row) => evaluationDate(row).getMonth()))].sort((a, b) => a - b);
+    const months = monthIndexesPresent.map((monthIndex) => ({ month: MESES[monthIndex], monthIndex: monthIndex + 1 }));
+
+    const porEvaluado = [...groupRowsBy(rows, (row) => row.evaluated).entries()]
+        .map(([evaluadoName, personRows]) => ({
+            evaluado: evaluadoName,
+            porMes: months.map(({ month, monthIndex }) => ({
+                month,
+                monthIndex,
+                valor: scoreValue(personRows.filter((row) => evaluationDate(row).getMonth() === monthIndex - 1)),
+            })),
+            total: scoreValue(personRows),
+        }))
+        .sort((a, b) => a.evaluado.localeCompare(b.evaluado));
+
+    const porEvaluadorMensual = [...groupRowsBy(rows, (row) => row.evaluator).entries()]
+        .map(([evaluador, evaluatorRows]) => ({
+            evaluador,
+            porMes: months.map(({ month, monthIndex }) => ({
+                month,
+                monthIndex,
+                valor: complianceValue(evaluatorRows.filter((row) => evaluationDate(row).getMonth() === monthIndex - 1)),
+            })),
+            total: complianceValue(evaluatorRows),
+        }))
+        .sort((a, b) => a.evaluador.localeCompare(b.evaluador));
+
+    const porEvaluadorTrimestre = [...groupRowsBy(rows, (row) => row.evaluator).entries()]
+        .map(([evaluador, evaluatorRows]) => {
+            const trimestres = [...new Set(evaluatorRows.map((row) => quarterOf(evaluationDate(row))))].sort();
+            return {
+                evaluador,
+                porTrimestre: trimestres.map((trimestre) => ({
+                    trimestre,
+                    valor: scoreValue(evaluatorRows.filter((row) => quarterOf(evaluationDate(row)) === trimestre)),
+                })),
+                total: scoreValue(evaluatorRows),
+            };
+        })
+        .sort((a, b) => a.evaluador.localeCompare(b.evaluador));
+
+    const comentarios = rows.flatMap((row) =>
+        (row.respuestas || [])
+            .filter((r) => r.answer && typeof SurveyScoring.asignarPuntaje(r.answer) !== 'number')
+            .map((r) => ({ evaluado: row.evaluated, evaluador: row.evaluator, texto: r.answer }))
+    );
+
+    return { months, porEvaluado, porEvaluadorMensual, porEvaluadorTrimestre, comentarios };
+}
+
 module.exports = {
     MESES,
     round2,
@@ -182,4 +255,5 @@ module.exports = {
     buildCargoMap,
     getOverview,
     getYates,
+    getPersonas,
 };
