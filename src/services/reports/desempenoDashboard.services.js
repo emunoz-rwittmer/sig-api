@@ -125,6 +125,46 @@ async function getOverview(yateFilter) {
     };
 }
 
+async function getYates(yateFilter) {
+    const allRows = await loadEvaluations();
+
+    const yateGroups = new Map();
+    allRows.forEach((row) => {
+        const yate = yateName(row);
+        if (!yate) return;
+        if (!yateGroups.has(yate)) yateGroups.set(yate, []);
+        yateGroups.get(yate).push(row);
+    });
+
+    const avgByYate = [...yateGroups.entries()]
+        .map(([yate, yateRows]) => ({ yate, calificacion: scoreValue(yateRows) }))
+        .sort((a, b) => a.yate.localeCompare(b.yate));
+
+    const scoped = allRows.filter((row) => matchesYate(row, yateFilter));
+    const completadas = scoped.filter((row) => row.state === 'Completada').length;
+    const caducadas = scoped.filter((row) => row.state === 'Caducada').length;
+
+    const monthlyCalificacionByYate = [...yateGroups.entries()]
+        .map(([yate, yateRows]) => ({
+            yate,
+            ...monthlySeriesByYear(yateRows, scoreValue),
+        }))
+        .sort((a, b) => a.yate.localeCompare(b.yate));
+
+    return {
+        avgByYate,
+        kpis: {
+            completadas,
+            caducadas,
+            calificacion: scoreValue(scoped),
+            compliancePercent: compliancePercent(completadas, caducadas),
+        },
+        monthlyCalificacion: monthlySeriesByYear(scoped, scoreValue),
+        monthlyCompliance: monthlySeriesByYear(scoped, complianceValue),
+        monthlyCalificacionByYate,
+    };
+}
+
 module.exports = {
     MESES,
     round2,
@@ -141,4 +181,5 @@ module.exports = {
     loadEvaluations,
     buildCargoMap,
     getOverview,
+    getYates,
 };
