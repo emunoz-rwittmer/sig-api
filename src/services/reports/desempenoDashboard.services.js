@@ -238,6 +238,67 @@ async function getPersonas({ yate, evaluado, funcion, anio } = {}) {
     return { months, porEvaluado, porEvaluadorMensual, porEvaluadorTrimestre, comentarios };
 }
 
+function scoreForCompetencia(rows, competencia) {
+    const numeric = rows.flatMap((row) =>
+        (row.respuestas || [])
+            .filter((r) => r.pregunta?.title === competencia)
+            .map((r) => SurveyScoring.asignarPuntaje(r.answer))
+            .filter((v) => typeof v === 'number')
+    );
+    return round2(average(numeric));
+}
+
+async function getPreguntas({ evaluado, funcion, anio } = {}) {
+    const allRows = await loadEvaluations();
+    const cargoMap = await buildCargoMap(allRows);
+
+    const rows = allRows.filter((row) => {
+        if (evaluado && row.evaluated?.trim().toLowerCase() !== evaluado.trim().toLowerCase()) return false;
+        if (funcion && (cargoMap.get(row.evaluated) || '').toLowerCase() !== funcion.trim().toLowerCase()) return false;
+        if (anio && evaluationDate(row).getFullYear() !== Number(anio)) return false;
+        return true;
+    });
+
+    const competencias = [];
+    const seen = new Set();
+    rows.forEach((row) => {
+        (row.respuestas || []).forEach((r) => {
+            const title = r.pregunta?.title;
+            if (!title || seen.has(title)) return;
+            if (typeof SurveyScoring.asignarPuntaje(r.answer) === 'number') {
+                seen.add(title);
+                competencias.push(title);
+            }
+        });
+    });
+
+    const monthIndexesPresent = [...new Set(rows.map((row) => evaluationDate(row).getMonth()))].sort((a, b) => a - b);
+    const porMes = monthIndexesPresent.map((monthIndex) => {
+        const monthRows = rows.filter((row) => evaluationDate(row).getMonth() === monthIndex);
+        return {
+            month: MESES[monthIndex],
+            monthIndex: monthIndex + 1,
+            valores: competencias.map((competencia) => ({
+                etiqueta: competencia,
+                valor: scoreForCompetencia(monthRows, competencia),
+            })),
+        };
+    });
+
+    const porEvaluador = [...groupRowsBy(rows, (row) => row.evaluator).entries()]
+        .map(([evaluador, evaluatorRows]) => ({
+            evaluador,
+            valores: competencias.map((competencia) => ({
+                etiqueta: competencia,
+                valor: scoreForCompetencia(evaluatorRows, competencia),
+            })),
+            calificacion: scoreValue(evaluatorRows),
+        }))
+        .sort((a, b) => a.evaluador.localeCompare(b.evaluador));
+
+    return { competencias, porMes, porEvaluador };
+}
+
 module.exports = {
     MESES,
     round2,
@@ -256,4 +317,5 @@ module.exports = {
     getOverview,
     getYates,
     getPersonas,
+    getPreguntas,
 };
