@@ -19,7 +19,12 @@
 - **Compliance %** = `round(Completadas / (Completadas + Caducadas) * 100)`, `null` when both counts are 0. Verified against the source Excel: 753/(753+148)=84%, 1981/(1981+331)=86%, 1025/(1025+104)=91%.
 - **Competencias** (question labels) come from the real `FormQuestion.title`, never hardcoded — a title counts as a competencia if at least one answer for it parses to a number.
 - Follow existing patterns exactly: `AppError` (`src/errors/AppError.js`) is not needed here (no error branches — these endpoints only read and aggregate, they don't reject on missing config like the Power BI ones did); controllers use the `try { ... } catch (error) { next(error); }` shape seen in `src/controllers/reports/powerbi.controller.js`; `@openapi` JSDoc blocks on every route in `reports.routes.js`; Jest + Supertest domain tests booting the real app via `tests/helpers/testApp.js` and `tests/helpers/staffFixtures.js` (see `tests/domain/reports/reports.test.js` for the established shape).
-- Sequelize timestamps: to fixture a `FormRespond` into a specific month/year for aggregation tests, create it normally then `await respond.update({ updatedAt: new Date('YYYY-MM-DD') }, { silent: true })` — `silent: true` stops Sequelize from re-stamping `updatedAt` to "now" on the update itself.
+- **Sequelize timestamps (verified empirically against this project's Sequelize/MySQL setup — do not use `instance.update({ updatedAt }, { silent: true })`, it silently no-ops or gets overwritten to "now" depending on call shape):** to fixture a `FormRespond` into a specific month/year for aggregation tests, create it normally then set its `updatedAt` with the shared test helper `tests/helpers/dateFixtures.js`'s `setUpdatedAt(tableName, id, isoDateTime)`, which issues a raw parameterized `UPDATE` and is the only approach confirmed to work:
+  ```js
+  const { setUpdatedAt } = require('../../../helpers/dateFixtures'); // adjust ../ depth to the test file's location
+  await setUpdatedAt('form_responds', respond.id, '2025-01-10T12:00:00');
+  ```
+  Two details that matter: the table name is `form_responds` (Sequelize auto-pluralizes the `form_respond` model name — verified via `SHOW TABLES`), and every date string **must include a `T12:00:00` (noon) time component**, never a bare `YYYY-MM-DD` — a bare date parses as UTC midnight, and this DB's local timezone offset can shift it across a month/year boundary when read back (e.g. `'2025-01-01'` can read back as December 2024). Noon avoids that in any realistic offset.
 
 ---
 
@@ -27,6 +32,7 @@
 
 | File | Responsibility |
 |---|---|
+| `tests/helpers/dateFixtures.js` | `setUpdatedAt(tableName, id, isoDateTime)` — raw-SQL test helper to fixture a row's `updatedAt` to a specific past date (see Global Constraints; created once in Task 1, reused by Tasks 2-4). |
 | `src/services/reports/desempenoDashboard.services.js` | All aggregation logic + 4 exported functions: `getOverview(yateFilter)`, `getYates(yateFilter)`, `getPersonas(filters)`, `getPreguntas(filters)`. |
 | `src/controllers/reports/desempenoDashboard.controller.js` | 4 thin Express handlers, one per endpoint. |
 | `src/routes/reports/reports.routes.js` | Modified: remove the 2 Power BI routes/requires, add the 4 desempeño routes + their `@openapi` blocks. |
@@ -46,12 +52,34 @@
 - Consumes: `EvaluationService.getEvaluationsByCompany` (`src/services/operations/surveys/evaluations.services.js:97`, called as `getEvaluationsByCompany(undefined, undefined, undefined)` to fetch all rows); `SurveyScoring.asignarPuntaje` (`src/utils/surveyScoring.js`); `capitalizeYachtName` (`src/utils/reportFormatting.js`).
 - Produces (this task): shared helpers `MESES`, `round2`, `average`, `evaluationDate(row)`, `evaluationScore(row)`, `yateName(row)`, `matchesYate(row, yateFilter)`, `compliancePercent(completadas, caducadas)`, `quarterOf(date)`, `scoreValue(rows)`, `complianceValue(rows)`, `monthlySeriesByYear(rows, computeMonthValue)`, `loadEvaluations()` — all reused by Tasks 2-4, none exported (module-internal). Exported: `getOverview(yateFilter)` → `Promise<{ years: number[], kpisByYear: Array<{year, calificacion, compliancePercent, completadas, caducadas}>, monthlyCalificacion: {categories, series}, monthlyCompliance: {categories, series} }>`.
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Create the shared date-fixture test helper**
+
+```js
+// tests/helpers/dateFixtures.js
+const db = require('../../src/utils/database');
+
+// Sequelize's instance/static `.update({ updatedAt }, { silent: true })` does not
+// reliably persist a custom updatedAt on this project's Sequelize/MySQL setup — verified
+// empirically, it either no-ops or gets overwritten to "now" depending on call shape.
+// A raw parameterized UPDATE is the only approach confirmed to work.
+async function setUpdatedAt(tableName, id, isoDateTime) {
+    await db.query(`UPDATE ${tableName} SET \`updatedAt\` = :updatedAt WHERE id = :id`, {
+        replacements: { updatedAt: isoDateTime, id },
+    });
+}
+
+module.exports = { setUpdatedAt };
+```
+
+No dedicated test for this helper — it's test-only infrastructure, exercised (and proven correct) by every test in Task 1 that uses it.
+
+- [ ] **Step 2: Write the failing test**
 
 ```js
 // tests/domain/reports/desempeno/desempenoDashboard.overview.test.js
 const { bootTestApp, shutdownTestApp } = require('../../../helpers/testApp');
 const { createCompanyWithYacht } = require('../../../helpers/staffFixtures');
+const { setUpdatedAt } = require('../../../helpers/dateFixtures');
 const Form = require('../../../../src/models/operations/surveys/form.models');
 const FormQuestion = require('../../../../src/models/operations/surveys/formQuestion.models');
 const FormRespond = require('../../../../src/models/operations/surveys/formRespond.models');
@@ -80,7 +108,7 @@ describe('desempenoDashboard.services getOverview', () => {
             evaluated: 'Evaluado Overview',
             expirationDate: new Date('2025-01-15'),
         });
-        await completada.update({ updatedAt: new Date('2025-01-10') }, { silent: true });
+        await setUpdatedAt('form_responds', completada.id, '2025-01-10T12:00:00');
         await FormAnswers.create({ respuestaId: completada.id, questionId: question.id, answer: '5' });
 
         const caducada = await FormRespond.create({
@@ -91,7 +119,7 @@ describe('desempenoDashboard.services getOverview', () => {
             evaluated: 'Evaluado Overview 2',
             expirationDate: new Date('2025-01-20'),
         });
-        await caducada.update({ updatedAt: new Date('2025-01-12') }, { silent: true });
+        await setUpdatedAt('form_responds', caducada.id, '2025-01-12T12:00:00');
 
         const result = await getOverview();
         const year2025 = result.kpisByYear.find((k) => k.year === 2025);
@@ -117,7 +145,7 @@ describe('desempenoDashboard.services getOverview', () => {
             evaluated: 'Evaluado Filter',
             expirationDate: new Date('2025-03-01'),
         });
-        await respond.update({ updatedAt: new Date('2025-03-01') }, { silent: true });
+        await setUpdatedAt('form_responds', respond.id, '2025-03-01T12:00:00');
 
         const matched = await getOverview('Filtered Yacht Overview');
         const unmatched = await getOverview('Yacht That Does Not Exist');
@@ -128,12 +156,12 @@ describe('desempenoDashboard.services getOverview', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 3: Run test to verify it fails**
 
 Run: `npx jest tests/domain/reports/desempeno/desempenoDashboard.overview.test.js`
 Expected: FAIL — `src/services/reports/desempenoDashboard.services.js` does not exist.
 
-- [ ] **Step 3: Write the implementation**
+- [ ] **Step 4: Write the implementation**
 
 ```js
 // src/services/reports/desempenoDashboard.services.js
@@ -283,15 +311,15 @@ module.exports = {
 };
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 5: Run test to verify it passes**
 
 Run: `npx jest tests/domain/reports/desempeno/desempenoDashboard.overview.test.js`
 Expected: PASS (2 tests)
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add src/services/reports/desempenoDashboard.services.js tests/domain/reports/desempeno/desempenoDashboard.overview.test.js
+git add tests/helpers/dateFixtures.js src/services/reports/desempenoDashboard.services.js tests/domain/reports/desempeno/desempenoDashboard.overview.test.js
 git commit -m "feat: add desempeno dashboard overview aggregation"
 ```
 
@@ -313,6 +341,7 @@ git commit -m "feat: add desempeno dashboard overview aggregation"
 // tests/domain/reports/desempeno/desempenoDashboard.yates.test.js
 const { bootTestApp, shutdownTestApp } = require('../../../helpers/testApp');
 const { createCompanyWithYacht } = require('../../../helpers/staffFixtures');
+const { setUpdatedAt } = require('../../../helpers/dateFixtures');
 const Form = require('../../../../src/models/operations/surveys/form.models');
 const FormQuestion = require('../../../../src/models/operations/surveys/formQuestion.models');
 const FormRespond = require('../../../../src/models/operations/surveys/formRespond.models');
@@ -338,14 +367,14 @@ describe('desempenoDashboard.services getYates', () => {
             companyId: companyA.id, formId: form.id, state: 'Completada',
             evaluator: 'Eval A', evaluated: 'Evaluado A', expirationDate: new Date('2025-05-01'),
         });
-        await respondA.update({ updatedAt: new Date('2025-05-01') }, { silent: true });
+        await setUpdatedAt('form_responds', respondA.id, '2025-05-01T12:00:00');
         await FormAnswers.create({ respuestaId: respondA.id, questionId: question.id, answer: '5' });
 
         const respondB = await FormRespond.create({
             companyId: companyB.id, formId: form.id, state: 'Completada',
             evaluator: 'Eval B', evaluated: 'Evaluado B', expirationDate: new Date('2025-05-01'),
         });
-        await respondB.update({ updatedAt: new Date('2025-05-01') }, { silent: true });
+        await setUpdatedAt('form_responds', respondB.id, '2025-05-01T12:00:00');
         await FormAnswers.create({ respuestaId: respondB.id, questionId: question.id, answer: '3' });
 
         const result = await getYates('Yacht Alpha');
@@ -443,6 +472,7 @@ git commit -m "feat: add desempeno dashboard per-yate aggregation"
 // tests/domain/reports/desempeno/desempenoDashboard.personas.test.js
 const { bootTestApp, shutdownTestApp } = require('../../../helpers/testApp');
 const { createCompanyWithYacht } = require('../../../helpers/staffFixtures');
+const { setUpdatedAt } = require('../../../helpers/dateFixtures');
 const Form = require('../../../../src/models/operations/surveys/form.models');
 const FormQuestion = require('../../../../src/models/operations/surveys/formQuestion.models');
 const FormRespond = require('../../../../src/models/operations/surveys/formRespond.models');
@@ -470,7 +500,7 @@ describe('desempenoDashboard.services getPersonas', () => {
             evaluator: `Evaluador Personas ${caseSuffix}`, evaluated: `Evaluado Personas ${caseSuffix}`,
             expirationDate: new Date('2025-06-01'),
         });
-        await respond.update({ updatedAt: new Date('2025-06-15') }, { silent: true });
+        await setUpdatedAt('form_responds', respond.id, '2025-06-15T12:00:00');
         await FormAnswers.create({ respuestaId: respond.id, questionId: scaleQuestion.id, answer: '4' });
         await FormAnswers.create({ respuestaId: respond.id, questionId: commentQuestion.id, answer: 'Buen desempeño este mes.' });
 
@@ -479,7 +509,7 @@ describe('desempenoDashboard.services getPersonas', () => {
             evaluator: `Evaluador Personas ${caseSuffix}`, evaluated: `Evaluado Personas 2 ${caseSuffix}`,
             expirationDate: new Date('2025-06-01'),
         });
-        await caducada.update({ updatedAt: new Date('2025-06-20') }, { silent: true });
+        await setUpdatedAt('form_responds', caducada.id, '2025-06-20T12:00:00');
 
         const result = await getPersonas({ anio: 2025 });
 
@@ -615,6 +645,7 @@ git commit -m "feat: add desempeno dashboard per-persona aggregation"
 // tests/domain/reports/desempeno/desempenoDashboard.preguntas.test.js
 const { bootTestApp, shutdownTestApp } = require('../../../helpers/testApp');
 const { createCompanyWithYacht } = require('../../../helpers/staffFixtures');
+const { setUpdatedAt } = require('../../../helpers/dateFixtures');
 const Form = require('../../../../src/models/operations/surveys/form.models');
 const FormQuestion = require('../../../../src/models/operations/surveys/formQuestion.models');
 const FormRespond = require('../../../../src/models/operations/surveys/formRespond.models');
@@ -642,7 +673,7 @@ describe('desempenoDashboard.services getPreguntas', () => {
             evaluator: `Evaluador Preguntas ${caseSuffix}`, evaluated: `Evaluado Preguntas ${caseSuffix}`,
             expirationDate: new Date('2025-04-01'),
         });
-        await respond.update({ updatedAt: new Date('2025-04-05') }, { silent: true });
+        await setUpdatedAt('form_responds', respond.id, '2025-04-05T12:00:00');
         await FormAnswers.create({ respuestaId: respond.id, questionId: competenciaQuestion.id, answer: '4' });
         await FormAnswers.create({ respuestaId: respond.id, questionId: commentQuestion.id, answer: 'Todo bien.' });
 
