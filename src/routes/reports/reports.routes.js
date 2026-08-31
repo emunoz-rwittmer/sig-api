@@ -273,6 +273,7 @@ router.get('/desempeno/yates', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO
  *         name: anio
  *         schema:
  *           type: integer
+ *         description: Año para filtrar (opcional). Si se omite, los datos de distintos años se combinan en el mismo mes — se recomienda siempre pasar este filtro en producción.
  *     responses:
  *       200:
  *         description: Tablas por evaluado/evaluador + comentarios
@@ -302,6 +303,7 @@ router.get('/desempeno/personas', authJwt.verifyToken, authJwt.hasAnyRole(DESEMP
  *         name: anio
  *         schema:
  *           type: integer
+ *         description: Año para filtrar (opcional). Si se omite, los datos de distintos años se combinan en el mismo mes/trimestre — se recomienda siempre pasar este filtro en producción.
  *     responses:
  *       200:
  *         description: Competencias + desglose mensual y por evaluador

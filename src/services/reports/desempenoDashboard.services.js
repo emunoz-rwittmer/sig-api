@@ -58,7 +58,7 @@ function complianceValue(rows) {
 }
 
 function monthlySeriesByYear(rows, computeMonthValue) {
-    const years = [...new Set(rows.map((row) => evaluationDate(row).getFullYear()))].sort();
+    const years = [...new Set(rows.map((row) => evaluationDate(row).getFullYear()))].sort((a, b) => a - b);
     return {
         categories: MESES,
         series: years.map((year) => ({
@@ -102,7 +102,7 @@ async function buildCargoMap(rows) {
 
 async function getOverview(yateFilter) {
     const rows = (await loadEvaluations()).filter((row) => matchesYate(row, yateFilter));
-    const years = [...new Set(rows.map((row) => evaluationDate(row).getFullYear()))].sort();
+    const years = [...new Set(rows.map((row) => evaluationDate(row).getFullYear()))].sort((a, b) => a - b);
 
     const kpisByYear = years.map((year) => {
         const yearRows = rows.filter((row) => evaluationDate(row).getFullYear() === year);
@@ -178,7 +178,7 @@ function groupRowsBy(rows, keyFn) {
 
 async function getPersonas({ yate, evaluado, funcion, anio } = {}) {
     const allRows = await loadEvaluations();
-    const cargoMap = await buildCargoMap(allRows);
+    const cargoMap = funcion ? await buildCargoMap(allRows) : new Map();
 
     const rows = allRows.filter((row) => {
         if (!matchesYate(row, yate)) return false;
@@ -250,7 +250,7 @@ function scoreForCompetencia(rows, competencia) {
 
 async function getPreguntas({ evaluado, funcion, anio } = {}) {
     const allRows = await loadEvaluations();
-    const cargoMap = await buildCargoMap(allRows);
+    const cargoMap = funcion ? await buildCargoMap(allRows) : new Map();
 
     const rows = allRows.filter((row) => {
         if (evaluado && row.evaluated?.trim().toLowerCase() !== evaluado.trim().toLowerCase()) return false;
