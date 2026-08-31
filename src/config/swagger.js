@@ -17,11 +17,6 @@ const swaggerSpec = swaggerJsdoc({
                     scheme: 'bearer',
                     bearerFormat: 'JWT',
                 },
-                powerbiApiKey: {
-                    type: 'apiKey',
-                    in: 'header',
-                    name: 'X-PowerBI-Key',
-                },
             },
         },
         security: [{ bearerAuth: [] }],
