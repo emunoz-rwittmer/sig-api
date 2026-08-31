@@ -48,6 +48,10 @@ describe('desempenoDashboard.services getPersonas', () => {
         const evaluadorRow = result.porEvaluadorMensual.find((r) => r.evaluador === `Evaluador Personas ${caseSuffix}`);
         expect(evaluadorRow.total).toBe(50); // 1 completada + 1 caducada
 
+        const evaluadorTrimestreRow = result.porEvaluadorTrimestre.find((r) => r.evaluador === `Evaluador Personas ${caseSuffix}`);
+        expect(evaluadorTrimestreRow.total).toBe(4); // calificación (score), not compliance %
+        expect(evaluadorTrimestreRow.porTrimestre.find((t) => t.trimestre === 'Q2').valor).toBe(4);
+
         expect(result.comentarios).toContainEqual({
             evaluado: `Evaluado Personas ${caseSuffix}`,
             evaluador: `Evaluador Personas ${caseSuffix}`,
