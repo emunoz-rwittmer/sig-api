@@ -1,11 +1,10 @@
 const { Router } = require('express');
 const excelReports = require ('../../controllers/reports');
-const powerbiReports = require('../../controllers/reports/powerbi.controller');
+const desempenoDashboard = require('../../controllers/reports/desempenoDashboard.controller');
 const authJwt = require('../../middlewares/auth.middleware');
-const { verifyPowerBIDatasetKey } = require('../../middlewares/apiKey.middleware');
 const router = Router();
 
-const POWERBI_ALLOWED_ROLES = ['admin', 'psicologos', 'gerencia_gps', 'gerencia_uio'];
+const DESEMPENO_DASHBOARD_ROLES = ['admin', 'psicologos', 'gerencia_gps', 'gerencia_uio'];
 
 /**
  * @openapi
@@ -207,62 +206,108 @@ router.get('/comentCards/generateReport/:yacht_id', authJwt.verifyToken, excelRe
 
 /**
  * @openapi
- * /reports/powerbi/{reportKey}/embed:
+ * /reports/desempeno/overview:
  *   get:
- *     summary: Obtener la configuración de embed (token corto) de un reporte Power BI
+ *     summary: KPIs y tendencias mensuales de desempeño de tripulación por año
  *     tags: [Reports]
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: reportKey
- *         required: true
+ *       - in: query
+ *         name: yate
  *         schema:
  *           type: string
- *         description: Clave del reporte configurada en POWERBI_REPORTS_MAP (ej. "desempeno")
+ *         description: Nombre del yate para filtrar (opcional, sin filtro = todos)
  *     responses:
  *       200:
- *         description: Configuración de embed
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 embedUrl:
- *                   type: string
- *                 embedToken:
- *                   type: string
- *                 reportId:
- *                   type: string
- *                 expiration:
- *                   type: string
+ *         description: KPIs por año y series mensuales de calificación/compliance
  *       403:
  *         description: Token no proporcionado o rol no autorizado
- *       404:
- *         description: reportKey no configurado
  */
-router.get('/powerbi/:reportKey/embed', authJwt.verifyToken, authJwt.hasAnyRole(POWERBI_ALLOWED_ROLES), powerbiReports.getPowerBIEmbedConfig);
+router.get('/desempeno/overview', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO_DASHBOARD_ROLES), desempenoDashboard.getDesempenoOverview);
 
 /**
  * @openapi
- * /reports/evaluations/powerbi-dataset:
+ * /reports/desempeno/yates:
  *   get:
- *     summary: Dataset JSON de evaluaciones para el refresco programado de Power BI Service
+ *     summary: Promedio de calificación por yate y detalle mensual de un yate
  *     tags: [Reports]
  *     security:
- *       - powerbiApiKey: []
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: yate
+ *         schema:
+ *           type: string
+ *         description: Nombre del yate para filtrar los KPIs (opcional)
  *     responses:
  *       200:
- *         description: Filas planas de evaluaciones
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *       401:
- *         description: X-PowerBI-Key ausente o inválido
+ *         description: Promedio por yate + KPIs y series mensuales
+ *       403:
+ *         description: Token no proporcionado o rol no autorizado
  */
-router.get('/evaluations/powerbi-dataset', verifyPowerBIDatasetKey, powerbiReports.getEvaluationsPowerBIDataset);
+router.get('/desempeno/yates', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO_DASHBOARD_ROLES), desempenoDashboard.getDesempenoYates);
+
+/**
+ * @openapi
+ * /reports/desempeno/personas:
+ *   get:
+ *     summary: Calificación por evaluado y compliance por evaluador, con comentarios de texto libre
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: yate
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: evaluado
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: funcion
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: anio
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Tablas por evaluado/evaluador + comentarios
+ *       403:
+ *         description: Token no proporcionado o rol no autorizado
+ */
+router.get('/desempeno/personas', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO_DASHBOARD_ROLES), desempenoDashboard.getDesempenoPersonas);
+
+/**
+ * @openapi
+ * /reports/desempeno/preguntas:
+ *   get:
+ *     summary: Desglose de calificación por pregunta/competencia
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: evaluado
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: funcion
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: anio
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Competencias + desglose mensual y por evaluador
+ *       403:
+ *         description: Token no proporcionado o rol no autorizado
+ */
+router.get('/desempeno/preguntas', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO_DASHBOARD_ROLES), desempenoDashboard.getDesempenoPreguntas);
 
 module.exports = router;
