@@ -1,5 +1,6 @@
 const { bootTestApp, shutdownTestApp } = require('../../../helpers/testApp');
 const { createCompanyWithYacht } = require('../../../helpers/staffFixtures');
+const { setUpdatedAt } = require('../../../helpers/dateFixtures');
 const Form = require('../../../../src/models/operations/surveys/form.models');
 const FormQuestion = require('../../../../src/models/operations/surveys/formQuestion.models');
 const FormRespond = require('../../../../src/models/operations/surveys/formRespond.models');
@@ -28,7 +29,7 @@ describe('desempenoDashboard.services getOverview', () => {
             evaluated: 'Evaluado Overview',
             expirationDate: new Date('2025-01-15'),
         });
-        await completada.update({ updatedAt: new Date('2025-01-10') }, { silent: true });
+        await setUpdatedAt('form_responds', completada.id, '2025-01-10T12:00:00');
         await FormAnswers.create({ respuestaId: completada.id, questionId: question.id, answer: '5' });
 
         const caducada = await FormRespond.create({
@@ -39,7 +40,7 @@ describe('desempenoDashboard.services getOverview', () => {
             evaluated: 'Evaluado Overview 2',
             expirationDate: new Date('2025-01-20'),
         });
-        await caducada.update({ updatedAt: new Date('2025-01-12') }, { silent: true });
+        await setUpdatedAt('form_responds', caducada.id, '2025-01-12T12:00:00');
 
         const result = await getOverview();
         const year2025 = result.kpisByYear.find((k) => k.year === 2025);
@@ -65,7 +66,7 @@ describe('desempenoDashboard.services getOverview', () => {
             evaluated: 'Evaluado Filter',
             expirationDate: new Date('2025-03-01'),
         });
-        await respond.update({ updatedAt: new Date('2025-03-01') }, { silent: true });
+        await setUpdatedAt('form_responds', respond.id, '2025-03-01T12:00:00');
 
         const matched = await getOverview('Filtered Yacht Overview');
         const unmatched = await getOverview('Yacht That Does Not Exist');
