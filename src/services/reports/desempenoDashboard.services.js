@@ -198,17 +198,54 @@ function groupRowsBy(rows, keyFn) {
     return groups;
 }
 
-async function getPersonas({ yate, evaluado, funcion, anio } = {}) {
+async function getPersonas({ yate, evaluado, funcion, area, anio } = {}) {
     const allRows = await loadEvaluations();
     const cargoMap = funcion ? await buildCargoMap(allRows) : new Map();
+    const areaMap = area ? await buildAreaMap(allRows) : new Map();
 
     const rows = allRows.filter((row) => {
         if (!matchesYate(row, yate)) return false;
         if (evaluado && row.evaluated?.trim().toLowerCase() !== evaluado.trim().toLowerCase()) return false;
         if (funcion && (cargoMap.get(row.evaluated) || '').toLowerCase() !== funcion.trim().toLowerCase()) return false;
+        if (area && (areaMap.get(row.evaluated) || '').toLowerCase() !== area.trim().toLowerCase()) return false;
         if (anio && evaluationDate(row).getFullYear() !== Number(anio)) return false;
         return true;
     });
+
+    const years = [...new Set(rows.map((row) => evaluationDate(row).getFullYear()))].sort((a, b) => a - b);
+    const kpisByYear = years.map((year) => {
+        const yearRows = rows.filter((row) => evaluationDate(row).getFullYear() === year);
+        const completadas = yearRows.filter((row) => row.state === 'Completada').length;
+        const caducadas = yearRows.filter((row) => row.state === 'Caducada').length;
+        return {
+            year,
+            calificacion: scoreValue(yearRows),
+            compliancePercent: compliancePercent(completadas, caducadas),
+            completadas,
+            caducadas,
+        };
+    });
+
+    const completadas = rows.filter((row) => row.state === 'Completada').length;
+    const caducadas = rows.filter((row) => row.state === 'Caducada').length;
+    const scoresPerRow = rows.map(evaluationScore).filter((s) => s !== null);
+
+    const yateGroups = new Map();
+    rows.forEach((row) => {
+        const rowYate = yateName(row);
+        if (!rowYate) return;
+        if (!yateGroups.has(rowYate)) yateGroups.set(rowYate, []);
+        yateGroups.get(rowYate).push(row);
+    });
+    const avgByYate = [...yateGroups.entries()]
+        .map(([rowYate, yateRows]) => ({ yate: rowYate, calificacion: scoreValue(yateRows) }))
+        .sort((a, b) => a.yate.localeCompare(b.yate));
+    const monthlyCalificacionByYate = [...yateGroups.entries()]
+        .map(([rowYate, yateRows]) => ({
+            yate: rowYate,
+            ...monthlySeriesByYear(yateRows, scoreValue),
+        }))
+        .sort((a, b) => a.yate.localeCompare(b.yate));
 
     const monthIndexesPresent = [...new Set(rows.map((row) => evaluationDate(row).getMonth()))].sort((a, b) => a - b);
     const months = monthIndexesPresent.map((monthIndex) => ({ month: MESES[monthIndex], monthIndex: monthIndex + 1 }));
@@ -257,7 +294,26 @@ async function getPersonas({ yate, evaluado, funcion, anio } = {}) {
             .map((r) => ({ evaluado: row.evaluated, evaluador: row.evaluator, texto: r.answer }))
     );
 
-    return { months, porEvaluado, porEvaluadorMensual, porEvaluadorTrimestre, comentarios };
+    return {
+        kpisByYear,
+        kpis: {
+            calificacion: scoreValue(rows),
+            calificacionMax: scoresPerRow.length ? round2(Math.max(...scoresPerRow)) : null,
+            calificacionMin: scoresPerRow.length ? round2(Math.min(...scoresPerRow)) : null,
+            compliancePercent: compliancePercent(completadas, caducadas),
+            completadas,
+            caducadas,
+        },
+        avgByYate,
+        monthlyCalificacion: monthlySeriesByYear(rows, scoreValue),
+        monthlyCompliance: monthlySeriesByYear(rows, complianceValue),
+        monthlyCalificacionByYate,
+        months,
+        porEvaluado,
+        porEvaluadorMensual,
+        porEvaluadorTrimestre,
+        comentarios,
+    };
 }
 
 function scoreForCompetencia(rows, competencia) {
