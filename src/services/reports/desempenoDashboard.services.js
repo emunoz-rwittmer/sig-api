@@ -100,6 +100,28 @@ async function buildCargoMap(rows) {
     );
 }
 
+async function buildAreaMap(rows) {
+    const uniqueEvaluados = [...new Set(rows.map((r) => r.evaluated).filter(Boolean))];
+    const namePairs = uniqueEvaluados
+        .map((evaluado) => ({
+            fullName: evaluado,
+            firstName: extractNombres(evaluado),
+            lastName: extractApellido(evaluado),
+        }))
+        .filter(({ firstName, lastName }) => firstName && lastName);
+
+    const areaByFullName = await Staffervice.getDepartmentsByFullNames(
+        namePairs.map(({ firstName, lastName }) => ({ firstName, lastName }))
+    );
+
+    return new Map(
+        namePairs.map(({ fullName, firstName, lastName }) => [
+            fullName,
+            areaByFullName.get(`${firstName} ${lastName}`) || null,
+        ])
+    );
+}
+
 async function getOverview(yateFilter) {
     const rows = (await loadEvaluations()).filter((row) => matchesYate(row, yateFilter));
     const years = [...new Set(rows.map((row) => evaluationDate(row).getFullYear()))].sort((a, b) => a - b);
@@ -176,17 +198,54 @@ function groupRowsBy(rows, keyFn) {
     return groups;
 }
 
-async function getPersonas({ yate, evaluado, funcion, anio } = {}) {
+async function getPersonas({ yate, evaluado, funcion, area, anio } = {}) {
     const allRows = await loadEvaluations();
     const cargoMap = funcion ? await buildCargoMap(allRows) : new Map();
+    const areaMap = area ? await buildAreaMap(allRows) : new Map();
 
     const rows = allRows.filter((row) => {
         if (!matchesYate(row, yate)) return false;
         if (evaluado && row.evaluated?.trim().toLowerCase() !== evaluado.trim().toLowerCase()) return false;
         if (funcion && (cargoMap.get(row.evaluated) || '').toLowerCase() !== funcion.trim().toLowerCase()) return false;
+        if (area && (areaMap.get(row.evaluated) || '').toLowerCase() !== area.trim().toLowerCase()) return false;
         if (anio && evaluationDate(row).getFullYear() !== Number(anio)) return false;
         return true;
     });
+
+    const years = [...new Set(rows.map((row) => evaluationDate(row).getFullYear()))].sort((a, b) => a - b);
+    const kpisByYear = years.map((year) => {
+        const yearRows = rows.filter((row) => evaluationDate(row).getFullYear() === year);
+        const completadas = yearRows.filter((row) => row.state === 'Completada').length;
+        const caducadas = yearRows.filter((row) => row.state === 'Caducada').length;
+        return {
+            year,
+            calificacion: scoreValue(yearRows),
+            compliancePercent: compliancePercent(completadas, caducadas),
+            completadas,
+            caducadas,
+        };
+    });
+
+    const completadas = rows.filter((row) => row.state === 'Completada').length;
+    const caducadas = rows.filter((row) => row.state === 'Caducada').length;
+    const scoresPerRow = rows.map(evaluationScore).filter((s) => s !== null);
+
+    const yateGroups = new Map();
+    rows.forEach((row) => {
+        const rowYate = yateName(row);
+        if (!rowYate) return;
+        if (!yateGroups.has(rowYate)) yateGroups.set(rowYate, []);
+        yateGroups.get(rowYate).push(row);
+    });
+    const avgByYate = [...yateGroups.entries()]
+        .map(([rowYate, yateRows]) => ({ yate: rowYate, calificacion: scoreValue(yateRows) }))
+        .sort((a, b) => a.yate.localeCompare(b.yate));
+    const monthlyCalificacionByYate = [...yateGroups.entries()]
+        .map(([rowYate, yateRows]) => ({
+            yate: rowYate,
+            ...monthlySeriesByYear(yateRows, scoreValue),
+        }))
+        .sort((a, b) => a.yate.localeCompare(b.yate));
 
     const monthIndexesPresent = [...new Set(rows.map((row) => evaluationDate(row).getMonth()))].sort((a, b) => a - b);
     const months = monthIndexesPresent.map((monthIndex) => ({ month: MESES[monthIndex], monthIndex: monthIndex + 1 }));
@@ -235,7 +294,26 @@ async function getPersonas({ yate, evaluado, funcion, anio } = {}) {
             .map((r) => ({ evaluado: row.evaluated, evaluador: row.evaluator, texto: r.answer }))
     );
 
-    return { months, porEvaluado, porEvaluadorMensual, porEvaluadorTrimestre, comentarios };
+    return {
+        kpisByYear,
+        kpis: {
+            calificacion: scoreValue(rows),
+            calificacionMax: scoresPerRow.length ? round2(Math.max(...scoresPerRow)) : null,
+            calificacionMin: scoresPerRow.length ? round2(Math.min(...scoresPerRow)) : null,
+            compliancePercent: compliancePercent(completadas, caducadas),
+            completadas,
+            caducadas,
+        },
+        avgByYate,
+        monthlyCalificacion: monthlySeriesByYear(rows, scoreValue),
+        monthlyCompliance: monthlySeriesByYear(rows, complianceValue),
+        monthlyCalificacionByYate,
+        months,
+        porEvaluado,
+        porEvaluadorMensual,
+        porEvaluadorTrimestre,
+        comentarios,
+    };
 }
 
 function scoreForCompetencia(rows, competencia) {
@@ -248,9 +326,37 @@ function scoreForCompetencia(rows, competencia) {
     return round2(average(numeric));
 }
 
+function porMesFor(rows, competencias) {
+    const yearMonthKeys = [...new Set(rows.map((row) => {
+        const date = evaluationDate(row);
+        return `${date.getFullYear()}-${date.getMonth()}`;
+    }))]
+        .map((key) => {
+            const [year, monthIndex] = key.split('-').map(Number);
+            return { year, monthIndex };
+        })
+        .sort((a, b) => (a.year - b.year) || (a.monthIndex - b.monthIndex));
+
+    return yearMonthKeys.map(({ year, monthIndex }) => {
+        const monthRows = rows.filter((row) => {
+            const date = evaluationDate(row);
+            return date.getFullYear() === year && date.getMonth() === monthIndex;
+        });
+        return {
+            year,
+            month: MESES[monthIndex],
+            monthIndex: monthIndex + 1,
+            valores: competencias.map((competencia) => ({
+                etiqueta: competencia,
+                valor: scoreForCompetencia(monthRows, competencia),
+            })),
+        };
+    });
+}
+
 async function getPreguntas({ evaluado, funcion, anio } = {}) {
     const allRows = await loadEvaluations();
-    const cargoMap = funcion ? await buildCargoMap(allRows) : new Map();
+    const cargoMap = await buildCargoMap(allRows);
 
     const rows = allRows.filter((row) => {
         if (evaluado && row.evaluated?.trim().toLowerCase() !== evaluado.trim().toLowerCase()) return false;
@@ -272,18 +378,14 @@ async function getPreguntas({ evaluado, funcion, anio } = {}) {
         });
     });
 
-    const monthIndexesPresent = [...new Set(rows.map((row) => evaluationDate(row).getMonth()))].sort((a, b) => a - b);
-    const porMes = monthIndexesPresent.map((monthIndex) => {
-        const monthRows = rows.filter((row) => evaluationDate(row).getMonth() === monthIndex);
-        return {
-            month: MESES[monthIndex],
-            monthIndex: monthIndex + 1,
-            valores: competencias.map((competencia) => ({
-                etiqueta: competencia,
-                valor: scoreForCompetencia(monthRows, competencia),
-            })),
-        };
-    });
+    const porMes = porMesFor(rows, competencias);
+
+    const porFuncionMes = [...groupRowsBy(rows, (row) => cargoMap.get(row.evaluated) || null).entries()]
+        .map(([funcionName, funcionRows]) => ({
+            funcion: funcionName,
+            porMes: porMesFor(funcionRows, competencias),
+        }))
+        .sort((a, b) => a.funcion.localeCompare(b.funcion));
 
     const porEvaluador = [...groupRowsBy(rows, (row) => row.evaluator).entries()]
         .map(([evaluador, evaluatorRows]) => ({
@@ -296,7 +398,7 @@ async function getPreguntas({ evaluado, funcion, anio } = {}) {
         }))
         .sort((a, b) => a.evaluador.localeCompare(b.evaluador));
 
-    return { competencias, porMes, porEvaluador };
+    return { competencias, porMes, porFuncionMes, porEvaluador };
 }
 
 module.exports = {

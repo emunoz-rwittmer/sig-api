@@ -10,15 +10,32 @@ Este documento reemplaza la necesidad de completar `docs/superpowers/specs/2026-
 
 ## Alcance de esta iteración
 
-**Dentro de alcance:**
-- Las 4 vistas del reporte de desempeño de tripulación: Overview, por Yate, por Persona (Evaluado/Evaluador), por Pregunta/Competencia.
+**Fuente de verdad, verificada directamente contra los archivos originales:**
+- **Diseño visual** (qué gráficos/tablas mostrar, por qué página): `reporte/Reporte Desempeño.pbix` (10 páginas). Este spec traduce el diseño de esas páginas a los 4 endpoints — no se inventan vistas nuevas ni se asume el patrón genérico de `ChartOne.jsx` por defecto.
+- **Data**: exclusivamente la hoja **"General Tripulación"** del Excel (`reporte/Reporte General Desempeño Embarcaciones.xlsx`), cuya tabla es `Report_General_Final` (columnas: Formulario, Evaluador, Evaluado, Función, Área, Yate, Año, Trimestre, Fecha Final, Estatus Evaluación, Pregunta 1-10, Puntuación, Estado...). Las demás hojas del libro (`Completo 2024`, `Comment_Cards`, `Comentarios_Agencias`, `REPORTE ANTIGUO - 2025`) NO alimentan ninguno de los 4 endpoints de este spec.
+
+**Dentro de alcance — mapeo página pbix → vista/endpoint:**
+
+| Página pbix | Vista/endpoint |
+|---|---|
+| Desempeño Barco - Año | `overview` (3.1) |
+| Barco - Capitán | `personas` (3.3), filtrada por `funcion` |
+| Liderazgo - Capitanes Ítems | `preguntas` (3.4) |
+| Desempeño Individual - Año | `personas` (3.3) |
+| Cumplimiento - Individual | `personas` (3.3) |
+| Desempeño individual 360 | `personas` (3.3) |
+
+(`yates`, 3.2, generaliza el patrón de la página "Desempeño Barco 2026" sin fijar el año — ver nota al final de 3.2.)
+
 - Diseño completo (backend + frontend) documentado en este spec.
 - **Implementación en esta sesión: solo el backend** (`interno-api`) — los 4 endpoints de agregación y la limpieza del código Power BI en este repo.
 - El diseño de frontend (componentes, contrato de datos que consumen) queda documentado aquí para una sesión posterior en `interno-react`.
 
-**Fuera de alcance (explícitamente, no ahora):**
-- Comment Cards de pasajeros (dominio ya existe en `comentCard.*`, pero no se toca en este plan).
-- Comment Cards y Reclamos de Agencias (no hay módulo de "reclamos de agencia" identificado en el backend — requeriría su propio spec).
+**Fuera de alcance (explícitamente, no ahora) — páginas del pbix que NO se replican:**
+- **"Desempeño Barco 2026"**: es la misma información de `yates` (3.2) pero con el filtro de año fijado a 2026 en el mockup; `yates` ya la generaliza sin asumir "año actual" (ver nota en 3.2), así que no se construye como vista separada.
+- **"Comment Cards 2026"** (hoja `Comment_Cards`): Comment Cards de pasajeros, dominio ya existe en `comentCard.*`, pero no se toca en este plan.
+- **"Reclamo Agencias 2026"** (hoja `Comentarios_Agencias`): no hay módulo de "reclamos de agencia" identificado en el backend — requeriría su propio spec, y su data no vive en "General Tripulación".
+- **"Bonos - Trimestre 2026"** (hoja `Completo 2024`, tabla `Report_Gen324`): datos de compensación (`Bono Puntuación`, `Monto`, `Observación`) cargados manualmente, no derivables de `FormRespond`/`FormAnswers` ni de "General Tripulación". Fuera de alcance por la misma razón que Reclamos de Agencias — requeriría su propio spec y su propia fuente de datos.
 - Implementación del frontend (`interno-react`) — queda para otra sesión, usando el diseño de la sección 5 como contrato.
 
 ## 1. Métricas — definiciones verificadas contra el Excel fuente
@@ -68,7 +85,7 @@ Query: `yate?` (id o nombre del yate; sin filtro = todos).
 ### 3.2 `GET /reports/desempeno/yates`
 Query: `yate?` (filtra `kpis`; `avgByYate` y `monthlyCalificacionByYate` siempre muestran los 4 yates).
 
-`monthlyCalificacion`/`monthlyCompliance` usan el **mismo shape multi-año que `overview`** (una serie por año, no una sola línea) — el mockup de Power BI mostraba una sola línea porque tenía el filtro de año fijo en la última pantalla capturada, pero el backend no asume "año actual"; el frontend decide qué año(s) graficar con la data completa.
+`monthlyCalificacion`/`monthlyCompliance` usan el **mismo shape multi-año que `overview`** (una serie por año, no una sola línea) — el mockup de Power BI mostraba una sola línea porque tenía el filtro de año fijo en la última pantalla capturada (página "Desempeño Barco 2026" del pbix), pero el backend no asume "año actual"; el frontend decide qué año(s) graficar con la data completa. Por esto no se replica "Desempeño Barco 2026" como vista separada (ver sección "Alcance") — este endpoint ya la generaliza.
 
 ```json
 {
@@ -83,10 +100,24 @@ Query: `yate?` (filtra `kpis`; `avgByYate` y `monthlyCalificacionByYate` siempre
 ```
 
 ### 3.3 `GET /reports/desempeno/personas`
-Query: `yate?`, `evaluado?`, `funcion?`, `anio?`.
+Query: `yate?`, `evaluado?`, `funcion?`, `area?`, `anio?`.
+
+Este endpoint cubre 4 páginas del pbix ("Barco - Capitán", "Desempeño Individual - Año", "Cumplimiento - Individual", "Desempeño individual 360"), todas con los mismos filtros base (Evaluado/Función/Área/Yate/Año vía slicers) mirando el mismo universo de datos desde ángulos distintos — por eso comparten un solo endpoint en vez de cuatro. `funcion=Capitán` reproduce el filtro fijo de la página "Barco - Capitán".
+
+`kpisByYear` y `kpis` reutilizan el shape de `overview`/`yates` (no se inventa un shape nuevo por vista): `kpisByYear` alimenta las cards por año de "Desempeño Individual - Año"; `kpis` (agregado sobre el filtro actual, sin desglose por año) alimenta las cards de "Barco - Capitán" y "Desempeño individual 360" — incluye `calificacionMax`/`calificacionMin`, que no existían en la versión anterior de este contrato. `avgByYate` y `monthlyCalificacionByYate` reusan el shape de `yates` (3.2) para la página "Barco - Capitán" (columnChart Puntuación×Yate, lineChart Calificación×Mes×Yate). `monthlyCalificacion`/`monthlyCompliance` reusan el shape multi-año de `overview` para los lineChart de "Desempeño Individual - Año" y "Cumplimiento - Individual".
 
 ```json
 {
+  "kpisByYear": [
+    { "year": 2024, "calificacion": 4.36, "compliancePercent": 84, "completadas": 753, "caducadas": 148 }
+  ],
+  "kpis": { "calificacion": 4.74, "calificacionMax": 5.0, "calificacionMin": 2.8, "compliancePercent": 91, "completadas": 1019, "caducadas": 98 },
+  "avgByYate": [{ "yate": "Tip Top V", "calificacion": 4.7 }],
+  "monthlyCalificacion": { "categories": [...], "series": [{ "name": "2026", "data": [...] }] },
+  "monthlyCompliance": { "categories": [...], "series": [{ "name": "2026", "data": [...] }] },
+  "monthlyCalificacionByYate": [
+    { "yate": "Koln", "categories": [...], "series": [{ "name": "2026", "data": [...] }] }
+  ],
   "months": [{ "month": "enero", "monthIndex": 1 }],
   "porEvaluado": [
     { "evaluado": "Fabian Narvaez Benavidez", "porMes": [{ "month": "enero", "monthIndex": 1, "valor": 4.89 }], "total": 4.77 }
@@ -102,16 +133,26 @@ Query: `yate?`, `evaluado?`, `funcion?`, `anio?`.
   ]
 }
 ```
-`porEvaluadorMensual.valor` y `.total` son compliance % (0-100), no calificación.
+`porEvaluadorMensual.valor` y `.total` son compliance % (0-100), no calificación. `porEvaluado`, `porEvaluadorMensual` y `porEvaluadorTrimestre` no cambian respecto a la versión anterior de este contrato — ya cubrían, respectivamente, los pivots por Evaluado×Mes de "Desempeño individual 360", por Evaluador×Mes de "Cumplimiento - Individual" y por Evaluador×Trimestre de "Desempeño individual 360".
 
 ### 3.4 `GET /reports/desempeno/preguntas`
 Query: `evaluado?`, `funcion?`, `anio?`.
+
+Cubre la página "Liderazgo - Capitanes Ítems" del pbix, que tiene dos pivots: uno por Evaluador (ya cubierto por `porEvaluador`, sin cambios) y uno por Función×Mes (`porFuncionMes`, nuevo — antes no estaba en el contrato). El pivot original agrupa filas por Año+Mes, no solo por Mes; para no mezclar años distintos bajo el mismo mes cuando `anio` no se filtra, `porMes` y `porFuncionMes.porMes` ahora incluyen `year` explícito en cada fila (antes `porMes` no lo tenía — era ambiguo con más de un año de data).
 
 ```json
 {
   "competencias": ["Supervisión Cubierta", "Comunicación Clara"],
   "porMes": [
-    { "month": "enero", "monthIndex": 1, "valores": [{ "etiqueta": "Supervisión Cubierta", "valor": 4.70 }] }
+    { "year": 2026, "month": "enero", "monthIndex": 1, "valores": [{ "etiqueta": "Supervisión Cubierta", "valor": 4.70 }] }
+  ],
+  "porFuncionMes": [
+    {
+      "funcion": "Capitán",
+      "porMes": [
+        { "year": 2026, "month": "enero", "monthIndex": 1, "valores": [{ "etiqueta": "Supervisión Cubierta", "valor": 4.70 }] }
+      ]
+    }
   ],
   "porEvaluador": [
     { "evaluador": "Richard Alexander Mejia Chele", "valores": [{ "etiqueta": "Supervisión Cubierta", "valor": 3.44 }], "calificacion": 3.53 }
@@ -132,7 +173,9 @@ Sin tabla ni endpoint nuevo en base de datos — todo se calcula al vuelo sobre 
 ## 5. Diseño de frontend (contrato para implementación futura en `interno-react`)
 
 - 4 páginas bajo `src/containers/operations/surveys/reporting/desempeno/`: `OverviewPage.jsx`, `YatesPage.jsx`, `PersonasPage.jsx`, `PreguntasPage.jsx`, reemplazando la entrada de menú que hoy apunta a `EvaluationReportPowerBI.jsx`.
-- Cada página trae su(s) `ChartX.jsx` con `react-apexcharts`, siguiendo la convención de `ChartOne.jsx`: `type: 'line'` para tendencias mensuales (una serie por año o por yate), `type: 'bar'` para el promedio por yate, tablas HTML con Tailwind para las vistas de Personas y Preguntas (no hay chart nativo natural para esas).
+- Cada página trae su(s) `ChartX.jsx` con `react-apexcharts`, siguiendo la convención de `ChartOne.jsx`: `type: 'line'` para tendencias mensuales (una serie por año o por yate), `type: 'bar'` para el promedio por yate, tablas HTML con Tailwind para los pivots (Personas y Preguntas).
+- **Corrección sobre la versión anterior de este spec**: `PersonasPage.jsx` no es solo tablas — el pbix ("Barco - Capitán", "Desempeño Individual - Año", "Cumplimiento - Individual") sí tiene KPI cards y los mismos `YateBarChart`/`MonthlyLineChart` que ya existen para `YatesPage.jsx`; se reutilizan ahí en vez de crear componentes nuevos. `PreguntasPage.jsx` sí se queda solo con tablas (`DynamicValueTable`), incluyendo una nueva para `porFuncionMes` — el pbix la muestra como pivot, no como chart.
+- `DesempenoFilterBar.jsx` necesita un filtro `area` nuevo (slicer "Área" del pbix, presente en "Desempeño Individual - Año" y ausente hoy del componente).
 - Mismos roles de acceso que tenía el menú de Power BI: `admin`, `psicologos`, `gerencia_gps`, `gerencia_uio`.
 - Estado/fetch: un slice de Redux por vista (o un solo `desempenoDashboard.slice.js` con 4 thunks), reemplazando `powerbi.slice.js`.
 
@@ -165,3 +208,6 @@ Domain tests (Jest + Supertest, DB real vía `tests/helpers/testApp.js`), un arc
 
 - **Filtro `funcion`** en `/personas` y `/preguntas`: se asume que filtra por `Positions.name` (cargo) del evaluado, igual que la columna "Función" del Excel. Si en implementación se descubre que el Excel usa un concepto distinto de "función" al de `Positions`, se ajusta sin cambiar el contrato de query params.
 - **Formularios sin 9 preguntas numéricas**: si un formulario tiene menos o más de 9 preguntas de escala, `preguntas.competencias` refleja las que existan realmente (no se asume un número fijo de 9).
+- **Filtro `area`** (nuevo en `/personas`): se asume la misma convención que `funcion` — filtra por la columna `Área` de `Report_General_Final`. Si esa columna no tiene un origen claro en el modelo actual (`FormRespond`/`FormAnswers`/`Positions`/`Staff`), se ajusta el cálculo en implementación sin cambiar el contrato del query param.
+- **`kpis.calificacionMax`/`calificacionMin`**: se asume que es el máximo/mínimo de `calificacion` entre las evaluaciones que matchean el filtro actual (no un máximo/mínimo histórico sin filtrar).
+- Esta revisión (2026-08-31, segunda pasada) ajusta el contrato para reflejar el diseño real de `Reporte Desempeño.pbix` — la primera versión de este spec asumía visualmente el patrón de `ChartOne.jsx` en vez de partir del pbix, lo que dejó fuera `porFuncionMes`, `area`, `calificacionMax/Min` y los charts de `personas`. El backend ya implementado (PR #17) sigue el contrato viejo; falta un incremento para estos campos nuevos.

@@ -89,6 +89,31 @@ class Staffervice {
         }
     }
 
+    static async getDepartmentsByFullNames(namePairs) {
+        try {
+            if (!namePairs || namePairs.length === 0) return new Map();
+
+            const staff = await Staff.findAll({
+                where: {
+                    active: true,
+                    [Op.or]: namePairs.map(({ firstName, lastName }) => ({ firstName, lastName })),
+                },
+                attributes: ['id', 'firstName', 'lastName'],
+                include: [{
+                    model: Departaments,
+                    as: 'staff_departament',
+                    attributes: ['id', 'name'],
+                }],
+            });
+
+            return new Map(
+                staff.map(s => [`${s.firstName} ${s.lastName}`, s.staff_departament?.name || null])
+            );
+        } catch (error) {
+            throw error;
+        }
+    }
+
     static async getStaffCompanies(staffId) {
         try {
             const result = await StaffCompany.findAll({

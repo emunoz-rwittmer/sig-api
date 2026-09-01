@@ -36,20 +36,25 @@ describe('GET /api/reports/desempeno/*', () => {
         expect(response.body).toHaveProperty('kpis');
     });
 
-    it('returns the personas shape', async () => {
+    it('returns the personas shape, including the new yearly/per-yate breakdowns', async () => {
         const response = await withAuth(request(app).get('/api/reports/desempeno/personas'), adminToken);
 
         expect(response.status).toBe(200);
         expect(response.body).toHaveProperty('porEvaluado');
         expect(response.body).toHaveProperty('comentarios');
+        expect(response.body).toHaveProperty('kpisByYear');
+        expect(response.body).toHaveProperty('kpis');
+        expect(response.body).toHaveProperty('avgByYate');
+        expect(response.body).toHaveProperty('monthlyCalificacionByYate');
     });
 
-    it('returns the preguntas shape', async () => {
+    it('returns the preguntas shape, including porFuncionMes', async () => {
         const response = await withAuth(request(app).get('/api/reports/desempeno/preguntas'), adminToken);
 
         expect(response.status).toBe(200);
         expect(response.body).toHaveProperty('competencias');
         expect(response.body).toHaveProperty('porMes');
+        expect(response.body).toHaveProperty('porFuncionMes');
     });
 
     it('returns 403 without a token', async () => {

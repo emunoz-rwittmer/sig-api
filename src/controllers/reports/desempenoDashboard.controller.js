@@ -28,11 +28,12 @@ const getDesempenoYates = async (req, res, next) => {
 
 const getDesempenoPersonas = async (req, res, next) => {
     try {
-        const { yate, evaluado, funcion, anio } = req.query;
+        const { yate, evaluado, funcion, area, anio } = req.query;
         const personas = await getPersonas({
             yate: asString(yate),
             evaluado: asString(evaluado),
             funcion: asString(funcion),
+            area: asString(area),
             anio: asString(anio),
         });
         res.status(200).json(personas);
