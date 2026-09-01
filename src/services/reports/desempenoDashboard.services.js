@@ -326,9 +326,37 @@ function scoreForCompetencia(rows, competencia) {
     return round2(average(numeric));
 }
 
+function porMesFor(rows, competencias) {
+    const yearMonthKeys = [...new Set(rows.map((row) => {
+        const date = evaluationDate(row);
+        return `${date.getFullYear()}-${date.getMonth()}`;
+    }))]
+        .map((key) => {
+            const [year, monthIndex] = key.split('-').map(Number);
+            return { year, monthIndex };
+        })
+        .sort((a, b) => (a.year - b.year) || (a.monthIndex - b.monthIndex));
+
+    return yearMonthKeys.map(({ year, monthIndex }) => {
+        const monthRows = rows.filter((row) => {
+            const date = evaluationDate(row);
+            return date.getFullYear() === year && date.getMonth() === monthIndex;
+        });
+        return {
+            year,
+            month: MESES[monthIndex],
+            monthIndex: monthIndex + 1,
+            valores: competencias.map((competencia) => ({
+                etiqueta: competencia,
+                valor: scoreForCompetencia(monthRows, competencia),
+            })),
+        };
+    });
+}
+
 async function getPreguntas({ evaluado, funcion, anio } = {}) {
     const allRows = await loadEvaluations();
-    const cargoMap = funcion ? await buildCargoMap(allRows) : new Map();
+    const cargoMap = await buildCargoMap(allRows);
 
     const rows = allRows.filter((row) => {
         if (evaluado && row.evaluated?.trim().toLowerCase() !== evaluado.trim().toLowerCase()) return false;
@@ -350,18 +378,14 @@ async function getPreguntas({ evaluado, funcion, anio } = {}) {
         });
     });
 
-    const monthIndexesPresent = [...new Set(rows.map((row) => evaluationDate(row).getMonth()))].sort((a, b) => a - b);
-    const porMes = monthIndexesPresent.map((monthIndex) => {
-        const monthRows = rows.filter((row) => evaluationDate(row).getMonth() === monthIndex);
-        return {
-            month: MESES[monthIndex],
-            monthIndex: monthIndex + 1,
-            valores: competencias.map((competencia) => ({
-                etiqueta: competencia,
-                valor: scoreForCompetencia(monthRows, competencia),
-            })),
-        };
-    });
+    const porMes = porMesFor(rows, competencias);
+
+    const porFuncionMes = [...groupRowsBy(rows, (row) => cargoMap.get(row.evaluated) || null).entries()]
+        .map(([funcionName, funcionRows]) => ({
+            funcion: funcionName,
+            porMes: porMesFor(funcionRows, competencias),
+        }))
+        .sort((a, b) => a.funcion.localeCompare(b.funcion));
 
     const porEvaluador = [...groupRowsBy(rows, (row) => row.evaluator).entries()]
         .map(([evaluador, evaluatorRows]) => ({
@@ -374,7 +398,7 @@ async function getPreguntas({ evaluado, funcion, anio } = {}) {
         }))
         .sort((a, b) => a.evaluador.localeCompare(b.evaluador));
 
-    return { competencias, porMes, porEvaluador };
+    return { competencias, porMes, porFuncionMes, porEvaluador };
 }
 
 module.exports = {
