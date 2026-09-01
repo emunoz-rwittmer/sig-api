@@ -252,7 +252,7 @@ router.get('/desempeno/yates', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO
  * @openapi
  * /reports/desempeno/personas:
  *   get:
- *     summary: Calificación por evaluado y compliance por evaluador, con comentarios de texto libre
+ *     summary: KPIs, series mensuales y promedios por yate, calificación por evaluado y compliance por evaluador, con comentarios de texto libre
  *     tags: [Reports]
  *     security:
  *       - bearerAuth: []
@@ -280,7 +280,7 @@ router.get('/desempeno/yates', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO
  *         description: Año para filtrar (opcional). Si se omite, los datos de distintos años se combinan en el mismo mes — se recomienda siempre pasar este filtro en producción.
  *     responses:
  *       200:
- *         description: Tablas por evaluado/evaluador + comentarios
+ *         description: KPIs (kpisByYear, kpis con calificacionMax/calificacionMin), promedios y series mensuales (avgByYate, monthlyCalificacion, monthlyCompliance, monthlyCalificacionByYate), tablas por evaluado/evaluador y comentarios de texto libre. A diferencia de /yates, aquí avgByYate y monthlyCalificacionByYate respetan el filtro yate actual (no siempre muestran las 4 embarcaciones).
  *       403:
  *         description: Token no proporcionado o rol no autorizado
  */
@@ -290,7 +290,7 @@ router.get('/desempeno/personas', authJwt.verifyToken, authJwt.hasAnyRole(DESEMP
  * @openapi
  * /reports/desempeno/preguntas:
  *   get:
- *     summary: Desglose de calificación por pregunta/competencia
+ *     summary: Desglose de calificación por pregunta/competencia, con series mensuales generales y por función
  *     tags: [Reports]
  *     security:
  *       - bearerAuth: []
@@ -307,10 +307,10 @@ router.get('/desempeno/personas', authJwt.verifyToken, authJwt.hasAnyRole(DESEMP
  *         name: anio
  *         schema:
  *           type: integer
- *         description: Año para filtrar (opcional). Si se omite, los datos de distintos años se combinan en el mismo mes/trimestre — se recomienda siempre pasar este filtro en producción.
+ *         description: Año para filtrar (opcional). porMes y porFuncionMes ya separan cada año en su propia fila, así que omitirlo no mezcla años.
  *     responses:
  *       200:
- *         description: Competencias + desglose mensual y por evaluador
+ *         description: Competencias + desglose mensual (porMes), desglose mensual por función (porFuncionMes) y por evaluador (porEvaluador)
  *       403:
  *         description: Token no proporcionado o rol no autorizado
  */
