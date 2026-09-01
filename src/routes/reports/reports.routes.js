@@ -270,6 +270,10 @@ router.get('/desempeno/yates', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO
  *         schema:
  *           type: string
  *       - in: query
+ *         name: area
+ *         schema:
+ *           type: string
+ *       - in: query
  *         name: anio
  *         schema:
  *           type: integer
