@@ -52,7 +52,7 @@ describe('desempenoDashboard.services getPreguntas', () => {
         const { company } = await createCompanyWithYacht(`Preguntas FuncionMes Co ${caseSuffix}`);
         const department = await createDepartment(`Cubierta ${caseSuffix}`);
         const position = await createPosition(`Capitan ${caseSuffix}`);
-        const firstName = `PFM${caseSuffix}`;
+        const firstName = `Pfm${caseSuffix}`;
         const lastName = 'Rios Vera';
         await Staff.create({
             firstName,
