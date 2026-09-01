@@ -100,6 +100,28 @@ async function buildCargoMap(rows) {
     );
 }
 
+async function buildAreaMap(rows) {
+    const uniqueEvaluados = [...new Set(rows.map((r) => r.evaluated).filter(Boolean))];
+    const namePairs = uniqueEvaluados
+        .map((evaluado) => ({
+            fullName: evaluado,
+            firstName: extractNombres(evaluado),
+            lastName: extractApellido(evaluado),
+        }))
+        .filter(({ firstName, lastName }) => firstName && lastName);
+
+    const areaByFullName = await Staffervice.getDepartmentsByFullNames(
+        namePairs.map(({ firstName, lastName }) => ({ firstName, lastName }))
+    );
+
+    return new Map(
+        namePairs.map(({ fullName, firstName, lastName }) => [
+            fullName,
+            areaByFullName.get(`${firstName} ${lastName}`) || null,
+        ])
+    );
+}
+
 async function getOverview(yateFilter) {
     const rows = (await loadEvaluations()).filter((row) => matchesYate(row, yateFilter));
     const years = [...new Set(rows.map((row) => evaluationDate(row).getFullYear()))].sort((a, b) => a - b);
