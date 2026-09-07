@@ -25,7 +25,7 @@ CREATE TABLE yacht_equipments (
     numero_serie VARCHAR(255) NULL,
     potencia VARCHAR(255) NULL,
     rpm VARCHAR(255) NULL,
-    active TINYINT(1) NOT NULL DEFAULT 1,
+    active TINYINT(1) DEFAULT 1,
     createdAt DATETIME NOT NULL,
     updatedAt DATETIME NOT NULL,
     CONSTRAINT fk_yacht_equipments_yacht FOREIGN KEY (yacht_id) REFERENCES yachts(id)
@@ -37,7 +37,7 @@ CREATE TABLE maintenance_rules (
     periodicity_value FLOAT NULL,
     periodicity_unit VARCHAR(255) NULL,
     instructions TEXT NULL,
-    active TINYINT(1) NOT NULL DEFAULT 1,
+    active TINYINT(1) DEFAULT 1,
     createdAt DATETIME NOT NULL,
     updatedAt DATETIME NOT NULL
 );
@@ -46,7 +46,7 @@ CREATE TABLE maintenance_rule_assignments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     equipment_id INT NOT NULL,
     rule_id INT NOT NULL,
-    active TINYINT(1) NOT NULL DEFAULT 1,
+    active TINYINT(1) DEFAULT 1,
     createdAt DATETIME NOT NULL,
     updatedAt DATETIME NOT NULL,
     UNIQUE KEY uq_equipment_rule (equipment_id, rule_id),
