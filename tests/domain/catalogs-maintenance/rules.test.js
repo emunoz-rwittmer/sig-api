@@ -44,6 +44,7 @@ describe('catalogs/maintenance - rules', () => {
         expect(found.recommendedMaterials).toHaveLength(1);
         expect(found.recommendedMaterials[0].product.name).toBe('Aceite 15W40');
         expect(found.recommendedMaterials[0].product.id).toBe(Utils.encode(product.id));
+        expect(found.recommendedMaterials[0].productId).toBe(Utils.encode(product.id));
     });
 
     it('rejects an invalid periodicityUnit', async () => {

@@ -52,6 +52,7 @@ describe('catalogs/maintenance - records (historial)', () => {
         expect(list.body).toHaveLength(1);
         expect(list.body[0].workPerformed).toBe('Cambio de manguera de succión');
         expect(list.body[0].materials[0].product.name).toBe('Manguera');
+        expect(list.body[0].materials[0].productId).toBe(Utils.encode(product.id));
         expect(list.body[0].materials[0].quantity).toBe(2);
         expect(list.body[0].rule).toBeNull();
     });
@@ -165,6 +166,42 @@ describe('catalogs/maintenance - records (historial)', () => {
             })
         );
         expect(reapproved.status).toBe(409);
+    });
+
+    it('gets a single record by id with its materials, and 404s for a nonexistent one', async () => {
+        const { yacht } = await createCompanyWithYacht('Records Get Co', 'Records Get Yacht');
+        const equipment = await YachtEquipment.create({ yachtId: yacht.id, name: 'Generador' });
+        const product = await Product.create({ name: 'Filtro de aceite', type: 'DISCRETE' });
+
+        const created = await auth(
+            request(app).post('/api/maintenance/records').send({
+                equipmentId: Utils.encode(equipment.id),
+                responsible: 'Ana Mecánica',
+                workPerformed: 'Cambio de filtro de aceite',
+                performedAt: '2026-09-03T09:00:00.000Z',
+                materials: [{ productId: Utils.encode(product.id), quantity: 3 }],
+            })
+        );
+        expect(created.status).toBe(200);
+
+        const stored = await MaintenanceRecord.findOne({ where: { responsible: 'Ana Mecánica' } });
+
+        const response = await auth(
+            request(app).get(`/api/maintenance/records/${Utils.encode(stored.id)}`)
+        );
+        expect(response.status).toBe(200);
+        expect(response.body.id).toBe(Utils.encode(stored.id));
+        expect(response.body.equipmentId).toBe(Utils.encode(equipment.id));
+        expect(response.body.yachtId).toBe(Utils.encode(yacht.id));
+        expect(response.body.workPerformed).toBe('Cambio de filtro de aceite');
+        expect(response.body.materials).toHaveLength(1);
+        expect(response.body.materials[0].product.name).toBe('Filtro de aceite');
+        expect(response.body.materials[0].productId).toBe(Utils.encode(product.id));
+
+        const missing = await auth(
+            request(app).get(`/api/maintenance/records/${Utils.encode(999999999)}`)
+        );
+        expect(missing.status).toBe(404);
     });
 
     it('rejects approval without approvedBy', async () => {

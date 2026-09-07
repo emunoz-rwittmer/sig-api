@@ -7,6 +7,7 @@ const MaintenanceRule = require('../../../src/models/catalogs/maintenanceRule.mo
 const MaintenanceRuleAssignment = require('../../../src/models/catalogs/maintenanceRuleAssignment.models');
 const MaintenanceRuleMaterial = require('../../../src/models/catalogs/maintenanceRuleMaterial.models');
 const MaintenanceRecord = require('../../../src/models/catalogs/maintenanceRecord.models');
+const MaintenanceRecordMaterial = require('../../../src/models/catalogs/maintenanceRecordMaterial.models');
 const Product = require('../../../src/models/operations/inventory/product.models');
 const Utils = require('../../../src/utils/Utils');
 
@@ -36,11 +37,12 @@ describe('catalogs/maintenance - book', () => {
         await MaintenanceRuleAssignment.create({ equipmentId: equipment.id, ruleId: ruleB.id });
         await MaintenanceRuleMaterial.create({ ruleId: ruleA.id, productId: product.id, recommendedQuantity: 20 });
 
-        await MaintenanceRecord.create({
+        const recordA = await MaintenanceRecord.create({
             equipmentId: equipment.id, yachtId: yacht.id, ruleId: ruleA.id,
             responsible: 'Juan', workPerformed: 'Cambio de aceite',
             performedAt: new Date('2026-08-01T00:00:00.000Z'),
         });
+        await MaintenanceRecordMaterial.create({ recordId: recordA.id, productId: product.id, quantity: 4 });
         await MaintenanceRecord.create({
             equipmentId: equipment.id, yachtId: yacht.id, ruleId: ruleB.id,
             responsible: 'Pedro', workPerformed: 'Cambio de filtro',
@@ -62,12 +64,15 @@ describe('catalogs/maintenance - book', () => {
         expect(ruleAEntry.periodicityValue).toBe(250);
         expect(ruleAEntry.recommendedMaterials).toHaveLength(1);
         expect(ruleAEntry.recommendedMaterials[0].product.name).toBe('Aceite 15W40');
+        expect(ruleAEntry.recommendedMaterials[0].productId).toBe(Utils.encode(product.id));
         const ruleBEntry = equipmentBook.rules.find((r) => r.name === 'Cambio de filtro');
         expect(ruleBEntry.recommendedMaterials).toHaveLength(0);
 
         expect(equipmentBook.history).toHaveLength(2);
         expect(equipmentBook.history[0].workPerformed).toBe('Cambio de filtro');
         expect(equipmentBook.history[1].workPerformed).toBe('Cambio de aceite');
+        expect(equipmentBook.history[1].materials).toHaveLength(1);
+        expect(equipmentBook.history[1].materials[0].productId).toBe(Utils.encode(product.id));
     });
 
     it('reports 404 for a missing yacht', async () => {

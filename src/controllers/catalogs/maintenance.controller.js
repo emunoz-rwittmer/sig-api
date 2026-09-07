@@ -123,6 +123,7 @@ const encodeRule = (rule) => {
     rule.dataValues.recommendedMaterials.forEach((material) => {
         encodeInstanceField(material, 'id');
         encodeInstanceField(material, 'ruleId');
+        encodeInstanceField(material, 'productId');
         encodeInstanceField(material.dataValues.product, 'id');
     });
 };
@@ -302,6 +303,7 @@ const encodeRecord = (record) => {
     record.dataValues.materials.forEach((material) => {
         encodeInstanceField(material, 'id');
         encodeInstanceField(material, 'recordId');
+        encodeInstanceField(material, 'productId');
         encodeInstanceField(material.dataValues.product, 'id');
     });
 };
@@ -482,13 +484,7 @@ const getMaintenanceBook = async (req, res, next) => {
 
             const rules = item.dataValues.ruleAssignments.map((assignment) => {
                 const rule = assignment.dataValues.rule;
-                encodeInstanceField(rule, 'id');
-                const recommendedMaterials = rule.dataValues.recommendedMaterials.map((material) => {
-                    encodeInstanceField(material, 'id');
-                    encodeInstanceField(material.dataValues.product, 'id');
-                    return material;
-                });
-                rule.dataValues.recommendedMaterials = recommendedMaterials;
+                encodeRule(rule);
                 return rule;
             });
 
