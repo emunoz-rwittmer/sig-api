@@ -198,6 +198,75 @@ const updateRule = async (req, res, next) => {
     }
 };
 
+// RULE ASSIGNMENTS
+
+const getEquipmentRules = async (req, res, next) => {
+    try {
+        const equipmentId = decodeId(req.params.equipment_id, 'ID de equipo');
+        const equipment = await MaintenanceService.getEquipmentById(equipmentId);
+        if (!equipment) {
+            throw new AppError('Equipo no encontrado', 404);
+        }
+        const result = await MaintenanceService.getRuleAssignmentsByEquipment(equipmentId);
+        result.forEach((assignment) => {
+            encodeInstanceField(assignment, 'id');
+            encodeInstanceField(assignment, 'equipmentId');
+            encodeInstanceField(assignment, 'ruleId');
+            encodeInstanceField(assignment.dataValues.rule, 'id');
+        });
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+const createRuleAssignment = async (req, res, next) => {
+    try {
+        const { equipmentId, ruleId } = req.body;
+        if (!equipmentId || !ruleId) {
+            throw new AppError('equipmentId y ruleId son obligatorios', 400);
+        }
+        const decodedEquipmentId = decodeId(equipmentId, 'ID de equipo');
+        const decodedRuleId = decodeId(ruleId, 'ID de regla');
+
+        const equipment = await MaintenanceService.getEquipmentById(decodedEquipmentId);
+        if (!equipment) {
+            throw new AppError('Equipo no encontrado', 404);
+        }
+        const rule = await MaintenanceService.getRuleById(decodedRuleId);
+        if (!rule) {
+            throw new AppError('Regla no encontrada', 404);
+        }
+        const existing = await MaintenanceService.findRuleAssignment(decodedEquipmentId, decodedRuleId);
+        if (existing) {
+            throw new AppError('Esta regla ya está asignada a este equipo', 409);
+        }
+
+        await MaintenanceService.createRuleAssignment(decodedEquipmentId, decodedRuleId);
+        res.status(200).json({ data: 'resource created successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+const updateRuleAssignment = async (req, res, next) => {
+    try {
+        const assignmentId = decodeId(req.params.assignment_id, 'ID de asignación');
+        const { active } = req.body;
+        if (typeof active !== 'boolean') {
+            throw new AppError('active es obligatorio y debe ser booleano', 400);
+        }
+        const existing = await MaintenanceService.getRuleAssignmentById(assignmentId);
+        if (!existing) {
+            throw new AppError('Asignación no encontrada', 404);
+        }
+        await MaintenanceService.updateRuleAssignment(assignmentId, active);
+        res.status(200).json({ data: 'resource updated successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
 const MaintenanceController = {
     getAllEquipment,
     createEquipment,
@@ -205,5 +274,8 @@ const MaintenanceController = {
     getAllRules,
     createRule,
     updateRule,
+    getEquipmentRules,
+    createRuleAssignment,
+    updateRuleAssignment,
 };
 module.exports = MaintenanceController;

@@ -2,6 +2,7 @@ const db = require('../../utils/database');
 const YachtEquipment = require('../../models/catalogs/yachtEquipment.models');
 const MaintenanceRule = require('../../models/catalogs/maintenanceRule.models');
 const MaintenanceRuleMaterial = require('../../models/catalogs/maintenanceRuleMaterial.models');
+const MaintenanceRuleAssignment = require('../../models/catalogs/maintenanceRuleAssignment.models');
 const Product = require('../../models/operations/inventory/product.models');
 
 class MaintenanceService {
@@ -104,6 +105,32 @@ class MaintenanceService {
             await transaction.rollback();
             throw error;
         }
+    }
+
+    // RULE ASSIGNMENTS
+    static async getRuleAssignmentsByEquipment(equipmentId) {
+        return MaintenanceRuleAssignment.findAll({
+            where: { equipmentId },
+            include: [{ model: MaintenanceRule, as: 'rule' }],
+        });
+    }
+
+    static async getRuleAssignmentById(id) {
+        return MaintenanceRuleAssignment.findByPk(id);
+    }
+
+    static async findRuleAssignment(equipmentId, ruleId) {
+        return MaintenanceRuleAssignment.findOne({ where: { equipmentId, ruleId } });
+    }
+
+    static async createRuleAssignment(equipmentId, ruleId) {
+        return MaintenanceRuleAssignment.create({ equipmentId, ruleId });
+    }
+
+    static async updateRuleAssignment(id, active) {
+        const assignment = await MaintenanceRuleAssignment.findByPk(id);
+        await assignment.update({ active });
+        return assignment;
     }
 }
 

@@ -249,4 +249,104 @@ router.post('/rules', MaintenanceController.createRule);
  */
 router.put('/rules/:rule_id', MaintenanceController.updateRule);
 
+// RULE ASSIGNMENTS
+
+/**
+ * @openapi
+ * /maintenance/equipment/{equipment_id}/rules:
+ *   get:
+ *     summary: Listar reglas asignadas a un equipo
+ *     tags: [Mantenimiento]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: equipment_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID codificado del equipo
+ *     responses:
+ *       200:
+ *         description: Lista de asignaciones con su regla
+ *       400:
+ *         description: ID inválido
+ *       404:
+ *         description: Equipo no encontrado
+ *       500:
+ *         description: Error inesperado
+ */
+router.get('/equipment/:equipment_id/rules', MaintenanceController.getEquipmentRules);
+
+/**
+ * @openapi
+ * /maintenance/rule-assignments:
+ *   post:
+ *     summary: Asignar una regla de mantenimiento a un equipo
+ *     tags: [Mantenimiento]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [equipmentId, ruleId]
+ *             properties:
+ *               equipmentId:
+ *                 type: string
+ *               ruleId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Asignación creada
+ *       400:
+ *         description: Payload inválido
+ *       404:
+ *         description: Equipo o regla no encontrados
+ *       409:
+ *         description: La regla ya está asignada a este equipo
+ *       500:
+ *         description: Error inesperado
+ */
+router.post('/rule-assignments', MaintenanceController.createRuleAssignment);
+
+/**
+ * @openapi
+ * /maintenance/rule-assignments/{assignment_id}:
+ *   put:
+ *     summary: Activar/desactivar una asignación de regla
+ *     tags: [Mantenimiento]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: assignment_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID codificado de la asignación
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [active]
+ *             properties:
+ *               active:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Asignación actualizada
+ *       400:
+ *         description: Payload o ID inválido
+ *       404:
+ *         description: Asignación no encontrada
+ *       500:
+ *         description: Error inesperado
+ */
+router.put('/rule-assignments/:assignment_id', MaintenanceController.updateRuleAssignment);
+
 module.exports = router;
