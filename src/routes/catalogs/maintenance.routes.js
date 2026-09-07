@@ -349,4 +349,231 @@ router.post('/rule-assignments', MaintenanceController.createRuleAssignment);
  */
 router.put('/rule-assignments/:assignment_id', MaintenanceController.updateRuleAssignment);
 
+// RECORDS (historial)
+
+/**
+ * @openapi
+ * /maintenance/records:
+ *   get:
+ *     summary: Listar el historial de mantenimiento (filtrable)
+ *     tags: [Mantenimiento]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: yachtId
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: equipmentId
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: ruleId
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: from
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *       - in: query
+ *         name: to
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *     responses:
+ *       200:
+ *         description: Historial de mantenimiento, ordenado por performedAt descendente
+ *       400:
+ *         description: Algún filtro es inválido
+ *       500:
+ *         description: Error inesperado
+ */
+router.get('/records', MaintenanceController.getAllRecords);
+
+/**
+ * @openapi
+ * /maintenance/records/{record_id}:
+ *   get:
+ *     summary: Obtener un registro del historial
+ *     tags: [Mantenimiento]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: record_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Registro de historial
+ *       400:
+ *         description: ID inválido
+ *       404:
+ *         description: Registro no encontrado
+ *       500:
+ *         description: Error inesperado
+ */
+router.get('/records/:record_id', MaintenanceController.getRecord);
+
+/**
+ * @openapi
+ * /maintenance/records:
+ *   post:
+ *     summary: Registrar un mantenimiento realizado
+ *     tags: [Mantenimiento]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [equipmentId, responsible, workPerformed, performedAt]
+ *             properties:
+ *               equipmentId:
+ *                 type: string
+ *               ruleId:
+ *                 type: string
+ *                 nullable: true
+ *               responsible:
+ *                 type: string
+ *               workPerformed:
+ *                 type: string
+ *               performedAt:
+ *                 type: string
+ *                 format: date-time
+ *               hoursReading:
+ *                 type: number
+ *                 nullable: true
+ *               observation:
+ *                 type: string
+ *                 nullable: true
+ *               materials:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required: [productId, quantity]
+ *                   properties:
+ *                     productId:
+ *                       type: string
+ *                     quantity:
+ *                       type: integer
+ *     responses:
+ *       200:
+ *         description: Registro creado
+ *       400:
+ *         description: Payload inválido
+ *       404:
+ *         description: Equipo no encontrado
+ *       500:
+ *         description: Error inesperado
+ */
+router.post('/records', MaintenanceController.createRecord);
+
+/**
+ * @openapi
+ * /maintenance/records/{record_id}:
+ *   put:
+ *     summary: Editar un registro del historial (solo si no está aprobado)
+ *     tags: [Mantenimiento]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: record_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [equipmentId, responsible, workPerformed, performedAt]
+ *             properties:
+ *               equipmentId:
+ *                 type: string
+ *               ruleId:
+ *                 type: string
+ *                 nullable: true
+ *               responsible:
+ *                 type: string
+ *               workPerformed:
+ *                 type: string
+ *               performedAt:
+ *                 type: string
+ *                 format: date-time
+ *               hoursReading:
+ *                 type: number
+ *                 nullable: true
+ *               observation:
+ *                 type: string
+ *                 nullable: true
+ *               materials:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required: [productId, quantity]
+ *                   properties:
+ *                     productId:
+ *                       type: string
+ *                     quantity:
+ *                       type: integer
+ *     responses:
+ *       200:
+ *         description: Registro actualizado
+ *       400:
+ *         description: Payload o ID inválido
+ *       404:
+ *         description: Registro o equipo no encontrado
+ *       409:
+ *         description: El registro ya fue aprobado y es inmutable
+ *       500:
+ *         description: Error inesperado
+ */
+router.put('/records/:record_id', MaintenanceController.updateRecord);
+
+/**
+ * @openapi
+ * /maintenance/records/{record_id}/approve:
+ *   put:
+ *     summary: Aprobar un registro del historial
+ *     tags: [Mantenimiento]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: record_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [approvedBy]
+ *             properties:
+ *               approvedBy:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Registro aprobado
+ *       400:
+ *         description: approvedBy faltante o ID inválido
+ *       404:
+ *         description: Registro no encontrado
+ *       409:
+ *         description: El registro ya estaba aprobado
+ *       500:
+ *         description: Error inesperado
+ */
+router.put('/records/:record_id/approve', MaintenanceController.approveRecord);
+
 module.exports = router;

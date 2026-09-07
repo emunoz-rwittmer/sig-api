@@ -1,8 +1,11 @@
+const { Op } = require('sequelize');
 const db = require('../../utils/database');
 const YachtEquipment = require('../../models/catalogs/yachtEquipment.models');
 const MaintenanceRule = require('../../models/catalogs/maintenanceRule.models');
 const MaintenanceRuleMaterial = require('../../models/catalogs/maintenanceRuleMaterial.models');
 const MaintenanceRuleAssignment = require('../../models/catalogs/maintenanceRuleAssignment.models');
+const MaintenanceRecord = require('../../models/catalogs/maintenanceRecord.models');
+const MaintenanceRecordMaterial = require('../../models/catalogs/maintenanceRecordMaterial.models');
 const Product = require('../../models/operations/inventory/product.models');
 
 class MaintenanceService {
@@ -131,6 +134,119 @@ class MaintenanceService {
         const assignment = await MaintenanceRuleAssignment.findByPk(id);
         await assignment.update({ active });
         return assignment;
+    }
+
+    // RECORDS (historial)
+    static async getAllRecords(filters) {
+        const where = {};
+        if (filters.yachtId) where.yachtId = filters.yachtId;
+        if (filters.equipmentId) where.equipmentId = filters.equipmentId;
+        if (filters.ruleId) where.ruleId = filters.ruleId;
+        if (filters.from || filters.to) {
+            where.performedAt = {};
+            if (filters.from) where.performedAt[Op.gte] = filters.from;
+            if (filters.to) where.performedAt[Op.lte] = filters.to;
+        }
+        return MaintenanceRecord.findAll({
+            where,
+            order: [['performedAt', 'DESC']],
+            include: [
+                { model: YachtEquipment, as: 'equipment', attributes: ['id', 'name'] },
+                { model: MaintenanceRule, as: 'rule', attributes: ['id', 'name'] },
+                {
+                    model: MaintenanceRecordMaterial,
+                    as: 'materials',
+                    include: [{ model: Product, as: 'product', attributes: ['id', 'name'] }],
+                },
+            ],
+        });
+    }
+
+    static async getRecordById(id) {
+        return MaintenanceRecord.findOne({
+            where: { id },
+            include: [
+                { model: YachtEquipment, as: 'equipment', attributes: ['id', 'name'] },
+                { model: MaintenanceRule, as: 'rule', attributes: ['id', 'name'] },
+                {
+                    model: MaintenanceRecordMaterial,
+                    as: 'materials',
+                    include: [{ model: Product, as: 'product', attributes: ['id', 'name'] }],
+                },
+            ],
+        });
+    }
+
+    static async createRecord(data) {
+        const transaction = await db.transaction();
+        try {
+            const record = await MaintenanceRecord.create({
+                equipmentId: data.equipmentId,
+                yachtId: data.yachtId,
+                ruleId: data.ruleId,
+                responsible: data.responsible,
+                workPerformed: data.workPerformed,
+                performedAt: data.performedAt,
+                hoursReading: data.hoursReading,
+                observation: data.observation,
+            }, { transaction });
+
+            if (data.materials.length) {
+                const materials = data.materials.map((m) => ({
+                    recordId: record.id,
+                    productId: m.productId,
+                    quantity: m.quantity,
+                }));
+                await MaintenanceRecordMaterial.bulkCreate(materials, { transaction });
+            }
+
+            await transaction.commit();
+            return MaintenanceService.getRecordById(record.id);
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
+    }
+
+    static async updateRecord(id, data) {
+        const transaction = await db.transaction();
+        try {
+            const record = await MaintenanceRecord.findByPk(id, { transaction });
+            await record.update({
+                equipmentId: data.equipmentId,
+                yachtId: data.yachtId,
+                ruleId: data.ruleId,
+                responsible: data.responsible,
+                workPerformed: data.workPerformed,
+                performedAt: data.performedAt,
+                hoursReading: data.hoursReading,
+                observation: data.observation,
+            }, { transaction });
+
+            await MaintenanceRecordMaterial.destroy({ where: { recordId: id }, transaction });
+            if (data.materials.length) {
+                const materials = data.materials.map((m) => ({
+                    recordId: id,
+                    productId: m.productId,
+                    quantity: m.quantity,
+                }));
+                await MaintenanceRecordMaterial.bulkCreate(materials, { transaction });
+            }
+
+            await transaction.commit();
+            return MaintenanceService.getRecordById(id);
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
+    }
+
+    static async approveRecord(id, approvedBy) {
+        await MaintenanceRecord.update(
+            { approvedBy, approvedAt: new Date() },
+            { where: { id } }
+        );
+        return MaintenanceService.getRecordById(id);
     }
 }
 

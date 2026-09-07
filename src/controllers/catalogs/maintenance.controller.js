@@ -267,6 +267,202 @@ const updateRuleAssignment = async (req, res, next) => {
     }
 };
 
+// RECORDS (historial)
+
+const requireValidDate = (value, fieldName) => {
+    if (!value || Number.isNaN(new Date(value).getTime())) {
+        throw new AppError(`${fieldName} inválida`, 400);
+    }
+    return new Date(value);
+};
+
+const validateMaterials = (materials) => {
+    if (materials === undefined) return;
+    if (!Array.isArray(materials)) {
+        throw new AppError('materials debe ser un array', 400);
+    }
+    materials.forEach((material) => {
+        if (!material || !Number.isInteger(material.quantity) || material.quantity <= 0) {
+            throw new AppError('Cada material debe incluir productId y quantity > 0', 400);
+        }
+    });
+};
+
+const encodeRecord = (record) => {
+    encodeInstanceField(record, 'id');
+    encodeInstanceField(record, 'equipmentId');
+    encodeInstanceField(record, 'yachtId');
+    if (record.dataValues.ruleId) {
+        encodeInstanceField(record, 'ruleId');
+    }
+    encodeInstanceField(record.dataValues.equipment, 'id');
+    if (record.dataValues.rule) {
+        encodeInstanceField(record.dataValues.rule, 'id');
+    }
+    record.dataValues.materials.forEach((material) => {
+        encodeInstanceField(material, 'id');
+        encodeInstanceField(material, 'recordId');
+        encodeInstanceField(material.dataValues.product, 'id');
+    });
+};
+
+const validateRecordPayload = (body) => {
+    const { equipmentId, responsible, workPerformed, performedAt } = body;
+    if (!equipmentId || typeof responsible !== 'string' || !responsible.trim()
+        || typeof workPerformed !== 'string' || !workPerformed.trim()) {
+        throw new AppError('equipmentId, responsible y workPerformed son obligatorios', 400);
+    }
+    requireValidDate(performedAt, 'performedAt');
+    validateMaterials(body.materials);
+};
+
+const getAllRecords = async (req, res, next) => {
+    try {
+        const filters = {
+            yachtId: decodeOptionalId(req.query.yachtId, 'ID de yate'),
+            equipmentId: decodeOptionalId(req.query.equipmentId, 'ID de equipo'),
+            ruleId: decodeOptionalId(req.query.ruleId, 'ID de regla'),
+            from: req.query.from ? requireValidDate(req.query.from, 'from') : undefined,
+            to: req.query.to ? requireValidDate(req.query.to, 'to') : undefined,
+        };
+        const result = await MaintenanceService.getAllRecords(filters);
+        result.forEach(encodeRecord);
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+const getRecord = async (req, res, next) => {
+    try {
+        const recordId = decodeId(req.params.record_id, 'ID de registro');
+        const result = await MaintenanceService.getRecordById(recordId);
+        if (!result) {
+            throw new AppError('Registro no encontrado', 404);
+        }
+        encodeRecord(result);
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+const createRecord = async (req, res, next) => {
+    try {
+        validateRecordPayload(req.body);
+        const { equipmentId, ruleId, responsible, workPerformed, performedAt, hoursReading, observation, materials } = req.body;
+
+        const decodedEquipmentId = decodeId(equipmentId, 'ID de equipo');
+        const equipment = await MaintenanceService.getEquipmentById(decodedEquipmentId);
+        if (!equipment) {
+            throw new AppError('Equipo no encontrado', 404);
+        }
+
+        const decodedRuleId = decodeOptionalId(ruleId, 'ID de regla');
+        if (decodedRuleId) {
+            const rule = await MaintenanceService.getRuleById(decodedRuleId);
+            if (!rule || !rule.active) {
+                throw new AppError('Regla de mantenimiento no encontrada o inactiva', 400);
+            }
+        }
+
+        const decodedMaterials = (materials || []).map((m) => ({
+            productId: decodeId(m.productId, 'ID de producto'),
+            quantity: m.quantity,
+        }));
+
+        await MaintenanceService.createRecord({
+            equipmentId: decodedEquipmentId,
+            yachtId: equipment.yachtId,
+            ruleId: decodedRuleId || null,
+            responsible,
+            workPerformed,
+            performedAt: new Date(performedAt),
+            hoursReading: hoursReading ?? null,
+            observation: observation ?? null,
+            materials: decodedMaterials,
+        });
+
+        res.status(200).json({ data: 'resource created successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+const updateRecord = async (req, res, next) => {
+    try {
+        const recordId = decodeId(req.params.record_id, 'ID de registro');
+        const existing = await MaintenanceService.getRecordById(recordId);
+        if (!existing) {
+            throw new AppError('Registro no encontrado', 404);
+        }
+        if (existing.approvedAt) {
+            throw new AppError('No se puede editar un registro ya aprobado', 409);
+        }
+
+        validateRecordPayload(req.body);
+        const { equipmentId, ruleId, responsible, workPerformed, performedAt, hoursReading, observation, materials } = req.body;
+
+        const decodedEquipmentId = decodeId(equipmentId, 'ID de equipo');
+        const equipment = await MaintenanceService.getEquipmentById(decodedEquipmentId);
+        if (!equipment) {
+            throw new AppError('Equipo no encontrado', 404);
+        }
+
+        const decodedRuleId = decodeOptionalId(ruleId, 'ID de regla');
+        if (decodedRuleId) {
+            const rule = await MaintenanceService.getRuleById(decodedRuleId);
+            if (!rule || !rule.active) {
+                throw new AppError('Regla de mantenimiento no encontrada o inactiva', 400);
+            }
+        }
+
+        const decodedMaterials = (materials || []).map((m) => ({
+            productId: decodeId(m.productId, 'ID de producto'),
+            quantity: m.quantity,
+        }));
+
+        await MaintenanceService.updateRecord(recordId, {
+            equipmentId: decodedEquipmentId,
+            yachtId: equipment.yachtId,
+            ruleId: decodedRuleId || null,
+            responsible,
+            workPerformed,
+            performedAt: new Date(performedAt),
+            hoursReading: hoursReading ?? null,
+            observation: observation ?? null,
+            materials: decodedMaterials,
+        });
+
+        res.status(200).json({ data: 'resource updated successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+const approveRecord = async (req, res, next) => {
+    try {
+        const recordId = decodeId(req.params.record_id, 'ID de registro');
+        const { approvedBy } = req.body;
+        if (typeof approvedBy !== 'string' || !approvedBy.trim()) {
+            throw new AppError('approvedBy es obligatorio', 400);
+        }
+
+        const existing = await MaintenanceService.getRecordById(recordId);
+        if (!existing) {
+            throw new AppError('Registro no encontrado', 404);
+        }
+        if (existing.approvedAt) {
+            throw new AppError('Registro ya aprobado', 409);
+        }
+
+        await MaintenanceService.approveRecord(recordId, approvedBy);
+        res.status(200).json({ data: 'resource approved successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
 const MaintenanceController = {
     getAllEquipment,
     createEquipment,
@@ -277,5 +473,10 @@ const MaintenanceController = {
     getEquipmentRules,
     createRuleAssignment,
     updateRuleAssignment,
+    getAllRecords,
+    getRecord,
+    createRecord,
+    updateRecord,
+    approveRecord,
 };
 module.exports = MaintenanceController;
