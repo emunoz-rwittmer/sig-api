@@ -54,11 +54,6 @@ const RequestItems = require('./operations/yachtRequest/requestItems.models');
 const StaffDocumentation = require('./catalogs/staffDocumentation.models');
 const Documentation = require('./catalogs/documentation.models');
 const StockHistory = require('./operations/inventory/stockHistory.models');
-const YachtParts = require('./catalogs/yachtParts.models');
-const MaintenanceRulesPart = require('./catalogs/maintenanceRulesPart.models');
-const MaintenanceRules = require('./catalogs/maintenanceRules.models');
-const Maintenance = require('./catalogs/maintenance.models');
-const MaintenanceMaterials = require('./catalogs/maintenanceMaterials.models');
 const Cruise = require('./bar/cruises.models');
 const Passenger = require('./bar/passenger.models');
 const ConsumerCard = require('./bar/consumerCard.models');
@@ -68,6 +63,12 @@ const CortecyCardItems = require('./bar/cortecyCardItems.models');
 const CortecyCard = require('./bar/cortecyCard.models');
 const Recipe = require('./bar/recipe.models');
 const RecipeDetail = require('./bar/recipeDetail.models');
+const YachtEquipment = require('./catalogs/yachtEquipment.models');
+const MaintenanceRule = require('./catalogs/maintenanceRule.models');
+const MaintenanceRuleAssignment = require('./catalogs/maintenanceRuleAssignment.models');
+const MaintenanceRuleMaterial = require('./catalogs/maintenanceRuleMaterial.models');
+const MaintenanceRecord = require('./catalogs/maintenanceRecord.models');
+const MaintenanceRecordMaterial = require('./catalogs/maintenanceRecordMaterial.models');
 
 const initModels = () => {
 
@@ -109,24 +110,6 @@ const initModels = () => {
 
     Company.hasOne(Yacht, { foreignKey: 'company_id', as: 'yacht' });
     Yacht.belongsTo(Company, { foreignKey: 'company_id', as: 'company' });
-
-    YachtParts.belongsTo(Yacht, { as: 'yacht', foreignKey: 'yacht_id', });
-    Yacht.hasMany(YachtParts, { as: 'parts', foreignKey: 'yacht_id', onDelete: 'CASCADE', hooks: true });
-
-    MaintenanceRulesPart.belongsTo(YachtParts, { as: 'parte', foreignKey: 'part_id', });
-    YachtParts.hasMany(MaintenanceRulesPart, { as: 'reglas', foreignKey: 'part_id', onDelete: 'CASCADE', hooks: true });
-
-    MaintenanceRulesPart.belongsTo(MaintenanceRules, { as: 'regla', foreignKey: 'rule_id', });
-    MaintenanceRules.hasMany(MaintenanceRulesPart, { as: 'partes', foreignKey: 'rule_id', onDelete: 'CASCADE', hooks: true });
-
-    Maintenance.belongsTo(MaintenanceRulesPart, { as: 'rules_part', foreignKey: 'rules_part_id', });
-    MaintenanceRulesPart.hasMany(Maintenance, { as: 'maintenances', foreignKey: 'rules_part_id', onDelete: 'CASCADE', hooks: true });
-
-    MaintenanceMaterials.belongsTo(Maintenance, { as: 'maintenance', foreignKey: 'maintenance_id', });
-    Maintenance.hasMany(MaintenanceMaterials, { as: 'materials', foreignKey: 'maintenance_id', onDelete: 'CASCADE', hooks: true });
-
-    MaintenanceMaterials.belongsTo(Product, { as: 'product', foreignKey: 'product_id' });
-    Product.hasMany(MaintenanceMaterials, { as: 'materials', foreignKey: 'product_id' });
 
     //rrhh
     Company.hasMany(Regulation, { as: "regulations", foreignKey: "company_id" });
@@ -293,6 +276,30 @@ const initModels = () => {
     CortecyCard.hasMany(CortecyCardItems, { as: 'items', foreignKey: 'cortecy_card_id' });
 
     CortecyCardItems.belongsTo(ProductBar, { as: 'product', foreignKey: 'product_id', });
+
+    // MAINTENANCE DOMAIN
+    YachtEquipment.belongsTo(Yacht, { as: 'yacht', foreignKey: 'yacht_id' });
+    Yacht.hasMany(YachtEquipment, { as: 'equipment', foreignKey: 'yacht_id', onDelete: 'CASCADE', hooks: true });
+
+    MaintenanceRuleAssignment.belongsTo(YachtEquipment, { as: 'equipment', foreignKey: 'equipment_id' });
+    YachtEquipment.hasMany(MaintenanceRuleAssignment, { as: 'ruleAssignments', foreignKey: 'equipment_id', onDelete: 'CASCADE', hooks: true });
+
+    MaintenanceRuleAssignment.belongsTo(MaintenanceRule, { as: 'rule', foreignKey: 'rule_id' });
+    MaintenanceRule.hasMany(MaintenanceRuleAssignment, { as: 'assignments', foreignKey: 'rule_id', onDelete: 'CASCADE', hooks: true });
+
+    MaintenanceRuleMaterial.belongsTo(MaintenanceRule, { as: 'rule', foreignKey: 'rule_id' });
+    MaintenanceRule.hasMany(MaintenanceRuleMaterial, { as: 'recommendedMaterials', foreignKey: 'rule_id', onDelete: 'CASCADE', hooks: true });
+    MaintenanceRuleMaterial.belongsTo(Product, { as: 'product', foreignKey: 'product_id' });
+
+    MaintenanceRecord.belongsTo(YachtEquipment, { as: 'equipment', foreignKey: 'equipment_id' });
+    YachtEquipment.hasMany(MaintenanceRecord, { as: 'records', foreignKey: 'equipment_id' });
+    MaintenanceRecord.belongsTo(Yacht, { as: 'yacht', foreignKey: 'yacht_id' });
+    MaintenanceRecord.belongsTo(MaintenanceRule, { as: 'rule', foreignKey: 'rule_id' });
+    MaintenanceRule.hasMany(MaintenanceRecord, { as: 'records', foreignKey: 'rule_id' });
+
+    MaintenanceRecordMaterial.belongsTo(MaintenanceRecord, { as: 'record', foreignKey: 'record_id' });
+    MaintenanceRecord.hasMany(MaintenanceRecordMaterial, { as: 'materials', foreignKey: 'record_id', onDelete: 'CASCADE', hooks: true });
+    MaintenanceRecordMaterial.belongsTo(Product, { as: 'product', foreignKey: 'product_id' });
 }
 
 module.exports = initModels;

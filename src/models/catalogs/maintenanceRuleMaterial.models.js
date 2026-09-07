@@ -1,26 +1,27 @@
 const db = require('../../utils/database');
 const { DataTypes } = require('sequelize');
 
-const MaintenanceMaterials = db.define('maintenance_materials', {
+const MaintenanceRuleMaterial = db.define('maintenance_rule_material', {
     id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true,
     },
-   maintenanceId: {
+    ruleId: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        field: 'maintenance_id'
+        field: 'rule_id',
     },
     productId: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        field: 'product_id'
+        field: 'product_id',
     },
-    quantity: {
+    recommendedQuantity: {
         type: DataTypes.INTEGER,
         allowNull: false,
+        field: 'recommended_quantity',
     },
 });
 
-module.exports = MaintenanceMaterials;
+module.exports = MaintenanceRuleMaterial;

@@ -49,8 +49,8 @@ const routerApi = (app) => {
   app.use("/api/positions", authJwt.verifyToken, positionsRoutes);
   app.use("/api/documentation", authJwt.verifyToken, documentationRoutes);
   app.use("/api/yachts", authJwt.verifyToken, yachtRoutes);
-  app.use("/api/maintenance", authJwt.verifyToken, maintenanceRoutes);
   app.use("/api/companies", authJwt.verifyToken, companyRoutes);
+  app.use("/api/maintenance", authJwt.verifyToken, maintenanceRoutes);
   //RRHH
   app.use("/api/regulations", authJwt.verifyToken, regulationsRoutes);
   app.use("/api/tradings", authJwt.verifyToken, tradingRoutes);

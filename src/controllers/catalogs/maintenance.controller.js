@@ -1,228 +1,526 @@
 const MaintenanceService = require('../../services/catalogs/maintenance.services');
+const AppError = require('../../errors/AppError');
 const Utils = require('../../utils/Utils');
 
-const getAllMaintenances = async (req, res) => {
+const decodeId = (value, fieldName) => {
+    let id;
     try {
-        const result = await MaintenanceService.getAll();
-        if (result instanceof Array) {
-            result.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
-                x.dataValues.rules_part.parte.yachtId = Utils.encode(x.dataValues.rules_part.parte.yachtId);
-                x.dataValues.materials.map(m => (
-                    m.productId = Utils.encode(m.productId)
-                ))
-            });
-        }
-        res.status(200).json(result);
-    } catch (error) {
-        res.status(400).json(error.message)
+        id = Utils.decode(value);
+    } catch {
+        throw new AppError(`${fieldName} inválido`, 400);
     }
-}
-
-const getMaintenancesHistory = async (req, res) => {
-    try {
-        const result = await MaintenanceService.getMaintenancesHistory();
-        if (result instanceof Array) {
-            result.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
-                x.dataValues.partes.map(p => (
-                    p.partId = Utils.encode(p.partId),
-                    p.parte.yachtId = Utils.encode(p.parte.yachtId)
-                ))
-            });
-        }
-        res.status(200).json(result);
-    } catch (error) {
-        res.status(400).json(error.message)
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new AppError(`${fieldName} inválido`, 400);
     }
-}
+    return id;
+};
 
-const getMaintenance = async (req, res) => {
-    try {
-        const maintenanceId = Utils.decode(req.params.maintenance_id);
-        const result = await MaintenanceService.getMaintenanceById(maintenanceId);
-        if (result instanceof Object) {
-            result.id = Utils.encode(result.id);
-        }
-        res.status(200).json(result);
-    } catch (error) {
-        res.status(400).json(error.message)
+const decodeOptionalId = (value, fieldName) => {
+    if (!value || value === 'undefined' || value === 'null') {
+        return undefined;
     }
-}
+    return decodeId(value, fieldName);
+};
 
-const createMaintenance = async (req, res) => {
-    try {
-        const maintenance = req.body;
-        maintenance.yachtId = Utils.decode(maintenance.yachtId)
-        maintenance.partId = Utils.decode(maintenance.partId)
-        maintenance.ruleId = Utils.decode(maintenance.ruleId)
-
-        if (maintenance.products) {
-            maintenance.products.map(x => (
-                x.productId = Utils.decode(x.productId)
-            ));
-        }
-
-        await MaintenanceService.createMaintenance(maintenance);
-
-        res.status(200).json({ data: 'resource created successfully' });
-    } catch (error) {
-        console.log(error)
-
-        res.status(400).json(error.message);
+const encodeInstanceField = (instance, field) => {
+    if (instance?.dataValues?.[field] !== undefined && instance.dataValues[field] !== null) {
+        instance.dataValues[field] = Utils.encode(instance.dataValues[field]);
     }
-}
+};
 
-const updateMaintenance = async (req, res) => {
-    try {
-        const maintenanceId = Utils.decode(req.params.maintenance_id);
-        const maintenance = req.body;
-        delete maintenance.id
-        delete maintenance.materials
+// EQUIPMENT
 
-        if (maintenance.products) {
-            maintenance.products.map(x => (
-                x.productId = Utils.decode(x.productId)
-            ));
-        }
-
-        await MaintenanceService.updateMaintenance(maintenance, maintenanceId);
-        res.status(200).json({ data: 'resource updated successfully' });
-    } catch (error) {
-        res.status(400).json(error.message);
+const validateEquipmentPayload = (body) => {
+    const { yachtId, name } = body;
+    if (!yachtId || typeof name !== 'string' || !name.trim()) {
+        throw new AppError('yachtId y name son obligatorios', 400);
     }
-}
+};
 
-const approveMaintenance = async (req, res) => {
+const getAllEquipment = async (req, res, next) => {
     try {
-        const maintenanceId = Utils.decode(req.params.maintenance_id);
-        const maintenance = req.body;
-        delete maintenance.id
-
-        await MaintenanceService.approveMaintenance(maintenance, maintenanceId);
-        res.status(200).json({ data: 'resource updated successfully' });
-    } catch (error) {
-        res.status(400).json(error.message);
-    }
-}
-
-const deleteMaintenance = async (req, res) => {
-    try {
-        const maintenanceId = Utils.decode(req.params.maintenance_id);
-        await MaintenanceService.delete({
-            where: { id: maintenanceId }
+        const yachtId = decodeOptionalId(req.query.yachtId, 'ID de yate');
+        const result = await MaintenanceService.getAllEquipment(yachtId);
+        result.forEach((equipment) => {
+            encodeInstanceField(equipment, 'id');
+            encodeInstanceField(equipment, 'yachtId');
         });
-        res.status(200).json({ data: 'resource deleted successfully' })
-    } catch (error) {
-
-        res.status(400).json(error.message);
-    }
-}
-
-//PARTS
-
-const getAllParts = async (req, res) => {
-    try {
-        const result = await MaintenanceService.getAllParts();
-        if (result instanceof Array) {
-            result.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
-                x.dataValues.yachtId = Utils.encode(x.dataValues.yachtId);
-            });
-        }
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
-}
+};
 
-const createPart = async (req, res) => {
+const createEquipment = async (req, res, next) => {
     try {
-        const part = req.body;
-        part.yachtId = Utils.decode(part.yachtId)
-        await MaintenanceService.createPart(part);
-
+        validateEquipmentPayload(req.body);
+        const { yachtId, name, brand, model, serialNumber, power, rpm } = req.body;
+        await MaintenanceService.createEquipment({
+            yachtId: decodeId(yachtId, 'ID de yate'),
+            name,
+            brand: brand ?? null,
+            model: model ?? null,
+            serialNumber: serialNumber ?? null,
+            power: power ?? null,
+            rpm: rpm ?? null,
+        });
         res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
-}
+};
 
-const updatePart = async (req, res) => {
+const updateEquipment = async (req, res, next) => {
     try {
-        const partId = Utils.decode(req.params.part_id);
-        const part = req.body;
-        part.yachtId = Utils.decode(part.yachtId)
-        delete part.id
-        await MaintenanceService.updatePart(part, {
-            where: { id: partId },
+        const equipmentId = decodeId(req.params.equipment_id, 'ID de equipo');
+        const existing = await MaintenanceService.getEquipmentById(equipmentId);
+        if (!existing) {
+            throw new AppError('Equipo no encontrado', 404);
+        }
+        validateEquipmentPayload(req.body);
+        const { yachtId, name, brand, model, serialNumber, power, rpm, active } = req.body;
+        await MaintenanceService.updateEquipment(equipmentId, {
+            yachtId: decodeId(yachtId, 'ID de yate'),
+            name,
+            brand: brand ?? null,
+            model: model ?? null,
+            serialNumber: serialNumber ?? null,
+            power: power ?? null,
+            rpm: rpm ?? null,
+            active: active !== undefined ? active : true,
         });
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
-}
+};
 
-//RULES
-const getAllRules = async (req, res) => {
+// RULES
+
+const PERIODICITY_UNITS = ['horas', 'dias', 'meses', 'anios'];
+
+const validateRecommendedMaterials = (materials) => {
+    if (materials === undefined) return;
+    if (!Array.isArray(materials)) {
+        throw new AppError('recommendedMaterials debe ser un array', 400);
+    }
+    materials.forEach((material) => {
+        if (!material || !Number.isInteger(material.recommendedQuantity) || material.recommendedQuantity <= 0) {
+            throw new AppError('Cada material recomendado debe incluir productId y recommendedQuantity > 0', 400);
+        }
+    });
+};
+
+const validatePeriodicityUnit = (unit) => {
+    if (unit === undefined || unit === null) return;
+    if (!PERIODICITY_UNITS.includes(unit)) {
+        throw new AppError(`periodicityUnit debe ser uno de: ${PERIODICITY_UNITS.join(', ')}`, 400);
+    }
+};
+
+const encodeRule = (rule) => {
+    encodeInstanceField(rule, 'id');
+    rule.dataValues.recommendedMaterials.forEach((material) => {
+        encodeInstanceField(material, 'id');
+        encodeInstanceField(material, 'ruleId');
+        encodeInstanceField(material, 'productId');
+        encodeInstanceField(material.dataValues.product, 'id');
+    });
+};
+
+const getAllRules = async (req, res, next) => {
     try {
         const result = await MaintenanceService.getAllRules();
-        if (result instanceof Array) {
-            result.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
-                x.dataValues.partes.map(part => (
-                    part.partId = Utils.encode(part.partId),
-                    part.parte.yachtId = Utils.encode(part.parte.yachtId)
-                ))
-            });
-        }
+        result.forEach(encodeRule);
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
-}
+};
 
-const createRule = async (req, res) => {
+const createRule = async (req, res, next) => {
     try {
-        const part = req.body;
-        part.partIds = part.partIds.map(x => Utils.decode(x))
-        await MaintenanceService.createRule(part);
+        const { name, periodicityValue, periodicityUnit, instructions, recommendedMaterials } = req.body;
+        if (typeof name !== 'string' || !name.trim()) {
+            throw new AppError('name es obligatorio', 400);
+        }
+        validatePeriodicityUnit(periodicityUnit);
+        validateRecommendedMaterials(recommendedMaterials);
+
+        const decodedMaterials = (recommendedMaterials || []).map((m) => ({
+            productId: decodeId(m.productId, 'ID de producto'),
+            recommendedQuantity: m.recommendedQuantity,
+        }));
+
+        await MaintenanceService.createRule({
+            name,
+            periodicityValue: periodicityValue ?? null,
+            periodicityUnit: periodicityUnit ?? null,
+            instructions: instructions ?? null,
+            recommendedMaterials: decodedMaterials,
+        });
         res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
-        console.log(error)
-        res.status(400).json(error.message);
+        next(error);
     }
-}
+};
 
-const updateRule = async (req, res) => {
+const updateRule = async (req, res, next) => {
     try {
-        const partId = Utils.decode(req.params.part_id);
-        const part = req.body;
-        part.partIds = part.partIds.map(x => Utils.decode(x))
-        delete part.id
-        await MaintenanceService.updateRule(part, partId);
+        const ruleId = decodeId(req.params.rule_id, 'ID de regla');
+        const existing = await MaintenanceService.getRuleById(ruleId);
+        if (!existing) {
+            throw new AppError('Regla no encontrada', 404);
+        }
+
+        const { name, periodicityValue, periodicityUnit, instructions, active, recommendedMaterials } = req.body;
+        if (typeof name !== 'string' || !name.trim()) {
+            throw new AppError('name es obligatorio', 400);
+        }
+        validatePeriodicityUnit(periodicityUnit);
+        validateRecommendedMaterials(recommendedMaterials);
+
+        const decodedMaterials = (recommendedMaterials || []).map((m) => ({
+            productId: decodeId(m.productId, 'ID de producto'),
+            recommendedQuantity: m.recommendedQuantity,
+        }));
+
+        await MaintenanceService.updateRule(ruleId, {
+            name,
+            periodicityValue: periodicityValue ?? null,
+            periodicityUnit: periodicityUnit ?? null,
+            instructions: instructions ?? null,
+            active: active !== undefined ? active : true,
+            recommendedMaterials: decodedMaterials,
+        });
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        console.log(error)
-        res.status(400).json(error.message);
+        next(error);
     }
-}
+};
 
+// RULE ASSIGNMENTS
+
+const getEquipmentRules = async (req, res, next) => {
+    try {
+        const equipmentId = decodeId(req.params.equipment_id, 'ID de equipo');
+        const equipment = await MaintenanceService.getEquipmentById(equipmentId);
+        if (!equipment) {
+            throw new AppError('Equipo no encontrado', 404);
+        }
+        const result = await MaintenanceService.getRuleAssignmentsByEquipment(equipmentId);
+        result.forEach((assignment) => {
+            encodeInstanceField(assignment, 'id');
+            encodeInstanceField(assignment, 'equipmentId');
+            encodeInstanceField(assignment, 'ruleId');
+            encodeInstanceField(assignment.dataValues.rule, 'id');
+        });
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+const createRuleAssignment = async (req, res, next) => {
+    try {
+        const { equipmentId, ruleId } = req.body;
+        if (!equipmentId || !ruleId) {
+            throw new AppError('equipmentId y ruleId son obligatorios', 400);
+        }
+        const decodedEquipmentId = decodeId(equipmentId, 'ID de equipo');
+        const decodedRuleId = decodeId(ruleId, 'ID de regla');
+
+        const equipment = await MaintenanceService.getEquipmentById(decodedEquipmentId);
+        if (!equipment) {
+            throw new AppError('Equipo no encontrado', 404);
+        }
+        const rule = await MaintenanceService.getRuleById(decodedRuleId);
+        if (!rule) {
+            throw new AppError('Regla no encontrada', 404);
+        }
+        const existing = await MaintenanceService.findRuleAssignment(decodedEquipmentId, decodedRuleId);
+        if (existing) {
+            throw new AppError('Esta regla ya está asignada a este equipo', 409);
+        }
+
+        await MaintenanceService.createRuleAssignment(decodedEquipmentId, decodedRuleId);
+        res.status(200).json({ data: 'resource created successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+const updateRuleAssignment = async (req, res, next) => {
+    try {
+        const assignmentId = decodeId(req.params.assignment_id, 'ID de asignación');
+        const { active } = req.body;
+        if (typeof active !== 'boolean') {
+            throw new AppError('active es obligatorio y debe ser booleano', 400);
+        }
+        const existing = await MaintenanceService.getRuleAssignmentById(assignmentId);
+        if (!existing) {
+            throw new AppError('Asignación no encontrada', 404);
+        }
+        await MaintenanceService.updateRuleAssignment(assignmentId, active);
+        res.status(200).json({ data: 'resource updated successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// RECORDS (historial)
+
+const requireValidDate = (value, fieldName) => {
+    if (!value || Number.isNaN(new Date(value).getTime())) {
+        throw new AppError(`${fieldName} inválida`, 400);
+    }
+    return new Date(value);
+};
+
+const validateMaterials = (materials) => {
+    if (materials === undefined) return;
+    if (!Array.isArray(materials)) {
+        throw new AppError('materials debe ser un array', 400);
+    }
+    materials.forEach((material) => {
+        if (!material || !Number.isInteger(material.quantity) || material.quantity <= 0) {
+            throw new AppError('Cada material debe incluir productId y quantity > 0', 400);
+        }
+    });
+};
+
+const encodeRecord = (record) => {
+    encodeInstanceField(record, 'id');
+    encodeInstanceField(record, 'equipmentId');
+    encodeInstanceField(record, 'yachtId');
+    if (record.dataValues.ruleId) {
+        encodeInstanceField(record, 'ruleId');
+    }
+    encodeInstanceField(record.dataValues.equipment, 'id');
+    if (record.dataValues.rule) {
+        encodeInstanceField(record.dataValues.rule, 'id');
+    }
+    record.dataValues.materials.forEach((material) => {
+        encodeInstanceField(material, 'id');
+        encodeInstanceField(material, 'recordId');
+        encodeInstanceField(material, 'productId');
+        encodeInstanceField(material.dataValues.product, 'id');
+    });
+};
+
+const validateRecordPayload = (body) => {
+    const { equipmentId, responsible, workPerformed, performedAt } = body;
+    if (!equipmentId || typeof responsible !== 'string' || !responsible.trim()
+        || typeof workPerformed !== 'string' || !workPerformed.trim()) {
+        throw new AppError('equipmentId, responsible y workPerformed son obligatorios', 400);
+    }
+    requireValidDate(performedAt, 'performedAt');
+    validateMaterials(body.materials);
+};
+
+const getAllRecords = async (req, res, next) => {
+    try {
+        const filters = {
+            yachtId: decodeOptionalId(req.query.yachtId, 'ID de yate'),
+            equipmentId: decodeOptionalId(req.query.equipmentId, 'ID de equipo'),
+            ruleId: decodeOptionalId(req.query.ruleId, 'ID de regla'),
+            from: req.query.from ? requireValidDate(req.query.from, 'from') : undefined,
+            to: req.query.to ? requireValidDate(req.query.to, 'to') : undefined,
+        };
+        const result = await MaintenanceService.getAllRecords(filters);
+        result.forEach(encodeRecord);
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+const getRecord = async (req, res, next) => {
+    try {
+        const recordId = decodeId(req.params.record_id, 'ID de registro');
+        const result = await MaintenanceService.getRecordById(recordId);
+        if (!result) {
+            throw new AppError('Registro no encontrado', 404);
+        }
+        encodeRecord(result);
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+const createRecord = async (req, res, next) => {
+    try {
+        validateRecordPayload(req.body);
+        const { equipmentId, ruleId, responsible, workPerformed, performedAt, hoursReading, observation, materials } = req.body;
+
+        const decodedEquipmentId = decodeId(equipmentId, 'ID de equipo');
+        const equipment = await MaintenanceService.getEquipmentById(decodedEquipmentId);
+        if (!equipment) {
+            throw new AppError('Equipo no encontrado', 404);
+        }
+
+        const decodedRuleId = decodeOptionalId(ruleId, 'ID de regla');
+        if (decodedRuleId) {
+            const rule = await MaintenanceService.getRuleById(decodedRuleId);
+            if (!rule || !rule.active) {
+                throw new AppError('Regla de mantenimiento no encontrada o inactiva', 400);
+            }
+        }
+
+        const decodedMaterials = (materials || []).map((m) => ({
+            productId: decodeId(m.productId, 'ID de producto'),
+            quantity: m.quantity,
+        }));
+
+        await MaintenanceService.createRecord({
+            equipmentId: decodedEquipmentId,
+            yachtId: equipment.yachtId,
+            ruleId: decodedRuleId || null,
+            responsible,
+            workPerformed,
+            performedAt: new Date(performedAt),
+            hoursReading: hoursReading ?? null,
+            observation: observation ?? null,
+            materials: decodedMaterials,
+        });
+
+        res.status(200).json({ data: 'resource created successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+const updateRecord = async (req, res, next) => {
+    try {
+        const recordId = decodeId(req.params.record_id, 'ID de registro');
+        const existing = await MaintenanceService.getRecordById(recordId);
+        if (!existing) {
+            throw new AppError('Registro no encontrado', 404);
+        }
+        if (existing.approvedAt) {
+            throw new AppError('No se puede editar un registro ya aprobado', 409);
+        }
+
+        validateRecordPayload(req.body);
+        const { equipmentId, ruleId, responsible, workPerformed, performedAt, hoursReading, observation, materials } = req.body;
+
+        const decodedEquipmentId = decodeId(equipmentId, 'ID de equipo');
+        const equipment = await MaintenanceService.getEquipmentById(decodedEquipmentId);
+        if (!equipment) {
+            throw new AppError('Equipo no encontrado', 404);
+        }
+
+        const decodedRuleId = decodeOptionalId(ruleId, 'ID de regla');
+        if (decodedRuleId) {
+            const rule = await MaintenanceService.getRuleById(decodedRuleId);
+            if (!rule || !rule.active) {
+                throw new AppError('Regla de mantenimiento no encontrada o inactiva', 400);
+            }
+        }
+
+        const decodedMaterials = (materials || []).map((m) => ({
+            productId: decodeId(m.productId, 'ID de producto'),
+            quantity: m.quantity,
+        }));
+
+        await MaintenanceService.updateRecord(recordId, {
+            equipmentId: decodedEquipmentId,
+            yachtId: equipment.yachtId,
+            ruleId: decodedRuleId || null,
+            responsible,
+            workPerformed,
+            performedAt: new Date(performedAt),
+            hoursReading: hoursReading ?? null,
+            observation: observation ?? null,
+            materials: decodedMaterials,
+        });
+
+        res.status(200).json({ data: 'resource updated successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+const approveRecord = async (req, res, next) => {
+    try {
+        const recordId = decodeId(req.params.record_id, 'ID de registro');
+        const { approvedBy } = req.body;
+        if (typeof approvedBy !== 'string' || !approvedBy.trim()) {
+            throw new AppError('approvedBy es obligatorio', 400);
+        }
+
+        const existing = await MaintenanceService.getRecordById(recordId);
+        if (!existing) {
+            throw new AppError('Registro no encontrado', 404);
+        }
+        if (existing.approvedAt) {
+            throw new AppError('Registro ya aprobado', 409);
+        }
+
+        await MaintenanceService.approveRecord(recordId, approvedBy);
+        res.status(200).json({ data: 'resource approved successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// BOOK
+
+const getMaintenanceBook = async (req, res, next) => {
+    try {
+        const yachtId = decodeId(req.params.yacht_id, 'ID de yate');
+        const yacht = await MaintenanceService.getYachtForBook(yachtId);
+        if (!yacht) {
+            throw new AppError('Yate no encontrado', 404);
+        }
+        const equipment = await MaintenanceService.getMaintenanceBook(yachtId);
+
+        encodeInstanceField(yacht, 'id');
+
+        const equipmentBook = equipment.map((item) => {
+            encodeInstanceField(item, 'id');
+            encodeInstanceField(item, 'yachtId');
+
+            const rules = item.dataValues.ruleAssignments.map((assignment) => {
+                const rule = assignment.dataValues.rule;
+                encodeRule(rule);
+                return rule;
+            });
+
+            const history = item.dataValues.records.map((record) => {
+                encodeRecord(record);
+                return record;
+            });
+
+            item.dataValues.rules = rules;
+            item.dataValues.history = history;
+            delete item.dataValues.ruleAssignments;
+            delete item.dataValues.records;
+            return item;
+        });
+
+        res.status(200).json({ yacht, equipment: equipmentBook });
+    } catch (error) {
+        next(error);
+    }
+};
 
 const MaintenanceController = {
-    getAllMaintenances,
-    getMaintenancesHistory,
-    getMaintenance,
-    createMaintenance,
-    updateMaintenance,
-    approveMaintenance,
-    deleteMaintenance,
-    getAllParts,
-    createPart,
-    updatePart,
+    getAllEquipment,
+    createEquipment,
+    updateEquipment,
     getAllRules,
     createRule,
-    updateRule
-
-}
-module.exports = MaintenanceController
+    updateRule,
+    getEquipmentRules,
+    createRuleAssignment,
+    updateRuleAssignment,
+    getAllRecords,
+    getRecord,
+    createRecord,
+    updateRecord,
+    approveRecord,
+    getMaintenanceBook,
+};
+module.exports = MaintenanceController;

@@ -2,9 +2,6 @@ const db = require('../../utils/database');
 
 const Yachts = require('../../models/catalogs/yacht.models');
 const Company = require('../../models/catalogs/company.models');
-const YachtParts = require('../../models/catalogs/yachtParts.models');
-const MaintenanceRules = require('../../models/catalogs/maintenanceRules.models');
-const MaintenanceRulesPart = require('../../models/catalogs/maintenanceRulesPart.models');
 
 
 

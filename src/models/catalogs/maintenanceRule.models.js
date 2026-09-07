@@ -1,7 +1,7 @@
 const db = require('../../utils/database');
 const { DataTypes } = require('sequelize');
 
-const MaintenanceRules = db.define('maintenance_rules', {
+const MaintenanceRule = db.define('maintenance_rule', {
     id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
@@ -11,15 +11,19 @@ const MaintenanceRules = db.define('maintenance_rules', {
         type: DataTypes.STRING,
         allowNull: false,
     },
-    periodicity: {
-        type: DataTypes.STRING,
+    periodicityValue: {
+        type: DataTypes.FLOAT,
         allowNull: true,
-        field: 'periodicidad'
+        field: 'periodicity_value',
     },
-    periodicityType: {
+    periodicityUnit: {
         type: DataTypes.STRING,
         allowNull: true,
-        field: 'tipo_periodicidad'
+        field: 'periodicity_unit',
+    },
+    instructions: {
+        type: DataTypes.TEXT,
+        allowNull: true,
     },
     active: {
         type: DataTypes.BOOLEAN,
@@ -27,4 +31,4 @@ const MaintenanceRules = db.define('maintenance_rules', {
     },
 });
 
-module.exports = MaintenanceRules;
+module.exports = MaintenanceRule;
