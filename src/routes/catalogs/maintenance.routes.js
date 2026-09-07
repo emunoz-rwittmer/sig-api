@@ -122,4 +122,131 @@ router.post('/equipment', MaintenanceController.createEquipment);
  */
 router.put('/equipment/:equipment_id', MaintenanceController.updateEquipment);
 
+// RULES
+
+/**
+ * @openapi
+ * /maintenance/rules:
+ *   get:
+ *     summary: Listar reglas de mantenimiento (catálogo informativo)
+ *     tags: [Mantenimiento]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de reglas con sus materiales recomendados
+ *       403:
+ *         description: Token no proporcionado o inválido
+ *       500:
+ *         description: Error inesperado
+ */
+router.get('/rules', MaintenanceController.getAllRules);
+
+/**
+ * @openapi
+ * /maintenance/rules:
+ *   post:
+ *     summary: Crear una regla de mantenimiento
+ *     tags: [Mantenimiento]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name]
+ *             properties:
+ *               name:
+ *                 type: string
+ *               periodicityValue:
+ *                 type: number
+ *                 nullable: true
+ *               periodicityUnit:
+ *                 type: string
+ *                 enum: [horas, dias, meses, anios]
+ *                 nullable: true
+ *               instructions:
+ *                 type: string
+ *                 nullable: true
+ *               recommendedMaterials:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required: [productId, recommendedQuantity]
+ *                   properties:
+ *                     productId:
+ *                       type: string
+ *                     recommendedQuantity:
+ *                       type: integer
+ *     responses:
+ *       200:
+ *         description: Regla creada
+ *       400:
+ *         description: Payload inválido
+ *       500:
+ *         description: Error inesperado
+ */
+router.post('/rules', MaintenanceController.createRule);
+
+/**
+ * @openapi
+ * /maintenance/rules/{rule_id}:
+ *   put:
+ *     summary: Actualizar una regla de mantenimiento
+ *     tags: [Mantenimiento]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: rule_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID codificado de la regla
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name]
+ *             properties:
+ *               name:
+ *                 type: string
+ *               periodicityValue:
+ *                 type: number
+ *                 nullable: true
+ *               periodicityUnit:
+ *                 type: string
+ *                 enum: [horas, dias, meses, anios]
+ *                 nullable: true
+ *               instructions:
+ *                 type: string
+ *                 nullable: true
+ *               active:
+ *                 type: boolean
+ *               recommendedMaterials:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required: [productId, recommendedQuantity]
+ *                   properties:
+ *                     productId:
+ *                       type: string
+ *                     recommendedQuantity:
+ *                       type: integer
+ *     responses:
+ *       200:
+ *         description: Regla actualizada
+ *       400:
+ *         description: Payload o ID inválido
+ *       404:
+ *         description: Regla no encontrada
+ *       500:
+ *         description: Error inesperado
+ */
+router.put('/rules/:rule_id', MaintenanceController.updateRule);
+
 module.exports = router;

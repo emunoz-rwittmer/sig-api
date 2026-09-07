@@ -95,9 +95,115 @@ const updateEquipment = async (req, res, next) => {
     }
 };
 
+// RULES
+
+const PERIODICITY_UNITS = ['horas', 'dias', 'meses', 'anios'];
+
+const validateRecommendedMaterials = (materials) => {
+    if (materials === undefined) return;
+    if (!Array.isArray(materials)) {
+        throw new AppError('recommendedMaterials debe ser un array', 400);
+    }
+    materials.forEach((material) => {
+        if (!material || !Number.isInteger(material.recommendedQuantity) || material.recommendedQuantity <= 0) {
+            throw new AppError('Cada material recomendado debe incluir productId y recommendedQuantity > 0', 400);
+        }
+    });
+};
+
+const validatePeriodicityUnit = (unit) => {
+    if (unit === undefined || unit === null) return;
+    if (!PERIODICITY_UNITS.includes(unit)) {
+        throw new AppError(`periodicityUnit debe ser uno de: ${PERIODICITY_UNITS.join(', ')}`, 400);
+    }
+};
+
+const encodeRule = (rule) => {
+    encodeInstanceField(rule, 'id');
+    rule.dataValues.recommendedMaterials.forEach((material) => {
+        encodeInstanceField(material, 'id');
+        encodeInstanceField(material, 'ruleId');
+        encodeInstanceField(material.dataValues.product, 'id');
+    });
+};
+
+const getAllRules = async (req, res, next) => {
+    try {
+        const result = await MaintenanceService.getAllRules();
+        result.forEach(encodeRule);
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+const createRule = async (req, res, next) => {
+    try {
+        const { name, periodicityValue, periodicityUnit, instructions, recommendedMaterials } = req.body;
+        if (typeof name !== 'string' || !name.trim()) {
+            throw new AppError('name es obligatorio', 400);
+        }
+        validatePeriodicityUnit(periodicityUnit);
+        validateRecommendedMaterials(recommendedMaterials);
+
+        const decodedMaterials = (recommendedMaterials || []).map((m) => ({
+            productId: decodeId(m.productId, 'ID de producto'),
+            recommendedQuantity: m.recommendedQuantity,
+        }));
+
+        await MaintenanceService.createRule({
+            name,
+            periodicityValue: periodicityValue ?? null,
+            periodicityUnit: periodicityUnit ?? null,
+            instructions: instructions ?? null,
+            recommendedMaterials: decodedMaterials,
+        });
+        res.status(200).json({ data: 'resource created successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+const updateRule = async (req, res, next) => {
+    try {
+        const ruleId = decodeId(req.params.rule_id, 'ID de regla');
+        const existing = await MaintenanceService.getRuleById(ruleId);
+        if (!existing) {
+            throw new AppError('Regla no encontrada', 404);
+        }
+
+        const { name, periodicityValue, periodicityUnit, instructions, active, recommendedMaterials } = req.body;
+        if (typeof name !== 'string' || !name.trim()) {
+            throw new AppError('name es obligatorio', 400);
+        }
+        validatePeriodicityUnit(periodicityUnit);
+        validateRecommendedMaterials(recommendedMaterials);
+
+        const decodedMaterials = (recommendedMaterials || []).map((m) => ({
+            productId: decodeId(m.productId, 'ID de producto'),
+            recommendedQuantity: m.recommendedQuantity,
+        }));
+
+        await MaintenanceService.updateRule(ruleId, {
+            name,
+            periodicityValue: periodicityValue ?? null,
+            periodicityUnit: periodicityUnit ?? null,
+            instructions: instructions ?? null,
+            active: active !== undefined ? active : true,
+            recommendedMaterials: decodedMaterials,
+        });
+        res.status(200).json({ data: 'resource updated successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
 const MaintenanceController = {
     getAllEquipment,
     createEquipment,
     updateEquipment,
+    getAllRules,
+    createRule,
+    updateRule,
 };
 module.exports = MaintenanceController;

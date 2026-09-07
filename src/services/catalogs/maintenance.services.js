@@ -1,5 +1,8 @@
 const db = require('../../utils/database');
 const YachtEquipment = require('../../models/catalogs/yachtEquipment.models');
+const MaintenanceRule = require('../../models/catalogs/maintenanceRule.models');
+const MaintenanceRuleMaterial = require('../../models/catalogs/maintenanceRuleMaterial.models');
+const Product = require('../../models/operations/inventory/product.models');
 
 class MaintenanceService {
     // EQUIPMENT
@@ -21,6 +24,86 @@ class MaintenanceService {
         const equipment = await YachtEquipment.findByPk(id);
         await equipment.update(data);
         return equipment;
+    }
+
+    // RULES
+    static async getAllRules() {
+        return MaintenanceRule.findAll({
+            order: [['name', 'ASC']],
+            include: [{
+                model: MaintenanceRuleMaterial,
+                as: 'recommendedMaterials',
+                include: [{ model: Product, as: 'product', attributes: ['id', 'name'] }],
+            }],
+        });
+    }
+
+    static async getRuleById(id) {
+        return MaintenanceRule.findOne({
+            where: { id },
+            include: [{
+                model: MaintenanceRuleMaterial,
+                as: 'recommendedMaterials',
+                include: [{ model: Product, as: 'product', attributes: ['id', 'name'] }],
+            }],
+        });
+    }
+
+    static async createRule(data) {
+        const transaction = await db.transaction();
+        try {
+            const rule = await MaintenanceRule.create({
+                name: data.name,
+                periodicityValue: data.periodicityValue,
+                periodicityUnit: data.periodicityUnit,
+                instructions: data.instructions,
+            }, { transaction });
+
+            if (data.recommendedMaterials.length) {
+                const materials = data.recommendedMaterials.map((m) => ({
+                    ruleId: rule.id,
+                    productId: m.productId,
+                    recommendedQuantity: m.recommendedQuantity,
+                }));
+                await MaintenanceRuleMaterial.bulkCreate(materials, { transaction });
+            }
+
+            await transaction.commit();
+            return MaintenanceService.getRuleById(rule.id);
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
+    }
+
+    static async updateRule(id, data) {
+        const transaction = await db.transaction();
+        try {
+            const rule = await MaintenanceRule.findByPk(id, { transaction });
+            await rule.update({
+                name: data.name,
+                periodicityValue: data.periodicityValue,
+                periodicityUnit: data.periodicityUnit,
+                instructions: data.instructions,
+                active: data.active,
+            }, { transaction });
+
+            await MaintenanceRuleMaterial.destroy({ where: { ruleId: id }, transaction });
+            if (data.recommendedMaterials.length) {
+                const materials = data.recommendedMaterials.map((m) => ({
+                    ruleId: id,
+                    productId: m.productId,
+                    recommendedQuantity: m.recommendedQuantity,
+                }));
+                await MaintenanceRuleMaterial.bulkCreate(materials, { transaction });
+            }
+
+            await transaction.commit();
+            return MaintenanceService.getRuleById(id);
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
     }
 }
 
