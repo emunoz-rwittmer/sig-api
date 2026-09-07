@@ -532,7 +532,9 @@ class Staffervice {
                     fileName: document.fileName,
                     fileSize: document.fileSize,
                     status: document.status,
-                    expiryDate: document.expiryDate
+                    expiryDate: document.expiryDate,
+                    notifiedStage: null,
+                    notifiedAt: null
                 },
                 {
                     where: { id: document.id },

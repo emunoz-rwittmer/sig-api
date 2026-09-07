@@ -14,9 +14,13 @@ jest.mock('../../../src/models/operations/surveys/formRespond.models', () => ({
 jest.mock('../../../src/models/catalogs/positions.models', () => ({}));
 jest.mock('../../../src/models/operations/surveys/form.models', () => ({ findAll: jest.fn() }));
 jest.mock('../../../src/utils/database', () => ({}));
+jest.mock('../../../src/models/catalogs/staffDocumentation.models', () => ({ findAll: jest.fn() }));
+jest.mock('../../../src/models/catalogs/documentation.models', () => ({}));
 jest.mock('../../../src/mails/mailer', () => ({
     sendEmailEvaluationCrew: jest.fn(),
-    sendEmailCommentCard: jest.fn()
+    sendEmailCommentCard: jest.fn(),
+    sendEmailStaffDocumentExpiring: jest.fn(),
+    sendEmailRRHHDocumentExpiringDigest: jest.fn()
 }));
 jest.mock('../../../src/models/bar/cruises.models', () => ({}));
 jest.mock('../../../src/models/bar/passenger.models', () => ({}));

@@ -19,3 +19,9 @@ cron.schedule("0 14 * * 4", async () => {
 }, {
     timezone: "America/Guayaquil"
 });
+// Todos los días 06:00 revisar documentos de staff por caducar/vencidos
+cron.schedule("0 6 * * *", async () => {
+    CronJobs.checkExpiringStaffDocuments();
+}, {
+    timezone: "America/Guayaquil"
+});
