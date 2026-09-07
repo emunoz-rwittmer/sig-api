@@ -38,6 +38,16 @@ const StaffDocumentation = db.define('staff_documentation', {
         allowNull: true,
         field: "expiry_date",
     },
+    notifiedStage: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: "notified_stage",
+    },
+    notifiedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: "notified_at",
+    },
 });
 
 module.exports = StaffDocumentation;

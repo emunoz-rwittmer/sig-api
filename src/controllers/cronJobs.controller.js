@@ -15,7 +15,9 @@ const Form = require('../models/operations/surveys/form.models');
 const { Op } = require("sequelize");
 const db = require('../utils/database');
 
-const { sendEmailEvaluationCrew, sendEmailCommentCard } = require('../mails/mailer');
+const { sendEmailEvaluationCrew, sendEmailCommentCard, sendEmailStaffDocumentExpiring, sendEmailRRHHDocumentExpiringDigest } = require('../mails/mailer');
+const StaffDocumentation = require('../models/catalogs/staffDocumentation.models');
+const Documentation = require('../models/catalogs/documentation.models');
 const Cruise = require('../models/bar/cruises.models');
 const Passenger = require('../models/bar/passenger.models');
 const ConsumerCardCount = require('../models/bar/consumerCardCount.model');
@@ -519,10 +521,68 @@ const generateWeeklyEvaluationCrew = async () => {
     }
 };
 
+function computeExpiryStage(expiryDate, now) {
+    const daysLeft = moment(expiryDate).startOf('day').diff(moment(now).startOf('day'), 'days');
+
+    if (daysLeft < 0) return 'expired';
+    if (daysLeft <= 7) return '7';
+    if (daysLeft <= 30) return '30';
+    return null;
+}
+
+const checkExpiringStaffDocuments = async () => {
+    try {
+        const now = moment();
+
+        const records = await StaffDocumentation.findAll({
+            where: {
+                expiryDate: { [Op.not]: null }
+            },
+            include: [
+                {
+                    model: Staff,
+                    as: 'staff',
+                    required: true,
+                    where: { active: true },
+                    attributes: ['id', 'firstName', 'lastName', 'email']
+                },
+                {
+                    model: Documentation,
+                    as: 'document',
+                    attributes: ['id', 'name']
+                }
+            ]
+        });
+
+        const digestItems = [];
+
+        for (const record of records) {
+            const stage = computeExpiryStage(record.expiryDate, now);
+            if (!stage || stage === record.notifiedStage) continue;
+
+            const { staff, document } = record;
+
+            await sendEmailStaffDocumentExpiring(staff, document, stage, record.expiryDate);
+            digestItems.push({ staff, document, stage, expiryDate: record.expiryDate });
+
+            await record.update({ notifiedStage: stage, notifiedAt: now.toDate() });
+        }
+
+        if (digestItems.length > 0) {
+            await sendEmailRRHHDocumentExpiringDigest(digestItems);
+        }
+
+        console.log(`Documentos de staff notificados por caducidad: ${digestItems.length}`);
+    } catch (error) {
+        console.error('Error ejecutando cron job de documentos por caducar:', error);
+    }
+};
+
 const CronJobs = {
     generateWeeklyCommentCard,
     generateWeeklyCruisesAndPassengerInfo,
-    generateWeeklyEvaluationCrew
+    generateWeeklyEvaluationCrew,
+    checkExpiringStaffDocuments
 }
 
 module.exports = CronJobs;

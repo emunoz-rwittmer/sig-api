@@ -3,6 +3,7 @@ const Mails = require('./mailTemplates');
 const MailsConfirmation = require('./mailConfirmation');
 const MailsOrder = require('./mailOrder');
 const MailsSolicitudes = require('./mailRequests');
+const MailsDocumentation = require('./mailDocumentation');
 require('dotenv').config();
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
@@ -224,6 +225,28 @@ const sendEmailConfirmacion = (dataMail) => {
     });
 }
 
+const sendEmailStaffDocumentExpiring = (staff, document, stage, expiryDate) => {
+    const html = MailsDocumentation.htmlStaffDocumentExpiring(staff, document, stage, expiryDate);
+    return sendMail({
+        to: staff.email,
+        from: FROM_EMAIL,
+        subject: stage === 'expired'
+            ? `Documento vencido: ${document.name}`
+            : `Documento por caducar: ${document.name}`,
+        html,
+    });
+}
+
+const sendEmailRRHHDocumentExpiringDigest = (items) => {
+    const html = MailsDocumentation.htmlRRHHDocumentExpiringDigest(items);
+    return sendMail({
+        to: RECIPIENTS.belen,
+        from: FROM_EMAIL,
+        subject: 'Documentos de staff por caducar / vencidos',
+        html,
+    });
+}
+
 const sendEmailGuiaRemisionCreada = (dataMail, fileName, filePath) => {
     const html = MailsSolicitudes.htmlGuiaRemisionCreada(dataMail);
     return sendMail({
@@ -256,5 +279,7 @@ module.exports = {
     sendEmailNewRequest,
     sendEmailNuevaSolicitud,
     sendEmailConfirmacion,
-    sendEmailGuiaRemisionCreada
+    sendEmailGuiaRemisionCreada,
+    sendEmailStaffDocumentExpiring,
+    sendEmailRRHHDocumentExpiringDigest
 };
