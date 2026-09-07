@@ -241,6 +241,7 @@ const sendEmailRRHHDocumentExpiringDigest = (items) => {
     const html = MailsDocumentation.htmlRRHHDocumentExpiringDigest(items);
     return sendMail({
         to: RECIPIENTS.belen,
+        cc: RECIPIENTS.edison,
         from: FROM_EMAIL,
         subject: 'Documentos de staff por caducar / vencidos',
         html,
