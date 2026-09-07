@@ -33,13 +33,13 @@ Se decidió reconstruir el dominio completo desde cero (no reusar modelos, contr
 
 Todas las tablas nuevas, sin relación con las viejas. Convención: camelCase en JS, `field:` snake_case en columnas, timestamps por defecto de Sequelize (`createdAt`/`updatedAt`), igual que el resto del proyecto.
 
-### `yacht_equipment`
-Reemplaza `yacht_parts`. El equipo/pieza de un yate sujeta a mantenimiento (motor, generador, etc.).
+### `yacht_equipments`
+Reemplaza `yacht_parts`. El equipo/pieza de un yate sujeta a mantenimiento (motor, generador, etc.). Modelo `db.define('yacht_equipment', ...)` — Sequelize pluraliza el nombre de tabla automáticamente (igual que `yacht` → tabla `yachts`, ya lo hace hoy el resto del proyecto), de ahí el nombre real de tabla en plural.
 
 | Campo JS | Columna | Tipo | Null | Notas |
 |---|---|---|---|---|
 | `id` | `id` | INTEGER PK AI | no | |
-| `yachtId` | `yacht_id` | INTEGER FK → `yacht.id` | no | |
+| `yachtId` | `yacht_id` | INTEGER FK → `yachts.id` | no | |
 | `name` | `name` | STRING | no | |
 | `brand` | `marca` | STRING | sí | |
 | `model` | `modelo` | STRING | sí | |
@@ -68,7 +68,7 @@ Qué reglas aplican a qué equipo (M:N).
 | Campo JS | Columna | Tipo | Null | Notas |
 |---|---|---|---|---|
 | `id` | `id` | INTEGER PK AI | no | |
-| `equipmentId` | `equipment_id` | INTEGER FK → `yacht_equipment.id` | no | |
+| `equipmentId` | `equipment_id` | INTEGER FK → `yacht_equipments.id` | no | |
 | `ruleId` | `rule_id` | INTEGER FK → `maintenance_rules.id` | no | |
 | `active` | `active` | BOOLEAN | no | default `true` |
 
@@ -81,7 +81,7 @@ Qué reglas aplican a qué equipo (M:N).
 |---|---|---|---|---|
 | `id` | `id` | INTEGER PK AI | no | |
 | `ruleId` | `rule_id` | INTEGER FK → `maintenance_rules.id` | no | |
-| `productId` | `product_id` | INTEGER FK → `product.id` | no | |
+| `productId` | `product_id` | INTEGER FK → `products.id` | no | |
 | `recommendedQuantity` | `recommended_quantity` | INTEGER | no | |
 
 ### `maintenance_records`
@@ -90,8 +90,8 @@ Qué reglas aplican a qué equipo (M:N).
 | Campo JS | Columna | Tipo | Null | Notas |
 |---|---|---|---|---|
 | `id` | `id` | INTEGER PK AI | no | |
-| `equipmentId` | `equipment_id` | INTEGER FK → `yacht_equipment.id` | no | |
-| `yachtId` | `yacht_id` | INTEGER FK → `yacht.id` | no | denormalizado a propósito — filtrar historial por yate sin 3 niveles de include |
+| `equipmentId` | `equipment_id` | INTEGER FK → `yacht_equipments.id` | no | |
+| `yachtId` | `yacht_id` | INTEGER FK → `yachts.id` | no | denormalizado a propósito — filtrar historial por yate sin 3 niveles de include |
 | `ruleId` | `rule_id` | INTEGER FK → `maintenance_rules.id` | sí | null = correctivo, no ligado a una regla del catálogo |
 | `responsible` | `responsable` | STRING | no | mecánico según bitácora |
 | `workPerformed` | `work_performed` | TEXT | no | qué se hizo |
@@ -108,7 +108,7 @@ Materiales efectivamente usados en un registro del historial.
 |---|---|---|---|---|
 | `id` | `id` | INTEGER PK AI | no | |
 | `recordId` | `record_id` | INTEGER FK → `maintenance_records.id` | no | |
-| `productId` | `product_id` | INTEGER FK → `product.id` | no | |
+| `productId` | `product_id` | INTEGER FK → `products.id` | no | |
 | `quantity` | `quantity` | INTEGER | no | |
 
 ### Associations (`src/models/init.models.js`)
@@ -226,7 +226,7 @@ Mismo patrón que `comentCard`/`reports/desempeno`:
 **No hay tooling de migraciones en el repo** (`db.sync({ alter: false })` en `app.js`, sin carpeta `migrations/`). El `.env` local de este repo apunta a la base de **producción** ([[interno-api-production-db-caution]]) — nunca se ejecutan escrituras/DDL contra ella desde una sesión automatizada sin confirmación explícita del usuario en el momento.
 
 Plan:
-1. Se prepara el script SQL de `DROP TABLE` (tablas viejas: `maintenance`, `maintenance_materials`, `maintenancerules_part`, `maintenance_rules`, `yacht_parts`) + `CREATE TABLE` (tablas nuevas de este spec), como artefacto separado, no como algo que se ejecuta automáticamente durante la implementación del código.
+1. Se prepara el script SQL de `DROP TABLE` (tablas viejas — nombres reales en BD, ya pluralizados por Sequelize: `maintenances`, `maintenance_materials`, `maintenancerules_parts`, `maintenance_rules`, `yacht_parts`) + `CREATE TABLE` (tablas nuevas de este spec: `yacht_equipments`, `maintenance_rules`, `maintenance_rule_assignments`, `maintenance_rule_materials`, `maintenance_records`, `maintenance_record_materials`), como artefacto separado, no como algo que se ejecuta automáticamente durante la implementación del código.
 2. El usuario decide cuándo y cómo correrlo contra producción (él mismo, o pidiéndole a la sesión que lo haga con confirmación explícita en ese momento).
 3. Los tests de dominio **no** dependen de este paso — corren contra `.env.test` con `db.sync({ force: true })` (`tests/helpers/testApp.js`), una base separada de la de producción.
 
