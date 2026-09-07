@@ -1,5 +1,6 @@
 const { Op } = require('sequelize');
 const db = require('../../utils/database');
+const Yacht = require('../../models/catalogs/yacht.models');
 const YachtEquipment = require('../../models/catalogs/yachtEquipment.models');
 const MaintenanceRule = require('../../models/catalogs/maintenanceRule.models');
 const MaintenanceRuleMaterial = require('../../models/catalogs/maintenanceRuleMaterial.models');
@@ -247,6 +248,50 @@ class MaintenanceService {
             { where: { id } }
         );
         return MaintenanceService.getRecordById(id);
+    }
+
+    // BOOK
+    static async getYachtForBook(yachtId) {
+        return Yacht.findOne({ where: { id: yachtId }, attributes: ['id', 'name', 'code'] });
+    }
+
+    static async getMaintenanceBook(yachtId) {
+        return YachtEquipment.findAll({
+            where: { yachtId },
+            order: [['name', 'ASC']],
+            include: [
+                {
+                    model: MaintenanceRuleAssignment,
+                    as: 'ruleAssignments',
+                    where: { active: true },
+                    required: false,
+                    separate: true,
+                    include: [{
+                        model: MaintenanceRule,
+                        as: 'rule',
+                        include: [{
+                            model: MaintenanceRuleMaterial,
+                            as: 'recommendedMaterials',
+                            include: [{ model: Product, as: 'product', attributes: ['id', 'name'] }],
+                        }],
+                    }],
+                },
+                {
+                    model: MaintenanceRecord,
+                    as: 'records',
+                    separate: true,
+                    order: [['performedAt', 'DESC']],
+                    include: [
+                        { model: MaintenanceRule, as: 'rule', attributes: ['id', 'name'] },
+                        {
+                            model: MaintenanceRecordMaterial,
+                            as: 'materials',
+                            include: [{ model: Product, as: 'product', attributes: ['id', 'name'] }],
+                        },
+                    ],
+                },
+            ],
+        });
     }
 }
 

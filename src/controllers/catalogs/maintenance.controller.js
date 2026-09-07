@@ -463,6 +463,53 @@ const approveRecord = async (req, res, next) => {
     }
 };
 
+// BOOK
+
+const getMaintenanceBook = async (req, res, next) => {
+    try {
+        const yachtId = decodeId(req.params.yacht_id, 'ID de yate');
+        const yacht = await MaintenanceService.getYachtForBook(yachtId);
+        if (!yacht) {
+            throw new AppError('Yate no encontrado', 404);
+        }
+        const equipment = await MaintenanceService.getMaintenanceBook(yachtId);
+
+        encodeInstanceField(yacht, 'id');
+
+        const equipmentBook = equipment.map((item) => {
+            encodeInstanceField(item, 'id');
+            encodeInstanceField(item, 'yachtId');
+
+            const rules = item.dataValues.ruleAssignments.map((assignment) => {
+                const rule = assignment.dataValues.rule;
+                encodeInstanceField(rule, 'id');
+                const recommendedMaterials = rule.dataValues.recommendedMaterials.map((material) => {
+                    encodeInstanceField(material, 'id');
+                    encodeInstanceField(material.dataValues.product, 'id');
+                    return material;
+                });
+                rule.dataValues.recommendedMaterials = recommendedMaterials;
+                return rule;
+            });
+
+            const history = item.dataValues.records.map((record) => {
+                encodeRecord(record);
+                return record;
+            });
+
+            item.dataValues.rules = rules;
+            item.dataValues.history = history;
+            delete item.dataValues.ruleAssignments;
+            delete item.dataValues.records;
+            return item;
+        });
+
+        res.status(200).json({ yacht, equipment: equipmentBook });
+    } catch (error) {
+        next(error);
+    }
+};
+
 const MaintenanceController = {
     getAllEquipment,
     createEquipment,
@@ -478,5 +525,6 @@ const MaintenanceController = {
     createRecord,
     updateRecord,
     approveRecord,
+    getMaintenanceBook,
 };
 module.exports = MaintenanceController;

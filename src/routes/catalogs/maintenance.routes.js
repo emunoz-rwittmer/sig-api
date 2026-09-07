@@ -576,4 +576,33 @@ router.put('/records/:record_id', MaintenanceController.updateRecord);
  */
 router.put('/records/:record_id/approve', MaintenanceController.approveRecord);
 
+// BOOK
+
+/**
+ * @openapi
+ * /maintenance/yachts/{yacht_id}/book:
+ *   get:
+ *     summary: Libro de mantenimiento completo de un yate
+ *     tags: [Mantenimiento]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: yacht_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID codificado del yate
+ *     responses:
+ *       200:
+ *         description: Yate, sus equipos, las reglas/materiales recomendados de cada uno y su historial
+ *       400:
+ *         description: ID inválido
+ *       404:
+ *         description: Yate no encontrado
+ *       500:
+ *         description: Error inesperado
+ */
+router.get('/yachts/:yacht_id/book', MaintenanceController.getMaintenanceBook);
+
 module.exports = router;
