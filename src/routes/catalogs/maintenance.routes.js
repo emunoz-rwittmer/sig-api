@@ -452,6 +452,11 @@ router.get('/records/:record_id', MaintenanceController.getRecord);
  *               observation:
  *                 type: string
  *                 nullable: true
+ *               maintenanceType:
+ *                 type: string
+ *                 enum: [preventivo, correctivo]
+ *                 nullable: true
+ *                 description: Si se omite, se infiere de si el registro tiene ruleId (preventivo) o no (correctivo).
  *               materials:
  *                 type: array
  *                 items:
@@ -514,6 +519,11 @@ router.post('/records', MaintenanceController.createRecord);
  *               observation:
  *                 type: string
  *                 nullable: true
+ *               maintenanceType:
+ *                 type: string
+ *                 enum: [preventivo, correctivo]
+ *                 nullable: true
+ *                 description: Si se omite, se infiere de si el registro tiene ruleId (preventivo) o no (correctivo).
  *               materials:
  *                 type: array
  *                 items:
@@ -575,6 +585,34 @@ router.put('/records/:record_id', MaintenanceController.updateRecord);
  *         description: Error inesperado
  */
 router.put('/records/:record_id/approve', MaintenanceController.approveRecord);
+
+// ALERTS
+
+/**
+ * @openapi
+ * /maintenance/alerts:
+ *   get:
+ *     summary: Calcula el estado de cumplimiento de cada regla asignada (vencida, próxima a vencer, al día)
+ *     tags: [Mantenimiento]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: yachtId
+ *         schema:
+ *           type: string
+ *         description: ID codificado del yate para filtrar
+ *     responses:
+ *       200:
+ *         description: >
+ *           Lista de alertas por asignación regla-equipo activa. `status` es uno de:
+ *           `vencida`, `proxima`, `al_dia`, `nunca_realizada`, `sin_horometro`, `sin_periodicidad`.
+ *       400:
+ *         description: yachtId inválido
+ *       500:
+ *         description: Error inesperado
+ */
+router.get('/alerts', MaintenanceController.getRuleAlerts);
 
 // BOOK
 

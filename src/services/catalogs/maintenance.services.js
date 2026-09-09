@@ -1,4 +1,5 @@
 const { Op } = require('sequelize');
+const dayjs = require('dayjs');
 const db = require('../../utils/database');
 const Yacht = require('../../models/catalogs/yacht.models');
 const YachtEquipment = require('../../models/catalogs/yachtEquipment.models');
@@ -8,6 +9,60 @@ const MaintenanceRuleAssignment = require('../../models/catalogs/maintenanceRule
 const MaintenanceRecord = require('../../models/catalogs/maintenanceRecord.models');
 const MaintenanceRecordMaterial = require('../../models/catalogs/maintenanceRecordMaterial.models');
 const Product = require('../../models/operations/inventory/product.models');
+
+const DATE_UNIT_BY_PERIODICITY = { dias: 'day', meses: 'month', anios: 'year' };
+
+// Ventana de advertencia previa al vencimiento antes de pasar de "al día" a "próxima".
+// Horas: margen fijo de 24 horas de operación. Calendario: 10% del período, con un
+// piso mínimo para que periodicidades muy cortas igual den margen de reacción.
+const HOUR_WARNING_WINDOW = 24;
+const DAY_WARNING_MIN = 3;
+
+const buildRuleAlert = (assignment, equipmentRecords) => {
+    const rule = assignment.rule;
+    const equipment = assignment.equipment;
+    const recordsForRule = equipmentRecords.filter((record) => record.ruleId === rule.id);
+    const lastPerformed = recordsForRule[0] ?? null;
+
+    const base = {
+        equipmentId: equipment.id,
+        equipmentName: equipment.name,
+        yachtId: equipment.yachtId,
+        ruleId: rule.id,
+        ruleName: rule.name,
+        periodicityValue: rule.periodicityValue,
+        periodicityUnit: rule.periodicityUnit,
+        lastPerformedAt: lastPerformed?.performedAt ?? null,
+    };
+
+    if (!rule.periodicityValue || !rule.periodicityUnit) {
+        return { ...base, status: 'sin_periodicidad', remainingDays: null, remainingHours: null };
+    }
+
+    if (!lastPerformed) {
+        return { ...base, status: 'nunca_realizada', remainingDays: null, remainingHours: null };
+    }
+
+    if (rule.periodicityUnit === 'horas') {
+        if (lastPerformed.hoursReading == null) {
+            return { ...base, status: 'sin_horometro', remainingDays: null, remainingHours: null };
+        }
+        const currentHours = equipmentRecords.find((record) => record.hoursReading != null)?.hoursReading ?? lastPerformed.hoursReading;
+        const dueAtHours = lastPerformed.hoursReading + rule.periodicityValue;
+        const remainingHours = dueAtHours - currentHours;
+        const status = remainingHours <= 0 ? 'vencida' : remainingHours <= HOUR_WARNING_WINDOW ? 'proxima' : 'al_dia';
+        return { ...base, status, remainingDays: null, remainingHours, currentHours };
+    }
+
+    const unit = DATE_UNIT_BY_PERIODICITY[rule.periodicityUnit];
+    const lastPerformedAt = dayjs(lastPerformed.performedAt);
+    const dueAt = lastPerformedAt.add(rule.periodicityValue, unit);
+    const remainingDays = dueAt.diff(dayjs(), 'day');
+    const periodDays = dueAt.diff(lastPerformedAt, 'day');
+    const warningDays = Math.max(Math.round(periodDays * 0.1), DAY_WARNING_MIN);
+    const status = remainingDays <= 0 ? 'vencida' : remainingDays <= warningDays ? 'proxima' : 'al_dia';
+    return { ...base, status, remainingDays, remainingHours: null, dueAt: dueAt.toISOString() };
+};
 
 class MaintenanceService {
     // EQUIPMENT
@@ -190,6 +245,7 @@ class MaintenanceService {
                 performedAt: data.performedAt,
                 hoursReading: data.hoursReading,
                 observation: data.observation,
+                maintenanceType: data.maintenanceType,
             }, { transaction });
 
             if (data.materials.length) {
@@ -222,6 +278,7 @@ class MaintenanceService {
                 performedAt: data.performedAt,
                 hoursReading: data.hoursReading,
                 observation: data.observation,
+                maintenanceType: data.maintenanceType,
             }, { transaction });
 
             await MaintenanceRecordMaterial.destroy({ where: { recordId: id }, transaction });
@@ -250,9 +307,39 @@ class MaintenanceService {
         return MaintenanceService.getRecordById(id);
     }
 
+    // ALERTS
+    static async getRuleAlerts(yachtId) {
+        const equipmentWhere = { active: true };
+        if (yachtId) equipmentWhere.yachtId = yachtId;
+
+        const assignments = await MaintenanceRuleAssignment.findAll({
+            where: { active: true },
+            include: [
+                { model: MaintenanceRule, as: 'rule', where: { active: true } },
+                { model: YachtEquipment, as: 'equipment', where: equipmentWhere, attributes: ['id', 'name', 'yachtId'] },
+            ],
+        });
+
+        if (!assignments.length) return [];
+
+        const equipmentIds = [...new Set(assignments.map((assignment) => assignment.equipmentId))];
+        const records = await MaintenanceRecord.findAll({
+            where: { equipmentId: { [Op.in]: equipmentIds } },
+            order: [['performedAt', 'DESC']],
+        });
+
+        const recordsByEquipment = new Map();
+        records.forEach((record) => {
+            if (!recordsByEquipment.has(record.equipmentId)) recordsByEquipment.set(record.equipmentId, []);
+            recordsByEquipment.get(record.equipmentId).push(record);
+        });
+
+        return assignments.map((assignment) => buildRuleAlert(assignment, recordsByEquipment.get(assignment.equipmentId) ?? []));
+    }
+
     // BOOK
     static async getYachtForBook(yachtId) {
-        return Yacht.findOne({ where: { id: yachtId }, attributes: ['id', 'name', 'code'] });
+        return Yacht.findOne({ where: { id: yachtId }, attributes: ['id', 'name', 'code', 'active'] });
     }
 
     static async getMaintenanceBook(yachtId) {
