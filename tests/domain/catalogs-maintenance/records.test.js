@@ -44,6 +44,7 @@ describe('catalogs/maintenance - records (historial)', () => {
         const stored = await MaintenanceRecord.findOne({ where: { responsible: 'Carlos Mecánico' } });
         expect(stored.ruleId).toBeNull();
         expect(stored.yachtId).toBe(yacht.id);
+        expect(stored.maintenanceType).toBe('correctivo');
 
         const list = await auth(
             request(app).get(`/api/maintenance/records?yachtId=${Utils.encode(yacht.id)}`)
@@ -75,6 +76,38 @@ describe('catalogs/maintenance - records (historial)', () => {
 
         const stored = await MaintenanceRecord.findOne({ where: { responsible: 'Pedro' } });
         expect(stored.ruleId).toBe(rule.id);
+        expect(stored.maintenanceType).toBe('preventivo');
+    });
+
+    it('accepts an explicit maintenanceType override and rejects an invalid one', async () => {
+        const { yacht } = await createCompanyWithYacht('Records Type Co', 'Records Type Yacht');
+        const equipment = await YachtEquipment.create({ yachtId: yacht.id, name: 'Motor' });
+        const rule = await MaintenanceRule.create({ name: 'Cambio de aceite' });
+
+        const created = await auth(
+            request(app).post('/api/maintenance/records').send({
+                equipmentId: Utils.encode(equipment.id),
+                ruleId: Utils.encode(rule.id),
+                responsible: 'Marta',
+                workPerformed: 'Cambio de aceite anticipado por avería',
+                performedAt: '2026-09-02T08:00:00.000Z',
+                maintenanceType: 'correctivo',
+            })
+        );
+        expect(created.status).toBe(200);
+        const stored = await MaintenanceRecord.findOne({ where: { responsible: 'Marta' } });
+        expect(stored.maintenanceType).toBe('correctivo');
+
+        const invalid = await auth(
+            request(app).post('/api/maintenance/records').send({
+                equipmentId: Utils.encode(equipment.id),
+                responsible: 'Marta',
+                workPerformed: 'Algo',
+                performedAt: '2026-09-02T08:00:00.000Z',
+                maintenanceType: 'urgente',
+            })
+        );
+        expect(invalid.status).toBe(400);
     });
 
     it('filters the history correctly across multiple yachts', async () => {

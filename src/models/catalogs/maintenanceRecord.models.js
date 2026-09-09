@@ -32,6 +32,11 @@ const MaintenanceRecord = db.define('maintenance_record', {
         allowNull: false,
         field: 'work_performed',
     },
+    maintenanceType: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'maintenance_type',
+    },
     performedAt: {
         type: DataTypes.DATE,
         allowNull: false,

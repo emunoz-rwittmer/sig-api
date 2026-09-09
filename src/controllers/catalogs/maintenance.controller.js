@@ -289,6 +289,19 @@ const validateMaterials = (materials) => {
     });
 };
 
+const MAINTENANCE_TYPES = ['preventivo', 'correctivo'];
+
+const validateMaintenanceType = (maintenanceType) => {
+    if (maintenanceType === undefined || maintenanceType === null) return;
+    if (!MAINTENANCE_TYPES.includes(maintenanceType)) {
+        throw new AppError(`maintenanceType debe ser uno de: ${MAINTENANCE_TYPES.join(', ')}`, 400);
+    }
+};
+
+// Si el cliente no especifica el tipo, se infiere de si el registro está
+// ligado a una regla preventiva o no.
+const resolveMaintenanceType = (maintenanceType, ruleId) => maintenanceType ?? (ruleId ? 'preventivo' : 'correctivo');
+
 const encodeRecord = (record) => {
     encodeInstanceField(record, 'id');
     encodeInstanceField(record, 'equipmentId');
@@ -316,6 +329,7 @@ const validateRecordPayload = (body) => {
     }
     requireValidDate(performedAt, 'performedAt');
     validateMaterials(body.materials);
+    validateMaintenanceType(body.maintenanceType);
 };
 
 const getAllRecords = async (req, res, next) => {
@@ -352,7 +366,7 @@ const getRecord = async (req, res, next) => {
 const createRecord = async (req, res, next) => {
     try {
         validateRecordPayload(req.body);
-        const { equipmentId, ruleId, responsible, workPerformed, performedAt, hoursReading, observation, materials } = req.body;
+        const { equipmentId, ruleId, responsible, workPerformed, performedAt, hoursReading, observation, materials, maintenanceType } = req.body;
 
         const decodedEquipmentId = decodeId(equipmentId, 'ID de equipo');
         const equipment = await MaintenanceService.getEquipmentById(decodedEquipmentId);
@@ -383,6 +397,7 @@ const createRecord = async (req, res, next) => {
             hoursReading: hoursReading ?? null,
             observation: observation ?? null,
             materials: decodedMaterials,
+            maintenanceType: resolveMaintenanceType(maintenanceType, decodedRuleId),
         });
 
         res.status(200).json({ data: 'resource created successfully' });
@@ -403,7 +418,7 @@ const updateRecord = async (req, res, next) => {
         }
 
         validateRecordPayload(req.body);
-        const { equipmentId, ruleId, responsible, workPerformed, performedAt, hoursReading, observation, materials } = req.body;
+        const { equipmentId, ruleId, responsible, workPerformed, performedAt, hoursReading, observation, materials, maintenanceType } = req.body;
 
         const decodedEquipmentId = decodeId(equipmentId, 'ID de equipo');
         const equipment = await MaintenanceService.getEquipmentById(decodedEquipmentId);
@@ -434,6 +449,7 @@ const updateRecord = async (req, res, next) => {
             hoursReading: hoursReading ?? null,
             observation: observation ?? null,
             materials: decodedMaterials,
+            maintenanceType: resolveMaintenanceType(maintenanceType, decodedRuleId),
         });
 
         res.status(200).json({ data: 'resource updated successfully' });
@@ -460,6 +476,24 @@ const approveRecord = async (req, res, next) => {
 
         await MaintenanceService.approveRecord(recordId, approvedBy);
         res.status(200).json({ data: 'resource approved successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// ALERTS
+
+const getRuleAlerts = async (req, res, next) => {
+    try {
+        const yachtId = decodeOptionalId(req.query.yachtId, 'ID de yate');
+        const alerts = await MaintenanceService.getRuleAlerts(yachtId);
+        const encoded = alerts.map((alert) => ({
+            ...alert,
+            equipmentId: Utils.encode(alert.equipmentId),
+            yachtId: Utils.encode(alert.yachtId),
+            ruleId: Utils.encode(alert.ruleId),
+        }));
+        res.status(200).json(encoded);
     } catch (error) {
         next(error);
     }
@@ -521,6 +555,7 @@ const MaintenanceController = {
     createRecord,
     updateRecord,
     approveRecord,
+    getRuleAlerts,
     getMaintenanceBook,
 };
 module.exports = MaintenanceController;
