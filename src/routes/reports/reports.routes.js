@@ -220,7 +220,7 @@ router.get('/comentCards/generateReport/:yacht_id', authJwt.verifyToken, excelRe
  *         description: Nombre del yate para filtrar (opcional, sin filtro = todos)
  *     responses:
  *       200:
- *         description: KPIs por año y series mensuales de calificación/compliance
+ *         description: KPIs por año, promedio por yate, últimas evaluaciones, top 5 evaluados mejor calificados y series mensuales de calificación/compliance
  *       403:
  *         description: Token no proporcionado o rol no autorizado
  */
@@ -239,10 +239,15 @@ router.get('/desempeno/overview', authJwt.verifyToken, authJwt.hasAnyRole(DESEMP
  *         name: yate
  *         schema:
  *           type: string
- *         description: Nombre del yate para filtrar los KPIs (opcional)
+ *         description: Nombre del yate para filtrar los KPIs y series mensuales (opcional)
+ *       - in: query
+ *         name: anio
+ *         schema:
+ *           type: string
+ *         description: Año para filtrar los KPIs, comparativas de flota (avgByYate/radar) y series mensuales (opcional)
  *     responses:
  *       200:
- *         description: Promedio por yate + KPIs y series mensuales
+ *         description: Años disponibles y KPIs por año (según yate), promedio por yate, radar comparativo por competencia (top 6 más frecuentes) por yate — ambos acotados por año si se filtra —, KPIs y series mensuales acotados por yate y año
  *       403:
  *         description: Token no proporcionado o rol no autorizado
  */
@@ -278,9 +283,15 @@ router.get('/desempeno/yates', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO
  *         schema:
  *           type: integer
  *         description: Año para filtrar (opcional). Si se omite, los datos de distintos años se combinan en el mismo mes — se recomienda siempre pasar este filtro en producción.
+ *       - in: query
+ *         name: tipoEvaluacion
+ *         schema:
+ *           type: string
+ *           enum: [liderazgo, administrativa]
+ *         description: Filtra por el tipo de formulario de evaluación (Form.isAdministrative — false = liderazgo, true = administrativa/operaciones). Opcional; se omite = ambos tipos combinados.
  *     responses:
  *       200:
- *         description: KPIs (kpisByYear, kpis con calificacionMax/calificacionMin), promedios y series mensuales (avgByYate, monthlyCalificacion, monthlyCompliance, monthlyCalificacionByYate), tablas por evaluado/evaluador y comentarios de texto libre. A diferencia de /yates, aquí avgByYate y monthlyCalificacionByYate respetan el filtro yate actual (no siempre muestran las 4 embarcaciones).
+ *         description: Años disponibles y kpisByYear (acotados por yate/función/área/tipoEvaluacion, nunca por año ni evaluado — tendencia año a año del conjunto seleccionado); porEvaluado/avgByYate/monthlyCalificacionByYate (ranking y comparativas, acotados también por año si se filtra, pero nunca por evaluado — el resto de personas/yates siguen visibles aunque haya una selección); kpis (con calificacionMax/calificacionMin), monthlyCalificacion/monthlyCompliance, porEvaluadorMensual/porEvaluadorTrimestre y comentarios de texto libre (estos sí acotados por evaluado — el "drill-down" del filtro completo; comentarios limitado a los 30 más recientes).
  *       403:
  *         description: Token no proporcionado o rol no autorizado
  */

@@ -129,4 +129,73 @@ describe('desempenoDashboard.services getPersonas', () => {
         expect(matched.porEvaluado.some((p) => p.evaluado === evaluatedFullName)).toBe(true);
         expect(unmatched.porEvaluado.some((p) => p.evaluado === evaluatedFullName)).toBe(false);
     });
+
+    it('keeps porEvaluado/avgByYate showing everyone (year-scoped only) even when evaluado is selected, and scopes kpis to just that person', async () => {
+        const caseSuffix = `${Date.now()}`;
+        const { company } = await createCompanyWithYacht(`Personas Toggle Co ${caseSuffix}`);
+        const form = await Form.create({ name: `Form Personas Toggle ${caseSuffix}`, positions: [] });
+        const question = await FormQuestion.create({ formId: form.id, title: 'Pregunta 1', type: 'scale' });
+
+        const captainA = await FormRespond.create({
+            companyId: company.id, formId: form.id, state: 'Completada',
+            evaluator: `Eval Toggle ${caseSuffix}`, evaluated: `Capitan A ${caseSuffix}`,
+            expirationDate: new Date('2025-09-01'),
+        });
+        await setUpdatedAt('form_responds', captainA.id, '2025-09-05T12:00:00');
+        await FormAnswers.create({ respuestaId: captainA.id, questionId: question.id, answer: '5' });
+
+        const captainB = await FormRespond.create({
+            companyId: company.id, formId: form.id, state: 'Completada',
+            evaluator: `Eval Toggle ${caseSuffix}`, evaluated: `Capitan B ${caseSuffix}`,
+            expirationDate: new Date('2025-09-01'),
+        });
+        await setUpdatedAt('form_responds', captainB.id, '2025-09-10T12:00:00');
+        await FormAnswers.create({ respuestaId: captainB.id, questionId: question.id, answer: '3' });
+
+        const result = await getPersonas({ evaluado: `Capitan A ${caseSuffix}`, anio: 2025 });
+
+        expect(result.kpis.calificacion).toBe(5); // scoped to Capitan A only
+        expect(result.porEvaluado.some((p) => p.evaluado === `Capitan A ${caseSuffix}`)).toBe(true);
+        expect(result.porEvaluado.some((p) => p.evaluado === `Capitan B ${caseSuffix}`)).toBe(true); // still visible for comparison
+
+        const rowA = result.porEvaluado.find((p) => p.evaluado === `Capitan A ${caseSuffix}`);
+        expect(rowA.compliancePercent).toBe(100);
+        expect(rowA.completadas).toBe(1);
+    });
+
+    it('filters by tipoEvaluacion (liderazgo -> isAdministrative false, administrativa -> true)', async () => {
+        const caseSuffix = `${Date.now()}`;
+        const { company } = await createCompanyWithYacht(`Personas Tipo Co ${caseSuffix}`);
+        const formLiderazgo = await Form.create({ name: `Form Liderazgo ${caseSuffix}`, positions: [], isAdministrative: false });
+        const formAdministrativa = await Form.create({ name: `Form Administrativa ${caseSuffix}`, positions: [], isAdministrative: true });
+        const questionLiderazgo = await FormQuestion.create({ formId: formLiderazgo.id, title: 'Pregunta 1', type: 'scale' });
+        const questionAdministrativa = await FormQuestion.create({ formId: formAdministrativa.id, title: 'Pregunta 1', type: 'scale' });
+
+        const evalLiderazgo = await FormRespond.create({
+            companyId: company.id, formId: formLiderazgo.id, state: 'Completada',
+            evaluator: `Eval Tipo ${caseSuffix}`, evaluated: `Capitan Tipo ${caseSuffix}`,
+            expirationDate: new Date('2025-10-01'),
+        });
+        await setUpdatedAt('form_responds', evalLiderazgo.id, '2025-10-01T12:00:00');
+        await FormAnswers.create({ respuestaId: evalLiderazgo.id, questionId: questionLiderazgo.id, answer: '5' });
+
+        const evalAdministrativa = await FormRespond.create({
+            companyId: company.id, formId: formAdministrativa.id, state: 'Completada',
+            evaluator: `Eval Tipo ${caseSuffix}`, evaluated: `Capitan Tipo ${caseSuffix}`,
+            expirationDate: new Date('2025-10-01'),
+        });
+        await setUpdatedAt('form_responds', evalAdministrativa.id, '2025-10-02T12:00:00');
+        await FormAnswers.create({ respuestaId: evalAdministrativa.id, questionId: questionAdministrativa.id, answer: '3' });
+
+        const liderazgo = await getPersonas({ evaluado: `Capitan Tipo ${caseSuffix}`, anio: 2025, tipoEvaluacion: 'liderazgo' });
+        const administrativa = await getPersonas({ evaluado: `Capitan Tipo ${caseSuffix}`, anio: 2025, tipoEvaluacion: 'administrativa' });
+        const ambas = await getPersonas({ evaluado: `Capitan Tipo ${caseSuffix}`, anio: 2025 });
+
+        expect(liderazgo.kpis.calificacion).toBe(5);
+        expect(liderazgo.kpis.completadas).toBe(1);
+        expect(administrativa.kpis.calificacion).toBe(3);
+        expect(administrativa.kpis.completadas).toBe(1);
+        expect(ambas.kpis.calificacion).toBe(4); // ambos formularios combinados
+        expect(ambas.kpis.completadas).toBe(2);
+    });
 });
