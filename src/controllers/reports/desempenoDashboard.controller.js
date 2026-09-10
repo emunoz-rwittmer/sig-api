@@ -19,7 +19,7 @@ const getDesempenoOverview = async (req, res, next) => {
 
 const getDesempenoYates = async (req, res, next) => {
     try {
-        const yates = await getYates(asString(req.query.yate));
+        const yates = await getYates(asString(req.query.yate), asString(req.query.anio));
         res.status(200).json(yates);
     } catch (error) {
         next(error);
@@ -28,13 +28,14 @@ const getDesempenoYates = async (req, res, next) => {
 
 const getDesempenoPersonas = async (req, res, next) => {
     try {
-        const { yate, evaluado, funcion, area, anio } = req.query;
+        const { yate, evaluado, funcion, area, anio, tipoEvaluacion } = req.query;
         const personas = await getPersonas({
             yate: asString(yate),
             evaluado: asString(evaluado),
             funcion: asString(funcion),
             area: asString(area),
             anio: asString(anio),
+            tipoEvaluacion: asString(tipoEvaluacion),
         });
         res.status(200).json(personas);
     } catch (error) {

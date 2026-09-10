@@ -44,5 +44,43 @@ describe('desempenoDashboard.services getYates', () => {
         expect(betaAvg.calificacion).toBe(3);
         expect(result.kpis.calificacion).toBe(5); // scoped to Yacht Alpha only
         expect(result.kpis.completadas).toBe(1);
+
+        const competenciaIndex = result.radar.competencias.indexOf('Pregunta 1');
+        expect(competenciaIndex).toBeGreaterThanOrEqual(0);
+
+        const alphaRadar = result.radar.series.find((s) => s.yate === 'Yacht Alpha');
+        const betaRadar = result.radar.series.find((s) => s.yate === 'Yacht Beta');
+        expect(alphaRadar.valores[competenciaIndex]).toBe(5);
+        expect(betaRadar.valores[competenciaIndex]).toBe(3);
+    });
+
+    it('scopes kpis, avgByYate and radar by anio, and reports kpisByYear per yate', async () => {
+        const { company } = await createCompanyWithYacht('Yates Co Anio', 'Yacht Gamma');
+        const form = await Form.create({ name: 'Form Yates Anio', positions: [] });
+        const question = await FormQuestion.create({ formId: form.id, title: 'Pregunta 1', type: 'scale' });
+
+        const respond2024 = await FormRespond.create({
+            companyId: company.id, formId: form.id, state: 'Completada',
+            evaluator: 'Eval Gamma', evaluated: 'Evaluado Gamma', expirationDate: new Date('2024-06-01'),
+        });
+        await setUpdatedAt('form_responds', respond2024.id, '2024-06-01T12:00:00');
+        await FormAnswers.create({ respuestaId: respond2024.id, questionId: question.id, answer: '2' });
+
+        const respond2025 = await FormRespond.create({
+            companyId: company.id, formId: form.id, state: 'Completada',
+            evaluator: 'Eval Gamma', evaluated: 'Evaluado Gamma', expirationDate: new Date('2025-06-01'),
+        });
+        await setUpdatedAt('form_responds', respond2025.id, '2025-06-01T12:00:00');
+        await FormAnswers.create({ respuestaId: respond2025.id, questionId: question.id, answer: '5' });
+
+        const result = await getYates('Yacht Gamma', '2025');
+
+        expect(result.kpis.calificacion).toBe(5); // only 2025 counted
+        expect(result.avgByYate.find((y) => y.yate === 'Yacht Gamma').calificacion).toBe(5);
+
+        const kpi2024 = result.kpisByYear.find((k) => k.year === 2024);
+        const kpi2025 = result.kpisByYear.find((k) => k.year === 2025);
+        expect(kpi2024.calificacion).toBe(2);
+        expect(kpi2025.calificacion).toBe(5);
     });
 });

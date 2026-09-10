@@ -74,4 +74,44 @@ describe('desempenoDashboard.services getOverview', () => {
         expect(matched.years).toContain(2025);
         expect(unmatched.years).not.toContain(2025);
     });
+
+    it('computes avgByYate and surfaces recentEvaluations / topEvaluados for the fleet card + activity panels', async () => {
+        const { company } = await createCompanyWithYacht('Overview Panels Co', 'Panels Yacht');
+        const form = await Form.create({ name: 'Form Overview Panels', positions: [] });
+        const question = await FormQuestion.create({ formId: form.id, title: 'Pregunta 1', type: 'scale' });
+
+        const older = await FormRespond.create({
+            companyId: company.id,
+            formId: form.id,
+            state: 'Completada',
+            evaluator: 'Eval Panels',
+            evaluated: 'Evaluado Older',
+            expirationDate: new Date('2025-05-10'),
+        });
+        await setUpdatedAt('form_responds', older.id, '2025-05-01T09:00:00');
+        await FormAnswers.create({ respuestaId: older.id, questionId: question.id, answer: '4' });
+
+        const newer = await FormRespond.create({
+            companyId: company.id,
+            formId: form.id,
+            state: 'Caducada',
+            evaluator: 'Eval Panels',
+            evaluated: 'Evaluado Newer',
+            expirationDate: new Date('2025-05-20'),
+        });
+        await setUpdatedAt('form_responds', newer.id, '2025-05-15T09:00:00');
+
+        const result = await getOverview();
+
+        const panelsYate = result.avgByYate.find((entry) => entry.yate === 'Panels Yacht');
+        expect(panelsYate).toBeDefined();
+        expect(panelsYate.completadas).toBeGreaterThanOrEqual(1);
+        expect(panelsYate.caducadas).toBeGreaterThanOrEqual(1);
+
+        expect(result.recentEvaluations[0].evaluado).toBe('Evaluado Newer');
+        expect(result.recentEvaluations.some((row) => row.evaluado === 'Evaluado Older')).toBe(true);
+
+        expect(result.topEvaluados.some((row) => row.evaluado === 'Evaluado Older')).toBe(true);
+        expect(result.topEvaluados.every((row) => row.evaluado !== 'Evaluado Newer')).toBe(true);
+    });
 });
