@@ -2,8 +2,16 @@ const StaffService = require('../../services/catalogs/staff.services');
 const Utils = require('../../utils/Utils');
 const Tokens = require('../../utils/tokens');
 const fs = require('fs');
+const fsPromises = require('fs').promises;
 const path = require('path');
+const moment = require('moment');
 const AppError = require('../../errors/AppError');
+const {
+    generateExpiringDocumentsReportExcel,
+    generateEmbarkedTodayReportExcel,
+} = require('../../services/catalogs/staffReportsExcel.services');
+
+const UPLOADS_BASE_PATH = path.resolve(__dirname, '../../../uploads');
 
 const getAllStaffs = async (req, res, next) => {
     try {
@@ -36,6 +44,50 @@ const getDashboardStats = async (req, res, next) => {
         next(error);
     }
 }
+
+const exportExpiringDocumentsReport = async (req, res, next) => {
+    try {
+        const records = await StaffService.getExpiringDocumentsReport();
+        const plainRecords = records.map((record) => record.get({ plain: true }));
+
+        const reportsDir = path.join(UPLOADS_BASE_PATH, 'reports');
+        await fsPromises.mkdir(reportsDir, { recursive: true });
+
+        const fileName = `documentos_por_vencer_${moment().format('YYYY-MM-DD')}.xlsx`;
+        const filePath = path.join(reportsDir, fileName);
+
+        await generateExpiringDocumentsReportExcel(plainRecords, filePath);
+
+        res.download(filePath, fileName, (err) => {
+            if (err && !res.headersSent) next(err);
+            fsPromises.unlink(filePath).catch(() => {});
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+const exportEmbarkedTodayReport = async (req, res, next) => {
+    try {
+        const records = await StaffService.getEmbarkedTodayReport();
+        const plainRecords = records.map((record) => record.get({ plain: true }));
+
+        const reportsDir = path.join(UPLOADS_BASE_PATH, 'reports');
+        await fsPromises.mkdir(reportsDir, { recursive: true });
+
+        const fileName = `embarcados_hoy_${moment().format('YYYY-MM-DD')}.xlsx`;
+        const filePath = path.join(reportsDir, fileName);
+
+        await generateEmbarkedTodayReportExcel(plainRecords, filePath);
+
+        res.download(filePath, fileName, (err) => {
+            if (err && !res.headersSent) next(err);
+            fsPromises.unlink(filePath).catch(() => {});
+        });
+    } catch (error) {
+        next(error);
+    }
+};
 
 const getStaff = async (req, res, next) => {
     try {
@@ -304,6 +356,8 @@ const uploadStaffDocumentation = async (req, res, next) => {
 const StaffController = {
     getAllStaffs,
     getDashboardStats,
+    exportExpiringDocumentsReport,
+    exportEmbarkedTodayReport,
     getStaff,
     getStaffCompanies,
     getEvaluators,

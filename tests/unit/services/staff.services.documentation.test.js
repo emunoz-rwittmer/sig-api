@@ -9,6 +9,7 @@ jest.mock('../../../src/models/rrhh/regulation.models', () => ({}));
 jest.mock('../../../src/models/rrhh/readRegulation.models', () => ({}));
 jest.mock('../../../src/models/catalogs/documentation.models', () => ({}));
 jest.mock('../../../src/models/catalogs/staffDocumentation.models', () => ({ update: jest.fn() }));
+jest.mock('../../../src/models/operations/surveys/shipmentDates.models', () => ({}));
 jest.mock('../../../src/utils/Utils', () => ({}));
 
 const db = require('../../../src/utils/database');
