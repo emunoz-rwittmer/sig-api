@@ -2,12 +2,28 @@ const PositionService = require('../../services/catalogs/positions.services');
 const Utils = require('../../utils/Utils');
 const AppError = require('../../errors/AppError');
 
+const encodePosition = (x) => {
+    x.dataValues.id = Utils.encode(x.dataValues.id);
+    if (x.dataValues.departamentId) {
+        x.dataValues.departamentId = Utils.encode(x.dataValues.departamentId);
+    }
+    if (x.dataValues.departament) {
+        x.dataValues.departament.dataValues.id = Utils.encode(x.dataValues.departament.dataValues.id);
+    }
+};
+
 const getPositions = async (req, res, next) => {
     try {
-        const result = await PositionService.getAll();
+        const [result, counts] = await Promise.all([
+            PositionService.getAll(),
+            PositionService.getStaffAndDocumentCounts(),
+        ]);
         if (result instanceof Array) {
             result.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
+                const rawId = x.dataValues.id;
+                x.dataValues.staffCount = counts.staffByPosition[rawId] ?? 0;
+                x.dataValues.documentsCount = counts.documentsByPosition[rawId] ?? 0;
+                encodePosition(x);
             });
         }
         res.status(200).json(result);
@@ -23,7 +39,7 @@ const getPosition = async (req, res, next) => {
         if (!result) {
             throw new AppError('Posición no encontrada', 404);
         }
-        result.dataValues.id = Utils.encode(result.dataValues.id);
+        encodePosition(result);
         res.status(200).json(result);
     } catch (error) {
         next(error);
@@ -33,6 +49,7 @@ const getPosition = async (req, res, next) => {
 const createPosition = async (req, res, next) => {
     try {
         const position = req.body;
+        position.departamentId = position.departamentId ? Utils.decode(position.departamentId) : null;
         const result = await PositionService.createPosition(position);
         if (result) {
             res.status(200).json({ data: 'resource created successfully' });
@@ -47,6 +64,7 @@ const updatePosition = async (req, res, next) => {
         const positionId = Utils.decode(req.params.position_id);
         const position = req.body;
         delete position.id
+        position.departamentId = position.departamentId ? Utils.decode(position.departamentId) : null;
         await PositionService.updatePosition(position, {
             where: { id: positionId },
         });

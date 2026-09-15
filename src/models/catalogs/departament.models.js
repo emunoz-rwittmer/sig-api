@@ -17,6 +17,19 @@ const Departaments = db.define('departaments', {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
     },
+    code: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    description: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+    },
+    responsibleStaffId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        field: "responsible_staff_id",
+    },
 
 });
 

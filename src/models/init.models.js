@@ -96,6 +96,10 @@ const initModels = () => {
     Staff.belongsTo(Departaments, { as: "staff_departament", foreignKey: "departament_id" });
     Departaments.hasMany(Staff, { as: "departament_staff", foreignKey: "departament_id" });
 
+    Departaments.belongsTo(Staff, { as: "responsible", foreignKey: "responsible_staff_id" });
+    Positions.belongsTo(Departaments, { as: "departament", foreignKey: "departament_id" });
+    Departaments.hasMany(Positions, { as: "departament_positions", foreignKey: "departament_id" });
+
     StaffDocumentation.belongsTo(Staff, { as: "staff", foreignKey: "staff_id" });
     StaffDocumentation.belongsTo(Documentation, { as: "document", foreignKey: "document_id" });
     Staff.hasMany(StaffDocumentation, { as: "documentation", foreignKey: "staff_id", onDelete: 'CASCADE', hooks: true });

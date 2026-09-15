@@ -13,6 +13,18 @@ const Positions = db.define('positions', {
     name: {
         type: DataTypes.STRING,
         allowNull: true,
+    },
+    departamentId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        field: "departament_id",
+    },
+    level: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        validate: {
+            isIn: [['operational', 'supervision', 'management']],
+        },
     }
 
 });
