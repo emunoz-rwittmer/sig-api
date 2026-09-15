@@ -25,6 +25,18 @@ const getAllStaffs = async (req, res, next) => {
     }
 }
 
+const getDashboardStats = async (req, res, next) => {
+    try {
+        const [embarkedToday, documentsExpiringSoon] = await Promise.all([
+            StaffService.getEmbarkedTodayCount(),
+            StaffService.getDocumentsExpiringSoonCount()
+        ]);
+        res.status(200).json({ embarkedToday, documentsExpiringSoon });
+    } catch (error) {
+        next(error);
+    }
+}
+
 const getStaff = async (req, res, next) => {
     try {
         const staffId = Utils.decode(req.params.staff_id);
@@ -291,6 +303,7 @@ const uploadStaffDocumentation = async (req, res, next) => {
 
 const StaffController = {
     getAllStaffs,
+    getDashboardStats,
     getStaff,
     getStaffCompanies,
     getEvaluators,

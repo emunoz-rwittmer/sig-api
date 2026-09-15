@@ -20,6 +20,31 @@ router.get('/',StaffController.getAllStaffs);
 
 /**
  * @openapi
+ * /staffs/dashboard-stats:
+ *   get:
+ *     summary: Estadísticas agregadas de personal para el dashboard (embarcados hoy, documentos por vencer)
+ *     tags: [Staff]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Conteos agregados
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 embarkedToday:
+ *                   type: integer
+ *                   description: Personal activo actualmente embarcado (según embarques.shipmentDate/dischargeDate)
+ *                 documentsExpiringSoon:
+ *                   type: integer
+ *                   description: Documentos de personal activo que vencen dentro de los próximos 30 días
+ */
+router.get('/dashboard-stats',StaffController.getDashboardStats);
+
+/**
+ * @openapi
  * /staffs/{staff_id}:
  *   get:
  *     summary: Obtener un miembro del personal por ID
