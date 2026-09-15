@@ -12,7 +12,10 @@ const StaffReadRegulation = require('../../models/rrhh/readRegulation.models');
 const StaffDocumentation = require('../../models/catalogs/staffDocumentation.models');
 const Documentation = require('../../models/catalogs/documentation.models');
 const Yacht = require('../../models/catalogs/yacht.models');
+const ShipmentDates = require('../../models/operations/surveys/shipmentDates.models');
 const Utils = require('../../utils/Utils');
+
+const DOCUMENT_EXPIRY_WINDOW_DAYS = 30;
 
 class Staffervice {
     static async getAll() {
@@ -50,6 +53,60 @@ class Staffervice {
         } catch (error) {
             throw error;
         }
+    }
+
+    // Mismo criterio "on board" que usa el cron generateWeeklyEvaluationCrew
+    // (cronJobs.controller.js): now cae dentro de [shipmentDate, dischargeDate].
+    static async getEmbarkedTodayCount() {
+        const now = new Date();
+
+        return ShipmentDates.count({
+            distinct: true,
+            col: 'id',
+            where: {
+                shipmentDate: { [Op.lte]: now },
+                [Op.or]: [
+                    { dischargeDate: null },
+                    { dischargeDate: { [Op.gte]: now } }
+                ]
+            },
+            include: [{
+                model: StaffCompany,
+                as: 'empresa',
+                required: true,
+                attributes: [],
+                include: [{
+                    model: Staff,
+                    as: 'staff',
+                    required: true,
+                    where: { active: true },
+                    attributes: []
+                }]
+            }]
+        });
+    }
+
+    // Mismo criterio que el cron checkExpiringStaffDocuments
+    // (cronJobs.controller.js/computeExpiryStage): documentos vigentes que
+    // vencen dentro de los próximos DOCUMENT_EXPIRY_WINDOW_DAYS días.
+    static async getDocumentsExpiringSoonCount() {
+        const now = new Date();
+        const windowEnd = new Date(now.getTime() + DOCUMENT_EXPIRY_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+
+        return StaffDocumentation.count({
+            distinct: true,
+            col: 'id',
+            where: {
+                expiryDate: { [Op.gte]: now, [Op.lte]: windowEnd }
+            },
+            include: [{
+                model: Staff,
+                as: 'staff',
+                required: true,
+                where: { active: true },
+                attributes: []
+            }]
+        });
     }
 
     static async getStaffByEmail(email) {
