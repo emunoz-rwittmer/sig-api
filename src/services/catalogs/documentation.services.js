@@ -20,7 +20,7 @@ class DocumentService {
     static async getAll() {
         try {
             const result = await Documentation.findAll({
-                attributes: ['id', 'name', 'description', 'required','positions'],
+                attributes: ['id', 'name', 'description', 'required', 'type', 'positions', 'createdAt'],
             });
             return result;
         } catch (error) {

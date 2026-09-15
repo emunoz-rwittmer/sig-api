@@ -21,6 +21,13 @@ const Documentation = db.define('documentation', {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
     },
+    type: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        validate: {
+            isIn: [['omi_course', 'certification', 'health', 'personal']],
+        },
+    },
     positions: {
         type: DataTypes.JSON,
         allowNull: true,
