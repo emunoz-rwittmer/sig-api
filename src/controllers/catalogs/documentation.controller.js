@@ -16,6 +16,19 @@ const getDocuments = async (req, res, next) => {
     }
 }
 
+const getDashboardStats = async (req, res, next) => {
+    try {
+        const [stats, typeCompletion, upcomingExpirations] = await Promise.all([
+            DocumentService.getDashboardStats(),
+            DocumentService.getTypeCompletion(),
+            DocumentService.getUpcomingExpirations(),
+        ]);
+        res.status(200).json({ ...stats, typeCompletion, upcomingExpirations });
+    } catch (error) {
+        next(error);
+    }
+}
+
 const getDocument = async (req, res, next) => {
     try {
         const documentId = Utils.decode(req.params.document_id);
@@ -74,6 +87,7 @@ const deleteDocument = async (req, res, next) => {
 
 const DocumentsController = {
     getDocuments,
+    getDashboardStats,
     getDocument,
     createDocument,
     updateDocument,
