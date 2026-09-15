@@ -40,6 +40,20 @@ router.get('/', DocumentsController.getDocuments);
 
 /**
  * @openapi
+ * /documentation/dashboard-stats:
+ *   get:
+ *     summary: Estadísticas agregadas de cumplimiento documental (vigentes, por vencer, vencidos, cumplimiento % por tipo y próximos vencimientos) para staff activo
+ *     tags: [Documentation]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Estadísticas de cumplimiento documental
+ */
+router.get('/dashboard-stats', DocumentsController.getDashboardStats);
+
+/**
+ * @openapi
  * /documentation/{document_id}:
  *   get:
  *     summary: Obtener un documento por ID
