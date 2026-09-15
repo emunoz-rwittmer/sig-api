@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const DownloadController = require('../../controllers/downloads/downloads.controller');
 const ConsumerCardController = require('../../controllers/bar/consumerCard.controller');
+const StaffController = require('../../controllers/catalogs/staff.controller');
 
 const router = Router();
 
@@ -244,5 +245,55 @@ router.get('/cruise/:cruise_id/download/excel', DownloadController.downloadrepor
  *         description: Yate no encontrado
  */
 router.get('/consumer-cards/export/report', ConsumerCardController.exportConsumerCardReport);
+
+/**
+ * @openapi
+ * /downloads/staff/expiring-documents/excel:
+ *   get:
+ *     summary: Generar y descargar el reporte Excel de documentos de personal por vencer
+ *     description: >
+ *       Mismo criterio que el cron `checkExpiringStaffDocuments`
+ *       (documentos de personal activo cuya fecha de vencimiento cae dentro
+ *       de la ventana configurada, hoy 30 días).
+ *     tags: [Downloads]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Reporte Excel generado
+ *         content:
+ *           application/octet-stream:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       403:
+ *         description: Token ausente o inválido
+ */
+router.get('/staff/expiring-documents/excel', StaffController.exportExpiringDocumentsReport);
+
+/**
+ * @openapi
+ * /downloads/staff/embarked-today/excel:
+ *   get:
+ *     summary: Generar y descargar el reporte Excel de personal embarcado hoy
+ *     description: >
+ *       Mismo criterio que `getEmbarkedTodayCount`: personal activo cuyo
+ *       embarque (`embarques.shipmentDate`/`dischargeDate`) cubre la fecha
+ *       actual.
+ *     tags: [Downloads]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Reporte Excel generado
+ *         content:
+ *           application/octet-stream:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       403:
+ *         description: Token ausente o inválido
+ */
+router.get('/staff/embarked-today/excel', StaffController.exportEmbarkedTodayReport);
 
 module.exports = router;

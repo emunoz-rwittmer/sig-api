@@ -109,6 +109,90 @@ class Staffervice {
         });
     }
 
+    // Mismo criterio "on board" que getEmbarkedTodayCount, pero trayendo el
+    // detalle (staff/empresa/yate) en vez de solo el conteo, para el reporte
+    // Excel de "Embarcados hoy".
+    static async getEmbarkedTodayReport() {
+        const now = new Date();
+
+        return ShipmentDates.findAll({
+            where: {
+                shipmentDate: { [Op.lte]: now },
+                [Op.or]: [
+                    { dischargeDate: null },
+                    { dischargeDate: { [Op.gte]: now } }
+                ]
+            },
+            attributes: ['id', 'shipmentDate', 'dischargeDate'],
+            include: [{
+                model: StaffCompany,
+                as: 'empresa',
+                required: true,
+                attributes: ['id'],
+                include: [
+                    {
+                        model: Staff,
+                        as: 'staff',
+                        required: true,
+                        where: { active: true },
+                        attributes: ['firstName', 'lastName', 'email']
+                    },
+                    {
+                        model: Company,
+                        as: 'company',
+                        attributes: ['name'],
+                        include: [{
+                            model: Yacht,
+                            as: 'yacht',
+                            attributes: ['name']
+                        }]
+                    }
+                ]
+            }]
+        });
+    }
+
+    // Mismo criterio que getDocumentsExpiringSoonCount / el cron
+    // checkExpiringStaffDocuments, pero trayendo el detalle (staff/documento/
+    // empresas) en vez de solo el conteo, para el reporte Excel de
+    // "Documentos por vencer".
+    static async getExpiringDocumentsReport() {
+        const now = new Date();
+        const windowEnd = new Date(now.getTime() + DOCUMENT_EXPIRY_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+
+        return StaffDocumentation.findAll({
+            where: {
+                expiryDate: { [Op.gte]: now, [Op.lte]: windowEnd }
+            },
+            attributes: ['id', 'expiryDate'],
+            include: [
+                {
+                    model: Staff,
+                    as: 'staff',
+                    required: true,
+                    where: { active: true },
+                    attributes: ['firstName', 'lastName', 'email'],
+                    include: [{
+                        model: StaffCompany,
+                        as: 'companies',
+                        attributes: ['id'],
+                        include: [{
+                            model: Company,
+                            as: 'company',
+                            attributes: ['name']
+                        }]
+                    }]
+                },
+                {
+                    model: Documentation,
+                    as: 'document',
+                    attributes: ['name']
+                }
+            ],
+            order: [['expiryDate', 'ASC']]
+        });
+    }
+
     static async getStaffByEmail(email) {
         try {
             const result = await Staff.findOne({
