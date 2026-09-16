@@ -6,6 +6,20 @@ const router = Router();
 
 /**
  * @openapi
+ * /regulations:
+ *   get:
+ *     summary: Listar los reglamentos de todas las compañías del grupo
+ *     tags: [Regulations]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de reglamentos con su compañía
+ */
+router.get('/', RegulationController.getAllRegulationsAllCompanies);
+
+/**
+ * @openapi
  * /regulations/{company_id}:
  *   get:
  *     summary: Listar los reglamentos de una compañía
