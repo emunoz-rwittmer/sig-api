@@ -33,6 +33,14 @@ const Yacht = db.define('yacht', {
         type: DataTypes.STRING,
         allowNull: false,
     },
+    clase: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    matricula: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
     color: {
         type: DataTypes.STRING,
         allowNull: false,
