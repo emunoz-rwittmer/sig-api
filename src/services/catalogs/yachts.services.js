@@ -9,7 +9,7 @@ class YachtService {
     static async getAll() {
         try {
             const result = await Yachts.findAll({
-                attributes: ['id', 'name', 'code', 'color', 'companyId', 'email', 'active'],
+                attributes: ['id', 'name', 'code', 'clase', 'matricula', 'color', 'companyId', 'email', 'active'],
                 include: {
                     model: Company,
                     as: 'company',
@@ -26,7 +26,7 @@ class YachtService {
         try {
             const result = await Yachts.findOne({
                 where: { id },
-                attributes: ['id', 'name', 'code', 'color', 'companyId', 'email', 'active']
+                attributes: ['id', 'name', 'code', 'clase', 'matricula', 'color', 'companyId', 'email', 'active']
             });
             return result;
         } catch (error) {
