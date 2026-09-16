@@ -8,6 +8,27 @@ const Regulation = require('../../models/rrhh/regulation.models');
 const db = require('../../utils/database');
 
 class RegulationService {
+    static async getAllCompanies() {
+        try {
+            const result = await Regulation.findAll({
+                attributes: ['id', 'name', 'file', 'companyId', 'createdAt'],
+                include: [
+                    {
+                        model: StaffReadRegulation,
+                        as: 'reads',
+                        attributes: ['id', 'read'],
+                        include: [{ model: Staff, as: 'staff', attributes: ['firstName', 'lastName'] }],
+                    },
+                    { model: Company, as: 'company', attributes: ['name'] },
+                ],
+                order: [['createdAt', 'DESC']],
+            });
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     static async getAll(companyId) {
         try {
             const result = await Regulation.findAll({

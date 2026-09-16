@@ -17,6 +17,24 @@ const decodeId = (value, fieldName) => {
     return id;
 };
 
+const getAllRegulationsAllCompanies = async (req, res, next) => {
+    try {
+        const result = await RegulationService.getAllCompanies();
+        if (result instanceof Array) {
+            result.map((x) => {
+                x.dataValues.id = Utils.encode(x.dataValues.id);
+                x.dataValues.companyId = Utils.encode(x.dataValues.companyId);
+                (x.dataValues.reads ?? []).forEach((read) => {
+                    read.dataValues.id = Utils.encode(read.dataValues.id);
+                });
+            });
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+}
+
 const getAllRegulations = async (req, res, next) => {
     try {
         const companyId = decodeId(req.params.company_id, 'company_id');
@@ -144,6 +162,7 @@ const readAceptRegulation = async (req, res, next) => {
 }
 
 const RegulationController = {
+    getAllRegulationsAllCompanies,
     getAllRegulations,
     getRegulationStaffById,
     getAllRegulationsBystaff,
