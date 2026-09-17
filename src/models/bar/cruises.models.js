@@ -30,7 +30,7 @@ const Cruise = db.define('cruise', {
     },
     transferDay: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
         field: 'transfer_day',
     },
     startDate: {
