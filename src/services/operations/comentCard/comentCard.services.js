@@ -30,6 +30,25 @@ class ComentCardService {
                     model: Yacht,
                     as: 'yate',
                 },
+                {
+                    model: ComentCardQR,
+                    as: 'links_acceso',
+                    attributes: ['id', 'startDate', 'endDate'],
+                    include: [
+                        {
+                            model: ComentCardRespond,
+                            as: 'respuestas_coment_card',
+                            attributes: ['id', 'createdAt'],
+                            include: [
+                                {
+                                    model: ComentCardAnswers,
+                                    as: 'respuestas',
+                                    attributes: ['answer'],
+                                },
+                            ],
+                        },
+                    ],
+                },
             ],
         });
     }

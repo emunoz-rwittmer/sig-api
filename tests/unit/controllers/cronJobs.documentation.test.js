@@ -13,6 +13,7 @@ jest.mock('../../../src/models/operations/comentCard/cardQR.models', () => ({}))
 jest.mock('../../../src/models/operations/surveys/shipmentDates.models', () => ({ findAll: jest.fn() }));
 jest.mock('../../../src/models/catalogs/staffCompany.models', () => ({}));
 jest.mock('../../../src/models/catalogs/company.models', () => ({}));
+jest.mock('../../../src/models/catalogs/yacht.models', () => ({}));
 jest.mock('../../../src/models/operations/surveys/formRespond.models', () => ({ findAll: jest.fn(), bulkCreate: jest.fn() }));
 jest.mock('../../../src/models/catalogs/positions.models', () => ({}));
 jest.mock('../../../src/models/operations/surveys/form.models', () => ({ findAll: jest.fn() }));
@@ -31,12 +32,24 @@ const {
 } = require('../../../src/mails/mailer');
 const CronJobs = require('../../../src/controllers/cronJobs.controller');
 
-function buildRecord({ id, expiryDate, notifiedStage = null, staffActive = true }) {
+function buildRecord({
+    id,
+    expiryDate,
+    notifiedStage = null,
+    staffActive = true,
+    yachts = [{ id: 10, name: 'TIP TOP II', email: 'tiptopii@rwittmer.com' }],
+}) {
     return {
         id,
         expiryDate,
         notifiedStage,
-        staff: staffActive ? { id: 1, firstName: 'Juan', lastName: 'Perez', email: 'juan@example.com' } : null,
+        staff: staffActive ? {
+            id: 1,
+            firstName: 'Juan',
+            lastName: 'Perez',
+            email: 'juan@example.com',
+            companies: yachts.map((yacht) => ({ company: { yacht } })),
+        } : null,
         document: { id: 5, name: 'Cedula' },
         update: jest.fn(function (data) {
             Object.assign(this, data);
@@ -133,5 +146,53 @@ describe('checkExpiringStaffDocuments', () => {
 
         expect(sendEmailStaffDocumentExpiring).toHaveBeenCalledTimes(1);
         expect(record.update).toHaveBeenCalledWith(expect.objectContaining({ notifiedStage: '7' }));
+    });
+
+    it('agrupa los documentos por yate y solo notifica a los yates con pendientes', async () => {
+        const tipTopII = { id: 10, name: 'TIP TOP II', email: 'tiptopii@rwittmer.com' };
+        const tipTopIV = { id: 20, name: 'TIP TOP IV', email: 'tiptopiv@rwittmer.com' };
+        const recordTTII = buildRecord({
+            id: 7,
+            expiryDate: moment().add(20, 'days').toDate(),
+            yachts: [tipTopII],
+        });
+        const secondRecordTTII = buildRecord({
+            id: 8,
+            expiryDate: moment().add(5, 'days').toDate(),
+            yachts: [tipTopII],
+        });
+        const recordTTIV = buildRecord({
+            id: 9,
+            expiryDate: moment().subtract(1, 'day').toDate(),
+            yachts: [tipTopIV],
+        });
+        StaffDocumentation.findAll.mockResolvedValue([recordTTII, secondRecordTTII, recordTTIV]);
+
+        await CronJobs.checkExpiringStaffDocuments();
+
+        expect(sendEmailRRHHDocumentExpiringDigest).toHaveBeenCalledTimes(2);
+        expect(sendEmailRRHHDocumentExpiringDigest).toHaveBeenCalledWith(
+            expect.arrayContaining([
+                expect.objectContaining({ staff: recordTTII.staff }),
+                expect.objectContaining({ staff: secondRecordTTII.staff }),
+            ]),
+            tipTopII
+        );
+        expect(sendEmailRRHHDocumentExpiringDigest).toHaveBeenCalledWith(
+            [expect.objectContaining({ staff: recordTTIV.staff })],
+            tipTopIV
+        );
+    });
+
+    it('no envía un resumen a yates sin documentos pendientes', async () => {
+        const record = buildRecord({
+            id: 10,
+            expiryDate: moment().add(60, 'days').toDate(),
+        });
+        StaffDocumentation.findAll.mockResolvedValue([record]);
+
+        await CronJobs.checkExpiringStaffDocuments();
+
+        expect(sendEmailRRHHDocumentExpiringDigest).not.toHaveBeenCalled();
     });
 });

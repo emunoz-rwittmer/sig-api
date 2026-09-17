@@ -88,6 +88,30 @@ describe('operaciones/comentCard', () => {
         expect(found.yate.name).toBe(yacht.name);
     });
 
+    it('nests access links and their answered responses for fleet-wide scoring', async () => {
+        const { cardYacht, qr, questions } = await createFixture();
+        const respond = await ComentCardRespond.create({
+            cardQrId: qr.id,
+            fullName: 'Pasajero de prueba',
+            cabin: 4,
+            isSubmited: true,
+        });
+        await ComentCardAnswers.create({
+            respuestaId: respond.id,
+            questionId: questions[0].id,
+            answer: '9',
+        });
+
+        const response = await auth(request(app).get('/api/coment_cards'));
+
+        expect(response.status).toBe(200);
+        const found = response.body.find((item) => item.id === Utils.encode(cardYacht.id));
+        expect(found.links_acceso).toHaveLength(1);
+        const [link] = found.links_acceso;
+        expect(link.respuestas_coment_card).toHaveLength(1);
+        expect(link.respuestas_coment_card[0].respuestas[0].answer).toBe('9');
+    });
+
     it('returns one comment card and reports invalid or missing identifiers correctly', async () => {
         const { card, yacht } = await createFixture();
 

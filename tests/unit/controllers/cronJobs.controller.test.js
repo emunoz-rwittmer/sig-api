@@ -7,6 +7,7 @@ jest.mock('../../../src/models/operations/surveys/shipmentDates.models', () => (
 jest.mock('../../../src/models/catalogs/staffCompany.models', () => ({}));
 jest.mock('../../../src/models/catalogs/staff.models', () => ({}));
 jest.mock('../../../src/models/catalogs/company.models', () => ({}));
+jest.mock('../../../src/models/catalogs/yacht.models', () => ({}));
 jest.mock('../../../src/models/operations/surveys/formRespond.models', () => ({
     findAll: jest.fn(),
     bulkCreate: jest.fn()

@@ -237,13 +237,13 @@ const sendEmailStaffDocumentExpiring = (staff, document, stage, expiryDate) => {
     });
 }
 
-const sendEmailRRHHDocumentExpiringDigest = (items) => {
-    const html = MailsDocumentation.htmlRRHHDocumentExpiringDigest(items);
+const sendEmailRRHHDocumentExpiringDigest = (items, yacht) => {
+    const html = MailsDocumentation.htmlRRHHDocumentExpiringDigest(items, yacht);
     return sendMail({
-        to: RECIPIENTS.mirian,
-        cc: RECIPIENTS.edison,
+        to: RECIPIENTS.belen,
+        cc: [RECIPIENTS.mirian, RECIPIENTS.edison, yacht.email],
         from: FROM_EMAIL,
-        subject: 'Documentos de staff por caducar / vencidos',
+        subject: `Documentos de staff por caducar / vencidos - ${yacht.name}`,
         html,
     });
 }

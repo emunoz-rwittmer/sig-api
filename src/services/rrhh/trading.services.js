@@ -6,7 +6,7 @@ class TradingService {
     static async getAll() {
         try {
             const result = await Trading.findAll({
-                attributes: ['id', 'name', 'url', 'type', 'createdAt'],
+                attributes: ['id', 'name', 'url', 'type', 'categoria', 'createdAt'],
                 order: [
                     [
                         Sequelize.literal('CASE WHEN id = 16 THEN 0 ELSE 1 END'),
@@ -26,7 +26,7 @@ class TradingService {
         try {
             const result = await Trading.findOne({
                 where: { id },
-                attributes: ['id', 'url', 'type', 'createdAt']
+                attributes: ['id', 'name', 'url', 'type', 'categoria', 'createdAt']
             });
             return result;
         } catch (error) {

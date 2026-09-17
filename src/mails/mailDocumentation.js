@@ -26,7 +26,7 @@ class MailDocumentation {
     });
   }
 
-  static htmlRRHHDocumentExpiringDigest(items) {
+  static htmlRRHHDocumentExpiringDigest(items, yacht) {
     const rows = items.map(({ staff, document, stage, expiryDate }) => `
               <tr>
                 <td>${staff.firstName} ${staff.lastName}</td>
@@ -37,8 +37,8 @@ class MailDocumentation {
             `).join('');
 
     const bodyHtml = `
-              <p>Hola, <strong>Maria Belen Jara</strong>.</p>
-              <p>Los siguientes documentos de staff requieren gestión de renovación:</p>
+              <p>Hola,</p>
+              <p>Los siguientes documentos de la tripulación de <strong>${yacht.name}</strong> requieren gestión de renovación:</p>
               <table style="width:100%; border-collapse: collapse;" border="1" cellpadding="6">
                 <thead>
                   <tr>

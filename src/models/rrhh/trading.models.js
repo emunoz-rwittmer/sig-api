@@ -15,6 +15,10 @@ const Trading = db.define('trading', {
         type: DataTypes.STRING,
         allowNull: false,
     },
+    categoria: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
     url: {
         type: DataTypes.TEXT,
         allowNull: false,

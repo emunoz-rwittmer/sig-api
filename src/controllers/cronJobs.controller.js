@@ -18,6 +18,7 @@ const db = require('../utils/database');
 const { sendEmailEvaluationCrew, sendEmailCommentCard, sendEmailStaffDocumentExpiring, sendEmailRRHHDocumentExpiringDigest } = require('../mails/mailer');
 const StaffDocumentation = require('../models/catalogs/staffDocumentation.models');
 const Documentation = require('../models/catalogs/documentation.models');
+const Yacht = require('../models/catalogs/yacht.models');
 const Cruise = require('../models/bar/cruises.models');
 const Passenger = require('../models/bar/passenger.models');
 const ConsumerCardCount = require('../models/bar/consumerCardCount.model');
@@ -544,7 +545,22 @@ const checkExpiringStaffDocuments = async () => {
                     as: 'staff',
                     required: true,
                     where: { active: true },
-                    attributes: ['id', 'firstName', 'lastName', 'email']
+                    attributes: ['id', 'firstName', 'lastName', 'email'],
+                    include: [{
+                        model: StaffCompany,
+                        as: 'companies',
+                        attributes: ['companyId'],
+                        include: [{
+                            model: Company,
+                            as: 'company',
+                            attributes: ['id', 'name'],
+                            include: [{
+                                model: Yacht,
+                                as: 'yacht',
+                                attributes: ['id', 'name', 'email']
+                            }]
+                        }]
+                    }]
                 },
                 {
                     model: Documentation,
@@ -554,7 +570,8 @@ const checkExpiringStaffDocuments = async () => {
             ]
         });
 
-        const digestItems = [];
+        const digestItemsByYacht = new Map();
+        let notifiedDocuments = 0;
 
         for (const record of records) {
             const stage = computeExpiryStage(record.expiryDate, now);
@@ -563,16 +580,33 @@ const checkExpiringStaffDocuments = async () => {
             const { staff, document } = record;
 
             await sendEmailStaffDocumentExpiring(staff, document, stage, record.expiryDate);
-            digestItems.push({ staff, document, stage, expiryDate: record.expiryDate });
+            notifiedDocuments += 1;
+
+            for (const staffCompany of staff.companies || []) {
+                const yacht = staffCompany.company?.yacht;
+                if (!yacht?.id || !yacht.email) continue;
+
+                if (!digestItemsByYacht.has(yacht.id)) {
+                    digestItemsByYacht.set(yacht.id, { yacht, items: [] });
+                }
+
+                digestItemsByYacht.get(yacht.id).items.push({
+                    staff,
+                    document,
+                    stage,
+                    expiryDate: record.expiryDate
+                });
+            }
 
             await record.update({ notifiedStage: stage, notifiedAt: now.toDate() });
         }
 
-        if (digestItems.length > 0) {
-            await sendEmailRRHHDocumentExpiringDigest(digestItems);
+        for (const { yacht, items } of digestItemsByYacht.values()) {
+            await sendEmailRRHHDocumentExpiringDigest(items, yacht);
         }
 
-        console.log(`Documentos de staff notificados por caducidad: ${digestItems.length}`);
+        console.log(`Documentos de staff notificados por caducidad: ${notifiedDocuments}`);
+        console.log(`Yates notificados por documentos pendientes: ${digestItemsByYacht.size}`);
     } catch (error) {
         console.error('Error ejecutando cron job de documentos por caducar:', error);
     }
