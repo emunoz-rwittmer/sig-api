@@ -125,7 +125,7 @@ class EvaluationService {
                     {
                         model: Form,
                         as: "formulario",
-                        attributes: ['id', 'name', 'positions', 'isAdministrative'],
+                        attributes: ['id', 'name', 'positions', 'isAdministrative', 'type', 'active'],
                     },
                     {
                         model: FormAnswers,
