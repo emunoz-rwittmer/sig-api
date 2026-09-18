@@ -80,7 +80,7 @@ const Staff = db.define('staff', {
     },
     contractType: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
         field: "contract_type",
     },
     parentFirstName: {
