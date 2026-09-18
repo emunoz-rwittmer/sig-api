@@ -3,10 +3,18 @@ const Utils = require('../../../utils/Utils');
 
 const getAllQuestions = async (req, res) => {
     try {
-        const result = await QuestionService.getAll();
+        const [result, usageCounts] = await Promise.all([
+            QuestionService.getAll(),
+            QuestionService.getUsageCounts(),
+        ]);
         if (result instanceof Array) {
             result.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
+                const rawId = x.dataValues.id;
+                x.dataValues.usageCount = usageCounts[rawId] ?? 0;
+                if (x.dataValues.positionId) {
+                    x.dataValues.positionId = Utils.encode(x.dataValues.positionId);
+                }
+                x.dataValues.id = Utils.encode(rawId);
             });
         }
         res.status(200).json(result);
@@ -31,6 +39,7 @@ const getQuestion = async (req, res) => {
 const createQuestion = async (req, res) => {
     try {
         const question = req.body;
+        if (question.positionId) question.positionId = Utils.decode(question.positionId);
         const result = await QuestionService.createQuestion(question);
         if (result) {
             res.status(200).json({ data: 'resource created successfully' });
@@ -47,6 +56,7 @@ const updateQuestion = async (req, res) => {
         const questionId = Utils.decode(req.params.question_id);
         const question = req.body;
         delete question.id;
+        if (question.positionId) question.positionId = Utils.decode(question.positionId);
         await QuestionService.updateQuestion(question, {
             where: { id: questionId },
         });

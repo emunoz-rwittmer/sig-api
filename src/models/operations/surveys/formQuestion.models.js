@@ -16,6 +16,11 @@ const FormQuestion = db.define('form_question', {
     type: DataTypes.TEXT,
     allowNull: false,
   },
+  questionId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'question_id',
+  },
   type: {
     type: DataTypes.STRING,
     allowNull: false,

@@ -31,7 +31,11 @@ const getForm = async (req, res) => {
         if (result instanceof Object) {
             result.dataValues.id = Utils.encode(result.dataValues.id);
             result.dataValues.positionId = Utils.encode(result.dataValues.positionId);
-
+            (result.dataValues.preguntas ?? []).forEach((pregunta) => {
+                if (pregunta.dataValues.questionId) {
+                    pregunta.dataValues.questionId = Utils.encode(pregunta.dataValues.questionId);
+                }
+            });
         }
         res.status(200).json(result);
     } catch (error) {
@@ -86,11 +90,15 @@ const getFormAllNecesary = async (req, res) => {
 }
 
 
+const decodeQuestionIds = (preguntas) => (preguntas ?? []).map((pregunta) => (
+    pregunta.questionId ? { ...pregunta, questionId: Utils.decode(pregunta.questionId) } : pregunta
+));
+
 const createForm = async (req, res) => {
     try {
         const { preguntas, data } = req.body;
         data.positionId = Utils.decode(data.positionId)
-        await FormService.createForm({ preguntas, data });
+        await FormService.createForm({ preguntas: decodeQuestionIds(preguntas), data });
         res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
         res.status(400).json(error.message);
@@ -103,7 +111,7 @@ const updateForm = async (req, res) => {
         const formId = Utils.decode(req.params.form_id);
         const { preguntas, data } = req.body;
         if (data.positionId) data.positionId = Utils.decode(req.body.positionId)
-        await FormService.updateForm({ preguntas, data, formId });
+        await FormService.updateForm({ preguntas: decodeQuestionIds(preguntas), data, formId });
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
         res.status(400).json(error.message);
