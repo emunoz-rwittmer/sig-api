@@ -203,7 +203,7 @@ const getEvaluatorsByFilters = async (req, res, next) => {
             Utils.decode(item)
         );
         const companyId = Utils.decode(req.query.companyId) || null;
-        const departamentId = req.query.departamentId
+        const departamentId = Utils.decode(req.query.departamentId) || null;
         const positionId = Utils.decode(req.query.positionId);
 
         const result = await StaffService.getEvaluatorsByFilters(decodedArray, companyId, departamentId, positionId);
