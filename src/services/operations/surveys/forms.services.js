@@ -5,11 +5,11 @@ const FormRespond = require('../../../models/operations/surveys/formRespond.mode
 const db = require('../../../utils/database');
 
 class FormService {
-    static async getAll() {
+    static async getAll(includeInactive = false) {
         try {
             const result = await Form.findAll({
-                where: { active: true },
-                attributes: ['id', 'name', 'active', 'positions', 'isAdministrative', 'createdAt'],
+                where: includeInactive ? {} : { active: true },
+                attributes: ['id', 'name', 'active', 'positions', 'isAdministrative', 'type', 'createdAt'],
             });
             return result;
         } catch (error) {
@@ -21,7 +21,7 @@ class FormService {
         try {
             const result = await Form.findOne({
                 where: { id },
-                attributes: ['id', 'name', 'active', 'positions', 'isAdministrative', 'createdAt'],
+                attributes: ['id', 'name', 'active', 'positions', 'isAdministrative', 'type', 'createdAt'],
                 include: [{
                     model: FormQuestion,
                     as: "preguntas",

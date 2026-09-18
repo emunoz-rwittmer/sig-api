@@ -11,7 +11,8 @@ const CompanyService = require('../../../services/catalogs/company.services');
 
 const getAllForms = async (req, res) => {
     try {
-        const result = await FormService.getAll();
+        const includeInactive = req.query.includeInactive === 'true';
+        const result = await FormService.getAll(includeInactive);
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);

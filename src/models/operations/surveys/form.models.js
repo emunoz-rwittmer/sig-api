@@ -20,6 +20,10 @@ const Form = db.define('form', {
     type: DataTypes.BOOLEAN,
     defaultValue: true
   },
+  type: {
+    type: DataTypes.STRING(20),
+    allowNull: true,
+  },
   active: {
     type: DataTypes.BOOLEAN,
     defaultValue: true
