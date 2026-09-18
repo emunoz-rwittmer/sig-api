@@ -89,6 +89,7 @@ class FormService {
                             title: pregunta.title,
                             type: pregunta.type,
                             required: pregunta.required,
+                            questionId: pregunta.questionId,
                             opciones,
                             formId: formId,
                         };

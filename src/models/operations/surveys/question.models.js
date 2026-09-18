@@ -15,6 +15,15 @@ const Question= db.define('question',{
         type: DataTypes.BOOLEAN,
         defaultValue: true
     },
+    category: {
+        type: DataTypes.STRING(60),
+        allowNull: true,
+    },
+    positionId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        field: 'position_id',
+    },
 });
 
 module.exports = Question;
