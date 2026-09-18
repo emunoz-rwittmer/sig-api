@@ -86,6 +86,26 @@ router.get('/:staff_id/companies',StaffController.getStaffCompanies);
 
 /**
  * @openapi
+ * /staffs/{staff_id}/embarques-count:
+ *   get:
+ *     summary: Total histórico de embarques de un miembro del personal
+ *     tags: [Staff]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: staff_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Conteo de embarques
+ */
+router.get('/:staff_id/embarques-count',StaffController.getEmbarquesCount);
+
+/**
+ * @openapi
  * /staffs/createStaff:
  *   post:
  *     summary: Crear un miembro del personal

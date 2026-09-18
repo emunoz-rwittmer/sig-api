@@ -327,4 +327,30 @@ router.get('/desempeno/personas', authJwt.verifyToken, authJwt.hasAnyRole(DESEMP
  */
 router.get('/desempeno/preguntas', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO_DASHBOARD_ROLES), desempenoDashboard.getDesempenoPreguntas);
 
+/**
+ * @openapi
+ * /reports/desempeno/colaborador:
+ *   get:
+ *     summary: Resumen de un colaborador para Seguimiento (promedio por pregunta/competencia, fortaleza/oportunidad, historial de evaluaciones)
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: evaluado
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: anio
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Promedio por pregunta/competencia, fortaleza/oportunidad de mejora e historial de evaluaciones individuales
+ *       403:
+ *         description: Token no proporcionado o rol no autorizado
+ */
+router.get('/desempeno/colaborador', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO_DASHBOARD_ROLES), desempenoDashboard.getDesempenoColaborador);
+
 module.exports = router;

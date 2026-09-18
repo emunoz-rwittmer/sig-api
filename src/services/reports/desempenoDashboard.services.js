@@ -1,5 +1,6 @@
 const EvaluationService = require('../operations/surveys/evaluations.services');
 const Staffervice = require('../catalogs/staff.services');
+const Question = require('../../models/operations/surveys/question.models');
 const SurveyScoring = require('../../utils/surveyScoring');
 const { extractApellido, extractNombres, capitalizeYachtName } = require('../../utils/reportFormatting');
 
@@ -535,6 +536,93 @@ async function getPreguntas({ evaluado, funcion, anio } = {}) {
     return { competencias, porMes, porFuncionMes, porEvaluador };
 }
 
+// Resumen completo de UN colaborador para Seguimiento: promedio por
+// pregunta (con su categoría real del banco, vía FormQuestion.questionId
+// -> Question.category — a diferencia de getPreguntas(), que trata cada
+// título de pregunta como su propia "competencia" porque no hace este
+// join), fortaleza/oportunidad de mejora e historial de evaluaciones
+// individuales.
+async function getColaborador({ evaluado, anio } = {}) {
+    const empty = {
+        calificacion: null, compliancePercent: null, completadas: 0, caducadas: 0,
+        preguntas: [], competencias: [], fortaleza: null, oportunidad: null, historial: [],
+    };
+    if (!evaluado) return empty;
+
+    const allRows = await loadEvaluations();
+    const rows = allRows.filter((row) => {
+        if (row.evaluated?.trim().toLowerCase() !== evaluado.trim().toLowerCase()) return false;
+        if (anio && evaluationDate(row).getFullYear() !== Number(anio)) return false;
+        return true;
+    });
+
+    const porPreguntaMap = new Map();
+    rows.forEach((row) => {
+        (row.respuestas || []).forEach((r) => {
+            const title = r.pregunta?.title;
+            const score = SurveyScoring.asignarPuntaje(r.answer);
+            if (!title || typeof score !== 'number') return;
+            if (!porPreguntaMap.has(title)) {
+                porPreguntaMap.set(title, { scores: [], questionId: r.pregunta?.questionId ?? null });
+            }
+            porPreguntaMap.get(title).scores.push(score);
+        });
+    });
+
+    const questionIds = [...new Set([...porPreguntaMap.values()].map((v) => v.questionId).filter(Boolean))];
+    const bankQuestions = questionIds.length
+        ? await Question.findAll({ where: { id: questionIds }, attributes: ['id', 'category'] })
+        : [];
+    const categoryById = new Map(bankQuestions.map((q) => [q.id, q.category || 'Sin categoría']));
+
+    const preguntas = [...porPreguntaMap.entries()]
+        .map(([title, { scores, questionId }]) => ({
+            texto: title,
+            valor: round2(average(scores)),
+            respuestas: scores.length,
+            categoria: questionId ? (categoryById.get(questionId) || 'Sin categoría') : 'Sin categoría',
+        }))
+        .sort((a, b) => b.valor - a.valor);
+
+    const competenciaMap = new Map();
+    preguntas.forEach((p) => {
+        if (!competenciaMap.has(p.categoria)) competenciaMap.set(p.categoria, []);
+        competenciaMap.get(p.categoria).push(p.valor);
+    });
+    const competencias = [...competenciaMap.entries()]
+        .map(([categoria, valores]) => ({ competencia: categoria, valor: round2(average(valores)), preguntas: valores.length }))
+        .sort((a, b) => b.valor - a.valor);
+
+    const completadas = rows.filter((row) => row.state === 'Completada').length;
+    const caducadas = rows.filter((row) => row.state === 'Caducada').length;
+
+    const historial = rows
+        .map((row) => ({
+            id: row.id,
+            formulario: row.formulario?.name || 'Formulario',
+            tipo: row.formulario?.type || (row.formulario?.isAdministrative ? 'Administrativa' : 'Liderazgo'),
+            evaluador: row.evaluator,
+            estado: row.state,
+            fecha: evaluationDate(row),
+            valor: evaluationScore(row),
+        }))
+        .sort((a, b) => b.fecha - a.fecha)
+        .slice(0, 30)
+        .map((entry) => ({ ...entry, fecha: entry.fecha.toISOString() }));
+
+    return {
+        calificacion: scoreValue(rows),
+        compliancePercent: compliancePercent(completadas, caducadas),
+        completadas,
+        caducadas,
+        preguntas,
+        competencias,
+        fortaleza: preguntas[0] || null,
+        oportunidad: preguntas.length ? preguntas[preguntas.length - 1] : null,
+        historial,
+    };
+}
+
 module.exports = {
     MESES,
     round2,
@@ -554,4 +642,5 @@ module.exports = {
     getYates,
     getPersonas,
     getPreguntas,
+    getColaborador,
 };
