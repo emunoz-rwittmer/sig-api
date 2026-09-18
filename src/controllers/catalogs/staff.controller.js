@@ -108,6 +108,16 @@ const getStaff = async (req, res, next) => {
     }
 }
 
+const getEmbarquesCount = async (req, res, next) => {
+    try {
+        const staffId = Utils.decode(req.params.staff_id);
+        const count = await StaffService.getEmbarquesCountByStaffId(staffId);
+        res.status(200).json({ count });
+    } catch (error) {
+        next(error);
+    }
+}
+
 const getStaffCompanies = async (req, res, next) => {
     try {
         const staffId = Utils.decode(req.params.staff_id);
@@ -360,6 +370,7 @@ const StaffController = {
     exportEmbarkedTodayReport,
     getStaff,
     getStaffCompanies,
+    getEmbarquesCount,
     getEvaluators,
     getEvaluatorsByFilters,
     getEvaluateds,

@@ -86,6 +86,22 @@ class Staffervice {
         });
     }
 
+    // Total histórico de embarques (registros de shipmentDate/dischargeDate)
+    // de un colaborador, sumando todas sus asignaciones de empresa/yate.
+    static async getEmbarquesCountByStaffId(staffId) {
+        return ShipmentDates.count({
+            distinct: true,
+            col: 'id',
+            include: [{
+                model: StaffCompany,
+                as: 'empresa',
+                required: true,
+                attributes: [],
+                where: { staffId },
+            }],
+        });
+    }
+
     // Mismo criterio que el cron checkExpiringStaffDocuments
     // (cronJobs.controller.js/computeExpiryStage): documentos vigentes que
     // vencen dentro de los próximos DOCUMENT_EXPIRY_WINDOW_DAYS días.

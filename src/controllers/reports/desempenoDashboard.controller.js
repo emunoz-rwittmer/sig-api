@@ -4,6 +4,7 @@ const {
     getYates,
     getPersonas,
     getPreguntas,
+    getColaborador,
 } = require('../../services/reports/desempenoDashboard.services');
 
 const asString = (value) => (typeof value === 'string' ? value : undefined);
@@ -57,9 +58,23 @@ const getDesempenoPreguntas = async (req, res, next) => {
     }
 };
 
+const getDesempenoColaborador = async (req, res, next) => {
+    try {
+        const { evaluado, anio } = req.query;
+        const colaborador = await getColaborador({
+            evaluado: asString(evaluado),
+            anio: asString(anio),
+        });
+        res.status(200).json(colaborador);
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     getDesempenoOverview,
     getDesempenoYates,
     getDesempenoPersonas,
     getDesempenoPreguntas,
+    getDesempenoColaborador,
 };

@@ -134,7 +134,7 @@ class EvaluationService {
                         include: [{
                             model: FormQuestion,
                             as: 'pregunta',
-                            attributes: ['id', 'title'],
+                            attributes: ['id', 'title', 'questionId'],
                         }]
                     },
                 ],
