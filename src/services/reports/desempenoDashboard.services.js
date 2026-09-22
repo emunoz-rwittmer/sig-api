@@ -497,7 +497,7 @@ function porMesFor(rows, competencias) {
     });
 }
 
-async function getPreguntas({ evaluado, funcion, anio } = {}) {
+async function getPreguntas({ evaluado, funcion, anio, yate } = {}) {
     const allRows = await loadEvaluations();
     const cargoMap = await buildCargoMap(allRows);
 
@@ -505,6 +505,7 @@ async function getPreguntas({ evaluado, funcion, anio } = {}) {
         if (evaluado && row.evaluated?.trim().toLowerCase() !== evaluado.trim().toLowerCase()) return false;
         if (funcion && (cargoMap.get(row.evaluated) || '').toLowerCase() !== funcion.trim().toLowerCase()) return false;
         if (anio && evaluationDate(row).getFullYear() !== Number(anio)) return false;
+        if (!matchesYate(row, yate)) return false;
         return true;
     });
 
