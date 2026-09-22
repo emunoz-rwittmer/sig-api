@@ -33,6 +33,15 @@ function yateName(row) {
     return capitalizeYachtName(row.empresa?.yacht?.name) || null;
 }
 
+// `Form.type` es el campo nuevo (ver formType.js en el frontend); los
+// formularios creados antes de esa migración no lo tienen, por eso se cae de
+// vuelta a `isAdministrative` (true -> 'Administrativa', false -> 'Liderazgo').
+function formTypeLabel(row) {
+    return row.formulario?.type || (row.formulario?.isAdministrative ? 'Administrativa' : 'Liderazgo');
+}
+
+const TIPO_EVALUACION_TYPES = { liderazgo: 'Liderazgo', administrativa: 'Administrativa', operativa: 'Operativa' };
+
 function matchesYate(row, yateFilter) {
     if (!yateFilter) return true;
     const rowYate = yateName(row);
@@ -311,8 +320,7 @@ async function getPersonas({ yate, evaluado, funcion, area, anio, tipoEvaluacion
     const allRows = await loadEvaluations();
     const cargoMap = funcion ? await buildCargoMap(allRows) : new Map();
     const areaMap = area ? await buildAreaMap(allRows) : new Map();
-    // tipoEvaluacion: 'liderazgo' -> formulario.isAdministrative === false, 'administrativa' -> === true.
-    const wantsAdministrative = tipoEvaluacion === 'administrativa' ? true : tipoEvaluacion === 'liderazgo' ? false : null;
+    const wantedType = tipoEvaluacion ? TIPO_EVALUACION_TYPES[tipoEvaluacion.trim().toLowerCase()] ?? null : null;
 
     // "Quién" (yate/función/área/tipo de evaluación) sin año ni evaluado — de
     // aquí sale kpisByYear (tendencia por año de ese conjunto, sin importar
@@ -321,7 +329,7 @@ async function getPersonas({ yate, evaluado, funcion, area, anio, tipoEvaluacion
         if (!matchesYate(row, yate)) return false;
         if (funcion && (cargoMap.get(row.evaluated) || '').toLowerCase() !== funcion.trim().toLowerCase()) return false;
         if (area && (areaMap.get(row.evaluated) || '').toLowerCase() !== area.trim().toLowerCase()) return false;
-        if (wantsAdministrative !== null && row.formulario?.isAdministrative !== wantsAdministrative) return false;
+        if (wantedType && formTypeLabel(row) !== wantedType) return false;
         return true;
     });
 
@@ -502,6 +510,7 @@ async function getPreguntas({ evaluado, funcion, anio } = {}) {
 
     const competencias = [];
     const seen = new Set();
+    const questionIdByTitle = new Map();
     rows.forEach((row) => {
         (row.respuestas || []).forEach((r) => {
             const title = r.pregunta?.title;
@@ -509,9 +518,23 @@ async function getPreguntas({ evaluado, funcion, anio } = {}) {
             if (typeof SurveyScoring.asignarPuntaje(r.answer) === 'number') {
                 seen.add(title);
                 competencias.push(title);
+                questionIdByTitle.set(title, r.pregunta?.questionId ?? null);
             }
         });
     });
+
+    // Categoría real del banco de preguntas (vía FormQuestion.questionId ->
+    // Question.category), para poder filtrar "Promedio por pregunta" por
+    // categoría en el frontend — mismo join que getColaborador().
+    const questionIds = [...new Set([...questionIdByTitle.values()].filter(Boolean))];
+    const bankQuestions = questionIds.length
+        ? await Question.findAll({ where: { id: questionIds }, attributes: ['id', 'category'] })
+        : [];
+    const categoryById = new Map(bankQuestions.map((q) => [q.id, q.category || 'Sin categoría']));
+    const categoriaPorPregunta = Object.fromEntries(competencias.map((title) => {
+        const questionId = questionIdByTitle.get(title);
+        return [title, questionId ? (categoryById.get(questionId) || 'Sin categoría') : 'Sin categoría'];
+    }));
 
     const porMes = porMesFor(rows, competencias);
 
@@ -533,7 +556,7 @@ async function getPreguntas({ evaluado, funcion, anio } = {}) {
         }))
         .sort((a, b) => a.evaluador.localeCompare(b.evaluador));
 
-    return { competencias, porMes, porFuncionMes, porEvaluador };
+    return { competencias, categoriaPorPregunta, porMes, porFuncionMes, porEvaluador };
 }
 
 // Resumen completo de UN colaborador para Seguimiento: promedio por
@@ -600,7 +623,7 @@ async function getColaborador({ evaluado, anio } = {}) {
         .map((row) => ({
             id: row.id,
             formulario: row.formulario?.name || 'Formulario',
-            tipo: row.formulario?.type || (row.formulario?.isAdministrative ? 'Administrativa' : 'Liderazgo'),
+            tipo: formTypeLabel(row),
             evaluador: row.evaluator,
             estado: row.state,
             fecha: evaluationDate(row),
