@@ -46,11 +46,12 @@ const getDesempenoPersonas = async (req, res, next) => {
 
 const getDesempenoPreguntas = async (req, res, next) => {
     try {
-        const { evaluado, funcion, anio } = req.query;
+        const { evaluado, funcion, anio, yate } = req.query;
         const preguntas = await getPreguntas({
             evaluado: asString(evaluado),
             funcion: asString(funcion),
             anio: asString(anio),
+            yate: asString(yate),
         });
         res.status(200).json(preguntas);
     } catch (error) {
