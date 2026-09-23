@@ -1,188 +1,211 @@
 const IndicatorService = require('../../../services/operations/indicators/indicators.services');
 const Utils = require('../../../utils/Utils');
-const { create, all, cos } = require('mathjs'); // Para evaluar fórmulas dinámicas
+const AppError = require('../../../errors/AppError');
+const { create, all } = require('mathjs'); // Para evaluar fórmulas dinámicas
 
-const getIndicatorsByDepartament = async (req, res) => {
+const decodeId = (value, fieldName) => {
+    let id;
     try {
-        const departamentId = Utils.decode(req.params.departament_id);
-        const result = await IndicatorService.getIndicatorsByDepartament(departamentId);
-        if (result instanceof Array) {
-            result.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
-                x.dataValues.departamentId = Utils.encode(x.dataValues.departamentId);
-                x.dataValues.formulaId = Utils.encode(x.dataValues.formulaId);
-            });
+        id = Utils.decode(value);
+    } catch {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    return id;
+};
+
+const encodeIndicator = (indicator) => {
+    indicator.dataValues.id = Utils.encode(indicator.id);
+    indicator.dataValues.departamentId = Utils.encode(indicator.departamentId);
+    indicator.dataValues.formulaId = Utils.encode(indicator.formulaId);
+    if (indicator.dataValues.departament) {
+        indicator.dataValues.departament.dataValues.id = Utils.encode(indicator.dataValues.departament.id);
+        if (indicator.dataValues.departament.dataValues.departamento) {
+            indicator.dataValues.departament.dataValues.departamento.dataValues.id =
+                Utils.encode(indicator.dataValues.departament.dataValues.departamento.id);
         }
+    }
+    (indicator.dataValues.tabulations ?? []).forEach((tabulation) => {
+        tabulation.dataValues.id = Utils.encode(tabulation.id);
+        tabulation.dataValues.indicatorId = Utils.encode(tabulation.indicatorId);
+    });
+    return indicator;
+};
+
+const getAllIndicators = async (req, res, next) => {
+    try {
+        const result = await IndicatorService.getAllIndicators();
+        result.forEach(encodeIndicator);
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
-}
+};
 
-const getFormulas = async (req, res) => {
+const getIndicatorsByDepartament = async (req, res, next) => {
+    try {
+        const departamentId = decodeId(req.params.departament_id, 'departament_id');
+        const result = await IndicatorService.getIndicatorsByDepartament(departamentId);
+        result.forEach((x) => {
+            x.dataValues.id = Utils.encode(x.dataValues.id);
+            x.dataValues.departamentId = Utils.encode(x.dataValues.departamentId);
+            x.dataValues.formulaId = Utils.encode(x.dataValues.formulaId);
+        });
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+const getFormulas = async (req, res, next) => {
     try {
         const result = await IndicatorService.getFormulas();
-        if (result instanceof Array) {
-            result.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
-            });
-        }
+        result.forEach((x) => {
+            x.dataValues.id = Utils.encode(x.dataValues.id);
+        });
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
-}
+};
 
-const createIndicator = async (req, res) => {
+const createIndicator = async (req, res, next) => {
     try {
         const data = req.body;
-        data.departamentId = Utils.decode(data.departamentId)
-        data.formulaId = Utils.decode(data.formulaId)
-        const result = await IndicatorService.createIndicator(data);
-        if (result) {
-            res.status(200).json({ data: 'resource created successfully' });
-        }
+        data.departamentId = decodeId(data.departamentId, 'departamentId');
+        data.formulaId = decodeId(data.formulaId, 'formulaId');
+        await IndicatorService.createIndicator(data);
+        res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
-}
+};
 
-const updateIndicator = async (req, res) => {
+const updateIndicator = async (req, res, next) => {
     try {
-        const indicatorId = Utils.decode(req.params.indicator_id);
-        const data = req.body
+        const indicatorId = decodeId(req.params.indicator_id, 'indicator_id');
+        const data = req.body;
         delete data.id;
-        data.formulaId = Utils.decode(data.formulaId);
-        data.departamentId = Utils.decode(data.departamentId)
-        const result = await IndicatorService.updateIndicator(data, {
+        data.formulaId = decodeId(data.formulaId, 'formulaId');
+        data.departamentId = decodeId(data.departamentId, 'departamentId');
+        await IndicatorService.updateIndicator(data, {
             where: { id: indicatorId }
         });
-
-        if (result) {
-            res.status(200).json({ data: 'resource updated successfully' });
-        }
+        res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
-}
+};
 
-const deleteIndicator = async (req, res) => {
+const deleteIndicator = async (req, res, next) => {
     try {
-        const indicatorId = Utils.decode(req.params.indicator_id);
-        const result = await IndicatorService.deleteIndicator(indicatorId);
-        res.status(200).json({ data: result })
+        const indicatorId = decodeId(req.params.indicator_id, 'indicator_id');
+        await IndicatorService.deleteIndicator(indicatorId);
+        res.status(200).json({ data: 'resource deleted successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
-}
+};
 
-const createTabulation = async (req, res) => {
+const createTabulation = async (req, res, next) => {
     try {
         const math = create(all);
         const data = req.body;
-        data.indicatorId = Utils.decode(data.indicatorId);
+        data.indicatorId = decodeId(data.indicatorId, 'indicatorId');
         const indicador = await IndicatorService.getIndicatorById(data.indicatorId);
         if (!indicador || !indicador.formula) {
-            return res.status(404).json('Indicador o fórmula no encontrados');
+            throw new AppError('Indicador o fórmula no encontrados', 404);
         }
 
         const formula = indicador.formula_indicator.name;
-        let a = data.a;
-        let b = data.b;
-        let scope = { a, b };
+        const scope = { a: data.a, b: data.b };
 
+        let percent;
         try {
-            percent = b === 0 ? null : math.evaluate(formula, scope);
-        } catch (error) {
-            throw error.message;
+            percent = Number(data.b) === 0 ? null : math.evaluate(formula, scope);
+        } catch (evalError) {
+            throw new AppError('No se pudo evaluar la fórmula del indicador', 400);
         }
 
-        data.percent = percent
-        const result = await IndicatorService.createTabulation(data);
-        if (result) {
-            return res.status(200).json({ data: 'resource created successfully' });
-        }
+        data.percent = percent;
+        await IndicatorService.createTabulation(data);
+        res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
-        console.log(error)
-        res.status(400).json(error.message);
+        next(error);
     }
-}
+};
 
-
-const getTabulationsByIndicator = async (req, res) => {
+const getTabulationsByIndicator = async (req, res, next) => {
     try {
-        const indicatorId = Utils.decode(req.params.indicator_id);
+        const indicatorId = decodeId(req.params.indicator_id, 'indicator_id');
         const result = await IndicatorService.getTabulationsByIndicator(indicatorId);
+        if (!result) throw new AppError('Indicador no encontrado', 404);
+        encodeIndicator(result);
         res.status(200).json(result);
     } catch (error) {
-
-        res.status(400).json(error.message)
+        next(error);
     }
-}
+};
 
 //idicator staffs
 
-const getProcesStaffs = async (req, res) => {
+const getProcesStaffs = async (req, res, next) => {
     try {
-        const staffId = Utils.decode(req.params.staff_id)
+        const staffId = decodeId(req.params.staff_id, 'staff_id');
         const result = await IndicatorService.getProcesStaffs(staffId);
-        if (result instanceof Array) {
-            result.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
-            });
-        }
+        result.forEach((x) => {
+            x.dataValues.id = Utils.encode(x.dataValues.id);
+        });
         res.status(200).json(result);
     } catch (error) {
-
-        res.status(400).json(error.message);
+        next(error);
     }
-}
+};
 
-const getAllStaffsByProces = async (req, res) => {
+const getAllStaffsByProces = async (req, res, next) => {
     try {
-        const processId = Utils.decode(req.params.process_id)
+        const processId = decodeId(req.params.process_id, 'process_id');
         const result = await IndicatorService.getAllStaffsByProces(processId);
-        if (result instanceof Array) {
-            result.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
-            });
-        }
+        result.forEach((x) => {
+            x.dataValues.id = Utils.encode(x.dataValues.id);
+        });
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
-}
+};
 
-const assignStaff = async (req, res) => {
+const assignStaff = async (req, res, next) => {
     try {
         const data = req.body;
         if (!Array.isArray(data.staffs)) {
             data.staffs = [data.staffs];
         }
-        data.staffs = data.staffs.map(staffId => ({ staffId: Utils.decode(staffId) }))
-        data.processId = Utils.decode(req.params.process_id)
-        const result = await IndicatorService.assignStaff(data);
-        if (result) {
-            res.status(200).json({ data: 'resource created successfully' });
-        }
+        data.staffs = data.staffs.map((staffId) => ({ staffId: decodeId(staffId, 'staffId') }));
+        data.processId = decodeId(req.params.process_id, 'process_id');
+        await IndicatorService.assignStaff(data);
+        res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
-}
+};
 
-const deleteStafft = async (req, res) => {
+const deleteStafft = async (req, res, next) => {
     try {
-        const id = Utils.decode(req.params.staff_id)
-        const result = await IndicatorService.deleteStafft({
+        const id = decodeId(req.params.staff_id, 'staff_id');
+        await IndicatorService.deleteStafft({
             where: { id }
         });
-        res.status(200).json({ data: 'resource deleted successfully' })
+        res.status(200).json({ data: 'resource deleted successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
-}
+};
 
 const IndicatorController = {
+    getAllIndicators,
     getIndicatorsByDepartament,
     getFormulas,
     createIndicator,
