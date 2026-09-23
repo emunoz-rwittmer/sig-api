@@ -13,6 +13,7 @@ const HouseRulesRoutes = require("./catalogs/houseRules.routes");
 const regulationsRoutes = require("./rrhh/regulations.routes");
 const tradingRoutes = require("./rrhh/trading.routes");
 const formatsRoutes = require("./rrhh/formats.routes");
+const inductionsRoutes = require("./rrhh/inductions.routes");
 const maintenanceRoutes = require("./catalogs/maintenance.routes");
 
 //Operations
@@ -55,6 +56,7 @@ const routerApi = (app) => {
   app.use("/api/regulations", authJwt.verifyToken, regulationsRoutes);
   app.use("/api/tradings", authJwt.verifyToken, tradingRoutes);
   app.use("/api/formats", authJwt.verifyToken, formatsRoutes);
+  app.use("/api/inductions", authJwt.verifyToken, inductionsRoutes);
   //OPERATIONS
   app.use("/api/questions", authJwt.verifyToken, questiondRoutes);
   app.use("/api/forms", formsRoutes);

@@ -15,6 +15,7 @@ const verifyToken = async (req, res, next) => {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithm: 'HS512' });
         req.userRol = decoded.rol;
+        req.userId = decoded.id;
         return next();
     } catch (err) {
         const decodedExpired = jwt.decode(token);

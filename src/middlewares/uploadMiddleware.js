@@ -1,16 +1,16 @@
 const upload = require('../utils/multer');
 
-const uploadMiddleware = (type, fields = []) => (req, res, next) => {
+const uploadMiddleware = (type, fields = [], uploader = upload) => (req, res, next) => {
     let multerMiddleware;
 
     if (type === 'array') {
-        multerMiddleware = upload.array(fields); // fields es un string en este caso
+        multerMiddleware = uploader.array(fields); // fields es un string en este caso
     } else if (type === 'any') {
-        multerMiddleware = upload.any();
+        multerMiddleware = uploader.any();
     } else if (type === 'single') {
-        multerMiddleware = upload.single(fields);
+        multerMiddleware = uploader.single(fields);
     } else if (type === 'fields') {
-        multerMiddleware = upload.fields(fields); // fields como [{ name: 'logo' }, { name: 'background' }]
+        multerMiddleware = uploader.fields(fields); // fields como [{ name: 'logo' }, { name: 'background' }]
     }
 
     multerMiddleware(req, res, function (err) {
