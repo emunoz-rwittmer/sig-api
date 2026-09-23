@@ -27,6 +27,15 @@ const Induction = db.define('induction', {
         defaultValue: 3,
         field: 'max_attempts',
     },
+    // Cuántas preguntas del banco se muestran por intento (submuestra
+    // aleatoria, ver inductionScoring.pickRandomQuestions). NULL o >= al
+    // total de preguntas equivale a "mostrar todas" (pero igual se
+    // randomiza el orden — ver inductionAttempts.services.js).
+    questionsToShow: {
+        type: DataTypes.SMALLINT.UNSIGNED,
+        allowNull: true,
+        field: 'questions_to_show',
+    },
     active: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

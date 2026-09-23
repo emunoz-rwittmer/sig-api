@@ -9,7 +9,7 @@ const InductionQuestion = require('../../models/rrhh/inductionQuestion.models');
 const InductionOption = require('../../models/rrhh/inductionOption.models');
 const InductionProgress = require('../../models/rrhh/inductionProgress.models');
 const InductionAttempt = require('../../models/rrhh/inductionAttempt.models');
-const { validateQuestionSet, remainingAttempts, resolveStatus } = require('../../utils/inductionScoring');
+const { validateQuestionSet, validateQuestionsToShow, remainingAttempts, resolveStatus } = require('../../utils/inductionScoring');
 const AppError = require('../../errors/AppError');
 
 const FULL_INCLUDE = [
@@ -67,6 +67,8 @@ class InductionService {
     static async create(data) {
         const validationError = validateQuestionSet(data.questions);
         if (validationError) throw new AppError(validationError, 400);
+        const questionsToShowError = validateQuestionsToShow(data.questionsToShow, data.questions.length);
+        if (questionsToShowError) throw new AppError(questionsToShowError, 400);
         if (!Array.isArray(data.companyIds) || !data.companyIds.length) {
             throw new AppError('Debe asignar al menos una empresa', 400);
         }
@@ -77,6 +79,7 @@ class InductionService {
                 description: data.description ?? null,
                 passingScore: data.passingScore,
                 maxAttempts: data.maxAttempts,
+                questionsToShow: data.questionsToShow ?? null,
                 active: data.active ?? true,
             }, { transaction });
 
@@ -99,6 +102,13 @@ class InductionService {
             const validationError = validateQuestionSet(data.questions);
             if (validationError) throw new AppError(validationError, 400);
         }
+        if (data.questionsToShow !== undefined) {
+            const totalQuestions = data.questions
+                ? data.questions.length
+                : await InductionQuestion.count({ where: { inductionId: id } });
+            const questionsToShowError = validateQuestionsToShow(data.questionsToShow, totalQuestions);
+            if (questionsToShowError) throw new AppError(questionsToShowError, 400);
+        }
         if (data.companyIds && !data.companyIds.length) {
             throw new AppError('Debe asignar al menos una empresa', 400);
         }
@@ -109,6 +119,7 @@ class InductionService {
                 description: data.description !== undefined ? data.description : induction.description,
                 passingScore: data.passingScore ?? induction.passingScore,
                 maxAttempts: data.maxAttempts ?? induction.maxAttempts,
+                questionsToShow: data.questionsToShow !== undefined ? data.questionsToShow : induction.questionsToShow,
                 active: data.active !== undefined ? data.active : induction.active,
             }, { transaction });
 

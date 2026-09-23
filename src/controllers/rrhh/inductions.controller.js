@@ -23,6 +23,9 @@ const buildInductionPayload = (body) => ({
     description: body.description,
     passingScore: body.passingScore !== undefined ? Number(body.passingScore) : undefined,
     maxAttempts: body.maxAttempts !== undefined ? Number(body.maxAttempts) : undefined,
+    questionsToShow: body.questionsToShow !== undefined
+        ? (body.questionsToShow === null ? null : Number(body.questionsToShow))
+        : undefined,
     active: body.active,
     companyIds: body.companyIds ? decodeIds(body.companyIds, 'companyId') : undefined,
     questions: body.questions,
