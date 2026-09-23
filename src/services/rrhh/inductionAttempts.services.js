@@ -7,7 +7,7 @@ const InductionOption = require('../../models/rrhh/inductionOption.models');
 const InductionProgress = require('../../models/rrhh/inductionProgress.models');
 const InductionAttempt = require('../../models/rrhh/inductionAttempt.models');
 const InductionService = require('./inductions.services');
-const { gradeAttempt, remainingAttempts, resolveStatus } = require('../../utils/inductionScoring');
+const { gradeAttempt, pickRandomQuestions, remainingAttempts, resolveStatus } = require('../../utils/inductionScoring');
 const AppError = require('../../errors/AppError');
 
 async function assertStaffAssigned(staffId, inductionId) {
@@ -27,6 +27,25 @@ async function assertStaffAssigned(staffId, inductionId) {
     return induction;
 }
 
+/**
+ * Sorteo de preguntas por intento (anti-copia): mientras `usedAttempts` no
+ * cambie, se reutiliza el mismo subconjunto ya persistido (un refresh de
+ * página en medio del intento no lo altera); en cuanto se registra un
+ * intento nuevo, el próximo acceso sortea un subconjunto distinto.
+ */
+async function getSelectedQuestions(progress, induction, usedAttempts) {
+    const needsNewSelection = !progress.selectedQuestionIds || progress.selectedForAttempt !== usedAttempts;
+    let selectedIds = progress.selectedQuestionIds;
+
+    if (needsNewSelection) {
+        selectedIds = pickRandomQuestions(induction.questions, induction.questionsToShow).map((question) => question.id);
+        await progress.update({ selectedQuestionIds: selectedIds, selectedForAttempt: usedAttempts });
+    }
+
+    const byId = new Map(induction.questions.map((question) => [question.id, question]));
+    return selectedIds.map((id) => byId.get(id)).filter(Boolean);
+}
+
 class InductionAttemptService {
     static async listMine(staffId) {
         return InductionService.getInductionsForStaff(staffId);
@@ -34,24 +53,27 @@ class InductionAttemptService {
 
     static async getMineDetail(staffId, inductionId) {
         const induction = await assertStaffAssigned(staffId, inductionId);
-        const [progress, attempts] = await Promise.all([
-            InductionProgress.findOne({ where: { inductionId, staffId } }),
+        const [[progress], attempts] = await Promise.all([
+            InductionProgress.findOrCreate({ where: { inductionId, staffId }, defaults: { inductionId, staffId } }),
             InductionAttempt.findAll({ where: { inductionId, staffId }, order: [['createdAt', 'DESC']] }),
         ]);
+
+        const selectedQuestions = await getSelectedQuestions(progress, induction, attempts.length);
 
         const bestScore = attempts.length ? Math.max(...attempts.map((attempt) => Number(attempt.score))) : null;
         const remaining = remainingAttempts({
             maxAttempts: induction.maxAttempts,
-            extraAttempts: progress?.extraAttempts ?? 0,
+            extraAttempts: progress.extraAttempts,
             usedAttempts: attempts.length,
         });
 
-        induction.dataValues.materialViewedAt = progress?.materialViewedAt ?? null;
+        induction.dataValues.questions = selectedQuestions;
+        induction.dataValues.materialViewedAt = progress.materialViewedAt ?? null;
         induction.dataValues.bestScore = bestScore;
         induction.dataValues.attemptsUsed = attempts.length;
         induction.dataValues.remainingAttempts = remaining;
         induction.dataValues.status = resolveStatus({
-            materialViewedAt: progress?.materialViewedAt ?? null,
+            materialViewedAt: progress.materialViewedAt ?? null,
             bestScore,
             passingScore: induction.passingScore,
             remaining,
@@ -91,16 +113,21 @@ class InductionAttemptService {
             throw new AppError('Alcanzaste el número máximo de intentos para esta inducción', 400);
         }
 
-        const validQuestionIds = new Set(induction.questions.map((question) => question.id));
-        const validOptionIds = new Set(induction.questions.flatMap((question) => question.options.map((option) => option.id)));
-        const invalidAnswer = (answers ?? []).some(
+        const selectedQuestions = await getSelectedQuestions(progress, induction, usedAttempts);
+        const validQuestionIds = new Set(selectedQuestions.map((question) => question.id));
+        const validOptionIds = new Set(selectedQuestions.flatMap((question) => question.options.map((option) => option.id)));
+        const givenAnswers = answers ?? [];
+        const invalidAnswer = givenAnswers.some(
             (answer) => !validQuestionIds.has(answer.questionId) || !validOptionIds.has(answer.optionId),
         );
         if (invalidAnswer) {
             throw new AppError('La respuesta enviada no pertenece a esta inducción', 400);
         }
+        if (givenAnswers.length !== selectedQuestions.length) {
+            throw new AppError('Debes responder todas las preguntas mostradas', 400);
+        }
 
-        const graded = gradeAttempt(induction.questions, answers);
+        const graded = gradeAttempt(selectedQuestions, givenAnswers);
         const passed = graded.score >= induction.passingScore;
 
         await InductionAttempt.create({
@@ -110,7 +137,7 @@ class InductionAttemptService {
             totalQuestions: graded.total,
             score: graded.score,
             passed,
-            answers,
+            answers: givenAnswers,
         });
 
         return {

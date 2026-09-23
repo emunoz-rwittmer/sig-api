@@ -1,7 +1,9 @@
 const {
     validateQuestionSet,
+    validateQuestionsToShow,
     gradeAttempt,
     isPassed,
+    pickRandomQuestions,
     remainingAttempts,
     resolveStatus,
 } = require('../../../src/utils/inductionScoring');
@@ -33,6 +35,50 @@ describe('inductionScoring utils', () => {
         it('acepta un set válido', () => {
             const questions = [{ statement: 'Q1', options: [{ text: 'A', isCorrect: true }, { text: 'B', isCorrect: false }] }];
             expect(validateQuestionSet(questions)).toBeNull();
+        });
+    });
+
+    describe('validateQuestionsToShow', () => {
+        it('acepta null (mostrar todas)', () => {
+            expect(validateQuestionsToShow(null, 10)).toBeNull();
+        });
+
+        it('rechaza un valor no entero o menor a 1', () => {
+            expect(validateQuestionsToShow(0, 10)).toMatch(/mayor a 0/);
+            expect(validateQuestionsToShow(-1, 10)).toMatch(/mayor a 0/);
+            expect(validateQuestionsToShow(1.5, 10)).toMatch(/mayor a 0/);
+        });
+
+        it('rechaza un valor mayor al total de preguntas', () => {
+            expect(validateQuestionsToShow(11, 10)).toMatch(/no puede superar el total/);
+        });
+
+        it('acepta un valor entre 1 y el total', () => {
+            expect(validateQuestionsToShow(5, 10)).toBeNull();
+            expect(validateQuestionsToShow(10, 10)).toBeNull();
+        });
+    });
+
+    describe('pickRandomQuestions', () => {
+        const pool = [buildQuestion(1, []), buildQuestion(2, []), buildQuestion(3, []), buildQuestion(4, [])];
+
+        it('devuelve exactamente `count` preguntas del banco, sin repetir', () => {
+            const picked = pickRandomQuestions(pool, 2);
+            expect(picked).toHaveLength(2);
+            expect(new Set(picked.map((q) => q.id)).size).toBe(2);
+            picked.forEach((question) => expect(pool).toContainEqual(question));
+        });
+
+        it('devuelve el banco completo (barajado) cuando count es nulo, 0 o excede el total', () => {
+            expect(pickRandomQuestions(pool, null)).toHaveLength(pool.length);
+            expect(pickRandomQuestions(pool, 0)).toHaveLength(pool.length);
+            expect(pickRandomQuestions(pool, 99)).toHaveLength(pool.length);
+        });
+
+        it('no muta el arreglo original', () => {
+            const original = [...pool];
+            pickRandomQuestions(pool, 2);
+            expect(pool).toEqual(original);
         });
     });
 

@@ -56,6 +56,36 @@ Ver rutas documentadas con `@openapi` en
 `authJwt.hasAnyRole(['admin', 'rrhh'])`. Los endpoints `/me...` resuelven el
 staff desde `req.userId` (agregado en `verifyToken`), nunca desde la URL.
 
+## Preguntas aleatorias por intento (2026-09-23, addendum)
+
+`inductions.questionsToShow` (nullable) define cuántas preguntas del banco
+se muestran por intento — `null` o `>=` al total muestra todas. En cada
+intento nuevo el backend sortea (`inductionScoring.pickRandomQuestions`,
+Fisher-Yates) un subconjunto y lo persiste en
+`induction_progress.selected_question_ids` /
+`.selected_for_attempt` (ver migración
+`2026-09-23b-rrhh-inductions-random-questions-migration.sql`), así:
+
+- Dos colaboradores (o dos aperturas de la misma sesión) ven, con alta
+  probabilidad, preguntas distintas — dificulta copiarse.
+- Un refresh de página en medio del mismo intento no cambia el
+  subconjunto (se reutiliza mientras `attemptsUsed` no avance).
+- `submitAttempt` valida y califica **solo** contra ese subconjunto —
+  exige que la respuesta cubra exactamente esas preguntas, ni más ni
+  menos.
+
+## Bloqueo del lado del colaborador tras responder
+
+En el front, una inducción con `attemptsUsed > 0` se considera
+"bloqueada" para el trabajador: en vez de reabrir el cuestionario, la
+tarjeta en `/inductions/me` abre un modal de resumen
+(`InductionSummaryModal`) con estado, nota, intentos usados y — si
+todavía tiene intentos restantes y no aprobó — un botón para rendir de
+nuevo (dispara un sorteo nuevo). El acceso directo por URL a
+`/inductions/me/:id` sigue la misma regla (`useTakeInduction.blocked`).
+No es un cambio de contrato del backend: se deriva de `status` /
+`remainingAttempts`, ya expuestos en la respuesta de `/inductions/me`.
+
 ## Fuera de alcance
 
 - No se reutiliza el motor de encuestas (`operations/surveys`): no modela

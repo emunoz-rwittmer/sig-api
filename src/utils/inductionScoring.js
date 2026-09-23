@@ -26,6 +26,17 @@ function validateQuestionSet(questions) {
     return null;
 }
 
+function validateQuestionsToShow(questionsToShow, totalQuestions) {
+    if (questionsToShow == null) return null;
+    if (!Number.isInteger(questionsToShow) || questionsToShow < 1) {
+        return 'La cantidad de preguntas a mostrar debe ser un número entero mayor a 0';
+    }
+    if (questionsToShow > totalQuestions) {
+        return 'La cantidad de preguntas a mostrar no puede superar el total de preguntas de la inducción';
+    }
+    return null;
+}
+
 function gradeAttempt(questions, answers) {
     const answerByQuestion = new Map(
         (answers ?? []).map((answer) => [answer.questionId, answer.optionId]),
@@ -50,6 +61,22 @@ function isPassed(score, passingScore) {
     return score >= passingScore;
 }
 
+/**
+ * Baraja (Fisher-Yates) y toma `count` preguntas del banco — usado para
+ * armar el subconjunto que se muestra en un intento (anti-copia: cada
+ * colaborador/intento recibe un sorteo distinto). `count` nulo, <= 0 o
+ * mayor al total devuelve el banco completo, igual barajado.
+ */
+function pickRandomQuestions(questions, count) {
+    const pool = [...questions];
+    for (let i = pool.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    if (!count || count <= 0 || count >= pool.length) return pool;
+    return pool.slice(0, count);
+}
+
 function remainingAttempts({ maxAttempts, extraAttempts = 0, usedAttempts = 0 }) {
     return Math.max(0, maxAttempts + extraAttempts - usedAttempts);
 }
@@ -63,8 +90,10 @@ function resolveStatus({ materialViewedAt, bestScore, passingScore, remaining })
 
 module.exports = {
     validateQuestionSet,
+    validateQuestionsToShow,
     gradeAttempt,
     isPassed,
+    pickRandomQuestions,
     remainingAttempts,
     resolveStatus,
 };

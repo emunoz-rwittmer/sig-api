@@ -71,7 +71,17 @@ function validQuestionsPayload() {
     ];
 }
 
-async function createInductionFixture({ companyIds, passingScore = 50, maxAttempts = 1 }) {
+function manyQuestionsPayload(count) {
+    return Array.from({ length: count }, (_, index) => ({
+        statement: `Pregunta ${index + 1}`,
+        options: [
+            { text: 'Correcta', isCorrect: true },
+            { text: 'Incorrecta', isCorrect: false },
+        ],
+    }));
+}
+
+async function createInductionFixture({ companyIds, passingScore = 50, maxAttempts = 1, questions, questionsToShow }) {
     const response = await request(app)
         .post('/api/inductions')
         .set('Authorization', `Bearer ${adminToken}`)
@@ -80,14 +90,23 @@ async function createInductionFixture({ companyIds, passingScore = 50, maxAttemp
             description: 'Descripción de prueba',
             passingScore,
             maxAttempts,
+            questionsToShow,
             active: true,
             companyIds: companyIds.map((id) => Utils.encode(id)),
-            questions: validQuestionsPayload(),
+            questions: questions ?? validQuestionsPayload(),
         });
     expect(response.status).toBe(200);
 
     const induction = await Induction.findOne({ order: [['id', 'DESC']] });
     return induction;
+}
+
+async function getMine(token, inductionId) {
+    const response = await request(app)
+        .get(`/api/inductions/me/${Utils.encode(inductionId)}`)
+        .set('Authorization', `Bearer ${token}`);
+    expect(response.status).toBe(200);
+    return response.body;
 }
 
 async function fetchInductionDetail(inductionId) {
@@ -300,6 +319,94 @@ describe('RRHH Inductions', () => {
                 .set('Authorization', `Bearer ${staffToken}`)
                 .send({ answers: wrongAnswers });
             expect(retryAttempt.status).toBe(200);
+        });
+    });
+
+    describe('Random question sampling per attempt', () => {
+        it('rejects questionsToShow greater than the number of questions', async () => {
+            const { company } = await createCompanyWithYacht();
+
+            const response = await request(app)
+                .post('/api/inductions')
+                .set('Authorization', `Bearer ${adminToken}`)
+                .send({
+                    name: 'Inducción con muestra inválida',
+                    passingScore: 70,
+                    maxAttempts: 3,
+                    questionsToShow: 5,
+                    companyIds: [Utils.encode(company.id)],
+                    questions: manyQuestionsPayload(3),
+                });
+
+            expect(response.status).toBe(400);
+        });
+
+        it('shows only questionsToShow questions to the staff, consistently until a new attempt starts', async () => {
+            const { company } = await createCompanyWithYacht();
+            const staff = await createStaffFixture();
+            await StaffCompany.create({ staffId: staff.id, companyId: company.id });
+            const induction = await createInductionFixture({
+                companyIds: [company.id],
+                passingScore: 50,
+                maxAttempts: 3,
+                questions: manyQuestionsPayload(10),
+                questionsToShow: 4,
+            });
+            const staffToken = await loginStaff(staff);
+
+            const firstView = await getMine(staffToken, induction.id);
+            expect(firstView.questions).toHaveLength(4);
+
+            const secondView = await getMine(staffToken, induction.id);
+            expect(secondView.questions.map((q) => q.id).sort()).toEqual(firstView.questions.map((q) => q.id).sort());
+
+            await request(app)
+                .put(`/api/inductions/me/${Utils.encode(induction.id)}/viewed`)
+                .set('Authorization', `Bearer ${staffToken}`);
+
+            const wrongAnswers = firstView.questions.map((question) => ({
+                questionId: question.id,
+                optionId: question.options[0].id,
+            }));
+
+            const attempt = await request(app)
+                .post(`/api/inductions/me/${Utils.encode(induction.id)}/attempts`)
+                .set('Authorization', `Bearer ${staffToken}`)
+                .send({ answers: wrongAnswers });
+            expect(attempt.status).toBe(200);
+            expect(attempt.body.total).toBe(4);
+
+            const viewAfterAttempt = await getMine(staffToken, induction.id);
+            expect(viewAfterAttempt.questions).toHaveLength(4);
+        });
+
+        it('rejects an attempt that does not answer every shown question', async () => {
+            const { company } = await createCompanyWithYacht();
+            const staff = await createStaffFixture();
+            await StaffCompany.create({ staffId: staff.id, companyId: company.id });
+            const induction = await createInductionFixture({
+                companyIds: [company.id],
+                questions: manyQuestionsPayload(6),
+                questionsToShow: 3,
+            });
+            const staffToken = await loginStaff(staff);
+
+            const detail = await getMine(staffToken, induction.id);
+            await request(app)
+                .put(`/api/inductions/me/${Utils.encode(induction.id)}/viewed`)
+                .set('Authorization', `Bearer ${staffToken}`);
+
+            const partialAnswers = [{
+                questionId: detail.questions[0].id,
+                optionId: detail.questions[0].options[0].id,
+            }];
+
+            const response = await request(app)
+                .post(`/api/inductions/me/${Utils.encode(induction.id)}/attempts`)
+                .set('Authorization', `Bearer ${staffToken}`)
+                .send({ answers: partialAnswers });
+
+            expect(response.status).toBe(400);
         });
     });
 

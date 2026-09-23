@@ -28,6 +28,21 @@ const InductionProgress = db.define('induction_progress', {
         defaultValue: 0,
         field: 'extra_attempts',
     },
+    // Subconjunto de preguntas (ids) sorteado para el intento vigente —
+    // se recalcula cada vez que `attemptsUsed` (ver selectedForAttempt)
+    // avanza, así cada intento nuevo recibe un sorteo distinto, pero un
+    // refresh de página en medio del mismo intento no lo cambia.
+    selectedQuestionIds: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        field: 'selected_question_ids',
+    },
+    selectedForAttempt: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+        field: 'selected_for_attempt',
+    },
 });
 
 module.exports = InductionProgress;
