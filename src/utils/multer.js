@@ -35,5 +35,17 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }
 });
 
+// Permite instancias de multer con límites/tipos propios (ej. material
+// didáctico de inducciones, que admite video y pesa más que un PDF/imagen
+// de catálogo) sin tocar la instancia `upload` por defecto.
+const createUpload = ({ fileSize, allowedMimeTypes } = {}) => multer({
+  storage,
+  limits: { fileSize: fileSize ?? 10 * 1024 * 1024 },
+  fileFilter: allowedMimeTypes
+    ? (req, file, cb) => cb(null, allowedMimeTypes.includes(file.mimetype))
+    : undefined,
+});
+
 module.exports = upload;
+module.exports.createUpload = createUpload;
 

@@ -44,6 +44,13 @@ const StaffReadRegulation = require('./rrhh/readRegulation.models');
 const Trading = require('./rrhh/trading.models');
 const Format = require('./rrhh/format.models');
 const DoctorFormat = require('./rrhh/doctorFormat.models');
+const Induction = require('./rrhh/induction.models');
+const InductionCompany = require('./rrhh/inductionCompany.models');
+const InductionMaterial = require('./rrhh/inductionMaterial.models');
+const InductionQuestion = require('./rrhh/inductionQuestion.models');
+const InductionOption = require('./rrhh/inductionOption.models');
+const InductionProgress = require('./rrhh/inductionProgress.models');
+const InductionAttempt = require('./rrhh/inductionAttempt.models');
 const ShippingGuideCount = require('./operations/shippingGuide/shippingGuideCount.model');
 const ShipmentDates = require('./operations/surveys/shipmentDates.models');
 const FormRespond = require('./operations/surveys/formRespond.models');
@@ -124,6 +131,31 @@ const initModels = () => {
 
     Regulation.hasMany(StaffReadRegulation, { as: "reads", foreignKey: "regulation_id" });
     StaffReadRegulation.belongsTo(Regulation, { as: "regulation", foreignKey: "regulation_id" });
+
+    //inducciones
+    Induction.hasMany(InductionCompany, { as: "companies", foreignKey: "induction_id", onDelete: "CASCADE", hooks: true });
+    InductionCompany.belongsTo(Induction, { as: "induction", foreignKey: "induction_id" });
+    InductionCompany.belongsTo(Company, { as: "company", foreignKey: "company_id" });
+    Company.hasMany(InductionCompany, { as: "inductionCompanies", foreignKey: "company_id" });
+
+    Induction.hasMany(InductionMaterial, { as: "materials", foreignKey: "induction_id", onDelete: "CASCADE", hooks: true });
+    InductionMaterial.belongsTo(Induction, { as: "induction", foreignKey: "induction_id" });
+
+    Induction.hasMany(InductionQuestion, { as: "questions", foreignKey: "induction_id", onDelete: "CASCADE", hooks: true });
+    InductionQuestion.belongsTo(Induction, { as: "induction", foreignKey: "induction_id" });
+
+    InductionQuestion.hasMany(InductionOption, { as: "options", foreignKey: "question_id", onDelete: "CASCADE", hooks: true });
+    InductionOption.belongsTo(InductionQuestion, { as: "question", foreignKey: "question_id" });
+
+    Induction.hasMany(InductionProgress, { as: "progress", foreignKey: "induction_id", onDelete: "CASCADE", hooks: true });
+    InductionProgress.belongsTo(Induction, { as: "induction", foreignKey: "induction_id" });
+    InductionProgress.belongsTo(Staff, { as: "staff", foreignKey: "staff_id" });
+    Staff.hasMany(InductionProgress, { as: "inductionProgress", foreignKey: "staff_id" });
+
+    Induction.hasMany(InductionAttempt, { as: "attempts", foreignKey: "induction_id", onDelete: "CASCADE", hooks: true });
+    InductionAttempt.belongsTo(Induction, { as: "induction", foreignKey: "induction_id" });
+    InductionAttempt.belongsTo(Staff, { as: "staff", foreignKey: "staff_id" });
+    Staff.hasMany(InductionAttempt, { as: "inductionAttempts", foreignKey: "staff_id" });
 
     //coment cards
     ComentCardRespond.hasMany(ComentCardAnswers, { as: 'respuestas', foreignKey: "respuesta_coment_card_id", onDelete: "CASCADE", hooks: true });
