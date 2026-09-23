@@ -12,6 +12,12 @@ const Indicator = db.define('indicator', {
     allowNull: false,
     field: 'departament_id'
   },
+  // Sub-agrupación libre dentro del proceso (ej. "Compras" dentro de
+  // "Administración"). Metadata de UI, no una FK.
+  subprocess: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
   formulaId: {
     type: DataTypes.INTEGER,
     allowNull: false,
@@ -40,6 +46,19 @@ const Indicator = db.define('indicator', {
   formula: {
     type: DataTypes.STRING,
     allowNull: false,
+  },
+  // Etiquetas del numerador/denominador para la tabla y el gráfico de
+  // métricas (ej. "Requerimientos atendidos" / "Total de requerimientos").
+  // No participan en el cálculo (`formulaId` sigue siendo la fórmula real).
+  numLabel: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'num_label',
+  },
+  denLabel: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'den_label',
   },
   goal: {
     type: DataTypes.STRING,

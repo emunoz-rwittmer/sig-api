@@ -3,6 +3,7 @@ const IndicatorController  = require ('../../../controllers/operations/indicator
 
 const router = Router();
 
+router.get('/all',IndicatorController.getAllIndicators);
 router.get('/indicatorsByDepartament/:departament_id',IndicatorController.getIndicatorsByDepartament);
 router.get('/formulas/indicators',IndicatorController.getFormulas);
 router.post('/createIndicator', IndicatorController.createIndicator);

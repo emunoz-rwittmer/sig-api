@@ -1,4 +1,3 @@
-const { Sequelize, Op, where } = require("sequelize");
 const Indicator = require('../../../models/operations/indicators/indicator.models');
 const Formula = require('../../../models/operations/indicators/formula.models');
 const Tabulation = require("../../../models/operations/indicators/tabulation.models");
@@ -6,54 +5,63 @@ const Process = require("../../../models/operations/indicators/process.models");
 const ProcessStaff = require("../../../models/operations/indicators/processStaffs.models");
 const Staff = require("../../../models/catalogs/staff.models");
 const Positions = require("../../../models/catalogs/positions.models");
+const Departaments = require("../../../models/catalogs/departament.models");
+
+const INDICATOR_INCLUDE = [
+    {
+        model: Process,
+        as: 'departament',
+        attributes: ['id', 'name', 'departamentId'],
+        include: [{ model: Departaments, as: 'departamento', attributes: ['id', 'name'] }],
+    },
+    { model: Formula, as: 'formula_indicator' },
+    { model: Tabulation, as: 'tabulations' },
+];
 
 class IndicatorService {
 
     static async getProcessById(id) {
-        try {
-            const result = await Process.findByPk(id);
-            return result;
-        } catch (error) {
-            throw error;
-        }
+        return Process.findByPk(id);
+    }
+
+    // Dashboard rediseñado: todos los indicadores de todos los procesos en
+    // una sola llamada (el filtro por proceso/tipo/búsqueda es client-side,
+    // mismo patrón que `regulations`/`inductions`). Cada indicador trae sus
+    // tabulaciones para que el front calcule "actual" (última tabulación)
+    // sin una segunda llamada por indicador.
+    static async getAllIndicators() {
+        return Indicator.findAll({
+            include: INDICATOR_INCLUDE,
+            order: [['name', 'ASC']],
+        });
     }
 
     static async getIndicatorsByDepartament(departamentId) {
-        try {
-            const result = await Indicator.findAll({
-                where: { departamentId },
-                include: [
-                    {
-                        model: Process,
-                        as: 'departament',
-                        attributes: ['name'],
-                    },
-                    {
-                        model: Formula,
-                        as: 'formula_indicator',
-                    }],
-                order: [['name', 'ASC']]
-            });
-            return result;
-        } catch (error) {
-            throw error;
-        }
+        return Indicator.findAll({
+            where: { departamentId },
+            include: [
+                {
+                    model: Process,
+                    as: 'departament',
+                    attributes: ['name'],
+                },
+                {
+                    model: Formula,
+                    as: 'formula_indicator',
+                }],
+            order: [['name', 'ASC']]
+        });
     }
 
     static async getIndicatorById(id) {
-        try {
-            const result = await Indicator.findOne({
-                where: { id },
-                include: [{
-                    model: Formula,
-                    as: 'formula_indicator',
-                    attributes: ['name']
-                }],
-            });
-            return result;
-        } catch (error) {
-            throw error;
-        }
+        return Indicator.findOne({
+            where: { id },
+            include: [{
+                model: Formula,
+                as: 'formula_indicator',
+                attributes: ['name']
+            }],
+        });
     }
 
     static async getChangePercentageByMeasurement(indicatorId) {
@@ -117,152 +125,80 @@ class IndicatorService {
     }
 
     static async getFormulas() {
-        try {
-            const result = await Formula.findAll();
-            return result;
-        } catch (error) {
-
-            throw error;
-        }
+        return Formula.findAll();
     }
 
     static async createIndicator(indicator) {
-        try {
-            const result = await Indicator.create(indicator);
-            return result;
-        } catch (error) {
-            throw error;
-
-        }
+        return Indicator.create(indicator);
     }
 
     static async updateIndicator(data, id) {
-        try {
-            const result = await Indicator.update(data, id);
-            return result;
-        } catch (error) {
-
-            throw error;
-
-        }
+        return Indicator.update(data, id);
     }
 
     static async deleteIndicator(id) {
-        try {
-            const result = await Indicator.destroy({
-                where: { id }
-            });
-            if (result) {
-                return 'resource deleted successfully'
-            }
-        } catch (error) {
-            throw error;
-        }
+        const result = await Indicator.destroy({ where: { id } });
+        return result ? 'resource deleted successfully' : null;
     }
 
     // tabulation
 
     static async createTabulation(tabulation) {
-        try {
-            const result = await Tabulation.create(tabulation);
-            return result;
-        } catch (error) {
-            throw error;
-
-        }
+        return Tabulation.create(tabulation);
     }
 
     static async getTabulationsByIndicator(id) {
-        try {
-            const result = await Indicator.findOne(
-                {
-                    where: { id },
-                    include: [
-                        {
-                            model: Process,
-                            as: 'departament'
-                        },
-                        {
-                            model: Tabulation,
-                            as: 'tabulations'
-                        }
-                    ],
-                    order: [
-                        [{ model: Tabulation, as: 'tabulations' }, 'createdAt', 'DESC']
-                    ]
-                });
-            return result;
-        } catch (error) {
-            throw error;
-        }
+        return Indicator.findOne({
+            where: { id },
+            include: INDICATOR_INCLUDE,
+            order: [
+                [{ model: Tabulation, as: 'tabulations' }, 'periodYear', 'DESC'],
+                [{ model: Tabulation, as: 'tabulations' }, 'periodMonth', 'DESC'],
+                [{ model: Tabulation, as: 'tabulations' }, 'createdAt', 'DESC'],
+            ],
+        });
     }
 
-    // indicator - staff 
+    // indicator - staff
 
     static async getProcesStaffs(staffId) {
-        try {
-            const result = await ProcessStaff.findAll({
-                where: { staffId },
-                attributes: ['id'],
-                include: {
-                    model: Process,
-                    as: 'process',
-                    attributes: ['id', 'name'],
-                }
-            });
-            return result;
-        } catch (error) {
-
-            throw error;
-        }
+        return ProcessStaff.findAll({
+            where: { staffId },
+            attributes: ['id'],
+            include: {
+                model: Process,
+                as: 'process',
+                attributes: ['id', 'name'],
+            }
+        });
     }
 
     static async getAllStaffsByProces(id) {
-        try {
-            const result = await ProcessStaff.findAll({
-                where: { processId: id },
-                attributes: ['id'],
+        return ProcessStaff.findAll({
+            where: { processId: id },
+            attributes: ['id'],
+            include: {
+                model: Staff,
+                as: 'staffs',
+                attributes: ['firstName', 'lastName'],
                 include: {
-                    model: Staff,
-                    as: 'staffs',
-                    attributes: ['firstName', 'lastName'],
-                    include: {
-                        model: Positions,
-                        as: 'staff_position',
-                        attributes: ['name'],
-                    }
+                    model: Positions,
+                    as: 'staff_position',
+                    attributes: ['name'],
                 }
-            });
-            return result;
-        } catch (error) {
-
-            throw error;
-        }
+            }
+        });
     }
 
     static async assignStaff(data) {
-        try {
-            const result = await Promise.all(data.staffs.map(async (staff) => {
-                const response = await ProcessStaff.create({
-                    processId: data.processId,
-                    staffId: staff.staffId
-                });
-                return response;
-            }));
-            return result; // Devuelve el resultado después de que todas las promesas se resuelvan
-        } catch (error) {
-            throw error;
-        }
+        return Promise.all(data.staffs.map((staff) => ProcessStaff.create({
+            processId: data.processId,
+            staffId: staff.staffId,
+        })));
     }
 
-
     static async deleteStafft(id) {
-        try {
-            const result = await ProcessStaff.destroy(id);
-            return result;
-        } catch (error) {
-            throw error;
-        }
+        return ProcessStaff.destroy(id);
     }
 
 }
