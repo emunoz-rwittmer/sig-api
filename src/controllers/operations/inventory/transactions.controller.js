@@ -69,13 +69,20 @@ const productEntryInWarehouse = async (req, res, next) => {
     }
 };
 
+const decodeProducts = (products) => (products ?? []).map((product) => ({
+    ...product,
+    id: decodeId(product.id, 'product.id'),
+}));
+
 const transactionWarehouse = async (req, res, next) => {
     try {
-        const { products, userName, location } = req.body;
+        const { userName, location } = req.body;
+
         const companyId = req.body.companyId ? decodeId(req.body.companyId, 'companyId') : null;
         const warehouseFromId = decodeId(req.body.warehouseFromId, 'warehouseFromId');
         const warehouseToId = decodeId(req.body.warehouseToId, 'warehouseToId');
         const userId = decodeId(req.body.userId, 'userId');
+        const products = decodeProducts(req.body.products);
 
         const consecutivo = await Consecutivo.findOne({ where: {} }) ?? await Consecutivo.create({ valor: 1 });
 
@@ -109,10 +116,10 @@ const transactionWarehouse = async (req, res, next) => {
 
 const incomeProductsInWarehouse = async (req, res, next) => {
     try {
-        const { products } = req.body;
         const warehouseToId = decodeId(req.body.warehouseToId, 'warehouseToId')
         const companyId = req.body.companyId ? decodeId(req.body.companyId, 'companyId') : null;
         const userId = decodeId(req.body.userId, 'userId')
+        const products = decodeProducts(req.body.products);
 
         const transactions = await TransactionService.incomeProductsInWarehouse({
             products,

@@ -343,7 +343,7 @@ describe('POST /api/transactions/transactionBetweenWarehouse', () => {
             request(app)
                 .post('/api/transactions/transactionBetweenWarehouse')
                 .send({
-                    products: [{ id: product.id, name: product.name, quantity: 4 }],
+                    products: [{ id: Utils.encode(product.id), name: product.name, quantity: 4 }],
                     userName: 'Tester',
                     location: 'GPS',
                     companyId: Utils.encode(company.id),
@@ -382,7 +382,7 @@ describe('POST /api/transactions/transactionBetweenWarehouse', () => {
             request(app)
                 .post('/api/transactions/transactionBetweenWarehouse')
                 .send({
-                    products: [{ id: product.id, name: product.name, quantity: 2 }],
+                    products: [{ id: Utils.encode(product.id), name: product.name, quantity: 2 }],
                     userName: 'Tester',
                     location: 'GPS',
                     companyId: Utils.encode(company.id),
@@ -412,7 +412,7 @@ describe('POST /api/transactions/transactionBetweenWarehouse', () => {
             request(app)
                 .post('/api/transactions/transactionBetweenWarehouse')
                 .send({
-                    products: [{ id: product.id, name: product.name, quantity: 1 }],
+                    products: [{ id: Utils.encode(product.id), name: product.name, quantity: 1 }],
                     userName: 'Tester',
                     location: 'UIO',
                     companyId: Utils.encode(company.id),
@@ -436,7 +436,7 @@ describe('POST /api/transactions/transactionBetweenWarehouse', () => {
             request(app)
                 .post('/api/transactions/transactionBetweenWarehouse')
                 .send({
-                    products: [{ id: product.id, name: product.name, quantity: 1 }],
+                    products: [{ id: Utils.encode(product.id), name: product.name, quantity: 1 }],
                     userName: 'Tester',
                     location: 'GPS',
                     companyId: Utils.encode(company.id),
@@ -462,7 +462,7 @@ describe('POST /api/transactions/transactionBetweenWarehouse', () => {
             request(app)
                 .post('/api/transactions/transactionBetweenWarehouse')
                 .send({
-                    products: [{ id: product.id, name: product.name, quantity: 5 }],
+                    products: [{ id: Utils.encode(product.id), name: product.name, quantity: 5 }],
                     userName: 'Tester',
                     location: 'GPS',
                     companyId: Utils.encode(company.id),
@@ -522,7 +522,7 @@ describe('POST /api/transactions/incomeProductsInWarehouse', () => {
             request(app)
                 .post('/api/transactions/incomeProductsInWarehouse')
                 .send({
-                    products: [{ id: product.id, quantity: 8 }],
+                    products: [{ id: Utils.encode(product.id), quantity: 8 }],
                     warehouseToId: Utils.encode(warehouse.id),
                     companyId: Utils.encode(company.id),
                     userId: Utils.encode(staff.id),
