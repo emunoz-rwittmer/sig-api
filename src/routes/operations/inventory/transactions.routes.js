@@ -70,8 +70,8 @@ router.post('/productEntryInWarehouse/:warehouse_id', TransactionController.prod
  *                   type: object
  *                   properties:
  *                     id:
- *                       type: integer
- *                       description: ID del producto
+ *                       type: string
+ *                       description: ID del producto codificado (hashids)
  *                     name:
  *                       type: string
  *                     quantity:
@@ -123,8 +123,8 @@ router.post('/transactionBetweenWarehouse', TransactionController.transactionWar
  *                   type: object
  *                   properties:
  *                     id:
- *                       type: integer
- *                       description: ID del producto
+ *                       type: string
+ *                       description: ID del producto codificado (hashids)
  *                     quantity:
  *                       type: number
  *               warehouseToId:
