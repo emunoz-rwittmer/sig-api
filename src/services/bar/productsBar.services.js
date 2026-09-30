@@ -5,6 +5,7 @@ const ProductConfiguration = require('../../models/operations/inventory/productC
 const db = require('../../utils/database');
 const Recipe = require('../../models/bar/recipe.models');
 const RecipeDetail = require('../../models/bar/recipeDetail.models');
+const AppError = require('../../errors/AppError');
 
 class ProductBarService {
 
@@ -78,9 +79,7 @@ class ProductBarService {
     }
 
     static async createProduct(data) {
-        const transaction = await db.transaction();
-
-        try {
+        return db.transaction(async (transaction) => {
             const result = await ProductBar.create({
                 ...data,
                 type: data.category === 'Cócteles' ? 'RECIPE' : 'DIRECT'
@@ -92,144 +91,84 @@ class ProductBarService {
                     name: data.name
                 }, { transaction });
 
-                if (Array.isArray(data.recipe) && data.recipe.length > 0) {
-                    const recipeDetails = data.recipe.map(x => ({
-                        productId: x.productId,
-                        quantity: Number(x.quantity),
-                        recipeId: recipe.id,
-                    }));
-
-                    await RecipeDetail.bulkCreate(recipeDetails, { transaction });
-                }
+                await ProductBarService.replaceRecipeDetails(recipe.id, data.recipe, transaction, false);
             }
 
-            await transaction.commit();
             return result;
-        } catch (error) {
-            await transaction.rollback();
-            throw error;
+        });
+    }
+
+    static async replaceRecipeDetails(recipeId, ingredients, transaction, clearExisting = true) {
+        if (clearExisting) {
+            await RecipeDetail.destroy({ where: { recipeId }, transaction });
         }
+        if (!Array.isArray(ingredients) || ingredients.length === 0) return;
+
+        await RecipeDetail.bulkCreate(
+            ingredients.map(x => ({
+                productId: x.productId,
+                quantity: Number(x.quantity),
+                recipeId,
+            })),
+            { transaction }
+        );
     }
 
     static async updateProduct(data, id) {
-        const transaction = await db.transaction();
-
-        try {
+        return db.transaction(async (transaction) => {
             const currentProduct = await ProductBar.findOne({
                 where: { id },
                 include: [
                     {
                         model: Recipe,
                         as: 'recipe',
-                        include: [
-                            {
-                                model: RecipeDetail,
-                                as: 'recipe_details'
-                            }
-                        ]
+                        include: [{ model: RecipeDetail, as: 'recipe_details' }]
                     }
                 ],
                 transaction
             });
 
-            if (!currentProduct) {
-                await transaction.rollback();
-                throw new Error('Producto no encontrado');
-            }
+            if (!currentProduct) throw new AppError('Producto no encontrado', 404);
 
             const newType = data.category === 'Cócteles' ? 'RECIPE' : 'DIRECT';
             const wasRecipe = currentProduct.type === 'RECIPE';
             const isNowRecipe = newType === 'RECIPE';
 
             const result = await ProductBar.update(
-                {
-                    ...data,
-                    type: newType
-                },
-                {
-                    where: { id },
-                    transaction
-                }
+                { ...data, type: newType },
+                { where: { id }, transaction }
             );
 
-            if (wasRecipe && !isNowRecipe) {
-                const recipe = currentProduct.recipe;
-                if (recipe) {
-                    await RecipeDetail.destroy({
-                        where: { recipeId: recipe.id },
-                        transaction
-                    });
-                    await Recipe.destroy({
-                        where: { id: recipe.id },
-                        transaction
-                    });
-                }
+            const recipe = currentProduct.recipe;
+
+            if (wasRecipe && !isNowRecipe && recipe) {
+                await RecipeDetail.destroy({ where: { recipeId: recipe.id }, transaction });
+                await Recipe.destroy({ where: { id: recipe.id }, transaction });
             }
 
             if (!wasRecipe && isNowRecipe) {
-                const recipe = await Recipe.create({
+                const newRecipe = await Recipe.create({
                     productBarId: id,
                     name: data.name
                 }, { transaction });
 
-                if (Array.isArray(data.recipe) && data.recipe.length > 0) {
-                    const recipeDetails = data.recipe.map(x => ({
-                        productId: x.productId,
-                        quantity: Number(x.quantity),
-                        recipeId: recipe.id,
-                    }));
-
-                    await RecipeDetail.bulkCreate(recipeDetails, { transaction });
-                }
+                await ProductBarService.replaceRecipeDetails(newRecipe.id, data.recipe, transaction, false);
             }
 
-            if (wasRecipe && isNowRecipe) {
-                const recipe = currentProduct.recipe;
-                if (recipe) {
-                    await Recipe.update(
-                        { name: data.name },
-                        { where: { id: recipe.id }, transaction }
-                    );
-
-                    if (Array.isArray(data.recipe)) {
-                        await RecipeDetail.destroy({
-                            where: { recipeId: recipe.id },
-                            transaction
-                        });
-
-                        if (data.recipe.length > 0) {
-                            const recipeDetails = data.recipe.map(x => ({
-                                productId: x.productId,
-                                quantity: Number(x.quantity),
-                                recipeId: recipe.id,
-                            }));
-
-                            await RecipeDetail.bulkCreate(recipeDetails, { transaction });
-                        }
-                    }
-                }
+            if (wasRecipe && isNowRecipe && recipe) {
+                await Recipe.update({ name: data.name }, { where: { id: recipe.id }, transaction });
+                await ProductBarService.replaceRecipeDetails(recipe.id, data.recipe, transaction);
             }
 
-            await transaction.commit();
             return result;
-        } catch (error) {
-            await transaction.rollback();
-            throw error;
-        }
+        });
     }
 
 
     static async delete(id) {
-        try {
-            const result = await ProductBar.destroy({
-                where: { id }
-            });
-            if (result) {
-                return 'resource deleted successfully'
-            }
-        } catch (error) {
-            throw error;
-        }
+        const result = await ProductBar.destroy({ where: { id } });
+        if (!result) throw new AppError('Producto no encontrado', 404);
+        return 'resource deleted successfully';
     }
 
 }

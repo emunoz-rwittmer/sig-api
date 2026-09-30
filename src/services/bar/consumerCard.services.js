@@ -75,6 +75,7 @@ class ConsumerCardService {
                                 attributes: ['id', 'barman', 'code', 'name', 'yachtId', 'code', 'startDate', 'endDate'],
                                 where: Object.keys(cruiseWhereClause).length > 0 ? cruiseWhereClause : undefined,
                                 required: Object.keys(cruiseWhereClause).length > 0,
+                                include: [{ model: Yacht, as: 'yacht', attributes: ['name', 'code'] }],
                             }
                         ]
                     },
@@ -87,7 +88,7 @@ class ConsumerCardService {
                             {
                                 model: ProductBar,
                                 as: 'product',
-                                attributes: ['id', 'name', 'price']
+                                attributes: ['id', 'name', 'price', 'category']
                             }
                         ]
                     }
@@ -153,6 +154,7 @@ class ConsumerCardService {
                         attributes: ['id', 'name', 'code','yachtId', 'code', 'startDate', 'endDate'],
                         where: Object.keys(cruiseWhereClause).length > 0 ? cruiseWhereClause : undefined,
                         required: Object.keys(cruiseWhereClause).length > 0,
+                        include: [{ model: Yacht, as: 'yacht', attributes: ['name', 'code'] }],
 
                     },
                     {
@@ -164,7 +166,7 @@ class ConsumerCardService {
                             {
                                 model: ProductBar,
                                 as: 'product',
-                                attributes: ['id', 'name', 'price']
+                                attributes: ['id', 'name', 'price', 'category']
                             }
                         ]
                     }
@@ -333,7 +335,7 @@ class ConsumerCardService {
                         include: [{
                             model: ProductBar,
                             as: 'product',
-                            attributes: ['id', 'name', 'price']
+                            attributes: ['id', 'name', 'price', 'category']
                         }]
                     }
                 ],
