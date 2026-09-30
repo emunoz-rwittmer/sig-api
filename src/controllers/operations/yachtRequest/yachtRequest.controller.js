@@ -42,9 +42,11 @@ const getRequestById = async (req, res, next) => {
 
         result.id = Utils.encode(result.id);
         result.warehouseId = Utils.encode(result.warehouseId);
-        result.requestItems.map(x => (
-            x.stock = Quantity.viewCorrectQuantity(x.configuracion?.product, x.stock)
-        ))
+        result.requestItems.forEach((x) => {
+            x.stock = Quantity.viewCorrectQuantity(x.configuracion?.product, x.stock);
+            // El front reenvía este id en la transacción entre bodegas, que espera hashid.
+            if (x.configuracion?.productId) x.configuracion.productId = Utils.encode(x.configuracion.productId);
+        });
 
         res.status(200).json(result);
     } catch (error) {
