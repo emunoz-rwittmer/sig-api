@@ -156,6 +156,20 @@ describe('GET /api/requests/:request_id — solicitud por ID', () => {
         expect(response.body.requestItems).toHaveLength(1);
     });
 
+    it('codifica configuracion.productId como hashid para reenviarlo en la transacción entre bodegas', async () => {
+        const req = await createRequestFixture();
+        const product = await createProductFixture();
+        const config = await createProductConfigFixture(product.id);
+        await createRequestItemFixture(req.id, config.id);
+
+        const response = await auth(
+            request(app).get(`/api/requests/${Utils.encode(req.id)}`)
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.requestItems[0].configuracion.productId).toBe(Utils.encode(product.id));
+    });
+
     it('devuelve 400 con hashid inválido', async () => {
         const response = await auth(
             request(app).get('/api/requests/not-a-hashid')
