@@ -91,7 +91,11 @@ endpoints; `GET /reports/request/:request_id` se eliminó por dead code
 irreparable, confirmado por el usuario). Dominio `downloads` retrofiteado (7
 endpoints); se restauró `FormatService.getRequestById`, eliminado erróneamente
 como dead code mientras `downloadSolicitud` todavía lo consumía. Dominio
-`inventory/products` retrofiteado (10 endpoints).
+`inventory/products` retrofiteado (10 endpoints). Dominio `bar` parcialmente
+retrofiteado: `cruises` (4 endpoints), `products` (6 endpoints) y
+`GET /bar/consumer-cards` (`yachtId` opcional: sin él consolida todos los
+yates; incluye `cruise.yacht` y `product.category`). Pendientes en `bar`:
+`passengers`, escrituras de `consumer-cards`/`cortecy-cards`.
 
 ## Validación de identificadores codificados
 

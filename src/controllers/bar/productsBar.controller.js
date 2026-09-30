@@ -1,102 +1,109 @@
 const ProductBarService = require('../../services/bar/productsBar.services');
 const Utils = require('../../utils/Utils');
+const AppError = require('../../errors/AppError');
 
-const getProducts = async (req, res) => {
+const decodeId = (value, fieldName) => {
+    let id;
+    try {
+        id = Utils.decode(value);
+    } catch {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    return id;
+};
+
+// Normaliza el payload de create/update: decodifica el producto de inventario
+// relacionado y los ingredientes de la receta antes de llegar al service.
+const decodeProductPayload = (body = {}) => {
+    const product = { ...body };
+    if (product.productId) product.productId = decodeId(product.productId, 'productId');
+
+    const recipe = Array.isArray(product.recipe) ? product.recipe : [];
+    product.recipe = recipe.map((ingredient) => ({
+        ...ingredient,
+        productId: decodeId(ingredient.productId, 'productId de la receta'),
+    }));
+
+    return product;
+};
+
+const getProducts = async (req, res, next) => {
     try {
         const result = await ProductBarService.getAll();
-        const currentPlain = result.map(r => r.get({ plain: true }));
-        if (currentPlain instanceof Array) {
-            currentPlain.map((x) => {
-                x.id = Utils.encode(x.id)
-                x.productId = Utils.encode(x.productId) || null
-                if (x.recipe && x.recipe.recipe_details) {
-                    x.recipe.recipe_details = x.recipe.recipe_details.map(d => {
-                        d.productId = Utils.encode(d.productId)
-                        d.recipeId = Utils.encode(d.recipeId)
-                        return d
-                    })
-                }
-            });
-        }
-        res.status(200).json(currentPlain);
+        const products = result.map(r => r.get({ plain: true }));
+        products.forEach((x) => {
+            x.id = Utils.encode(x.id);
+            x.productId = x.productId ? Utils.encode(x.productId) : null;
+            if (x.recipe && x.recipe.recipe_details) {
+                x.recipe.recipe_details = x.recipe.recipe_details.map(d => {
+                    d.productId = Utils.encode(d.productId);
+                    d.recipeId = Utils.encode(d.recipeId);
+                    return d;
+                });
+            }
+        });
+        res.status(200).json(products);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const getProductsForBar = async (req, res) => {
+const getProductsForBar = async (req, res, next) => {
     try {
         const result = await ProductBarService.getProductsForBar();
-        if (result instanceof Array) {
-            result.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
-            });
-        }
+        result.forEach((x) => {
+            x.dataValues.id = Utils.encode(x.dataValues.id);
+        });
         res.status(200).json(result);
     } catch (error) {
-        console.log(error)
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const getProduct = async (req, res) => {
+const getProduct = async (req, res, next) => {
     try {
-        const productId = Utils.decode(req.params.product_id);
+        const productId = decodeId(req.params.product_id, 'product_id');
         const result = await ProductBarService.getProductById(productId);
-        if (result instanceof Object) {
-            result.id = Utils.encode(result.id);
-        }
+        if (!result) throw new AppError('Producto no encontrado', 404);
+        result.dataValues.id = Utils.encode(result.dataValues.id);
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const createProduct = async (req, res) => {
+const createProduct = async (req, res, next) => {
     try {
-        const product = req.body;
-        if (product.productId) product.productId = Utils.decode(product.productId);
-        if (product.recipe.length) {
-            product.recipe.map(x => (
-                x.productId = Utils.decode(x.productId)
-            ))
-        }
-
+        const product = decodeProductPayload(req.body);
         await ProductBarService.createProduct(product);
         res.status(200).json({ data: 'resource created successfully' });
-
     } catch (error) {
-        console.log(error)
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
-const updateProduct = async (req, res) => {
+const updateProduct = async (req, res, next) => {
     try {
-        const productId = Utils.decode(req.params.product_id);
-        const product = req.body;
-        if (product.productId) product.productId = Utils.decode(product.productId);
-        if (product.recipe.length) {
-            product.recipe.map(x => (
-                x.productId = Utils.decode(x.productId)
-            ))
-        }
-        delete product.id
+        const productId = decodeId(req.params.product_id, 'product_id');
+        const product = decodeProductPayload(req.body);
+        delete product.id;
         await ProductBarService.updateProduct(product, productId);
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
-const deleteProduct = async (req, res) => {
+const deleteProduct = async (req, res, next) => {
     try {
-        const productId = Utils.decode(req.params.product_id);
+        const productId = decodeId(req.params.product_id, 'product_id');
         const result = await ProductBarService.delete(productId);
-        res.status(200).json({ data: result })
+        res.status(200).json({ data: result });
     } catch (error) {
-
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 

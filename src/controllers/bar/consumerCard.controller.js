@@ -29,10 +29,11 @@ const decodeId = (value, fieldName) => {
     return id;
 };
 
-const getAllConsumer = async (req, res) => {
+const getAllConsumer = async (req, res, next) => {
     try {
         const { year, start, end } = req.query;
-        const yachtId = Utils.decode(req.query.yachtId);
+        // Sin yachtId se consolidan los cruceros de todos los yates.
+        const yachtId = req.query.yachtId ? decodeId(req.query.yachtId, 'yachtId') : undefined;
 
         const consumerCards = await ConsumerCardService.getAllConsumerCards(yachtId, year, start, end);
         const cortecyCards = await ConsumerCardService.getAllCortecyCards(yachtId, year, start, end);
@@ -54,7 +55,7 @@ const getAllConsumer = async (req, res) => {
 
         res.status(200).json({ consumerCards: plaintConsumer, cortecyCards: plaintCortecy });
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 

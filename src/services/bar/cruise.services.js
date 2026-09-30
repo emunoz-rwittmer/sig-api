@@ -6,6 +6,7 @@ const Cruise = require('../../models/bar/cruises.models');
 const Passenger = require('../../models/bar/passenger.models');
 const ProductBar = require('../../models/bar/productBar.models');
 const Yacht = require('../../models/catalogs/yacht.models');
+const AppError = require('../../errors/AppError');
 
 class CruiseService {
     static async getAll() {
@@ -104,14 +105,10 @@ class CruiseService {
     }
 
     static async updateCruise(id, data) {
-        try {
-            const result = await Cruise.update(data, {
-                where: { id },
-            });
-            return result;
-        } catch (error) {
-            throw error;
-        }
+        const cruise = await Cruise.findByPk(id, { attributes: ['id'] });
+        if (!cruise) throw new AppError('Crucero no encontrado', 404);
+
+        return Cruise.update(data, { where: { id } });
     }
 
 }

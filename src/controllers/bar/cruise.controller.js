@@ -6,50 +6,57 @@ const CruiseReportExcelService = require('../../services/bar/cruiseReportExcel.s
 const CruiseReportPDFService = require('../../services/bar/cruiseReportPDF.services');
 const MailsWithAttachments = require('../../mails/mailAttachments');
 const RequestService = require('../../services/operations/yachtRequest/yachtRequest.services');
+const AppError = require('../../errors/AppError');
 
+const decodeId = (value, fieldName) => {
+    let id;
+    try {
+        id = Utils.decode(value);
+    } catch {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    return id;
+};
 
-const getAllCruises = async (req, res) => {
+const getAllCruises = async (req, res, next) => {
     try {
         const result = await CruiseService.getAll();
-        if (result instanceof Array) {
-            result.map((x) => {
-                x.dataValues.id = Utils.encode(x.dataValues.id);
-                x.dataValues.yachtId = Utils.encode(x.dataValues.yachtId);
-            });
-        }
+        result.forEach((x) => {
+            x.dataValues.id = Utils.encode(x.dataValues.id);
+            x.dataValues.yachtId = Utils.encode(x.dataValues.yachtId);
+        });
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const getCruise = async (req, res) => {
+const getCruise = async (req, res, next) => {
     try {
-        const cruiseId = Utils.decode(req.params.cruise_id);
+        const cruiseId = decodeId(req.params.cruise_id, 'cruise_id');
         const result = await CruiseService.getCruiseById(cruiseId);
-        if (result instanceof Object) {
-            result.id = Utils.encode(result.id);
-        }
+        if (!result) throw new AppError('Crucero no encontrado', 404);
+        result.id = Utils.encode(result.id);
         res.status(200).json(result);
     } catch (error) {
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
-const sendCruiseReport = async (req, res) => {
+const sendCruiseReport = async (req, res, next) => {
     let excelPath, pdfPath;
 
     try {
-        const cruiseId = Utils.decode(req.params.cruise_id);
-        const userId = Utils.decode(req.query.user_id);
+        const cruiseId = decodeId(req.params.cruise_id, 'cruise_id');
+        const userId = decodeId(req.query.user_id, 'user_id');
         const data = req.body;
 
         await CruiseService.updateCruise(cruiseId, data);
 
         const cruise = await CruiseService.getCruiseById(cruiseId);
-        if (!cruise) {
-            return res.status(404).json({ message: 'Crucero no encontrado' });
-        }
 
         const emailTo = ['fabian@rwittmer.com', 'rosa@tiptoptravel.ec', 'enrique@rwittmer.com'];
         const emailCc = 'edison@tiptoptravel.ec';
@@ -81,7 +88,7 @@ const sendCruiseReport = async (req, res) => {
         }));
 
         if (consumerCards.length === 0 && cortecyCards.length === 0) {
-            throw new Error('No hay consumer cards o cortecy cards válidas para este crucero');
+            throw new AppError('No hay consumer cards o cortecy cards válidas para este crucero', 400);
         }
 
         const uploadsDir = path.join(__dirname, '../../..', 'uploads', 'cruises', cruise.code, 'reports');
@@ -153,28 +160,26 @@ const sendCruiseReport = async (req, res) => {
         res.status(200).json({ data: 'Reporte de crucero generado y enviado correctamente' });
 
     } catch (error) {
-        console.log(error);
         try {
             if (excelPath && fs.existsSync(excelPath)) fs.unlinkSync(excelPath);
             if (pdfPath && fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
         } catch (cleanupError) {
-            console.log('Error limpiando archivos:', cleanupError);
+            console.error('Error limpiando archivos del reporte de crucero:', cleanupError);
         }
 
-        res.status(400).json(error.message);
+        next(error);
     }
 }
 
-const updateCruise = async (req, res) => {
+const updateCruise = async (req, res, next) => {
     try {
-        const cruiseId = Utils.decode(req.params.cruise_id);
+        const cruiseId = decodeId(req.params.cruise_id, 'cruise_id');
         const data = req.body;
 
         await CruiseService.updateCruise(cruiseId, data);
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
-        console.log(error)
-        res.status(400).json(error.message)
+        next(error);
     }
 }
 
