@@ -29,6 +29,31 @@ const getAllTradings = async (req, res, next) => {
     }
 }
 
+const getMyTradings = async (req, res, next) => {
+    try {
+        const result = await TradingService.getAllForStaff(Utils.decode(req.userId));
+        result.forEach((x) => {
+            x.dataValues.id = Utils.encode(x.dataValues.id);
+        });
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+}
+
+const markTradingViewed = async (req, res, next) => {
+    try {
+        const tradingId = decodeId(req.params.trading_id, 'trading_id');
+        const marked = await TradingService.markViewed(Utils.decode(req.userId), tradingId);
+        if (!marked) {
+            throw new AppError('Trading no encontrado', 404);
+        }
+        res.status(200).json({ data: 'resource updated successfully' });
+    } catch (error) {
+        next(error);
+    }
+}
+
 const getTrading = async (req, res, next) => {
     try {
         const tradingId = decodeId(req.params.trading_id, 'trading_id');
@@ -92,6 +117,8 @@ const deleteTrading = async (req, res, next) => {
 
 const TradingController = {
     getAllTradings,
+    getMyTradings,
+    markTradingViewed,
     getTrading,
     createTrading,
     updateTrading,

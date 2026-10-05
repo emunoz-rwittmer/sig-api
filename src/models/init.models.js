@@ -42,6 +42,7 @@ const Consecutivo = require('./catalogs/consecutivo.model');
 const Regulation = require('./rrhh/regulation.models');
 const StaffReadRegulation = require('./rrhh/readRegulation.models');
 const Trading = require('./rrhh/trading.models');
+const StaffTradingView = require('./rrhh/staffTradingView.models');
 const Format = require('./rrhh/format.models');
 const DoctorFormat = require('./rrhh/doctorFormat.models');
 const Induction = require('./rrhh/induction.models');
@@ -131,6 +132,10 @@ const initModels = () => {
 
     Regulation.hasMany(StaffReadRegulation, { as: "reads", foreignKey: "regulation_id" });
     StaffReadRegulation.belongsTo(Regulation, { as: "regulation", foreignKey: "regulation_id" });
+
+    Trading.hasMany(StaffTradingView, { as: "views", foreignKey: "trading_id", onDelete: "CASCADE", hooks: true });
+    StaffTradingView.belongsTo(Trading, { as: "trading", foreignKey: "trading_id" });
+    StaffTradingView.belongsTo(Staff, { as: "staff", foreignKey: "staff_id" });
 
     //inducciones
     Induction.hasMany(InductionCompany, { as: "companies", foreignKey: "induction_id", onDelete: "CASCADE", hooks: true });

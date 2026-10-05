@@ -56,6 +56,42 @@ const router = Router();
  *       400:
  *         description: No se ha subido ningún archivo
  */
+/**
+ * @openapi
+ * /tradings/me:
+ *   get:
+ *     summary: Listar los tradings con el estado de revision del colaborador autenticado
+ *     tags: [Tradings]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de tradings, cada uno con el campo booleano viewed
+ */
+router.get('/me', TradingController.getMyTradings);
+
+/**
+ * @openapi
+ * /tradings/{trading_id}/view:
+ *   put:
+ *     summary: Marcar un trading como revisado por el colaborador autenticado
+ *     tags: [Tradings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: trading_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Trading marcado como revisado
+ *       404:
+ *         description: Trading no encontrado
+ */
+router.put('/:trading_id/view', TradingController.markTradingViewed);
+
 router.get('/', TradingController.getAllTradings);
 router.post('/', uploadPdfFile, TradingController.createTrading);
 
