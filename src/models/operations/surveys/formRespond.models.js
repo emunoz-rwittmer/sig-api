@@ -39,6 +39,15 @@ const FormRespond = db.define('form_respond', {
     type: DataTypes.STRING,
     allowNull: true,
   },
+  // Borrador del evaluador: { answers: { [questionId]: valor }, comment } hasta que se envía.
+  draft: {
+    type: DataTypes.JSON,
+    allowNull: true,
+  },
+  comment: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
 });
 
 module.exports = FormRespond;
