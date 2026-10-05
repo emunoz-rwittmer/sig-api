@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const FormatController = require('../../controllers/rrhh/formats.controller');
 const { uploadPdfFile } = require('../../utils/uploadConfiguration');
+const authJwt = require('../../middlewares/auth.middleware');
 const multer = require("multer");
 const router = Router();
 const upload = multer();
@@ -62,6 +63,58 @@ const upload = multer();
  *         description: Formato creado
  */
 router.get('/request', FormatController.getAllFormats);
+
+/**
+ * @openapi
+ * /formats/request/me:
+ *   get:
+ *     summary: Listar todas las solicitudes del colaborador autenticado
+ *     tags: [Formats]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Solicitudes con code, status (revision, aprobada, rechazada) y respondedAt
+ */
+router.get('/request/me', FormatController.getMyRequests);
+
+/**
+ * @openapi
+ * /formats/request/{request_id}/respond:
+ *   put:
+ *     summary: Aprobar o rechazar una solicitud de colaborador (solo administradores)
+ *     tags: [Formats]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: request_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de solicitud codificado (hashids)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [status]
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [aprobada, rechazada]
+ *     responses:
+ *       200:
+ *         description: Solicitud respondida
+ *       400:
+ *         description: status invalido
+ *       403:
+ *         description: Requiere rol administrador
+ *       404:
+ *         description: Solicitud no encontrada
+ */
+router.put('/request/:request_id/respond', authJwt.isAdmin, FormatController.respondRequest);
 
 /**
  * @openapi

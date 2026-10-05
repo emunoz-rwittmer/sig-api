@@ -35,6 +35,17 @@ const RequestStaffs = db.define('request_staffs', {
         type: DataTypes.TEXT,
         allowNull: true,
     },
+    // revision | aprobada | rechazada. La respuesta de Talento Humano la fija /respond.
+    status: {
+        type: DataTypes.STRING(20),
+        allowNull: false,
+        defaultValue: 'revision',
+    },
+    respondedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: 'responded_at',
+    },
 
 });
 

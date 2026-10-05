@@ -183,10 +183,35 @@ const getAllFormatsByStaff = async (req, res, next) => {
         const result = await FormatService.getAllFormatsByStaff(formatId, staffId);
         if (result instanceof Array) {
             result.map((x) => {
+                x.dataValues.code = FormatService.formatRequestCode(x.dataValues.id);
                 x.dataValues.id = Utils.encode(x.dataValues.id);
             });
         }
         res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+}
+
+const getMyRequests = async (req, res, next) => {
+    try {
+        const result = await FormatService.getAllRequestsByStaff(Utils.decode(req.userId));
+        result.forEach((x) => {
+            x.dataValues.code = FormatService.formatRequestCode(x.dataValues.id);
+            x.dataValues.id = Utils.encode(x.dataValues.id);
+            x.dataValues.formatId = Utils.encode(x.dataValues.formatId);
+        });
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+}
+
+const respondRequest = async (req, res, next) => {
+    try {
+        const requestId = decodeId(req.params.request_id, 'request_id');
+        await FormatService.respondRequest(requestId, req.body?.status);
+        res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
         next(error);
     }
@@ -283,6 +308,8 @@ const FormatController = {
     updateDoctorFormat,
     deleteDoctorFormat,
     getAllFormatsByStaff,
+    getMyRequests,
+    respondRequest,
     createRequesForStaff
 
 }

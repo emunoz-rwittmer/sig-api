@@ -2,6 +2,12 @@
 const DoctorFormat = require('../../models/rrhh/doctorFormat.models');
 const Format = require('../../models/rrhh/format.models');
 const RequestStaffs = require('../../models/rrhh/requestStaffs.models');
+const AppError = require('../../errors/AppError');
+
+const REQUEST_STATUSES = ['revision', 'aprobada', 'rechazada'];
+const RESPONSE_STATUSES = ['aprobada', 'rechazada'];
+
+const formatRequestCode = (id) => `SOL-${String(id).padStart(4, '0')}`;
 
 class FormatService {
     static async getAll() {
@@ -124,6 +130,26 @@ class FormatService {
         }
     }
 
+    static async getAllRequestsByStaff(staffId) {
+        return RequestStaffs.findAll({
+            where: { staffId },
+            attributes: ['id', 'formatId', 'name', 'company', 'file', 'status', 'respondedAt', 'createdAt'],
+            order: [['createdAt', 'ASC']],
+        });
+    }
+
+    static async respondRequest(requestId, status) {
+        if (!RESPONSE_STATUSES.includes(status)) {
+            throw new AppError('status inválido: use aprobada o rechazada', 400);
+        }
+        const request = await RequestStaffs.findOne({ where: { id: requestId } });
+        if (!request) {
+            throw new AppError('Solicitud no encontrada', 404);
+        }
+        await request.update({ status, respondedAt: new Date() });
+        return request;
+    }
+
     static async getRequestById(requestId) {
         return RequestStaffs.findOne({ where: { id: requestId } });
     }
@@ -141,5 +167,8 @@ class FormatService {
     }
 
 }
+
+FormatService.REQUEST_STATUSES = REQUEST_STATUSES;
+FormatService.formatRequestCode = formatRequestCode;
 
 module.exports = FormatService;
