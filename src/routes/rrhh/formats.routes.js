@@ -4,6 +4,7 @@ const { uploadPdfFile } = require('../../utils/uploadConfiguration');
 const authJwt = require('../../middlewares/auth.middleware');
 const multer = require("multer");
 const router = Router();
+const requireRRHH = authJwt.hasAnyRole(['admin', 'rrhh']);
 const upload = multer();
 
 //request
@@ -80,9 +81,32 @@ router.get('/request/me', FormatController.getMyRequests);
 
 /**
  * @openapi
+ * /formats/request/staff/{staff_id}:
+ *   get:
+ *     summary: Listar todas las solicitudes de un colaborador (administradores y RR. HH.)
+ *     tags: [Formats]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: staff_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de colaborador codificado (hashids)
+ *     responses:
+ *       200:
+ *         description: Solicitudes con code, formatName, status y respondedAt, de la mas reciente a la mas antigua
+ *       403:
+ *         description: Requiere rol administrador o rrhh
+ */
+router.get('/request/staff/:staff_id', requireRRHH, FormatController.getStaffRequests);
+
+/**
+ * @openapi
  * /formats/request/{request_id}/respond:
  *   put:
- *     summary: Aprobar o rechazar una solicitud de colaborador (solo administradores)
+ *     summary: Aprobar o rechazar una solicitud de colaborador (administradores y RR. HH.)
  *     tags: [Formats]
  *     security:
  *       - bearerAuth: []
@@ -110,11 +134,11 @@ router.get('/request/me', FormatController.getMyRequests);
  *       400:
  *         description: status invalido
  *       403:
- *         description: Requiere rol administrador
+ *         description: Requiere rol administrador o rrhh
  *       404:
  *         description: Solicitud no encontrada
  */
-router.put('/request/:request_id/respond', authJwt.isAdmin, FormatController.respondRequest);
+router.put('/request/:request_id/respond', requireRRHH, FormatController.respondRequest);
 
 /**
  * @openapi
