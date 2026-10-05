@@ -138,6 +138,24 @@ class FormatService {
         });
     }
 
+    /** Todas las solicitudes de un colaborador (vista de RR. HH.), con el nombre del formato. */
+    static async getAllRequestsByStaffWithFormat(staffId) {
+        const requests = await RequestStaffs.findAll({
+            where: { staffId },
+            attributes: ['id', 'formatId', 'name', 'company', 'yacht', 'file', 'status', 'respondedAt', 'createdAt'],
+            order: [['createdAt', 'DESC']],
+        });
+        const formatIds = [...new Set(requests.map((request) => request.formatId))];
+        const formats = formatIds.length
+            ? await Format.findAll({ where: { id: formatIds }, attributes: ['id', 'name'] })
+            : [];
+        const nameById = new Map(formats.map((format) => [format.id, format.name]));
+        requests.forEach((request) => {
+            request.dataValues.formatName = nameById.get(request.formatId) ?? request.name;
+        });
+        return requests;
+    }
+
     static async respondRequest(requestId, status) {
         if (!RESPONSE_STATUSES.includes(status)) {
             throw new AppError('status inválido: use aprobada o rechazada', 400);

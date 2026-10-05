@@ -207,6 +207,21 @@ const getMyRequests = async (req, res, next) => {
     }
 }
 
+const getStaffRequests = async (req, res, next) => {
+    try {
+        const staffId = decodeId(req.params.staff_id, 'staff_id');
+        const result = await FormatService.getAllRequestsByStaffWithFormat(staffId);
+        result.forEach((x) => {
+            x.dataValues.code = FormatService.formatRequestCode(x.dataValues.id);
+            x.dataValues.id = Utils.encode(x.dataValues.id);
+            x.dataValues.formatId = Utils.encode(x.dataValues.formatId);
+        });
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+}
+
 const respondRequest = async (req, res, next) => {
     try {
         const requestId = decodeId(req.params.request_id, 'request_id');
@@ -309,6 +324,7 @@ const FormatController = {
     deleteDoctorFormat,
     getAllFormatsByStaff,
     getMyRequests,
+    getStaffRequests,
     respondRequest,
     createRequesForStaff
 
