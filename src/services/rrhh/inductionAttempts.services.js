@@ -145,6 +145,8 @@ class InductionAttemptService {
             total: graded.total,
             score: graded.score,
             passed,
+            // Solo acierto/error por pregunta: nunca la opción correcta.
+            results: graded.detail.map(({ questionId, isCorrect }) => ({ questionId, isCorrect })),
             remainingAttempts: remainingAttempts({
                 maxAttempts: induction.maxAttempts,
                 extraAttempts: progress.extraAttempts,

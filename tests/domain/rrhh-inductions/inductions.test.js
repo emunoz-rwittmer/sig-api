@@ -273,6 +273,12 @@ describe('RRHH Inductions', () => {
             expect(passResponse.status).toBe(200);
             expect(passResponse.body.passed).toBe(true);
             expect(passResponse.body.score).toBe(100);
+            // acierto/error por pregunta (ids codificados), sin exponer la opción correcta
+            expect(passResponse.body.results).toHaveLength(questions.length);
+            expect(passResponse.body.results.map((entry) => entry.questionId).sort())
+                .toEqual(questions.map((question) => Utils.encode(question.id)).sort());
+            expect(passResponse.body.results.every((entry) => entry.isCorrect === true)).toBe(true);
+            expect(Object.keys(passResponse.body.results[0]).sort()).toEqual(['isCorrect', 'questionId']);
         });
 
         it('blocks a new attempt once max attempts are exhausted, then unblocks after an extra attempt is granted', async () => {
