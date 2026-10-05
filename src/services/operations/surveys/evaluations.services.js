@@ -9,6 +9,7 @@ const Positions = require('../../../models/catalogs/positions.models');
 const { Op, where } = require('sequelize');
 const Company = require('../../../models/catalogs/company.models');
 const db = require('../../../utils/database');
+const AppError = require('../../../errors/AppError');
 
 class EvaluationService {
     static async getEvaluationsByUser(evaluator) {
@@ -18,7 +19,9 @@ class EvaluationService {
                 include: [{
                     model: Form,
                     as: "formulario",
-                    attributes: ['id', 'name', 'positions'],
+                    attributes: ['id', 'name', 'positions', 'type', 'isAdministrative'],
+                    // Solo ids: el portal necesita el total de criterios para mostrar el avance del borrador.
+                    include: [{ model: FormQuestion, as: 'preguntas', attributes: ['id'] }],
                 }, {
                     model: Company,
                     as: "empresa",
@@ -56,7 +59,28 @@ class EvaluationService {
         }
     }
 
-    static async respondEvaluation(evaluationId, answers) {
+    static async saveDraft(evaluationId, { answers, comment }) {
+        const evaluation = await FormRespond.findOne({ where: { id: evaluationId } });
+        if (!evaluation) {
+            throw new AppError('Evaluación no encontrada', 404);
+        }
+        if (evaluation.state !== 'Pendiente') {
+            throw new AppError('Solo se puede guardar el borrador de una evaluación pendiente', 400);
+        }
+
+        await evaluation.update({ draft: { answers: answers ?? {}, comment: comment ?? '' } });
+        return evaluation;
+    }
+
+    static async respondEvaluation(evaluationId, answers, comment) {
+        const evaluation = await FormRespond.findOne({ where: { id: evaluationId } });
+        if (!evaluation) {
+            throw new AppError('Evaluación no encontrada', 404);
+        }
+        if (evaluation.state !== 'Pendiente') {
+            throw new AppError('La evaluación ya fue respondida o caducó', 400);
+        }
+
         const t = await db.transaction();
         try {
             const answersToCreate = Object.entries(answers).map(([numeroPregunta, answer]) => ({
@@ -69,7 +93,7 @@ class EvaluationService {
 
             if (result) {
                 await FormRespond.update(
-                    { state: 'Completada' },
+                    { state: 'Completada', comment: comment || null, draft: null },
                     { where: { id: evaluationId }, transaction: t }
                 );
             }

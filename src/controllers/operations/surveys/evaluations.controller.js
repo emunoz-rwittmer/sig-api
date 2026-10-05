@@ -49,12 +49,27 @@ const getEvaluation = async (req, res) => {
 const respondEvaluation = async (req, res) => {
     try {
         const evaluationId = Utils.decode(req.params.evaluation_id)
-        const answers = req.body
-        await EvaluationService.respondEvaluation(evaluationId, answers);
+        // Formato nuevo { answers, comment }; se mantiene el anterior (mapa de respuestas directo).
+        const body = req.body ?? {};
+        const isEnvelope = body.answers && typeof body.answers === 'object' && !Array.isArray(body.answers);
+        const answers = isEnvelope ? body.answers : body;
+        const comment = isEnvelope ? body.comment : undefined;
+        await EvaluationService.respondEvaluation(evaluationId, answers, comment);
         res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
 
         res.status(400).json(error.message);
+    }
+}
+
+const saveDraft = async (req, res) => {
+    try {
+        const evaluationId = Utils.decode(req.params.evaluation_id);
+        const { answers, comment } = req.body ?? {};
+        await EvaluationService.saveDraft(evaluationId, { answers, comment });
+        res.status(200).json({ data: 'resource updated successfully' });
+    } catch (error) {
+        res.status(error.statusCode ?? 400).json(error.message);
     }
 }
 
@@ -151,6 +166,7 @@ const EvaluationController = {
     getAllEvaluations,
     getEvaluation,
     respondEvaluation,
+    saveDraft,
     getReportingByCompany,
     getReportingByDepartament,
     getReportingEvaluationsByCrew,

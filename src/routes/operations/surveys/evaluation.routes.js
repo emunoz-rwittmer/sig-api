@@ -11,6 +11,7 @@ router.get('/reportingByDepartament/:departament_id',EvaluationController.getRep
 router.get('/reportingEvaluationsByCrew/:crew_id',EvaluationController.getReportingEvaluationsByCrew);
 //operations
 router.post('/:evaluation_id/respondEvaluation',EvaluationController.respondEvaluation);
+router.put('/:evaluation_id/draft',EvaluationController.saveDraft);
 router.delete('/:evaluation_id',EvaluationController.deleteEvaluation);
 
 
