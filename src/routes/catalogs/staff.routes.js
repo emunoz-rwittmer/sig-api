@@ -166,6 +166,39 @@ router.put('/updateStaff/:staff_id',StaffController.updateStaff);
 
 /**
  * @openapi
+ * /staffs/me/password:
+ *   put:
+ *     summary: Cambiar la contrasena del colaborador autenticado
+ *     tags: [Staff]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [currentPassword, newPassword]
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *                 format: password
+ *               newPassword:
+ *                 type: string
+ *                 format: password
+ *                 description: 6 a 14 caracteres con mayuscula, minuscula y numero
+ *     responses:
+ *       200:
+ *         description: Contrasena actualizada
+ *       400:
+ *         description: Contrasena actual incorrecta o nueva contrasena no cumple la politica
+ *       404:
+ *         description: Colaborador no encontrado o deshabilitado
+ */
+router.put('/me/password', StaffController.changeMyPassword);
+
+/**
+ * @openapi
  * /staffs/{staff_id}/uploadImageFile:
  *   put:
  *     summary: Subir una imagen (foto o firma) de un miembro del personal

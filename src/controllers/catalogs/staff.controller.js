@@ -1,4 +1,5 @@
 const StaffService = require('../../services/catalogs/staff.services');
+const AuthService = require('../../services/catalogs/auth.services');
 const Utils = require('../../utils/Utils');
 const Tokens = require('../../utils/tokens');
 const fs = require('fs');
@@ -363,7 +364,22 @@ const uploadStaffDocumentation = async (req, res, next) => {
     }
 };
 
+const changeMyPassword = async (req, res, next) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        await AuthService.changeStaffPassword({
+            staffId: Utils.decode(req.userId),
+            currentPassword,
+            newPassword,
+        });
+        res.status(200).json({ data: 'password updated successfully' });
+    } catch (error) {
+        next(error);
+    }
+}
+
 const StaffController = {
+    changeMyPassword,
     getAllStaffs,
     getDashboardStats,
     exportExpiringDocumentsReport,
