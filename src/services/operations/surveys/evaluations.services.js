@@ -20,6 +20,8 @@ class EvaluationService {
                     model: Form,
                     as: "formulario",
                     attributes: ['id', 'name', 'positions', 'type', 'isAdministrative'],
+                    // Solo ids: el portal necesita el total de criterios para mostrar el avance del borrador.
+                    include: [{ model: FormQuestion, as: 'preguntas', attributes: ['id'] }],
                 }, {
                     model: Company,
                     as: "empresa",
