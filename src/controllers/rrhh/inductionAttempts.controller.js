@@ -60,7 +60,10 @@ const submitAttempt = async (req, res, next) => {
         const inductionId = decodeId(req.params.induction_id, 'induction_id');
         const answers = decodeAnswers(req.body.answers);
         const result = await InductionAttemptService.submitAttempt(currentStaffId(req), inductionId, answers);
-        res.status(200).json(result);
+        res.status(200).json({
+            ...result,
+            results: result.results.map((entry) => ({ ...entry, questionId: Utils.encode(entry.questionId) })),
+        });
     } catch (error) {
         next(error);
     }
