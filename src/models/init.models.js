@@ -133,9 +133,12 @@ const initModels = () => {
     Regulation.hasMany(StaffReadRegulation, { as: "reads", foreignKey: "regulation_id" });
     StaffReadRegulation.belongsTo(Regulation, { as: "regulation", foreignKey: "regulation_id" });
 
-    Trading.hasMany(StaffTradingView, { as: "views", foreignKey: "trading_id", onDelete: "CASCADE", hooks: true });
-    StaffTradingView.belongsTo(Trading, { as: "trading", foreignKey: "trading_id" });
-    StaffTradingView.belongsTo(Staff, { as: "staff", foreignKey: "staff_id" });
+    // foreignKey usa el nombre del atributo (tradingId/staffId), no el de la columna:
+    // con "trading_id" Sequelize crea un atributo extra con ON DELETE SET NULL que
+    // choca con la columna NOT NULL al hacer sync.
+    Trading.hasMany(StaffTradingView, { as: "views", foreignKey: "tradingId", onDelete: "CASCADE", hooks: true });
+    StaffTradingView.belongsTo(Trading, { as: "trading", foreignKey: "tradingId", onDelete: "CASCADE" });
+    StaffTradingView.belongsTo(Staff, { as: "staff", foreignKey: "staffId", onDelete: "CASCADE" });
 
     //inducciones
     Induction.hasMany(InductionCompany, { as: "companies", foreignKey: "induction_id", onDelete: "CASCADE", hooks: true });
