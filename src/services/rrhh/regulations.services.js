@@ -79,13 +79,13 @@ class RegulationService {
         try {
             const result = await StaffReadRegulation.findAll({
                 where: { staffId },
-                attributes: ['id', 'read', 'createdAt'],
+                attributes: ['id', 'read', 'createdAt', 'updatedAt'],
                 include:
                     [
                         {
                             model: Regulation,
                             as: 'regulation',
-                            attributes: ['id', 'name', 'file'],
+                            attributes: ['id', 'name', 'file', 'createdAt'],
                             include:
                                 [
                                     {
