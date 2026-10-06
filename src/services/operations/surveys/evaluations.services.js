@@ -118,7 +118,15 @@ class EvaluationService {
 
     //REPORTING EVALUATIONS
 
-    static async getEvaluationsByCompany(companyId, startDate, endDate) {  
+    // Marca como Caducada, en una sola consulta, toda evaluación pendiente vencida.
+    static async expirePendingEvaluations(companyId) {
+        const where = { state: 'Pendiente', expirationDate: { [Op.lt]: new Date() } };
+        if (companyId) where.companyId = companyId;
+        return FormRespond.update({ state: 'Caducada' }, { where });
+    }
+
+    static async getEvaluationsByCompany(companyId, startDate, endDate, options = {}) {
+        const { year, estado, tipo, summary } = options;  
         try {
 
             const where = {};
@@ -131,6 +139,22 @@ class EvaluationService {
                 where.createdAt = {
                     [Op.between]: [new Date(startDate), new Date(endDate)]
                 };
+            } else if (year) {
+                where.createdAt = {
+                    [Op.between]: [new Date(year, 0, 1), new Date(year, 11, 31, 23, 59, 59, 999)]
+                };
+            }
+
+            if (estado) where.state = estado;
+
+            const formWhere = {};
+            if (tipo) {
+                // Formularios antiguos sin `type`: se deduce de isAdministrative (igual que el front).
+                formWhere[Op.or] = tipo === 'Administrativa'
+                    ? [{ type: tipo }, { type: null, isAdministrative: true }]
+                    : tipo === 'Liderazgo'
+                        ? [{ type: tipo }, { type: null, isAdministrative: false }]
+                        : [{ type: tipo }];
             }
 
             const result = await FormRespond.findAll({
@@ -150,8 +174,10 @@ class EvaluationService {
                         model: Form,
                         as: "formulario",
                         attributes: ['id', 'name', 'positions', 'isAdministrative', 'type', 'active'],
+                        where: tipo ? formWhere : undefined,
+                        required: !!tipo,
                     },
-                    {
+                    ...(summary ? [] : [{
                         model: FormAnswers,
                         as: 'respuestas',
                         attributes: ['id', 'answer'],
@@ -160,18 +186,17 @@ class EvaluationService {
                             as: 'pregunta',
                             attributes: ['id', 'title', 'questionId'],
                         }]
-                    },
+                    }]),
                 ],
 
                 order: [
-                    ['createdAt', 'DESC'], 
-
-                    [
+                    ['createdAt', 'DESC'],
+                    ...(summary ? [] : [[
                         { model: FormAnswers, as: 'respuestas' },
                         { model: FormQuestion, as: 'pregunta' },
                         'id',
                         'ASC'
-                    ]
+                    ]])
                 ],
 
                 distinct: true
