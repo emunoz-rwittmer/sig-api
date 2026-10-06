@@ -77,24 +77,22 @@ const saveDraft = async (req, res) => {
 
 const getReportingByCompany = async (req, res) => {
     try {
-        const companyId = Utils.decode(req.params.company_id);
-        const startDate = req.query.startDate;
-        const endDate = req.query.endDate;
-        const result = await EvaluationService.getEvaluationsByCompany(companyId, startDate, endDate)
-        
-        await Promise.all(
-            result.map(async (evaluation) => {
-                if (isTempPasswordExpired(evaluation.expirationDate)) {
-                    await EvaluationService.updateEvaluation(evaluation.id);
-                }
-            })
-        );
+        // `all` (o un id inválido) => sin filtro de empresa: todas las empresas.
+        const companyId = req.params.company_id === 'all' ? undefined : Utils.decode(req.params.company_id);
+        const { startDate, endDate, year, estado, tipo, summary } = req.query;
+
+        await EvaluationService.expirePendingEvaluations(companyId);
+        const result = await EvaluationService.getEvaluationsByCompany(companyId, startDate, endDate, {
+            year: year ? Number(year) : undefined,
+            estado,
+            tipo,
+            summary: summary === '1',
+        });
 
         if (result instanceof Array) {
-            result.map((x) => {
+            result.forEach((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);
                 x.dataValues.companyId = Utils.encode(x.dataValues.companyId);
-                return x;
             });
         }
         res.status(200).json(result);
