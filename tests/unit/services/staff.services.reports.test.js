@@ -27,19 +27,22 @@ describe('StaffService.getExpiringDocumentsReport', () => {
 
     it('usa la misma ventana de 30 días y el mismo filtro de staff activo que el cron checkExpiringStaffDocuments', async () => {
         const { Op } = require('sequelize');
-        const before = Date.now();
         await StaffService.getExpiringDocumentsReport();
-        const after = Date.now();
 
         expect(StaffDocumentation.findAll).toHaveBeenCalledTimes(1);
         const call = StaffDocumentation.findAll.mock.calls[0][0];
 
+        // Días calendario: desde el inicio de hoy (incluye lo que vence hoy) hasta
+        // hoy + 30 días inclusive, igual que computeExpiryStage del cron.
         const gte = call.where.expiryDate[Op.gte];
-        const lte = call.where.expiryDate[Op.lte];
+        const lt = call.where.expiryDate[Op.lt];
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
 
-        expect(gte.getTime()).toBeGreaterThanOrEqual(before);
-        expect(gte.getTime()).toBeLessThanOrEqual(after);
-        expect(lte.getTime() - gte.getTime()).toBe(DOCUMENT_EXPIRY_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+        expect(gte.getTime()).toBe(startOfToday.getTime());
+        const expectedEnd = new Date(startOfToday);
+        expectedEnd.setDate(startOfToday.getDate() + DOCUMENT_EXPIRY_WINDOW_DAYS + 1);
+        expect(lt.getTime()).toBe(expectedEnd.getTime());
 
         const staffInclude = call.include.find((inc) => inc.as === 'staff');
         expect(staffInclude.required).toBe(true);

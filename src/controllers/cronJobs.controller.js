@@ -531,9 +531,40 @@ function computeExpiryStage(expiryDate, now) {
     return null;
 }
 
+const EXPIRING_THRESHOLD_DAYS = 30;
+
+// `staff_documentation.status` se calcula una sola vez al subir el archivo, así
+// que sin esto un documento queda "valid" aunque ya esté por vencer o vencido.
+// Se re-sincroniza todos los días con los mismos umbrales que el front y que
+// computeExpiryStage. Los documentos sin archivo (pending) no se tocan.
+const syncStaffDocumentStatuses = async (now) => {
+    const today = moment(now).startOf('day');
+    const expiringLimit = today.clone().add(EXPIRING_THRESHOLD_DAYS + 1, 'days').toDate();
+    const todayDate = today.toDate();
+    const hasFile = { [Op.not]: null };
+
+    const buckets = [
+        ['expired', { [Op.lt]: todayDate }],
+        ['expiring', { [Op.gte]: todayDate, [Op.lt]: expiringLimit }],
+        ['valid', { [Op.gte]: expiringLimit }],
+    ];
+
+    for (const [status, expiryDate] of buckets) {
+        await StaffDocumentation.update({ status }, {
+            where: { file: hasFile, expiryDate, status: { [Op.ne]: status } }
+        });
+    }
+};
+
 const checkExpiringStaffDocuments = async () => {
     try {
         const now = moment();
+
+        try {
+            await syncStaffDocumentStatuses(now);
+        } catch (error) {
+            console.error('Error sincronizando status de documentos de staff:', error);
+        }
 
         const records = await StaffDocumentation.findAll({
             where: {
@@ -579,7 +610,15 @@ const checkExpiringStaffDocuments = async () => {
 
             const { staff, document } = record;
 
-            await sendEmailStaffDocumentExpiring(staff, document, stage, record.expiryDate);
+            // Un fallo en un registro no debe cortar el ciclo ni dejar sin resumen
+            // a los demás: si no se envió, no se marca y se reintenta mañana.
+            try {
+                await sendEmailStaffDocumentExpiring(staff, document, stage, record.expiryDate);
+                await record.update({ notifiedStage: stage, notifiedAt: now.toDate() });
+            } catch (error) {
+                console.error(`Error notificando documento de staff (staff_documentation ${record.id}):`, error);
+                continue;
+            }
             notifiedDocuments += 1;
 
             for (const staffCompany of staff.companies || []) {
@@ -597,12 +636,14 @@ const checkExpiringStaffDocuments = async () => {
                     expiryDate: record.expiryDate
                 });
             }
-
-            await record.update({ notifiedStage: stage, notifiedAt: now.toDate() });
         }
 
         for (const { yacht, items } of digestItemsByYacht.values()) {
-            await sendEmailRRHHDocumentExpiringDigest(items, yacht);
+            try {
+                await sendEmailRRHHDocumentExpiringDigest(items, yacht);
+            } catch (error) {
+                console.error(`Error enviando resumen de documentos al yate ${yacht.id}:`, error);
+            }
         }
 
         console.log(`Documentos de staff notificados por caducidad: ${notifiedDocuments}`);

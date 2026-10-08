@@ -3,6 +3,8 @@ const { bootTestApp, shutdownTestApp } = require('../../helpers/testApp');
 const { createAuthenticatedUser } = require('../../helpers/auth');
 const { createCompanyWithYacht } = require('../../helpers/staffFixtures');
 const Cruise = require('../../../src/models/bar/cruises.models');
+const Passenger = require('../../../src/models/bar/passenger.models');
+const ConsumerCard = require('../../../src/models/bar/consumerCard.models');
 const Utils = require('../../../src/utils/Utils');
 
 let app;
@@ -160,6 +162,54 @@ describe('PUT /api/bar/cruises/sendCruiseReport/:cruise_id', () => {
         );
 
         expect(response.status).toBe(404);
+    });
+
+    describe('informe parcial (día del traslado)', () => {
+        // transferDay = 1 con el crucero iniciado hoy: hoy es el día del traslado.
+        const partialCruise = () => createCruiseFixture({ transferDay: 1, startDate: new Date(), endDate: new Date(Date.now() + 14 * 86400000) });
+        const createPassenger = (cruise, type, name) => Passenger.create({
+            cruiseId: cruise.id,
+            identificationNumber: `ID-${suffix()}`,
+            name,
+            cabin: '1',
+            type,
+            nationality: 'EC',
+            country: 'Ecuador',
+            gender: 'Male',
+            cruiseStartDate: cruise.startDate,
+            cruiseEndDate: cruise.endDate,
+        });
+        const send = (cruise) => auth(
+            request(app)
+                .put(`/api/bar/cruises/sendCruiseReport/${Utils.encode(cruise.id)}?user_id=${Utils.encode(1)}`)
+                .send({})
+        );
+
+        it('liquida a los PP sin consumos, deja el crucero abierto y no toca a los TO', async () => {
+            const cruise = await partialCruise();
+            const pp = await createPassenger(cruise, 'PP', 'Pasajero PP');
+            const to = await createPassenger(cruise, 'TO', 'Pasajero TO');
+
+            const response = await send(cruise);
+
+            expect(response.status).toBe(200);
+            expect(response.body.data).toMatch(/parcial PP/);
+            expect((await pp.reload()).settled).toBe(true);
+            expect((await to.reload()).settled).toBe(false);
+            expect((await cruise.reload()).cruiseState).toBe('open');
+        });
+
+        it('devuelve 400 y no liquida a un PP con saldo sin cobrar', async () => {
+            const cruise = await partialCruise();
+            const pp = await createPassenger(cruise, 'PP', 'PP con deuda');
+            await ConsumerCard.create({ numberCard: `C-${suffix()}`, passengerId: pp.id, totalCount: 25, paidAccount: false });
+
+            const response = await send(cruise);
+
+            expect(response.status).toBe(400);
+            expect(response.body.error.message).toMatch(/PP con saldo sin cobrar/);
+            expect((await pp.reload()).settled).toBe(false);
+        });
     });
 
     it('devuelve 400 cuando el crucero no tiene tarjetas válidas para reportar', async () => {

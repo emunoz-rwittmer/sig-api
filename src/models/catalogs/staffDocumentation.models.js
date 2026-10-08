@@ -38,6 +38,11 @@ const StaffDocumentation = db.define('staff_documentation', {
         allowNull: true,
         field: "expiry_date",
     },
+    uploadedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: "uploaded_at",
+    },
     notifiedStage: {
         type: DataTypes.STRING,
         allowNull: true,
