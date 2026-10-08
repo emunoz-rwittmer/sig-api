@@ -17,6 +17,16 @@ const Utils = require('../../utils/Utils');
 
 const DOCUMENT_EXPIRY_WINDOW_DAYS = 30;
 
+// Ventana "por vencer" por días calendario, igual que computeExpiryStage del
+// cron: hoy (aunque la hora de expiryDate ya pasó) hasta hoy + 30 días inclusive.
+const getExpiringWindow = () => {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const endExclusive = new Date(start);
+    endExclusive.setDate(start.getDate() + DOCUMENT_EXPIRY_WINDOW_DAYS + 1);
+    return { [Op.gte]: start, [Op.lt]: endExclusive };
+};
+
 class Staffervice {
     static async getAll() {
         try {
@@ -106,14 +116,11 @@ class Staffervice {
     // (cronJobs.controller.js/computeExpiryStage): documentos vigentes que
     // vencen dentro de los próximos DOCUMENT_EXPIRY_WINDOW_DAYS días.
     static async getDocumentsExpiringSoonCount() {
-        const now = new Date();
-        const windowEnd = new Date(now.getTime() + DOCUMENT_EXPIRY_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-
         return StaffDocumentation.count({
             distinct: true,
             col: 'id',
             where: {
-                expiryDate: { [Op.gte]: now, [Op.lte]: windowEnd }
+                expiryDate: getExpiringWindow()
             },
             include: [{
                 model: Staff,
@@ -173,12 +180,9 @@ class Staffervice {
     // empresas) en vez de solo el conteo, para el reporte Excel de
     // "Documentos por vencer".
     static async getExpiringDocumentsReport() {
-        const now = new Date();
-        const windowEnd = new Date(now.getTime() + DOCUMENT_EXPIRY_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-
         return StaffDocumentation.findAll({
             where: {
-                expiryDate: { [Op.gte]: now, [Op.lte]: windowEnd }
+                expiryDate: getExpiringWindow()
             },
             attributes: ['id', 'expiryDate'],
             include: [
@@ -327,7 +331,7 @@ class Staffervice {
                     {
                         model: StaffDocumentation,
                         as: 'documentation',
-                        attributes: ['id', 'status', 'file', 'expiryDate', 'fileName', 'fileSize', 'updatedAt'],
+                        attributes: ['id', 'status', 'file', 'expiryDate', 'fileName', 'fileSize', 'uploadedAt'],
                         include: [
                             {
                                 model: Documentation,
@@ -690,6 +694,7 @@ class Staffervice {
                     fileSize: document.fileSize,
                     status: document.status,
                     expiryDate: document.expiryDate,
+                    uploadedAt: new Date(),
                     notifiedStage: null,
                     notifiedAt: null
                 },

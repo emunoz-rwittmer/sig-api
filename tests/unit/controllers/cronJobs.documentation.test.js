@@ -1,4 +1,4 @@
-jest.mock('../../../src/models/catalogs/staffDocumentation.models', () => ({ findAll: jest.fn() }));
+jest.mock('../../../src/models/catalogs/staffDocumentation.models', () => ({ findAll: jest.fn(), update: jest.fn() }));
 jest.mock('../../../src/models/catalogs/documentation.models', () => ({}));
 jest.mock('../../../src/models/catalogs/staff.models', () => ({}));
 jest.mock('../../../src/mails/mailer', () => ({
@@ -194,5 +194,60 @@ describe('checkExpiringStaffDocuments', () => {
         await CronJobs.checkExpiringStaffDocuments();
 
         expect(sendEmailRRHHDocumentExpiringDigest).not.toHaveBeenCalled();
+    });
+
+    it('re-sincroniza status expired/expiring/valid solo de documentos con archivo', async () => {
+        StaffDocumentation.findAll.mockResolvedValue([]);
+        const { Op } = require('sequelize');
+
+        await CronJobs.checkExpiringStaffDocuments();
+
+        const calls = StaffDocumentation.update.mock.calls;
+        expect(calls.map(([values]) => values.status)).toEqual(['expired', 'expiring', 'valid']);
+        calls.forEach(([values, { where }]) => {
+            expect(where.file).toEqual({ [Op.not]: null });
+            expect(where.status).toEqual({ [Op.ne]: values.status });
+        });
+
+        const today = moment().startOf('day');
+        const [, expiring, valid] = calls.map(([, { where }]) => where.expiryDate);
+        expect(moment(expiring[Op.gte]).isSame(today)).toBe(true);
+        expect(moment(expiring[Op.lt]).diff(today, 'days')).toBe(31);
+        expect(moment(valid[Op.gte]).diff(today, 'days')).toBe(31);
+    });
+
+    it('sigue notificando aunque falle la sincronización de status', async () => {
+        StaffDocumentation.update.mockRejectedValueOnce(new Error('db'));
+        const record = buildRecord({ id: 11, expiryDate: moment().add(3, 'days').toDate() });
+        StaffDocumentation.findAll.mockResolvedValue([record]);
+
+        await CronJobs.checkExpiringStaffDocuments();
+
+        expect(sendEmailStaffDocumentExpiring).toHaveBeenCalledTimes(1);
+    });
+
+    it('si falla el correo de un documento, no lo marca y sigue con los demás', async () => {
+        const failing = buildRecord({ id: 20, expiryDate: moment().add(3, 'days').toDate() });
+        const ok = buildRecord({ id: 21, expiryDate: moment().add(3, 'days').toDate() });
+        StaffDocumentation.findAll.mockResolvedValue([failing, ok]);
+        sendEmailStaffDocumentExpiring.mockRejectedValueOnce(new Error('smtp'));
+
+        await CronJobs.checkExpiringStaffDocuments();
+
+        expect(failing.update).not.toHaveBeenCalled();
+        expect(ok.update).toHaveBeenCalledWith(expect.objectContaining({ notifiedStage: '7' }));
+        expect(sendEmailRRHHDocumentExpiringDigest).toHaveBeenCalledTimes(1);
+        expect(sendEmailRRHHDocumentExpiringDigest.mock.calls[0][0]).toHaveLength(1);
+    });
+
+    it('si falla el resumen de un yate, igual envía el de los demás', async () => {
+        const a = buildRecord({ id: 22, expiryDate: moment().add(3, 'days').toDate(), yachts: [{ id: 1, name: 'A', email: 'a@x.com' }] });
+        const b = buildRecord({ id: 23, expiryDate: moment().add(3, 'days').toDate(), yachts: [{ id: 2, name: 'B', email: 'b@x.com' }] });
+        StaffDocumentation.findAll.mockResolvedValue([a, b]);
+        sendEmailRRHHDocumentExpiringDigest.mockRejectedValueOnce(new Error('smtp'));
+
+        await CronJobs.checkExpiringStaffDocuments();
+
+        expect(sendEmailRRHHDocumentExpiringDigest).toHaveBeenCalledTimes(2);
     });
 });
