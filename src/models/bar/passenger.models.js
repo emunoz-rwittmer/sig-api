@@ -60,6 +60,12 @@ const Passenger = db.define('passenger', {
         type: DataTypes.DATE,
         allowNull: false,
     },
+    // Pasajero PP ya incluido en el informe parcial: queda fuera del resto del crucero.
+    settled: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+    },
 
 });
 

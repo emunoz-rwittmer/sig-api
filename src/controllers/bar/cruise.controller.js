@@ -7,6 +7,7 @@ const CruiseReportPDFService = require('../../services/bar/cruiseReportPDF.servi
 const MailsWithAttachments = require('../../mails/mailAttachments');
 const RequestService = require('../../services/operations/yachtRequest/yachtRequest.services');
 const AppError = require('../../errors/AppError');
+const Passenger = require('../../models/bar/passenger.models');
 
 const decodeId = (value, fieldName) => {
     let id;
@@ -19,6 +20,29 @@ const decodeId = (value, fieldName) => {
         throw new AppError(`${fieldName} inválido`, 400);
     }
     return id;
+};
+
+const PARTIAL_REPORT_MESSAGE = 'Reporte parcial PP generado y enviado correctamente';
+
+/**
+ * El informe es parcial (solo PP, crucero abierto) el día del traslado o el
+ * día anterior; el traslado es el día `transferDay` contado desde el inicio.
+ */
+const isPartialReportDay = (cruise) => {
+    const transferDayNumber = Number(cruise.transferDay || 0);
+    if (transferDayNumber <= 0) return false;
+
+    const reportDate = new Date();
+    reportDate.setHours(0, 0, 0, 0);
+
+    const transferDate = new Date(cruise.startDate);
+    transferDate.setHours(0, 0, 0, 0);
+    transferDate.setDate(transferDate.getDate() + transferDayNumber - 1);
+
+    const dayBeforeTransfer = new Date(transferDate);
+    dayBeforeTransfer.setDate(dayBeforeTransfer.getDate() - 1);
+
+    return reportDate.getTime() === transferDate.getTime() || reportDate.getTime() === dayBeforeTransfer.getTime();
 };
 
 const getAllCruises = async (req, res, next) => {
@@ -61,7 +85,23 @@ const sendCruiseReport = async (req, res, next) => {
         const emailTo = ['fabian@rwittmer.com', 'rosa@tiptoptravel.ec', 'enrique@rwittmer.com'];
         const emailCc = 'edison@tiptoptravel.ec';
 
-        const consumerPassengers = cruise.passengers.filter(
+        const isPartial = isPartialReportDay(cruise);
+
+        // Informe parcial: solo los PP; informe final: todos los que no se liquidaron antes.
+        const activePassengers = cruise.passengers.filter((p) => !p.settled);
+        const reportPassengers = isPartial ? activePassengers.filter((p) => p.type === 'PP') : activePassengers;
+
+        // Un PP con saldo sin cobrar no puede salir del crucero: se cobra antes de enviar el parcial.
+        if (isPartial) {
+            const unpaidPassengers = reportPassengers.filter(
+                (p) => p.consumer_card && p.consumer_card.totalCount > 0 && p.consumer_card.paidAccount !== true
+            );
+            if (unpaidPassengers.length > 0) {
+                throw new AppError(`Hay ${unpaidPassengers.length} pasajero(s) PP con saldo sin cobrar`, 400);
+            }
+        }
+
+        const consumerPassengers = reportPassengers.filter(
             (p) => p.consumer_card && p.consumer_card.totalCount > 0 && p.consumer_card.paidAccount === true
         );
 
@@ -82,13 +122,19 @@ const sendCruiseReport = async (req, res, next) => {
             },
         }));
 
-        const cortecyCards = (cruise.cortecy_cards || []).map((card) => ({
+        // Las cortesías son del crucero completo: solo van en el informe final.
+        const cortecyCards = isPartial ? [] : (cruise.cortecy_cards || []).map((card) => ({
             ...card,
             cruise,
         }));
 
         if (consumerCards.length === 0 && cortecyCards.length === 0) {
-            throw new AppError('No hay consumer cards o cortecy cards válidas para este crucero', 400);
+            if (!isPartial) {
+                throw new AppError('No hay consumer cards o cortecy cards válidas para este crucero', 400);
+            }
+            // Parcial sin consumos de PP: no hay nada que reportar, solo se liquidan.
+            await Passenger.update({ settled: true }, { where: { cruiseId, type: 'PP', settled: false } });
+            return res.status(200).json({ data: PARTIAL_REPORT_MESSAGE });
         }
 
         const uploadsDir = path.join(__dirname, '../../..', 'uploads', 'cruises', cruise.code, 'reports');
@@ -96,7 +142,7 @@ const sendCruiseReport = async (req, res, next) => {
             fs.mkdirSync(uploadsDir, { recursive: true });
         }
 
-        const baseName = `report_${cruise.code}`;
+        const baseName = isPartial ? `report_${cruise.code}_PP` : `report_${cruise.code}`;
 
         excelPath = path.join(uploadsDir, `${baseName}.xlsx`);
         pdfPath = path.join(uploadsDir, `${baseName}.pdf`);
@@ -122,42 +168,22 @@ const sendCruiseReport = async (req, res, next) => {
             emailCc
         );
 
-        const cruiseUpdate = {
-            urlPDFReport: urlPDF,
-            urlExcelReport: urlExcel
-        };
-
-        const transferDayNumber = Number(cruise.transferDay || 0);
-        if (transferDayNumber > 0) {
-            const reportDate = new Date();
-            reportDate.setHours(0, 0, 0, 0);
-
-            const cruiseStartDate = new Date(cruise.startDate);
-            cruiseStartDate.setHours(0, 0, 0, 0);
-
-            const transferDate = new Date(cruiseStartDate);
-            transferDate.setDate(transferDate.getDate() + transferDayNumber - 1);
-
-            const dayBeforeTransfer = new Date(transferDate);
-            dayBeforeTransfer.setDate(dayBeforeTransfer.getDate() - 1);
-
-            const isTransferDay = reportDate.getTime() === transferDate.getTime();
-            const isDayBeforeTransfer = reportDate.getTime() === dayBeforeTransfer.getTime();
-
-            if (!isTransferDay && !isDayBeforeTransfer) {
-                cruiseUpdate.cruiseState = 'under review';
-            }
+        if (isPartial) {
+            // El crucero sigue abierto: los PP reportados salen de la operación.
+            await Passenger.update({ settled: true }, { where: { cruiseId, type: 'PP', settled: false } });
         } else {
-            cruiseUpdate.cruiseState = 'under review';
+            await CruiseService.updateCruise(cruiseId, {
+                urlPDFReport: urlPDF,
+                urlExcelReport: urlExcel,
+                cruiseState: 'under review',
+            });
         }
-
-        await CruiseService.updateCruise(cruiseId, cruiseUpdate);
 
         RequestService.createDrinkRequest(cruise.yachtId, userId).catch(error => {
             console.error('Error creando drink request:', error);
         });
 
-        res.status(200).json({ data: 'Reporte de crucero generado y enviado correctamente' });
+        res.status(200).json({ data: isPartial ? PARTIAL_REPORT_MESSAGE : 'Reporte de crucero generado y enviado correctamente' });
 
     } catch (error) {
         try {
