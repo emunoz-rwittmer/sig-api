@@ -34,16 +34,17 @@ async function assertStaffAssigned(staffId, inductionId) {
  * intento nuevo, el próximo acceso sortea un subconjunto distinto.
  */
 async function getSelectedQuestions(progress, induction, usedAttempts) {
-    const needsNewSelection = !progress.selectedQuestionIds || progress.selectedForAttempt !== usedAttempts;
-    let selectedIds = progress.selectedQuestionIds;
-
-    if (needsNewSelection) {
-        selectedIds = pickRandomQuestions(induction.questions, induction.questionsToShow).map((question) => question.id);
-        await progress.update({ selectedQuestionIds: selectedIds, selectedForAttempt: usedAttempts });
-    }
-
     const byId = new Map(induction.questions.map((question) => [question.id, question]));
-    return selectedIds.map((id) => byId.get(id)).filter(Boolean);
+    const stored = Array.isArray(progress.selectedQuestionIds) ? progress.selectedQuestionIds : null;
+    const storedQuestions = (stored ?? []).map((id) => byId.get(id)).filter(Boolean);
+    // También se re-sortea si la selección guardada quedó vacía u obsoleta (preguntas editadas o borradas).
+    const needsNewSelection = !stored || progress.selectedForAttempt !== usedAttempts
+        || !storedQuestions.length || storedQuestions.length !== stored.length;
+    if (!needsNewSelection) return storedQuestions;
+
+    const picked = pickRandomQuestions(induction.questions, induction.questionsToShow);
+    await progress.update({ selectedQuestionIds: picked.map((question) => question.id), selectedForAttempt: usedAttempts });
+    return picked;
 }
 
 class InductionAttemptService {
