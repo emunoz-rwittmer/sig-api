@@ -2,7 +2,7 @@ const { Router } = require('express');
 const InductionController = require('../../controllers/rrhh/inductions.controller');
 const InductionAttemptController = require('../../controllers/rrhh/inductionAttempts.controller');
 const authJwt = require('../../middlewares/auth.middleware');
-const { uploadInductionMaterials } = require('../../utils/uploadConfiguration');
+const { uploadInductionMaterials, uploadInductionQuestionsMatrix } = require('../../utils/uploadConfiguration');
 
 const router = Router();
 const requireRRHH = authJwt.hasAnyRole(['admin', 'rrhh']);
@@ -125,6 +125,46 @@ router.post('/me/:induction_id/attempts', InductionAttemptController.submitAttem
  *         description: Lista de inducciones del trabajador con avance
  */
 router.get('/staff/:staff_id', requireRRHH, InductionController.getForStaff);
+
+/**
+ * @openapi
+ * /inductions/questions/template:
+ *   get:
+ *     summary: Descargar la matriz de Excel para cargar preguntas de una inducción
+ *     tags: [Inductions]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Archivo .xlsx con encabezados, ejemplos e instrucciones
+ */
+router.get('/questions/template', requireRRHH, InductionController.downloadQuestionsTemplate);
+
+/**
+ * @openapi
+ * /inductions/questions/import:
+ *   post:
+ *     summary: Leer una matriz de Excel y devolver sus preguntas (no guarda nada)
+ *     tags: [Inductions]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: "{ questions: [{ statement, options: [{ text, isCorrect }] }], errors: [{ row, message }] }"
+ *       400:
+ *         description: Archivo faltante, ilegible o sin preguntas
+ */
+router.post('/questions/import', requireRRHH, uploadInductionQuestionsMatrix, InductionController.importQuestions);
 
 /**
  * @openapi

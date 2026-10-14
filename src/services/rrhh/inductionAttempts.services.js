@@ -18,7 +18,8 @@ async function assertStaffAssigned(staffId, inductionId) {
             { model: InductionQuestion, as: 'questions', include: [{ model: InductionOption, as: 'options' }] },
         ],
     });
-    if (!induction) throw new AppError('Inducción no encontrada', 404);
+    // Un borrador todavía no existe para el personal.
+    if (!induction?.active) throw new AppError('Inducción no encontrada', 404);
 
     const companyIds = induction.companies.map((entry) => entry.companyId);
     const assigned = await StaffCompany.count({ where: { staffId, companyId: companyIds } });

@@ -1,3 +1,4 @@
+const multer = require('multer');
 const uploadMiddleware = require('../middlewares/uploadMiddleware');
 const { createUpload } = require('../utils/multer');
 
@@ -36,6 +37,16 @@ const inductionUpload = createUpload({
 
 const uploadInductionMaterials = uploadMiddleware('array', 'materials', inductionUpload);
 
+// La matriz de preguntas de inducción solo se lee para devolver su contenido:
+// se procesa en memoria y no se guarda en /uploads.
+const inductionQuestionsUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => cb(null, /\.xlsx?$/i.test(file.originalname)),
+});
+
+const uploadInductionQuestionsMatrix = uploadMiddleware('single', 'file', inductionQuestionsUpload);
+
 module.exports =  {
     uploadExcelFile,
     uploadSingleImage,
@@ -43,4 +54,5 @@ module.exports =  {
     uploadImageFile,
     uploadManyFiles,
     uploadInductionMaterials,
+    uploadInductionQuestionsMatrix,
 };

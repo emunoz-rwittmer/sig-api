@@ -22,6 +22,30 @@ const FULL_INCLUDE = [
     },
 ];
 
+const DEFAULT_PASSING_SCORE = 70;
+const DEFAULT_MAX_ATTEMPTS = 3;
+const DRAFT_NAME = 'Inducción sin título';
+
+// Un borrador guarda el avance tal cual (sin campos obligatorios); solo al
+// publicar (`active: true`) se exige el set completo, porque desde ese momento
+// la inducción queda visible para el personal de las empresas asignadas.
+function assertPublishable({ questions, companyIds, questionsToShow }) {
+    const validationError = validateQuestionSet(questions);
+    if (validationError) throw new AppError(validationError, 400);
+    const questionsToShowError = validateQuestionsToShow(questionsToShow, questions.length);
+    if (questionsToShowError) throw new AppError(questionsToShowError, 400);
+    if (!Array.isArray(companyIds) || !companyIds.length) {
+        throw new AppError('Debe asignar al menos una empresa', 400);
+    }
+}
+
+const draftName = (name) => String(name ?? '').trim() || DRAFT_NAME;
+
+const toQuestionInput = (question) => ({
+    statement: question.statement,
+    options: (question.options ?? []).map((option) => ({ text: option.text, isCorrect: option.isCorrect })),
+});
+
 async function getAssignedStaffIds(companyIds) {
     if (!companyIds.length) return [];
     const rows = await StaffCompany.findAll({
@@ -65,62 +89,62 @@ class InductionService {
     }
 
     static async create(data) {
-        const validationError = validateQuestionSet(data.questions);
-        if (validationError) throw new AppError(validationError, 400);
-        const questionsToShowError = validateQuestionsToShow(data.questionsToShow, data.questions.length);
-        if (questionsToShowError) throw new AppError(questionsToShowError, 400);
-        if (!Array.isArray(data.companyIds) || !data.companyIds.length) {
-            throw new AppError('Debe asignar al menos una empresa', 400);
+        const published = data.active ?? true;
+        if (published) {
+            assertPublishable({ questions: data.questions, companyIds: data.companyIds, questionsToShow: data.questionsToShow });
         }
 
         return db.transaction(async (transaction) => {
             const induction = await Induction.create({
-                name: data.name,
+                name: draftName(data.name),
                 description: data.description ?? null,
-                passingScore: data.passingScore,
-                maxAttempts: data.maxAttempts,
+                passingScore: data.passingScore ?? DEFAULT_PASSING_SCORE,
+                maxAttempts: data.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
                 questionsToShow: data.questionsToShow ?? null,
-                active: data.active ?? true,
+                active: published,
             }, { transaction });
 
-            await InductionCompany.bulkCreate(
-                data.companyIds.map((companyId) => ({ inductionId: induction.id, companyId })),
-                { transaction },
-            );
+            if (data.companyIds?.length) {
+                await InductionCompany.bulkCreate(
+                    data.companyIds.map((companyId) => ({ inductionId: induction.id, companyId })),
+                    { transaction },
+                );
+            }
 
-            await createQuestions(induction.id, data.questions, transaction);
+            await createQuestions(induction.id, data.questions ?? [], transaction);
 
             return induction;
         });
     }
 
     static async update(id, data) {
-        const induction = await Induction.findByPk(id);
+        const induction = await Induction.findByPk(id, {
+            include: [
+                { model: InductionCompany, as: 'companies' },
+                { model: InductionQuestion, as: 'questions', include: [{ model: InductionOption, as: 'options' }] },
+            ],
+        });
         if (!induction) throw new AppError('Inducción no encontrada', 404);
 
-        if (data.questions) {
-            const validationError = validateQuestionSet(data.questions);
-            if (validationError) throw new AppError(validationError, 400);
-        }
-        if (data.questionsToShow !== undefined) {
-            const totalQuestions = data.questions
-                ? data.questions.length
-                : await InductionQuestion.count({ where: { inductionId: id } });
-            const questionsToShowError = validateQuestionsToShow(data.questionsToShow, totalQuestions);
-            if (questionsToShowError) throw new AppError(questionsToShowError, 400);
-        }
-        if (data.companyIds && !data.companyIds.length) {
-            throw new AppError('Debe asignar al menos una empresa', 400);
+        const published = data.active !== undefined ? data.active : induction.active;
+        if (published) {
+            // Se valida el estado final (lo enviado o, si no viene, lo ya guardado):
+            // un `{ active: true }` suelto no debe publicar un borrador incompleto.
+            assertPublishable({
+                questions: data.questions ?? induction.questions.map(toQuestionInput),
+                companyIds: data.companyIds ?? induction.companies.map((entry) => entry.companyId),
+                questionsToShow: data.questionsToShow !== undefined ? data.questionsToShow : induction.questionsToShow,
+            });
         }
 
         return db.transaction(async (transaction) => {
             await induction.update({
-                name: data.name ?? induction.name,
+                name: data.name !== undefined ? draftName(data.name) : induction.name,
                 description: data.description !== undefined ? data.description : induction.description,
                 passingScore: data.passingScore ?? induction.passingScore,
                 maxAttempts: data.maxAttempts ?? induction.maxAttempts,
                 questionsToShow: data.questionsToShow !== undefined ? data.questionsToShow : induction.questionsToShow,
-                active: data.active !== undefined ? data.active : induction.active,
+                active: published,
             }, { transaction });
 
             if (data.companyIds) {
@@ -226,8 +250,9 @@ class InductionService {
             .map((entry) => entry.inductionId);
         if (!inductionIds.length) return [];
 
+        // Los borradores no se asignan a nadie hasta publicarse.
         const inductions = await Induction.findAll({
-            where: { id: [...new Set(inductionIds)] },
+            where: { id: [...new Set(inductionIds)], active: true },
             order: [['createdAt', 'DESC']],
         });
         const attempts = await InductionAttempt.findAll({ where: { inductionId: inductions.map((i) => i.id), staffId } });
@@ -268,14 +293,14 @@ async function createQuestions(inductionId, questions, transaction) {
     for (let index = 0; index < questions.length; index += 1) {
         const question = await InductionQuestion.create({
             inductionId,
-            statement: questions[index].statement,
+            statement: String(questions[index].statement ?? ''),
             sortOrder: index,
         }, { transaction });
 
         await InductionOption.bulkCreate(
-            questions[index].options.map((option, optionIndex) => ({
+            (questions[index].options ?? []).map((option, optionIndex) => ({
                 questionId: question.id,
-                text: option.text,
+                text: String(option.text ?? ''),
                 isCorrect: Boolean(option.isCorrect),
                 sortOrder: optionIndex,
             })),

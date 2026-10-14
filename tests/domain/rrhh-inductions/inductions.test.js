@@ -472,4 +472,106 @@ describe('RRHH Inductions', () => {
             expect(await Induction.findByPk(induction.id)).toBeNull();
         });
     });
+
+    describe('Drafts (active: false)', () => {
+        it('saves an incomplete draft without required fields', async () => {
+            const response = await request(app)
+                .post('/api/inductions')
+                .set('Authorization', `Bearer ${adminToken}`)
+                .send({
+                    name: '',
+                    active: false,
+                    companyIds: [],
+                    questions: [{ statement: '', options: [{ text: 'A', isCorrect: false }, { text: '', isCorrect: false }] }],
+                });
+
+            expect(response.status).toBe(200);
+            const detail = await fetchInductionDetail(Utils.decode(response.body.inductionId));
+            expect(detail.active).toBe(false);
+            expect(detail.name).toBe('Inducción sin título');
+            expect(detail.questions.length).toBe(1);
+        });
+
+        it('rejects publishing an incomplete draft with a bare { active: true }', async () => {
+            const created = await request(app)
+                .post('/api/inductions')
+                .set('Authorization', `Bearer ${adminToken}`)
+                .send({ name: 'Borrador', active: false, companyIds: [], questions: [] });
+            expect(created.status).toBe(200);
+
+            const response = await request(app)
+                .put(`/api/inductions/${created.body.inductionId}`)
+                .set('Authorization', `Bearer ${adminToken}`)
+                .send({ active: true });
+
+            expect(response.status).toBe(400);
+        });
+
+        it('hides drafts from staff until they are published', async () => {
+            const { company } = await createCompanyWithYacht();
+            const staff = await createStaffFixture();
+            await StaffCompany.create({ staffId: staff.id, companyId: company.id });
+            const staffToken = await loginStaff(staff);
+
+            const created = await request(app)
+                .post('/api/inductions')
+                .set('Authorization', `Bearer ${adminToken}`)
+                .send({
+                    name: 'Borrador por publicar',
+                    passingScore: 70,
+                    maxAttempts: 3,
+                    active: false,
+                    companyIds: [Utils.encode(company.id)],
+                    questions: validQuestionsPayload(),
+                });
+            const encodedId = created.body.inductionId;
+
+            const listWhileDraft = await request(app).get('/api/inductions/me').set('Authorization', `Bearer ${staffToken}`);
+            expect(listWhileDraft.body.some((item) => item.id === encodedId)).toBe(false);
+            const detailWhileDraft = await request(app).get(`/api/inductions/me/${encodedId}`).set('Authorization', `Bearer ${staffToken}`);
+            expect(detailWhileDraft.status).toBe(404);
+
+            const published = await request(app)
+                .put(`/api/inductions/${encodedId}`)
+                .set('Authorization', `Bearer ${adminToken}`)
+                .send({ active: true });
+            expect(published.status).toBe(200);
+
+            const listAfterPublish = await request(app).get('/api/inductions/me').set('Authorization', `Bearer ${staffToken}`);
+            expect(listAfterPublish.body.some((item) => item.id === encodedId)).toBe(true);
+        });
+    });
+
+    describe('Questions matrix', () => {
+        it('downloads the template and imports it back as questions', async () => {
+            const template = await request(app)
+                .get('/api/inductions/questions/template')
+                .set('Authorization', `Bearer ${adminToken}`)
+                .buffer(true)
+                .parse((res, callback) => {
+                    const chunks = [];
+                    res.on('data', (chunk) => chunks.push(chunk));
+                    res.on('end', () => callback(null, Buffer.concat(chunks)));
+                });
+            expect(template.status).toBe(200);
+
+            const imported = await request(app)
+                .post('/api/inductions/questions/import')
+                .set('Authorization', `Bearer ${adminToken}`)
+                .attach('file', template.body, 'matriz.xlsx');
+
+            expect(imported.status).toBe(200);
+            expect(imported.body.questions.length).toBe(2);
+            expect(imported.body.errors).toEqual([]);
+        });
+
+        it('rejects a file that is not the questions matrix', async () => {
+            const response = await request(app)
+                .post('/api/inductions/questions/import')
+                .set('Authorization', `Bearer ${adminToken}`)
+                .attach('file', Buffer.from('hola'), 'otro.xlsx');
+
+            expect(response.status).toBe(400);
+        });
+    });
 });

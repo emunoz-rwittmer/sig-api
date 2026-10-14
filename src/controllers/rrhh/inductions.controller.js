@@ -1,5 +1,6 @@
 const InductionService = require('../../services/rrhh/inductions.services');
 const { toAdminDto } = require('../../utils/inductionPresenters');
+const { buildQuestionsTemplate, parseQuestionsWorkbook } = require('../../utils/inductionQuestionsMatrix');
 const Utils = require('../../utils/Utils');
 const AppError = require('../../errors/AppError');
 
@@ -149,6 +150,31 @@ const getForStaff = async (req, res, next) => {
     }
 };
 
+const downloadQuestionsTemplate = async (req, res, next) => {
+    try {
+        const buffer = buildQuestionsTemplate();
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename="matriz-preguntas-induccion.xlsx"');
+        res.status(200).send(buffer);
+    } catch (error) {
+        next(error);
+    }
+};
+
+const importQuestions = async (req, res, next) => {
+    try {
+        if (!req.file) throw new AppError('Adjunta un archivo de Excel (.xlsx)', 400);
+        const result = parseQuestionsWorkbook(req.file.buffer);
+        if (!result) throw new AppError('No se pudo leer el archivo. Usa la matriz de preguntas en formato .xlsx', 400);
+        if (!result.questions.length && !result.errors.length) {
+            throw new AppError('La matriz no tiene preguntas', 400);
+        }
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
 const grantExtraAttempt = async (req, res, next) => {
     try {
         const inductionId = decodeId(req.params.induction_id, 'induction_id');
@@ -171,6 +197,8 @@ const InductionController = {
     getStaffProgress,
     getForStaff,
     grantExtraAttempt,
+    downloadQuestionsTemplate,
+    importQuestions,
 };
 
 module.exports = InductionController;
