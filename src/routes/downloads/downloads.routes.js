@@ -2,6 +2,7 @@ const { Router } = require('express');
 const DownloadController = require('../../controllers/downloads/downloads.controller');
 const ConsumerCardController = require('../../controllers/bar/consumerCard.controller');
 const StaffController = require('../../controllers/catalogs/staff.controller');
+const RegulationController = require('../../controllers/rrhh/regulations.controller');
 
 const router = Router();
 
@@ -295,5 +296,38 @@ router.get('/staff/expiring-documents/excel', StaffController.exportExpiringDocu
  *         description: Token ausente o inválido
  */
 router.get('/staff/embarked-today/excel', StaffController.exportEmbarkedTodayReport);
+
+/**
+ * @openapi
+ * /downloads/regulations/readings/excel:
+ *   get:
+ *     summary: Descargar el reporte Excel de lectura de reglamentos
+ *     description: >
+ *       Resumen por reglamento y detalle por colaborador (quién leyó y quién no,
+ *       con cargo, departamento y fecha de lectura).
+ *     tags: [Downloads]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: companyId
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Id (codificado) de la empresa; sin él, todas las empresas.
+ *     responses:
+ *       200:
+ *         description: Reporte Excel generado
+ *         content:
+ *           application/octet-stream:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       400:
+ *         description: companyId inválido
+ *       403:
+ *         description: Token ausente o inválido
+ */
+router.get('/regulations/readings/excel', RegulationController.exportReadingReport);
 
 module.exports = router;

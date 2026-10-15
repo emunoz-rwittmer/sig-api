@@ -29,6 +29,32 @@ class RegulationService {
         }
     }
 
+    /** Reglamentos con lectores (cargo, departamento, fecha de lectura) para el reporte Excel. */
+    static async getReadingReport(companyId) {
+        return Regulation.findAll({
+            where: companyId ? { companyId } : {},
+            attributes: ['id', 'name', 'createdAt'],
+            include: [
+                { model: Company, as: 'company', attributes: ['name'] },
+                {
+                    model: StaffReadRegulation,
+                    as: 'reads',
+                    attributes: ['id', 'read', 'updatedAt'],
+                    include: [{
+                        model: Staff,
+                        as: 'staff',
+                        attributes: ['firstName', 'lastName', 'email'],
+                        include: [
+                            { model: Positions, as: 'staff_position', attributes: ['name'] },
+                            { model: Departaments, as: 'staff_departament', attributes: ['name'] },
+                        ],
+                    }],
+                },
+            ],
+            order: [['createdAt', 'DESC']],
+        });
+    }
+
     static async getAll(companyId) {
         try {
             const result = await Regulation.findAll({

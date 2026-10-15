@@ -3,6 +3,12 @@ const Utils = require('../../utils/Utils');
 const Staffervice = require('../../services/catalogs/staff.services');
 const { sendEmailConfirmacion } = require('../../mails/mailer');
 const AppError = require('../../errors/AppError');
+const path = require('path');
+const fsPromises = require('fs').promises;
+const moment = require('moment');
+const { generateRegulationsReadingReportExcel } = require('../../services/rrhh/regulationsReportExcel.services');
+
+const UPLOADS_BASE_PATH = path.resolve(__dirname, '../../../uploads');
 
 const decodeId = (value, fieldName) => {
     let id;
@@ -161,7 +167,33 @@ const readAceptRegulation = async (req, res, next) => {
     }
 }
 
+const exportReadingReport = async (req, res, next) => {
+    try {
+        const companyId = req.query.companyId ? decodeId(req.query.companyId, 'companyId') : null;
+        const records = await RegulationService.getReadingReport(companyId);
+        const plainRecords = records.map((record) => record.get({ plain: true }));
+
+        const reportsDir = path.join(UPLOADS_BASE_PATH, 'reports');
+        await fsPromises.mkdir(reportsDir, { recursive: true });
+
+        const fileName = `lectura_reglamentos_${moment().format('YYYY-MM-DD')}_${Date.now()}.xlsx`;
+        const filePath = path.join(reportsDir, fileName);
+
+        await generateRegulationsReadingReportExcel(plainRecords, filePath, {
+            companyName: companyId ? plainRecords[0]?.company?.name : undefined,
+        });
+
+        res.download(filePath, fileName, (err) => {
+            if (err && !res.headersSent) next(err);
+            fsPromises.unlink(filePath).catch(() => {});
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 const RegulationController = {
+    exportReadingReport,
     getAllRegulationsAllCompanies,
     getAllRegulations,
     getRegulationStaffById,
