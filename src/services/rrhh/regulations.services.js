@@ -17,7 +17,7 @@ class RegulationService {
                         model: StaffReadRegulation,
                         as: 'reads',
                         attributes: ['id', 'read'],
-                        include: [{ model: Staff, as: 'staff', attributes: ['firstName', 'lastName'] }],
+                        include: [{ model: Staff, as: 'staff', attributes: ['firstName', 'lastName'], where: { active: true } }],
                     },
                     { model: Company, as: 'company', attributes: ['name'] },
                 ],
@@ -44,6 +44,7 @@ class RegulationService {
                         model: Staff,
                         as: 'staff',
                         attributes: ['firstName', 'lastName', 'email'],
+                        where: { active: true },
                         include: [
                             { model: Positions, as: 'staff_position', attributes: ['name'] },
                             { model: Departaments, as: 'staff_departament', attributes: ['name'] },
@@ -62,12 +63,14 @@ class RegulationService {
                 attributes: ['id', 'name', 'file', 'createdAt'],
                 include: [{
                     model: StaffReadRegulation,
-                    as: 'reads'
+                    as: 'reads',
+                    include: [{ model: Staff, as: 'staff', attributes: [], where: { active: true } }]
                 }]
             });
 
             const count = await StaffCompany.count({
-                where: { companyId }
+                where: { companyId },
+                include: [{ model: Staff, as: 'staff', attributes: [], where: { active: true } }]
             });
 
             result.map(res => (
@@ -138,6 +141,7 @@ class RegulationService {
                     {
                         model: Staff,
                         as: 'staff',
+                        where: { active: true },
                         attributes: ['first_name', 'last_name', 'email', 'cell_phone', 'roleId', 'departamentId', 'positionId', 'active'],
                         include: [
                             {
@@ -193,6 +197,7 @@ class RegulationService {
 
             const staffCompany = await StaffCompany.findAll({
                 where: { companyId: data.companyId },
+                include: [{ model: Staff, as: 'staff', attributes: [], where: { active: true } }],
             });
 
             if (result && staffCompany.length > 0) {
