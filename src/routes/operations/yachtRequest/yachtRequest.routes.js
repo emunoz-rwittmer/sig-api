@@ -70,6 +70,18 @@ const router = Router();
  *                 type: string
  *               status:
  *                 type: string
+ *               deliveryPort:
+ *                 type: string
+ *                 maxLength: 100
+ *                 description: Puerto de entrega solicitado (opcional)
+ *               requiredDate:
+ *                 type: string
+ *                 format: date
+ *                 description: Fecha en que se requiere el abastecimiento (opcional)
+ *               note:
+ *                 type: string
+ *                 maxLength: 1000
+ *                 description: Nota para bodega (opcional)
  *               products:
  *                 type: array
  *                 items:
@@ -87,13 +99,62 @@ const router = Router();
  *       200:
  *         description: Solicitud creada
  *       400:
- *         description: ID codificado inválido o products no es un arreglo
+ *         description: ID codificado inválido, products no es un arreglo o deliveryPort/requiredDate/note inválidos
  *       403:
  *         description: Token no proporcionado o inválido
  *       500:
  *         description: Error inesperado
  */
 router.get('/',YachtRequestController.getAllRequests);
+
+/**
+ * @openapi
+ * /requests/search:
+ *   get:
+ *     summary: Listado paginado y filtrado de requerimientos de yate, con totales
+ *     description: Filtra y pagina en SQL y devuelve los totales del año (por estado, tipo y yate) sin traer los items de cada requerimiento.
+ *     tags: [Requests]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: year
+ *         schema: { type: integer }
+ *         description: Año (hora de Ecuador). Por defecto el año actual
+ *       - in: query
+ *         name: warehouseIds
+ *         schema: { type: string }
+ *         description: Bodegas visibles separadas por coma (hashids). Limita todo el resultado
+ *       - in: query
+ *         name: warehouseId
+ *         schema: { type: string }
+ *         description: Un yate (hashid) para filtrar la tabla y los KPIs
+ *       - in: query
+ *         name: group
+ *         schema: { type: string }
+ *         description: Tipo (food_request, drink_request, lingerie_request)
+ *       - in: query
+ *         name: status
+ *         schema: { type: string, enum: [Pendiente, Procesado] }
+ *       - in: query
+ *         name: q
+ *         schema: { type: string, maxLength: 100 }
+ *         description: Texto en el nombre del requerimiento o del solicitante
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, minimum: 1 }
+ *       - in: query
+ *         name: pageSize
+ *         schema: { type: integer, minimum: 1, maximum: 100 }
+ *     responses:
+ *       200:
+ *         description: "{ rows, total, years, types, yachts, summary }"
+ *       400:
+ *         description: Algún parámetro es inválido
+ *       403:
+ *         description: Token no proporcionado o inválido
+ */
+router.get('/search', YachtRequestController.searchRequests);
 
 /**
  * @openapi
