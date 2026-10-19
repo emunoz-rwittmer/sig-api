@@ -70,6 +70,18 @@ const router = Router();
  *                 type: string
  *               status:
  *                 type: string
+ *               deliveryPort:
+ *                 type: string
+ *                 maxLength: 100
+ *                 description: Puerto de entrega solicitado (opcional)
+ *               requiredDate:
+ *                 type: string
+ *                 format: date
+ *                 description: Fecha en que se requiere el abastecimiento (opcional)
+ *               note:
+ *                 type: string
+ *                 maxLength: 1000
+ *                 description: Nota para bodega (opcional)
  *               products:
  *                 type: array
  *                 items:
@@ -87,7 +99,7 @@ const router = Router();
  *       200:
  *         description: Solicitud creada
  *       400:
- *         description: ID codificado inválido o products no es un arreglo
+ *         description: ID codificado inválido, products no es un arreglo o deliveryPort/requiredDate/note inválidos
  *       403:
  *         description: Token no proporcionado o inválido
  *       500:

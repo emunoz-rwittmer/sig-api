@@ -37,7 +37,7 @@ class RequestService {
 
             const result = await Request.findOne({
                 where: { id: requestId },
-                attributes: ['id', 'name', 'group', 'warehouseId', 'status', 'pax', 'cruise', 'supplyDate'],
+                attributes: ['id', 'name', 'group', 'warehouseId', 'status', 'pax', 'cruise', 'supplyDate', 'createdAt', 'deliveryPort', 'requiredDate', 'note'],
                 include: [
                     {
                         model: RequestItems,

@@ -19,6 +19,26 @@ const decodeId = (value, fieldName) => {
     return id;
 };
 
+const MAX_DELIVERY_PORT = 100;
+const MAX_NOTE = 1000;
+
+// Campos opcionales del formulario de nuevo requerimiento: se normalizan a null si vienen vacíos.
+const validateDeliveryFields = (data) => {
+    const { deliveryPort, requiredDate, note } = data;
+    if (deliveryPort != null && (typeof deliveryPort !== 'string' || deliveryPort.length > MAX_DELIVERY_PORT)) {
+        throw new AppError('deliveryPort inválido', 400);
+    }
+    if (note != null && (typeof note !== 'string' || note.length > MAX_NOTE)) {
+        throw new AppError('note inválido', 400);
+    }
+    if (requiredDate && Number.isNaN(Date.parse(requiredDate))) {
+        throw new AppError('requiredDate inválido', 400);
+    }
+    data.deliveryPort = deliveryPort?.trim() || null;
+    data.requiredDate = requiredDate || null;
+    data.note = note?.trim() || null;
+};
+
 const getAllRequests = async (req, res, next) => {
     try {
         const result = await YachtRequestService.getAllRequests();
@@ -63,6 +83,7 @@ const createRequest = async (req, res, next) => {
         if (!Array.isArray(data.products)) {
             throw new AppError('products debe ser un arreglo', 400);
         }
+        validateDeliveryFields(data);
 
         await YachtRequestService.createRequest(data)
         const warehouse = await WarehouseService.getWarehouseById(data.warehouseId)

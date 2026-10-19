@@ -226,6 +226,95 @@ describe('POST /api/requests — crear solicitud', () => {
         expect(response.body.data).toBe('resource created successfully');
     });
 
+    it('guarda puerto de entrega, fecha requerida y nota, y los devuelve al consultar la solicitud', async () => {
+        const { yacht } = await createCompanyWithYacht(`PostYacht-${suffix()}`);
+        const warehouse = await createWarehouseFixture(yacht.id);
+        const staff = await createStaffFixture();
+        const product = await createProductFixture();
+        const config = await createProductConfigFixture(product.id);
+        const name = `Requerimiento-${suffix()}`;
+
+        const created = await auth(
+            request(app)
+                .post('/api/requests')
+                .send({
+                    warehouseId: Utils.encode(warehouse.id),
+                    userId: Utils.encode(staff.id),
+                    name,
+                    group: 'food_request',
+                    status: 'Pendiente',
+                    deliveryPort: 'Puerto Ayora',
+                    requiredDate: '2026-10-24',
+                    note: '  crucero de 8 días  ',
+                    products: [{ configurationId: config.id, stock: 1, order: 2 }],
+                })
+        );
+        expect(created.status).toBe(200);
+
+        const saved = await Request.findOne({ where: { name } });
+        expect(saved.deliveryPort).toBe('Puerto Ayora');
+        expect(saved.requiredDate).toBe('2026-10-24');
+        expect(saved.note).toBe('crucero de 8 días');
+
+        const detail = await auth(request(app).get(`/api/requests/${Utils.encode(saved.id)}`));
+        expect(detail.status).toBe(200);
+        expect(detail.body).toMatchObject({ deliveryPort: 'Puerto Ayora', requiredDate: '2026-10-24', note: 'crucero de 8 días' });
+        expect(detail.body.createdAt).toBeDefined();
+    });
+
+    it('acepta la solicitud sin los campos de entrega (quedan en null)', async () => {
+        const { yacht } = await createCompanyWithYacht(`PostYacht-${suffix()}`);
+        const warehouse = await createWarehouseFixture(yacht.id);
+        const staff = await createStaffFixture();
+        const name = `Requerimiento-${suffix()}`;
+
+        const response = await auth(
+            request(app)
+                .post('/api/requests')
+                .send({
+                    warehouseId: Utils.encode(warehouse.id),
+                    userId: Utils.encode(staff.id),
+                    name,
+                    group: 'food_request',
+                    status: 'Pendiente',
+                    deliveryPort: '',
+                    note: '   ',
+                    products: [],
+                })
+        );
+
+        expect(response.status).toBe(200);
+        const saved = await Request.findOne({ where: { name } });
+        expect(saved.deliveryPort).toBeNull();
+        expect(saved.requiredDate).toBeNull();
+        expect(saved.note).toBeNull();
+    });
+
+    it.each([
+        ['requiredDate inválida', { requiredDate: 'no-es-fecha' }],
+        ['nota demasiado larga', { note: 'x'.repeat(1001) }],
+        ['puerto demasiado largo', { deliveryPort: 'x'.repeat(101) }],
+    ])('devuelve 400 con %s', async (_label, extra) => {
+        const { yacht } = await createCompanyWithYacht(`PostYacht-${suffix()}`);
+        const warehouse = await createWarehouseFixture(yacht.id);
+        const staff = await createStaffFixture();
+
+        const response = await auth(
+            request(app)
+                .post('/api/requests')
+                .send({
+                    warehouseId: Utils.encode(warehouse.id),
+                    userId: Utils.encode(staff.id),
+                    status: 'Pendiente',
+                    products: [],
+                    ...extra,
+                })
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
     it('devuelve 400 con warehouseId hashid inválido', async () => {
         const response = await auth(
             request(app)

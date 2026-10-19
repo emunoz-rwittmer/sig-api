@@ -41,6 +41,20 @@ const Request = db.define('request', {
     type: DataTypes.DATE,
     allowNull: true,
   },
+  deliveryPort: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    field: 'delivery_port'
+  },
+  requiredDate: {
+    type: DataTypes.DATEONLY,
+    allowNull: true,
+    field: 'required_date'
+  },
+  note: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
 });
 
 module.exports = Request;
