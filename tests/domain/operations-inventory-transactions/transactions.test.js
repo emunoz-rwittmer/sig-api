@@ -368,6 +368,43 @@ describe('POST /api/transactions/transactionBetweenWarehouse', () => {
         expect(transactions[0].type).toBe('OUT');
     });
 
+    it('despacha botellas completas de un producto en ml: descuenta y suma ml (cantidad × presentación)', async () => {
+        await Consecutivo.destroy({ where: {} });
+        await Consecutivo.create({ valor: 1 });
+
+        const { company } = await createCompanyWithYacht(`TW-Ml-${suffix()}`);
+        const from = await createWarehouseFixture();
+        const to = await createWarehouseFixture();
+        const product = await createProductFixture({ type: 'CONSUMABLE', unit: 'ml', presentationQuantity: 750 });
+        await createStockFixture(product.id, from.id, company.id, { quantity: 3000 }); // 4 botellas
+        const staff = await createStaffFixture();
+        const send = (quantity) => auth(
+            request(app)
+                .post('/api/transactions/transactionBetweenWarehouse')
+                .send({
+                    products: [{ id: Utils.encode(product.id), name: product.name, quantity }],
+                    userName: 'Tester',
+                    location: 'GPS',
+                    companyId: Utils.encode(company.id),
+                    warehouseFromId: Utils.encode(from.id),
+                    warehouseToId: Utils.encode(to.id),
+                    userId: Utils.encode(staff.id),
+                })
+        );
+
+        expect((await send(1)).status).toBe(200);
+
+        const stockFrom = await Stock.findOne({ where: { productId: product.id, warehouseId: from.id } });
+        const stockTo = await Stock.findOne({ where: { productId: product.id, warehouseId: to.id } });
+        expect(Number(stockFrom.quantity)).toBe(2250);
+        expect(Number(stockTo.quantity)).toBe(750);
+
+        // quedan 3 botellas: pedir 4 supera el stock y no mueve nada
+        const tooMany = await send(4);
+        expect(tooMany.status).toBe(400);
+        expect(Number((await Stock.findOne({ where: { productId: product.id, warehouseId: from.id } })).quantity)).toBe(2250);
+    });
+
     it('devuelve 200 cuando la tabla Consecutivo está vacía (fix del bug de crash)', async () => {
         await Consecutivo.destroy({ where: {} });
 
