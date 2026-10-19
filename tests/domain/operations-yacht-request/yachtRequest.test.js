@@ -421,3 +421,119 @@ describe('PUT /api/requests/:request_id — actualizar solicitud', () => {
         expect(response.status).toBe(403);
     });
 });
+
+// =========================================================================
+// GET /api/requests/search — listado paginado con filtros en SQL
+// =========================================================================
+
+describe('GET /api/requests/search — listado filtrado por el backend', () => {
+    const search = (query) => auth(request(app).get('/api/requests/search').query(query));
+
+    async function createScenario() {
+        const tag = suffix();
+        const { yacht } = await createCompanyWithYacht(`Search Company ${tag}`);
+        const warehouseA = await createWarehouseFixture(yacht.id);
+        const warehouseB = await createWarehouseFixture(yacht.id);
+        const staff = await createStaffFixture();
+        const base = { userId: staff.id, status: 'Pendiente', group: 'food_request' };
+
+        const pendingFood = await Request.create({ ...base, warehouseId: warehouseA.id, name: `food_${tag}` });
+        const processedFood = await Request.create({ ...base, warehouseId: warehouseA.id, name: `done_${tag}`, status: 'Procesado' });
+        const lingerie = await Request.create({ ...base, warehouseId: warehouseB.id, name: `lingerie_${tag}`, group: 'lingerie_request' });
+        const product = await createProductFixture();
+        const config = await createProductConfigFixture(product.id);
+        await createRequestItemFixture(pendingFood.id, config.id);
+        await createRequestItemFixture(pendingFood.id, config.id);
+        await createRequestItemFixture(lingerie.id, config.id);
+
+        const scope = [warehouseA, warehouseB].map((w) => Utils.encode(w.id)).join(',');
+        return { tag, staff, warehouseA, warehouseB, pendingFood, processedFood, lingerie, scope };
+    }
+
+    it('pagina, cuenta los productos sin traer los items y calcula los totales', async () => {
+        const { scope, warehouseA, pendingFood } = await createScenario();
+
+        const response = await search({ warehouseIds: scope, pageSize: 2 });
+
+        expect(response.status).toBe(200);
+        expect(response.body.total).toBe(3);
+        expect(response.body.rows).toHaveLength(2);
+        expect(response.body.rows[0]).not.toHaveProperty('requestItems');
+        expect(response.body.summary).toMatchObject({ total: 3, pending: 2, processed: 1, products: 3 });
+        expect(response.body.types).toMatchObject({ all: 3, food_request: 2, lingerie_request: 1 });
+        const yachtA = response.body.yachts.find((y) => y.warehouseId === Utils.encode(warehouseA.id));
+        expect(yachtA).toMatchObject({ total: 2, pending: 1 });
+        expect(response.body.years).toContain(new Date().getFullYear());
+
+        const second = await search({ warehouseIds: scope, pageSize: 2, page: 2 });
+        expect(second.body.rows).toHaveLength(1);
+        const names = [...response.body.rows, ...second.body.rows].map((row) => row.name);
+        expect(new Set(names).size).toBe(3);
+        const food = [...response.body.rows, ...second.body.rows].find((row) => row.id === Utils.encode(pendingFood.id));
+        expect(food.productCount).toBe(2);
+    });
+
+    it('filtra por estado, tipo, yate y texto (nombre o solicitante)', async () => {
+        const { scope, warehouseA, staff, tag } = await createScenario();
+
+        const byStatus = await search({ warehouseIds: scope, status: 'Procesado' });
+        expect(byStatus.body.rows.map((r) => r.name)).toEqual([`done_${tag}`]);
+
+        const byGroup = await search({ warehouseIds: scope, group: 'lingerie_request' });
+        expect(byGroup.body.total).toBe(1);
+        // el filtro de tipo también reduce los totales por yate
+        expect(byGroup.body.yachts).toHaveLength(1);
+
+        const byYacht = await search({ warehouseIds: scope, warehouseId: Utils.encode(warehouseA.id) });
+        expect(byYacht.body.total).toBe(2);
+        expect(byYacht.body.summary.total).toBe(2);
+        // los totales por tipo ignoran el filtro de yate
+        expect(byYacht.body.types.all).toBe(3);
+
+        const byName = await search({ warehouseIds: scope, q: `lingerie_${tag}` });
+        expect(byName.body.total).toBe(1);
+
+        const byStaff = await search({ warehouseIds: scope, q: staff.lastName });
+        expect(byStaff.body.total).toBe(3);
+
+        const wildcard = await search({ warehouseIds: scope, q: '%' });
+        expect(wildcard.body.total).toBe(0);
+    });
+
+    it('no incluye otros años', async () => {
+        const { scope } = await createScenario();
+
+        const response = await search({ warehouseIds: scope, year: 2001 });
+
+        expect(response.status).toBe(200);
+        expect(response.body.total).toBe(0);
+        expect(response.body.summary.total).toBe(0);
+    });
+
+    it.each([
+        ['year', { year: 'abc' }],
+        ['page', { page: 0 }],
+        ['pageSize', { pageSize: 101 }],
+        ['status', { status: 'Otro' }],
+        ['warehouseIds', { warehouseIds: 'no-es-hashid' }],
+    ])('devuelve 400 con %s inválido', async (_name, query) => {
+        const response = await search(query);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error.code).toBe('AppError');
+    });
+
+    it('devuelve 400 si el yate pedido no está entre las bodegas visibles', async () => {
+        const { warehouseA, warehouseB } = await createScenario();
+
+        const response = await search({ warehouseIds: Utils.encode(warehouseA.id), warehouseId: Utils.encode(warehouseB.id) });
+
+        expect(response.status).toBe(400);
+    });
+
+    it('devuelve 403 sin JWT', async () => {
+        const response = await request(app).get('/api/requests/search');
+
+        expect(response.status).toBe(403);
+    });
+});

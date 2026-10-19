@@ -9,3 +9,8 @@
 ALTER TABLE requests ADD COLUMN delivery_port VARCHAR(100) NULL;
 ALTER TABLE requests ADD COLUMN required_date DATE NULL;
 ALTER TABLE requests ADD COLUMN note TEXT NULL;
+
+-- Índices para el listado filtrado por año y yate (GET /requests/search).
+-- request_items.request_id ya tiene índice.
+ALTER TABLE requests ADD INDEX idx_requests_warehouse_created (warehouse_id, createdAt);
+ALTER TABLE requests ADD INDEX idx_requests_created (createdAt);

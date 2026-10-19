@@ -54,6 +54,60 @@ const getAllRequests = async (req, res, next) => {
     }
 }
 
+const REQUEST_STATUSES = ['Pendiente', 'Procesado'];
+const DEFAULT_PAGE_SIZE = 10;
+const MAX_PAGE_SIZE = 100;
+const MAX_SEARCH = 100;
+
+const parseIntParam = (value, fallback, fieldName, { min, max }) => {
+    if (value === undefined || value === '') return fallback;
+    const number = Number(value);
+    if (!Number.isInteger(number) || number < min || number > max) {
+        throw new AppError(`${fieldName} inválido`, 400);
+    }
+    return number;
+};
+
+const searchRequests = async (req, res, next) => {
+    try {
+        const { year, warehouseIds, warehouseId, group, status, q, page, pageSize } = req.query;
+
+        const scopeIds = warehouseIds
+            ? String(warehouseIds).split(',').filter(Boolean).map((value) => decodeId(value.trim(), 'warehouseIds'))
+            : [];
+        const selectedWarehouse = warehouseId ? decodeId(warehouseId, 'warehouseId') : undefined;
+        if (selectedWarehouse && scopeIds.length && !scopeIds.includes(selectedWarehouse)) {
+            throw new AppError('warehouseId no está en warehouseIds', 400);
+        }
+        if (status && !REQUEST_STATUSES.includes(status)) throw new AppError('status inválido', 400);
+        if (group && String(group).length > 50) throw new AppError('group inválido', 400);
+        if (q && String(q).length > MAX_SEARCH) throw new AppError('q inválido', 400);
+
+        const result = await YachtRequestService.searchRequests({
+            year: parseIntParam(year, new Date().getFullYear(), 'year', { min: 2000, max: 2100 }),
+            page: parseIntParam(page, 1, 'page', { min: 1, max: 100000 }),
+            pageSize: parseIntParam(pageSize, DEFAULT_PAGE_SIZE, 'pageSize', { min: 1, max: MAX_PAGE_SIZE }),
+            warehouseIds: scopeIds,
+            warehouseId: selectedWarehouse,
+            group: group || undefined,
+            status: status || undefined,
+            // % y _ son comodines de LIKE: se escapan para buscar el texto literal.
+            search: q ? String(q).trim().replace(/[\\%_]/g, '\\$&') : undefined,
+        });
+
+        res.status(200).json({
+            ...result,
+            rows: result.rows.map((row) => {
+                const plain = row.get({ plain: true });
+                return { ...plain, id: Utils.encode(plain.id), warehouseId: Utils.encode(plain.warehouseId), productCount: Number(plain.productCount) || 0 };
+            }),
+            yachts: result.yachts.map((yacht) => ({ ...yacht, warehouseId: Utils.encode(yacht.warehouseId) })),
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
 const getRequestById = async (req, res, next) => {
     try {
         const requestId = decodeId(req.params.request_id, 'request_id');
@@ -114,6 +168,7 @@ const updateRequest = async (req, res, next) => {
 
 const YachtRequestController = {
     getAllRequests,
+    searchRequests,
     getRequestById,
     createRequest,
     updateRequest,
