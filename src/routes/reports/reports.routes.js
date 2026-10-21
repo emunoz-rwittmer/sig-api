@@ -4,7 +4,7 @@ const desempenoDashboard = require('../../controllers/reports/desempenoDashboard
 const authJwt = require('../../middlewares/auth.middleware');
 const router = Router();
 
-const DESEMPENO_DASHBOARD_ROLES = ['admin', 'psicologos', 'gerencia_gps', 'gerencia_uio'];
+const DESEMPENO_DASHBOARD_ROLES = ['admin', 'psicologos', 'rrhh', 'gerencia_gps', 'gerencia_uio'];
 
 /**
  * @openapi

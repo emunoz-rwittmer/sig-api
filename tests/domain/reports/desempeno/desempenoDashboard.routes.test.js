@@ -63,7 +63,7 @@ describe('GET /api/reports/desempeno/*', () => {
     });
 
     it('returns 403 for a role outside the allowed list', async () => {
-        const restrictedToken = jwt.sign({ id: 999, rol: 'rrhh' }, process.env.JWT_SECRET, {
+        const restrictedToken = jwt.sign({ id: 999, rol: 'logistica_gps' }, process.env.JWT_SECRET, {
             expiresIn: '10h',
             algorithm: 'HS512',
         });
