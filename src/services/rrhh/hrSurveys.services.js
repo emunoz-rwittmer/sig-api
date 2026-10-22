@@ -8,7 +8,9 @@ const HrSurveyDepartament = require('../../models/rrhh/hrSurveyDepartament.model
 const HrSurveyQuestion = require('../../models/rrhh/hrSurveyQuestion.models');
 const HrSurveyOption = require('../../models/rrhh/hrSurveyOption.models');
 const HrSurveyParticipation = require('../../models/rrhh/hrSurveyParticipation.models');
-const { validateSurveyForPublish, resolveSurveyStatus } = require('../../utils/hrSurveyScoring');
+const HrSurveyResponse = require('../../models/rrhh/hrSurveyResponse.models');
+const HrSurveyAnswer = require('../../models/rrhh/hrSurveyAnswer.models');
+const { validateSurveyForPublish, resolveSurveyStatus, computeResults } = require('../../utils/hrSurveyScoring');
 const AppError = require('../../errors/AppError');
 
 const DATE_FORMAT = 'YYYY-MM-DD';
@@ -168,6 +170,72 @@ class HrSurveyService {
         survey.dataValues.status = withStatus(survey);
         survey.dataValues.responded = await countResponses(id);
         return survey;
+    }
+
+    /**
+     * Tabulación agregada. Los ids salen crudos (el controlador los codifica) y nunca
+     * se devuelven ids de respuestas ni de personas.
+     */
+    static async getResults(id) {
+        const survey = await HrSurvey.findByPk(id, {
+            include: FULL_INCLUDE,
+            order: [
+                [{ model: HrSurveyQuestion, as: 'questions' }, 'sortOrder', 'ASC'],
+                [{ model: HrSurveyQuestion, as: 'questions' }, { model: HrSurveyOption, as: 'options' }, 'sortOrder', 'ASC'],
+            ],
+        });
+        if (!survey) throw new AppError('Encuesta no encontrada', 404);
+
+        const [responseRows, participationRows] = await Promise.all([
+            HrSurveyResponse.findAll({
+                where: { surveyId: id },
+                attributes: ['id', 'departamentId'],
+                include: [{ model: HrSurveyAnswer, as: 'answers', attributes: ['questionId', 'optionId', 'score', 'text'] }],
+            }),
+            HrSurveyParticipation.findAll({
+                where: { surveyId: id },
+                attributes: ['departamentId', [fn('COUNT', col('id')), 'total']],
+                group: ['departamentId'],
+                raw: true,
+            }),
+        ]);
+
+        const participationCounts = new Map(participationRows.map((row) => [row.departamentId, Number(row.total)]));
+        const responses = responseRows.map((response) => ({
+            departamentId: response.departamentId,
+            answers: response.answers.map((answer) => ({
+                questionId: answer.questionId,
+                optionId: answer.optionId,
+                score: answer.score,
+                text: answer.text,
+            })),
+        }));
+
+        // Departamentos asignados + los que quedaron en los snapshots aunque ya no estén asignados.
+        const departaments = survey.departaments.map((entry) => ({
+            id: entry.departamentId,
+            name: entry.departament?.name ?? null,
+        }));
+        const known = new Set(departaments.map((departament) => departament.id));
+        const orphanIds = [...new Set([
+            ...participationCounts.keys(),
+            ...responses.map((response) => response.departamentId),
+        ])].filter((departamentId) => !known.has(departamentId));
+        if (orphanIds.length) {
+            const orphans = await Departaments.findAll({ where: { id: orphanIds }, attributes: ['id', 'name'] });
+            orphans.forEach((departament) => departaments.push({ id: departament.id, name: departament.name }));
+        }
+
+        const assignedPending = await countAssignedPending(id, departaments.map((departament) => departament.id));
+        const results = computeResults({
+            questions: sortByOrder(survey.questions),
+            departaments,
+            responses,
+            participationCounts,
+            assignedPending,
+        });
+
+        return { survey: { ...survey.toJSON(), status: withStatus(survey) }, ...results };
     }
 
     static async create(data) {

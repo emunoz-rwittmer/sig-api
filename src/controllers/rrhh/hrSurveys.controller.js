@@ -62,6 +62,26 @@ const toDetailDto = (survey) => {
     };
 };
 
+const toResultsDto = ({ survey, participation, questions }) => ({
+    survey: {
+        id: Utils.encode(survey.id),
+        name: survey.name,
+        startsAt: survey.startsAt,
+        endsAt: survey.endsAt,
+        status: survey.status,
+    },
+    participation: participation.map((entry) => ({ ...entry, departamentId: Utils.encode(entry.departamentId) })),
+    questions: questions.map((question) => ({
+        ...question,
+        questionId: Utils.encode(question.questionId),
+        byDepartament: Object.fromEntries(
+            Object.entries(question.byDepartament).map(([departamentId, value]) => [Utils.encode(Number(departamentId)), value]),
+        ),
+        distribution: question.distribution?.map((entry) => ({ ...entry, optionId: Utils.encode(entry.optionId) })),
+        comments: question.comments?.map((entry) => ({ ...entry, departamentId: Utils.encode(entry.departamentId) })),
+    })),
+});
+
 const getAll = async (req, res, next) => {
     try {
         const result = await HrSurveyService.getAll();
@@ -76,6 +96,16 @@ const getById = async (req, res, next) => {
         const surveyId = decodeId(req.params.survey_id, 'survey_id');
         const result = await HrSurveyService.getById(surveyId);
         res.status(200).json(toDetailDto(result));
+    } catch (error) {
+        next(error);
+    }
+};
+
+const getResults = async (req, res, next) => {
+    try {
+        const surveyId = decodeId(req.params.survey_id, 'survey_id');
+        const result = await HrSurveyService.getResults(surveyId);
+        res.status(200).json(toResultsDto(result));
     } catch (error) {
         next(error);
     }
@@ -138,6 +168,7 @@ const importQuestions = async (req, res, next) => {
 const HrSurveyController = {
     getAll,
     getById,
+    getResults,
     create,
     update,
     remove,

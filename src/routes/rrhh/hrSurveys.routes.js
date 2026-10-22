@@ -175,6 +175,30 @@ router.post('/', requireRRHH, HrSurveyController.create);
 
 /**
  * @openapi
+ * /hr-surveys/{survey_id}/results:
+ *   get:
+ *     summary: Resultados agregados y anónimos de una encuesta (solo rol rrhh)
+ *     tags: [HrSurveys]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: survey_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: "{ survey, participation: [{ departamentId, name, responded, assigned }], questions: [{ questionId, statement, type, overall, byDepartament, distribution?, comments? }] }"
+ *       403:
+ *         description: Rol no autorizado (el rol admin no basta)
+ *       404:
+ *         description: Encuesta no encontrada
+ */
+router.get('/:survey_id/results', authJwt.hasAnyRole(['rrhh']), HrSurveyController.getResults);
+
+/**
+ * @openapi
  * /hr-surveys/{survey_id}:
  *   get:
  *     summary: Obtener una encuesta con sus preguntas y departamentos
