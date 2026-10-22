@@ -52,6 +52,13 @@ const InductionQuestion = require('./rrhh/inductionQuestion.models');
 const InductionOption = require('./rrhh/inductionOption.models');
 const InductionProgress = require('./rrhh/inductionProgress.models');
 const InductionAttempt = require('./rrhh/inductionAttempt.models');
+const HrSurvey = require('./rrhh/hrSurvey.models');
+const HrSurveyDepartament = require('./rrhh/hrSurveyDepartament.models');
+const HrSurveyQuestion = require('./rrhh/hrSurveyQuestion.models');
+const HrSurveyOption = require('./rrhh/hrSurveyOption.models');
+const HrSurveyParticipation = require('./rrhh/hrSurveyParticipation.models');
+const HrSurveyResponse = require('./rrhh/hrSurveyResponse.models');
+const HrSurveyAnswer = require('./rrhh/hrSurveyAnswer.models');
 const ShippingGuideCount = require('./operations/shippingGuide/shippingGuideCount.model');
 const ShipmentDates = require('./operations/surveys/shipmentDates.models');
 const FormRespond = require('./operations/surveys/formRespond.models');
@@ -164,6 +171,29 @@ const initModels = () => {
     InductionAttempt.belongsTo(Induction, { as: "induction", foreignKey: "induction_id" });
     InductionAttempt.belongsTo(Staff, { as: "staff", foreignKey: "staff_id" });
     Staff.hasMany(InductionAttempt, { as: "inductionAttempts", foreignKey: "staff_id" });
+
+    // Encuestas RRHH (anónimas: HrSurveyResponse no se asocia con Staff). foreignKey usa el nombre del atributo (no el field) para no duplicar columnas.
+    HrSurvey.hasMany(HrSurveyDepartament, { as: "departaments", foreignKey: "surveyId", onDelete: "CASCADE", hooks: true });
+    HrSurveyDepartament.belongsTo(HrSurvey, { as: "survey", foreignKey: "surveyId" });
+    HrSurveyDepartament.belongsTo(Departaments, { as: "departament", foreignKey: "departamentId" });
+
+    HrSurvey.hasMany(HrSurveyQuestion, { as: "questions", foreignKey: "surveyId", onDelete: "CASCADE", hooks: true });
+    HrSurveyQuestion.belongsTo(HrSurvey, { as: "survey", foreignKey: "surveyId" });
+
+    HrSurveyQuestion.hasMany(HrSurveyOption, { as: "options", foreignKey: "questionId", onDelete: "CASCADE", hooks: true });
+    HrSurveyOption.belongsTo(HrSurveyQuestion, { as: "question", foreignKey: "questionId" });
+
+    HrSurvey.hasMany(HrSurveyParticipation, { as: "participations", foreignKey: "surveyId", onDelete: "CASCADE", hooks: true });
+    HrSurveyParticipation.belongsTo(HrSurvey, { as: "survey", foreignKey: "surveyId" });
+    HrSurveyParticipation.belongsTo(Staff, { as: "staff", foreignKey: "staffId" });
+
+    HrSurvey.hasMany(HrSurveyResponse, { as: "responses", foreignKey: "surveyId", onDelete: "CASCADE", hooks: true });
+    HrSurveyResponse.belongsTo(HrSurvey, { as: "survey", foreignKey: "surveyId" });
+
+    HrSurveyResponse.hasMany(HrSurveyAnswer, { as: "answers", foreignKey: "responseId", onDelete: "CASCADE", hooks: true });
+    HrSurveyAnswer.belongsTo(HrSurveyResponse, { as: "response", foreignKey: "responseId" });
+    HrSurveyAnswer.belongsTo(HrSurveyQuestion, { as: "question", foreignKey: "questionId" });
+    HrSurveyAnswer.belongsTo(HrSurveyOption, { as: "option", foreignKey: "optionId" });
 
     //coment cards
     ComentCardRespond.hasMany(ComentCardAnswers, { as: 'respuestas', foreignKey: "respuesta_coment_card_id", onDelete: "CASCADE", hooks: true });
