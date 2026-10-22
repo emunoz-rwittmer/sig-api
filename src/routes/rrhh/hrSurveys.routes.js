@@ -1,5 +1,6 @@
 const { Router } = require('express');
 const HrSurveyController = require('../../controllers/rrhh/hrSurveys.controller');
+const HrSurveyResponseController = require('../../controllers/rrhh/hrSurveyResponses.controller');
 const authJwt = require('../../middlewares/auth.middleware');
 const { uploadHrSurveyQuestionsMatrix } = require('../../utils/uploadConfiguration');
 
@@ -47,6 +48,86 @@ router.get('/questions/template', requireRRHH, HrSurveyController.downloadQuesti
  *         description: Archivo faltante, ilegible o sin preguntas
  */
 router.post('/questions/import', requireRRHH, uploadHrSurveyQuestionsMatrix, HrSurveyController.importQuestions);
+
+/**
+ * @openapi
+ * /hr-surveys/me:
+ *   get:
+ *     summary: Listar las encuestas del colaborador autenticado (asignadas a su departamento o ya respondidas)
+ *     tags: [HrSurveys]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de encuestas (id, name, description, startsAt, endsAt, status, answered)
+ */
+// Portal del colaborador: sin guardia de rol (solo verifyToken, aplicado al montar).
+router.get('/me', HrSurveyResponseController.listMine);
+
+/**
+ * @openapi
+ * /hr-surveys/me/{survey_id}:
+ *   get:
+ *     summary: Obtener una encuesta para responderla (las opciones no incluyen puntaje)
+ *     tags: [HrSurveys]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: survey_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Encuesta con sus preguntas y el indicador answered
+ *       404:
+ *         description: Encuesta no visible para el colaborador
+ */
+router.get('/me/:survey_id', HrSurveyResponseController.getMineDetail);
+
+/**
+ * @openapi
+ * /hr-surveys/me/{survey_id}/responses:
+ *   post:
+ *     summary: Enviar la respuesta anónima del colaborador
+ *     tags: [HrSurveys]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: survey_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [answers]
+ *             properties:
+ *               answers:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     questionId: { type: string }
+ *                     optionId: { type: string }
+ *                     value: { type: integer }
+ *                     text: { type: string }
+ *     responses:
+ *       200:
+ *         description: "{ ok: true }"
+ *       400:
+ *         description: Encuesta no abierta o respuestas inválidas
+ *       403:
+ *         description: Usuario inactivo o encuesta no asignada a su departamento
+ *       409:
+ *         description: Ya respondiste esta encuesta
+ */
+router.post('/me/:survey_id/responses', HrSurveyResponseController.submit);
 
 /**
  * @openapi
