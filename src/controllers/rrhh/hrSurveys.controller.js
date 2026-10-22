@@ -21,11 +21,14 @@ const decodeIds = (values, fieldName) => {
     return values.map((value) => decodeId(value, fieldName));
 };
 
+// Ausente => undefined (no se toca); null o '' => null (se limpia la fecha).
+const optionalDate = (value) => (value === undefined ? undefined : (value || null));
+
 const buildSurveyPayload = (body) => ({
     name: body.name,
     description: body.description,
-    startsAt: body.startsAt || undefined,
-    endsAt: body.endsAt || undefined,
+    startsAt: optionalDate(body.startsAt),
+    endsAt: optionalDate(body.endsAt),
     active: body.active,
     departamentIds: body.departamentIds !== undefined ? decodeIds(body.departamentIds, 'departamentId') : undefined,
     questions: body.questions,

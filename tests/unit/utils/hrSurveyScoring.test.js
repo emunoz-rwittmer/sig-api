@@ -46,6 +46,10 @@ describe('hrSurveyScoring', () => {
         it('rechaza startsAt > endsAt', () => {
             expect(validateSurveyForPublish(survey({ startsAt: '2026-12-01' }))).toEqual(expect.any(String));
         });
+        it('rechaza fechas inválidas', () => {
+            expect(validateSurveyForPublish(survey({ startsAt: 'garbage' }))).toBe('Fecha inválida');
+            expect(validateSurveyForPublish(survey({ endsAt: '2026-13-45' }))).toBe('Fecha inválida');
+        });
         it('rechaza opción múltiple con 1 u 11 opciones', () => {
             expect(validateSurveyForPublish(survey({ questions: [mcq({ options: opts(1) })] }))).toEqual(expect.any(String));
             expect(validateSurveyForPublish(survey({ questions: [mcq({ options: opts(11) })] }))).toEqual(expect.any(String));
@@ -62,6 +66,22 @@ describe('hrSurveyScoring', () => {
     });
 
     describe('validateQuestion', () => {
+        it('rechaza un puntaje fuera de DECIMAL(6,2)', () => {
+            const options = opts(2);
+            options[0].score = 10000;
+            expect(validateQuestion(mcq({ options }))).toEqual(expect.any(String));
+            options[0].score = -10000;
+            expect(validateQuestion(mcq({ options }))).toEqual(expect.any(String));
+            options[0].score = 9999.99;
+            expect(validateQuestion(mcq({ options }))).toBeNull();
+        });
+        it('rechaza puntajes true o []', () => {
+            [true, []].forEach((score) => {
+                const options = opts(2);
+                options[0].score = score;
+                expect(validateQuestion(mcq({ options }))).toEqual(expect.any(String));
+            });
+        });
         it('acepta score como string decimal', () => {
             const options = opts(2).map((o) => ({ ...o, score: '3.50' }));
             expect(validateQuestion(mcq({ options }))).toBeNull();
@@ -99,6 +119,9 @@ describe('hrSurveyScoring', () => {
             expect(() => scoreAnswer(scale(), { questionId: 2, value: 6 })).toThrow(bad);
             expect(() => scoreAnswer(scale(), { questionId: 2, value: 0 })).toThrow(bad);
             expect(() => scoreAnswer(scale(), { questionId: 2, value: 2.5 })).toThrow(bad);
+        });
+        it('lanza si el valor de la escala es true', () => {
+            expect(() => scoreAnswer(scale(), { questionId: 2, value: true })).toThrow(bad);
         });
         it('acepta escala válida', () => {
             expect(scoreAnswer(scale(), { questionId: 2, value: 4 })).toEqual({ optionId: null, score: 4, text: null });

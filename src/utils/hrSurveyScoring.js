@@ -13,12 +13,25 @@ const DATE_FORMAT = 'YYYY-MM-DD';
 
 const round2 = (value) => Math.round(value * 100) / 100;
 
+const MAX_SCORE = 9999.99;
+
 const isNumeric = (value) => {
-    if (value === null || value === undefined || value === '') return false;
-    return Number.isFinite(Number(value));
+    if (typeof value === 'number') return Number.isFinite(value);
+    if (typeof value === 'string' && value.trim() !== '') return Number.isFinite(Number(value));
+    return false;
 };
 
 const toDay = (value) => dayjs(value).format(DATE_FORMAT);
+
+/** Fecha válida YYYY-MM-DD (o Date): evita que "Invalid Date" pase las comparaciones de strings. */
+const isValidDay = (value) => {
+    if (value === null || value === undefined || value === '') return false;
+    if (typeof value === 'string') {
+        const day = value.slice(0, 10);
+        return /^\d{4}-\d{2}-\d{2}$/.test(day) && toDay(day) === day;
+    }
+    return dayjs(value).isValid();
+};
 
 const average = (scores) => {
     if (scores.length === 0) return null;
@@ -44,6 +57,9 @@ function validateQuestion(question) {
         if (options.some((option) => !isNumeric(option.score))) {
             return 'Cada opción debe tener un puntaje numérico';
         }
+        if (options.some((option) => Math.abs(Number(option.score)) > MAX_SCORE)) {
+            return `El puntaje de cada opción debe estar entre -${MAX_SCORE} y ${MAX_SCORE}`;
+        }
     }
 
     if (question.type === 'scale') {
@@ -64,6 +80,9 @@ function validateQuestion(question) {
 function validateSurveyForPublish({ startsAt, endsAt, departamentIds, questions }) {
     if (!startsAt || !endsAt) {
         return 'La encuesta debe tener fecha de inicio y de fin';
+    }
+    if (!isValidDay(startsAt) || !isValidDay(endsAt)) {
+        return 'Fecha inválida';
     }
     if (toDay(startsAt) > toDay(endsAt)) {
         return 'La fecha de inicio no puede ser posterior a la fecha de fin';
@@ -86,7 +105,7 @@ function validateSurveyForPublish({ startsAt, endsAt, departamentIds, questions 
  * YYYY-MM-DD para evitar desfases por la hora del día.
  */
 function resolveSurveyStatus({ active, startsAt, endsAt }, today = dayjs()) {
-    if (!active) return 'draft';
+    if (!active || !startsAt || !endsAt) return 'draft';
     const now = toDay(today);
     if (now < toDay(startsAt)) return 'scheduled';
     if (now > toDay(endsAt)) return 'closed';
@@ -204,4 +223,5 @@ module.exports = {
     resolveSurveyStatus,
     scoreAnswer,
     computeResults,
+    isValidDay,
 };

@@ -10,7 +10,7 @@ const HrSurveyOption = require('../../models/rrhh/hrSurveyOption.models');
 const HrSurveyParticipation = require('../../models/rrhh/hrSurveyParticipation.models');
 const HrSurveyResponse = require('../../models/rrhh/hrSurveyResponse.models');
 const HrSurveyAnswer = require('../../models/rrhh/hrSurveyAnswer.models');
-const { validateSurveyForPublish, resolveSurveyStatus, computeResults } = require('../../utils/hrSurveyScoring');
+const { validateSurveyForPublish, resolveSurveyStatus, computeResults, isValidDay } = require('../../utils/hrSurveyScoring');
 const AppError = require('../../errors/AppError');
 
 const DATE_FORMAT = 'YYYY-MM-DD';
@@ -50,9 +50,13 @@ const sameQuestions = (payloadQuestions, storedQuestions) => (
     === JSON.stringify(sortByOrder(storedQuestions).map(toQuestionInput))
 );
 
-function assertPublishable({ startsAt, endsAt, departamentIds, questions }) {
+// `checkExpired`: solo al publicar (transición a activa), nunca al editar una ya publicada.
+function assertPublishable({ startsAt, endsAt, departamentIds, questions }, { checkExpired = false } = {}) {
     const validationError = validateSurveyForPublish({ startsAt, endsAt, departamentIds, questions });
     if (validationError) throw new AppError(validationError, 400);
+    if (checkExpired && toDay(endsAt) < dayjs().format(DATE_FORMAT)) {
+        throw new AppError('La fecha de cierre ya pasó', 400);
+    }
 }
 
 function assertName(name) {
@@ -247,17 +251,15 @@ class HrSurveyService {
                 endsAt: data.endsAt,
                 departamentIds: data.departamentIds,
                 questions: data.questions,
-            });
+            }, { checkExpired: true });
         }
 
         return db.transaction(async (transaction) => {
-            // Las fechas son NOT NULL: un borrador sin fechas toma hoy y se ajusta al publicar.
-            const today = dayjs().format(DATE_FORMAT);
             const survey = await HrSurvey.create({
                 name: draftName(data.name),
                 description: data.description ?? null,
-                startsAt: data.startsAt || today,
-                endsAt: data.endsAt || data.startsAt || today,
+                startsAt: data.startsAt ?? null,
+                endsAt: data.endsAt ?? null,
                 active,
             }, { transaction });
 
@@ -277,13 +279,14 @@ class HrSurveyService {
         if (data.name !== undefined) assertName(data.name);
         const active = data.active !== undefined ? data.active : survey.active;
         const next = {
-            startsAt: data.startsAt ?? survey.startsAt,
-            endsAt: data.endsAt ?? survey.endsAt,
+            // undefined conserva la fecha; null la limpia (borrador sin fechas).
+            startsAt: data.startsAt === undefined ? survey.startsAt : data.startsAt,
+            endsAt: data.endsAt === undefined ? survey.endsAt : data.endsAt,
             departamentIds: data.departamentIds ?? survey.departaments.map((entry) => entry.departamentId),
             questions: data.questions ?? sortByOrder(survey.questions).map(toQuestionInput),
         };
         // Se valida el estado final: un `{ active: true }` suelto no publica un borrador incompleto.
-        if (active) assertPublishable(next);
+        if (active) assertPublishable(next, { checkExpired: !survey.active });
 
         return db.transaction(async (transaction) => {
             await survey.update({
@@ -315,7 +318,7 @@ class HrSurveyService {
     static async updateLocked(survey, data) {
         const reject = () => { throw new AppError(LOCKED_MESSAGE, 400); };
 
-        if (data.startsAt !== undefined && toDay(data.startsAt) !== toDay(survey.startsAt)) reject();
+        if (data.startsAt !== undefined && (data.startsAt === null || toDay(data.startsAt) !== toDay(survey.startsAt))) reject();
         if (data.active !== undefined && Boolean(data.active) !== survey.active) reject();
         if (data.questions !== undefined && !sameQuestions(data.questions, survey.questions)) reject();
 
@@ -323,7 +326,8 @@ class HrSurveyService {
         const requestedIds = data.departamentIds !== undefined ? [...new Set(data.departamentIds)] : currentIds;
         if (currentIds.some((departamentId) => !requestedIds.includes(departamentId))) reject();
 
-        const endsAt = data.endsAt ?? survey.endsAt;
+        const endsAt = data.endsAt === undefined ? survey.endsAt : data.endsAt;
+        if (!isValidDay(endsAt)) throw new AppError('Fecha inválida', 400);
         if (toDay(endsAt) < toDay(survey.startsAt)) {
             throw new AppError('La fecha de fin no puede ser anterior a la de inicio', 400);
         }

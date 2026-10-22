@@ -11,8 +11,8 @@ CREATE TABLE IF NOT EXISTS hr_surveys (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT NULL,
-    starts_at DATE NOT NULL,
-    ends_at DATE NOT NULL,
+    starts_at DATE NULL,
+    ends_at DATE NULL,
     active TINYINT(1) NOT NULL DEFAULT 0,
     createdAt DATETIME NOT NULL,
     updatedAt DATETIME NOT NULL

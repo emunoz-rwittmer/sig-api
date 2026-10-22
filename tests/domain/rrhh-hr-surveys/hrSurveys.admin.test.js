@@ -116,6 +116,48 @@ describe('HR surveys admin', () => {
         expect(response.status).toBe(400);
     });
 
+    it('stores null dates for a dateless draft', async () => {
+        const created = await request(app).post('/api/hr-surveys').set(auth()).send({ name: 'Sin fechas' });
+        expect(created.status).toBe(201);
+        const survey = await HrSurvey.findByPk(Utils.decode(created.body.surveyId));
+        expect(survey.startsAt).toBeNull();
+        expect(survey.endsAt).toBeNull();
+    });
+
+    it('refuses to publish a dateless draft', async () => {
+        const created = await request(app).post('/api/hr-surveys').set(auth()).send({ name: 'Sin fechas' });
+        const response = await request(app)
+            .put(`/api/hr-surveys/${created.body.surveyId}`).set(auth()).send({ active: true });
+        expect(response.status).toBe(400);
+    });
+
+    it('refuses to publish a draft whose endsAt already passed', async () => {
+        const departament = await createDepartment('Cierre pasado');
+        const created = await request(app)
+            .post('/api/hr-surveys')
+            .set(auth())
+            .send(validPayload([Utils.encode(departament.id)], { active: false, startsAt: '2020-01-01', endsAt: '2020-02-01' }));
+        expect(created.status).toBe(201);
+        const response = await request(app)
+            .put(`/api/hr-surveys/${created.body.surveyId}`).set(auth()).send({ active: true });
+        expect(response.status).toBe(400);
+        expect(JSON.stringify(response.body)).toMatch(/ya pas/i);
+    });
+
+    it('clears the dates of an unlocked draft when null is sent', async () => {
+        const departament = await createDepartment('Limpiar fechas');
+        const created = await request(app)
+            .post('/api/hr-surveys')
+            .set(auth())
+            .send(validPayload([Utils.encode(departament.id)], { active: false }));
+        const response = await request(app)
+            .put(`/api/hr-surveys/${created.body.surveyId}`).set(auth()).send({ startsAt: null, endsAt: '' });
+        expect(response.status).toBe(200);
+        const survey = await HrSurvey.findByPk(Utils.decode(created.body.surveyId));
+        expect(survey.startsAt).toBeNull();
+        expect(survey.endsAt).toBeNull();
+    });
+
     it('lists an open survey with the active staff of its departament as assigned', async () => {
         const departament = await createDepartment('Asignados');
         await createStaffFixture(departament);
@@ -221,6 +263,22 @@ describe('HR surveys admin', () => {
             .put(`/api/hr-surveys/${surveyHash}`)
             .set(auth())
             .send(validPayload([Utils.encode(departament.id)], { endsAt: '2019-12-31' }));
+        expect(response.status).toBe(400);
+    });
+
+    it('rejects an invalid endsAt once the survey has responses', async () => {
+        const { surveyHash, departament } = await createSurveyWithResponse();
+        const response = await request(app)
+            .put(`/api/hr-surveys/${surveyHash}`)
+            .set(auth())
+            .send(validPayload([Utils.encode(departament.id)], { endsAt: 'garbage' }));
+        expect(response.status).toBe(400);
+    });
+
+    it('rejects clearing startsAt once the survey has responses', async () => {
+        const { surveyHash } = await createSurveyWithResponse();
+        const response = await request(app)
+            .put(`/api/hr-surveys/${surveyHash}`).set(auth()).send({ startsAt: null });
         expect(response.status).toBe(400);
     });
 

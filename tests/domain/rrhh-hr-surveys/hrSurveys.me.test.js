@@ -7,6 +7,7 @@ const Staff = require('../../../src/models/catalogs/staff.models');
 const HrSurveyParticipation = require('../../../src/models/rrhh/hrSurveyParticipation.models');
 const HrSurveyResponse = require('../../../src/models/rrhh/hrSurveyResponse.models');
 const HrSurveyAnswer = require('../../../src/models/rrhh/hrSurveyAnswer.models');
+const HrSurvey = require('../../../src/models/rrhh/hrSurvey.models');
 const Utils = require('../../../src/utils/Utils');
 
 let app;
@@ -273,7 +274,9 @@ describe('HR surveys staff self-service', () => {
 
         it('rejects a closed survey', async () => {
             const yesterday = dayjs().subtract(1, 'day').format(DATE_FORMAT);
-            const { token, surveyHash } = await setupOpenSurvey({ startsAt: '2020-01-01', endsAt: yesterday });
+            // Publicar con cierre pasado se rechaza por API: se cierra directo en BD.
+            const { token, surveyHash, surveyId } = await setupOpenSurvey();
+            await HrSurvey.update({ endsAt: yesterday }, { where: { id: surveyId } });
             const detail = await getDetail(token, surveyHash);
             expect(detail.status).toBe('closed');
 
