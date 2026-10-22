@@ -47,6 +47,15 @@ const inductionQuestionsUpload = multer({
 
 const uploadInductionQuestionsMatrix = uploadMiddleware('single', 'file', inductionQuestionsUpload);
 
+// Misma lectura en memoria para la matriz de preguntas de encuestas RRHH.
+const hrSurveyQuestionsUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => cb(null, /.xlsx?$/i.test(file.originalname)),
+});
+
+const uploadHrSurveyQuestionsMatrix = uploadMiddleware('single', 'file', hrSurveyQuestionsUpload);
+
 module.exports =  {
     uploadExcelFile,
     uploadSingleImage,
@@ -55,4 +64,5 @@ module.exports =  {
     uploadManyFiles,
     uploadInductionMaterials,
     uploadInductionQuestionsMatrix,
+    uploadHrSurveyQuestionsMatrix,
 };
