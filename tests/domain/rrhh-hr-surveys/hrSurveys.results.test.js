@@ -175,9 +175,29 @@ describe('HR surveys results (rrhh only)', () => {
         });
     });
 
-    it('forbids admin without the rrhh role', async () => {
+    it('lets admin see the results too', async () => {
         const { surveyHash } = await setup();
         const response = await request(app).get(`/api/hr-surveys/${surveyHash}/results`).set(bearer(adminToken));
+        expect(response.status).toBe(200);
+        expect(response.body.survey.id).toBe(surveyHash);
+    });
+
+    it('forbids roles other than admin and rrhh', async () => {
+        const { surveyHash } = await setup();
+        const role = await Roles.create({ name: 'psicologos' });
+        const email = 'psico-results@example.com';
+        await Users.create({
+            firstName: 'Psico',
+            lastName: 'Results',
+            email,
+            password: TEST_USER.password,
+            roleId: role.id,
+            active: true,
+        });
+        const login = await request(app).post('/api/auth/login').send({ email, password: TEST_USER.password });
+        expect(login.status).toBe(200);
+
+        const response = await request(app).get(`/api/hr-surveys/${surveyHash}/results`).set(bearer(login.body.token));
         expect(response.status).toBe(403);
     });
 
