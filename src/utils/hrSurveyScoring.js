@@ -77,7 +77,7 @@ function validateQuestion(question) {
     return null;
 }
 
-function validateSurveyForPublish({ startsAt, endsAt, departamentIds, questions }) {
+function validateSurveyForPublish({ startsAt, endsAt, positionIds, questions }) {
     if (!startsAt || !endsAt) {
         return 'La encuesta debe tener fecha de inicio y de fin';
     }
@@ -87,8 +87,8 @@ function validateSurveyForPublish({ startsAt, endsAt, departamentIds, questions 
     if (toDay(startsAt) > toDay(endsAt)) {
         return 'La fecha de inicio no puede ser posterior a la fecha de fin';
     }
-    if (!Array.isArray(departamentIds) || departamentIds.length === 0) {
-        return 'La encuesta debe estar dirigida al menos a un departamento';
+    if (!Array.isArray(positionIds) || positionIds.length === 0) {
+        return 'La encuesta debe estar dirigida al menos a un cargo';
     }
     if (!Array.isArray(questions) || questions.length === 0) {
         return 'La encuesta debe tener al menos una pregunta';

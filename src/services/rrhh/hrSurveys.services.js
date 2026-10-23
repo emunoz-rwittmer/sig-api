@@ -3,8 +3,9 @@ const { Op, fn, col, literal } = require('sequelize');
 const db = require('../../utils/database');
 const Staff = require('../../models/catalogs/staff.models');
 const Departaments = require('../../models/catalogs/departament.models');
+const Positions = require('../../models/catalogs/positions.models');
 const HrSurvey = require('../../models/rrhh/hrSurvey.models');
-const HrSurveyDepartament = require('../../models/rrhh/hrSurveyDepartament.models');
+const HrSurveyPosition = require('../../models/rrhh/hrSurveyPosition.models');
 const HrSurveyQuestion = require('../../models/rrhh/hrSurveyQuestion.models');
 const HrSurveyOption = require('../../models/rrhh/hrSurveyOption.models');
 const HrSurveyParticipation = require('../../models/rrhh/hrSurveyParticipation.models');
@@ -15,10 +16,21 @@ const AppError = require('../../errors/AppError');
 
 const DATE_FORMAT = 'YYYY-MM-DD';
 const DRAFT_NAME = 'Encuesta sin título';
-const LOCKED_MESSAGE = 'La encuesta ya tiene respuestas: solo puedes cambiar nombre, descripción, fecha de cierre o agregar departamentos';
+const LOCKED_MESSAGE = 'La encuesta ya tiene respuestas: solo puedes cambiar nombre, descripción, fecha de cierre o agregar cargos';
+
+const POSITIONS_INCLUDE = {
+    model: HrSurveyPosition,
+    as: 'positions',
+    include: [{
+        model: Positions,
+        as: 'position',
+        attributes: ['id', 'name', 'departamentId'],
+        include: [{ model: Departaments, as: 'departament', attributes: ['id', 'name'] }],
+    }],
+};
 
 const FULL_INCLUDE = [
-    { model: HrSurveyDepartament, as: 'departaments', include: [{ model: Departaments, as: 'departament', attributes: ['id', 'name'] }] },
+    POSITIONS_INCLUDE,
     { model: HrSurveyQuestion, as: 'questions', include: [{ model: HrSurveyOption, as: 'options' }] },
 ];
 
@@ -51,8 +63,8 @@ const sameQuestions = (payloadQuestions, storedQuestions) => (
 );
 
 // `checkExpired`: solo al publicar (transición a activa), nunca al editar una ya publicada.
-function assertPublishable({ startsAt, endsAt, departamentIds, questions }, { checkExpired = false } = {}) {
-    const validationError = validateSurveyForPublish({ startsAt, endsAt, departamentIds, questions });
+function assertPublishable({ startsAt, endsAt, positionIds, questions }, { checkExpired = false } = {}) {
+    const validationError = validateSurveyForPublish({ startsAt, endsAt, positionIds, questions });
     if (validationError) throw new AppError(validationError, 400);
     if (checkExpired && toDay(endsAt) < dayjs().format(DATE_FORMAT)) {
         throw new AppError('La fecha de cierre ya pasó', 400);
@@ -92,10 +104,16 @@ async function createQuestions(surveyId, questions, transaction) {
     }
 }
 
-const createDepartaments = (surveyId, departamentIds, transaction) => HrSurveyDepartament.bulkCreate(
-    [...new Set(departamentIds)].map((departamentId) => ({ surveyId, departamentId })),
+const createPositions = (surveyId, positionIds, transaction) => HrSurveyPosition.bulkCreate(
+    [...new Set(positionIds)].map((positionId) => ({ surveyId, positionId })),
     { transaction },
 );
+
+const toPositionDto = (entry) => ({
+    id: entry.positionId,
+    name: entry.position?.name ?? null,
+    departament: entry.position?.departament?.name ?? null,
+});
 
 /** Participaciones registradas = personas que respondieron. */
 async function countResponses(surveyId) {
@@ -103,18 +121,20 @@ async function countResponses(surveyId) {
 }
 
 /**
- * Personal activo hoy en cada departamento que todavía no participó.
- * Devuelve Map<departamentId, n> (con 0 para los departamentos sin pendientes).
+ * Personal activo hoy en los cargos asignados que todavía no participó, agrupado
+ * por su departamento (los resultados se tabulan por departamento).
+ * Devuelve Map<departamentId, n>; el personal sin departamento no puede responder y no cuenta.
  */
-async function countAssignedPending(surveyId, departamentIds) {
-    const result = new Map(departamentIds.map((id) => [id, 0]));
-    if (!departamentIds.length) return result;
+async function countAssignedPending(surveyId, positionIds) {
+    const result = new Map();
+    if (!positionIds.length) return result;
 
     const rows = await Staff.findAll({
         attributes: ['departamentId', [fn('COUNT', col('id')), 'total']],
         where: {
             active: true,
-            departamentId: departamentIds,
+            positionId: positionIds,
+            departamentId: { [Op.ne]: null },
             id: { [Op.notIn]: literal(`(SELECT staff_id FROM hr_survey_participations WHERE survey_id = ${Number(surveyId)})`) },
         },
         group: ['departamentId'],
@@ -133,15 +153,15 @@ const withStatus = (survey) => resolveSurveyStatus({
 class HrSurveyService {
     static async getAll() {
         const surveys = await HrSurvey.findAll({
-            include: [{ model: HrSurveyDepartament, as: 'departaments', include: [{ model: Departaments, as: 'departament', attributes: ['id', 'name'] }] }],
+            include: [POSITIONS_INCLUDE],
             order: [['createdAt', 'DESC']],
         });
 
         return Promise.all(surveys.map(async (survey) => {
-            const departamentIds = survey.departaments.map((entry) => entry.departamentId);
+            const positionIds = survey.positions.map((entry) => entry.positionId);
             const [responded, pending] = await Promise.all([
                 countResponses(survey.id),
-                countAssignedPending(survey.id, departamentIds),
+                countAssignedPending(survey.id, positionIds),
             ]);
             const pendingTotal = [...pending.values()].reduce((sum, value) => sum + value, 0);
             return {
@@ -151,10 +171,7 @@ class HrSurveyService {
                 endsAt: survey.endsAt,
                 active: survey.active,
                 status: withStatus(survey),
-                departaments: survey.departaments.map((entry) => ({
-                    id: entry.departamentId,
-                    name: entry.departament?.name ?? null,
-                })),
+                positions: survey.positions.map(toPositionDto),
                 responded,
                 assigned: responded + pendingTotal,
             };
@@ -215,13 +232,19 @@ class HrSurveyService {
             })),
         }));
 
-        // Departamentos asignados + los que quedaron en los snapshots aunque ya no estén asignados.
-        const departaments = survey.departaments.map((entry) => ({
-            id: entry.departamentId,
-            name: entry.departament?.name ?? null,
-        }));
-        const known = new Set(departaments.map((departament) => departament.id));
+        // Se asigna por cargo pero se tabula por departamento: los de los cargos asignados,
+        // los del personal pendiente y los que quedaron en los snapshots.
+        const assignedPending = await countAssignedPending(id, survey.positions.map((entry) => entry.positionId));
+        const departaments = [];
+        const known = new Set();
+        survey.positions.forEach(({ position }) => {
+            const departament = position?.departament;
+            if (!departament || known.has(departament.id)) return;
+            known.add(departament.id);
+            departaments.push({ id: departament.id, name: departament.name });
+        });
         const orphanIds = [...new Set([
+            ...assignedPending.keys(),
             ...participationCounts.keys(),
             ...responses.map((response) => response.departamentId),
         ])].filter((departamentId) => !known.has(departamentId));
@@ -230,7 +253,6 @@ class HrSurveyService {
             orphans.forEach((departament) => departaments.push({ id: departament.id, name: departament.name }));
         }
 
-        const assignedPending = await countAssignedPending(id, departaments.map((departament) => departament.id));
         const results = computeResults({
             questions: sortByOrder(survey.questions),
             departaments,
@@ -249,7 +271,7 @@ class HrSurveyService {
             assertPublishable({
                 startsAt: data.startsAt,
                 endsAt: data.endsAt,
-                departamentIds: data.departamentIds,
+                positionIds: data.positionIds,
                 questions: data.questions,
             }, { checkExpired: true });
         }
@@ -263,7 +285,7 @@ class HrSurveyService {
                 active,
             }, { transaction });
 
-            if (data.departamentIds?.length) await createDepartaments(survey.id, data.departamentIds, transaction);
+            if (data.positionIds?.length) await createPositions(survey.id, data.positionIds, transaction);
             await createQuestions(survey.id, data.questions ?? [], transaction);
             return survey;
         });
@@ -282,7 +304,7 @@ class HrSurveyService {
             // undefined conserva la fecha; null la limpia (borrador sin fechas).
             startsAt: data.startsAt === undefined ? survey.startsAt : data.startsAt,
             endsAt: data.endsAt === undefined ? survey.endsAt : data.endsAt,
-            departamentIds: data.departamentIds ?? survey.departaments.map((entry) => entry.departamentId),
+            positionIds: data.positionIds ?? survey.positions.map((entry) => entry.positionId),
             questions: data.questions ?? sortByOrder(survey.questions).map(toQuestionInput),
         };
         // Se valida el estado final: un `{ active: true }` suelto no publica un borrador incompleto.
@@ -297,9 +319,9 @@ class HrSurveyService {
                 active,
             }, { transaction });
 
-            if (data.departamentIds) {
-                await HrSurveyDepartament.destroy({ where: { surveyId: id }, transaction });
-                await createDepartaments(id, data.departamentIds, transaction);
+            if (data.positionIds) {
+                await HrSurveyPosition.destroy({ where: { surveyId: id }, transaction });
+                await createPositions(id, data.positionIds, transaction);
             }
 
             if (data.questions) {
@@ -314,7 +336,7 @@ class HrSurveyService {
         });
     }
 
-    // Con respuestas, solo se aceptan nombre, descripción, cierre y departamentos nuevos.
+    // Con respuestas, solo se aceptan nombre, descripción, cierre y cargos nuevos.
     static async updateLocked(survey, data) {
         const reject = () => { throw new AppError(LOCKED_MESSAGE, 400); };
 
@@ -322,9 +344,9 @@ class HrSurveyService {
         if (data.active !== undefined && Boolean(data.active) !== survey.active) reject();
         if (data.questions !== undefined && !sameQuestions(data.questions, survey.questions)) reject();
 
-        const currentIds = survey.departaments.map((entry) => entry.departamentId);
-        const requestedIds = data.departamentIds !== undefined ? [...new Set(data.departamentIds)] : currentIds;
-        if (currentIds.some((departamentId) => !requestedIds.includes(departamentId))) reject();
+        const currentIds = survey.positions.map((entry) => entry.positionId);
+        const requestedIds = data.positionIds !== undefined ? [...new Set(data.positionIds)] : currentIds;
+        if (currentIds.some((positionId) => !requestedIds.includes(positionId))) reject();
 
         const endsAt = data.endsAt === undefined ? survey.endsAt : data.endsAt;
         if (!isValidDay(endsAt)) throw new AppError('Fecha inválida', 400);
@@ -340,8 +362,8 @@ class HrSurveyService {
                 endsAt,
             }, { transaction });
 
-            const newIds = requestedIds.filter((departamentId) => !currentIds.includes(departamentId));
-            if (newIds.length) await createDepartaments(survey.id, newIds, transaction);
+            const newIds = requestedIds.filter((positionId) => !currentIds.includes(positionId));
+            if (newIds.length) await createPositions(survey.id, newIds, transaction);
             return survey;
         });
     }

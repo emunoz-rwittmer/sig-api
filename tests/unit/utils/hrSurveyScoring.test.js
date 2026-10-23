@@ -18,7 +18,7 @@ const texto = (extra = {}) => ({ id: 3, statement: 'T', type: 'texto', required:
 const survey = (extra = {}) => ({
     startsAt: '2026-11-01',
     endsAt: '2026-11-30',
-    departamentIds: [1],
+    positionIds: [1],
     questions: [mcq()],
     ...extra,
 });
@@ -37,8 +37,8 @@ describe('hrSurveyScoring', () => {
             expect(validateSurveyForPublish(survey())).toBeNull();
             expect(validateSurveyForPublish(survey({ questions: [texto()] }))).toBeNull();
         });
-        it('rechaza 0 departamentos', () => {
-            expect(validateSurveyForPublish(survey({ departamentIds: [] }))).toEqual(expect.any(String));
+        it('rechaza 0 cargos', () => {
+            expect(validateSurveyForPublish(survey({ positionIds: [] }))).toEqual(expect.any(String));
         });
         it('rechaza 0 preguntas', () => {
             expect(validateSurveyForPublish(survey({ questions: [] }))).toEqual(expect.any(String));

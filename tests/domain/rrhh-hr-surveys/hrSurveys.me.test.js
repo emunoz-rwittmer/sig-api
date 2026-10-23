@@ -2,7 +2,7 @@ const request = require('supertest');
 const dayjs = require('dayjs');
 const { bootTestApp, shutdownTestApp } = require('../../helpers/testApp');
 const { createAuthenticatedUser } = require('../../helpers/auth');
-const { createDepartment, createPosition } = require('../../helpers/staffFixtures');
+const { createAssignablePosition, createPosition } = require('../../helpers/staffFixtures');
 const Staff = require('../../../src/models/catalogs/staff.models');
 const HrSurveyParticipation = require('../../../src/models/rrhh/hrSurveyParticipation.models');
 const HrSurveyResponse = require('../../../src/models/rrhh/hrSurveyResponse.models');
@@ -27,8 +27,7 @@ const DATE_FORMAT = 'YYYY-MM-DD';
 const today = () => dayjs().format(DATE_FORMAT);
 
 let staffCounter = 0;
-async function createStaffFixture(departament, overrides = {}) {
-    const position = await createPosition();
+async function createStaffFixture(position, overrides = {}) {
     staffCounter += 1;
     // email es STRING(50) y único: corto y con contador.
     return Staff.create({
@@ -37,7 +36,7 @@ async function createStaffFixture(departament, overrides = {}) {
         email: `hsm-${staffCounter}-${Date.now() % 1e8}@example.com`,
         cellPhone: '0966666666',
         password: 'Sup3rSecret!',
-        departamentId: departament.id,
+        departamentId: position.departamentId,
         positionId: position.id,
         contractType: 'Fijo',
         active: true,
@@ -72,7 +71,7 @@ const surveyQuestions = () => [
     { statement: 'Comentarios', type: 'texto largo', required: false },
 ];
 
-async function createSurvey(departaments, overrides = {}) {
+async function createSurvey(positions, overrides = {}) {
     const response = await request(app)
         .post('/api/hr-surveys')
         .set(bearer(adminToken))
@@ -82,7 +81,7 @@ async function createSurvey(departaments, overrides = {}) {
             startsAt: '2020-01-01',
             endsAt: '2099-12-31',
             active: true,
-            departamentIds: departaments.map((departament) => Utils.encode(departament.id)),
+            positionIds: positions.map((position) => Utils.encode(position.id)),
             questions: surveyQuestions(),
             ...overrides,
         });
@@ -113,18 +112,18 @@ const submit = (token, surveyHash, answers) => request(app)
     .send({ answers });
 
 async function setupOpenSurvey(overrides = {}) {
-    const departament = await createDepartment('Encuestados');
-    const staff = await createStaffFixture(departament);
+    const position = await createAssignablePosition('Encuestados');
+    const staff = await createStaffFixture(position);
     const token = await loginStaff(staff);
-    const surveyHash = await createSurvey([departament], overrides);
-    return { departament, staff, token, surveyHash, surveyId: Utils.decode(surveyHash) };
+    const surveyHash = await createSurvey([position], overrides);
+    return { position, staff, token, surveyHash, surveyId: Utils.decode(surveyHash) };
 }
 
 describe('HR surveys staff self-service', () => {
     describe('GET /me', () => {
-        it('lists an assigned survey as not answered and hides it from other departaments', async () => {
+        it('lists an assigned survey as not answered and hides it from other positions', async () => {
             const { token, surveyHash } = await setupOpenSurvey();
-            const other = await createStaffFixture(await createDepartment('Ajeno'));
+            const other = await createStaffFixture(await createAssignablePosition('Ajeno'));
             const otherToken = await loginStaff(other);
 
             const mine = await request(app).get('/api/hr-surveys/me').set(bearer(token));
@@ -145,10 +144,21 @@ describe('HR surveys staff self-service', () => {
             expect(others.body.some((survey) => survey.id === surveyHash)).toBe(false);
         });
 
+        it('hides the survey from staff of the same departament with another position', async () => {
+            const { position, surveyHash } = await setupOpenSurvey();
+            const sibling = await createPosition('Otro cargo', position.departamentId);
+            const token = await loginStaff(await createStaffFixture(sibling));
+
+            const mine = await request(app).get('/api/hr-surveys/me').set(bearer(token));
+            expect(mine.body.some((survey) => survey.id === surveyHash)).toBe(false);
+            const detail = await request(app).get(`/api/hr-surveys/me/${surveyHash}`).set(bearer(token));
+            expect(detail.status).toBe(404);
+        });
+
         it('never lists a draft', async () => {
-            const departament = await createDepartment('Borradores');
-            const token = await loginStaff(await createStaffFixture(departament));
-            const draftHash = await createSurvey([departament], { active: false, name: 'Borrador' });
+            const position = await createAssignablePosition('Borradores');
+            const token = await loginStaff(await createStaffFixture(position));
+            const draftHash = await createSurvey([position], { active: false, name: 'Borrador' });
 
             const mine = await request(app).get('/api/hr-surveys/me').set(bearer(token));
             expect(mine.body.some((survey) => survey.id === draftHash)).toBe(false);
@@ -189,9 +199,9 @@ describe('HR surveys staff self-service', () => {
             expect(JSON.stringify(detail)).not.toMatch(/score/i);
         });
 
-        it('returns 404 for a survey not assigned to the staff departament', async () => {
+        it('returns 404 for a survey not assigned to the staff position', async () => {
             const { surveyHash } = await setupOpenSurvey();
-            const outsider = await loginStaff(await createStaffFixture(await createDepartment('Fuera')));
+            const outsider = await loginStaff(await createStaffFixture(await createAssignablePosition('Fuera')));
             const response = await request(app).get(`/api/hr-surveys/me/${surveyHash}`).set(bearer(outsider));
             expect(response.status).toBe(404);
         });
@@ -199,7 +209,7 @@ describe('HR surveys staff self-service', () => {
 
     describe('POST /me/:id/responses', () => {
         it('stores an anonymous response and marks the survey as answered', async () => {
-            const { token, surveyHash, surveyId, departament, staff } = await setupOpenSurvey();
+            const { token, surveyHash, surveyId, position, staff } = await setupOpenSurvey();
             const detail = await getDetail(token, surveyHash);
 
             const response = await submit(token, surveyHash, buildAnswers(detail));
@@ -217,11 +227,11 @@ describe('HR surveys staff self-service', () => {
 
             const participations = await HrSurveyParticipation.findAll({ where: { surveyId } });
             expect(participations).toHaveLength(1);
-            expect(participations[0]).toMatchObject({ staffId: staff.id, departamentId: departament.id });
+            expect(participations[0]).toMatchObject({ staffId: staff.id, departamentId: position.departamentId });
 
             const responses = await HrSurveyResponse.findAll({ where: { surveyId }, raw: true });
             expect(responses).toHaveLength(1);
-            expect(responses[0]).toEqual({ id: expect.any(String), surveyId, departamentId: departament.id });
+            expect(responses[0]).toEqual({ id: expect.any(String), surveyId, departamentId: position.departamentId });
             expect(HrSurveyResponse.rawAttributes).not.toHaveProperty('staffId');
             expect(HrSurveyResponse.rawAttributes).not.toHaveProperty('createdAt');
             const columns = await HrSurveyResponse.sequelize.getQueryInterface().describeTable('hr_survey_responses');
@@ -304,8 +314,8 @@ describe('HR surveys staff self-service', () => {
         });
 
         it('rejects a question from another survey', async () => {
-            const { token, surveyHash, departament } = await setupOpenSurvey();
-            const otherHash = await createSurvey([departament], { name: 'Otra' });
+            const { token, surveyHash, position } = await setupOpenSurvey();
+            const otherHash = await createSurvey([position], { name: 'Otra' });
             const detail = await getDetail(token, surveyHash);
             const otherDetail = await getDetail(token, otherHash);
 
@@ -354,10 +364,10 @@ describe('HR surveys staff self-service', () => {
             expect(Number(scores.get(detail.questions[1].id))).toBe(4);
         });
 
-        it('rejects a submission to a survey not assigned to the staff departament', async () => {
+        it('rejects a submission to a survey not assigned to the staff position', async () => {
             const { surveyHash, token } = await setupOpenSurvey();
             const detail = await getDetail(token, surveyHash);
-            const outsider = await loginStaff(await createStaffFixture(await createDepartment('Externo')));
+            const outsider = await loginStaff(await createStaffFixture(await createAssignablePosition('Externo')));
 
             const response = await submit(outsider, surveyHash, buildAnswers(detail));
             expect(response.status).toBe(404);
@@ -373,16 +383,16 @@ describe('HR surveys staff self-service', () => {
             expect(await HrSurveyParticipation.count({ where: { surveyId } })).toBe(0);
         });
 
-        it('keeps a survey answered after the staff moves to another assigned departament', async () => {
-            const first = await createDepartment('Origen');
-            const second = await createDepartment('Destino');
+        it('keeps a survey answered after the staff moves to another assigned position', async () => {
+            const first = await createAssignablePosition('Origen');
+            const second = await createAssignablePosition('Destino');
             const staff = await createStaffFixture(first);
             const token = await loginStaff(staff);
             const surveyHash = await createSurvey([first, second]);
             const detail = await getDetail(token, surveyHash);
 
             expect((await submit(token, surveyHash, buildAnswers(detail))).status).toBe(200);
-            await staff.update({ departamentId: second.id });
+            await staff.update({ positionId: second.id, departamentId: second.departamentId });
 
             const mine = await request(app).get('/api/hr-surveys/me').set(bearer(token));
             expect(mine.body.filter((survey) => survey.id === surveyHash)).toEqual([
@@ -392,12 +402,13 @@ describe('HR surveys staff self-service', () => {
             expect(again.status).toBe(409);
         });
 
-        it('still shows an answered survey after moving to an unassigned departament', async () => {
+        it('still shows an answered survey after moving to an unassigned position', async () => {
             const { staff, token, surveyHash } = await setupOpenSurvey();
             const detail = await getDetail(token, surveyHash);
             expect((await submit(token, surveyHash, buildAnswers(detail))).status).toBe(200);
 
-            await staff.update({ departamentId: (await createDepartment('Nuevo')).id });
+            const moved = await createAssignablePosition('Nuevo');
+            await staff.update({ positionId: moved.id, departamentId: moved.departamentId });
 
             const mine = await request(app).get('/api/hr-surveys/me').set(bearer(token));
             expect(mine.body.find((survey) => survey.id === surveyHash)).toMatchObject({ answered: true });

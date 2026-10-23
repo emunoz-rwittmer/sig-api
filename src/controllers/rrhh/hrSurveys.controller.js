@@ -30,14 +30,14 @@ const buildSurveyPayload = (body) => ({
     startsAt: optionalDate(body.startsAt),
     endsAt: optionalDate(body.endsAt),
     active: body.active,
-    departamentIds: body.departamentIds !== undefined ? decodeIds(body.departamentIds, 'departamentId') : undefined,
+    positionIds: body.positionIds !== undefined ? decodeIds(body.positionIds, 'positionId') : undefined,
     questions: body.questions,
 });
 
 const toListDto = (survey) => ({
     ...survey,
     id: Utils.encode(survey.id),
-    departaments: survey.departaments.map((entry) => ({ ...entry, id: Utils.encode(entry.id) })),
+    positions: survey.positions.map((entry) => ({ ...entry, id: Utils.encode(entry.id) })),
 });
 
 const toDetailDto = (survey) => {
@@ -47,9 +47,10 @@ const toDetailDto = (survey) => {
         id: Utils.encode(data.id),
         status: survey.dataValues.status,
         responded: survey.dataValues.responded,
-        departaments: data.departaments.map((entry) => ({
-            id: Utils.encode(entry.departamentId),
-            name: entry.departament?.name ?? null,
+        positions: data.positions.map((entry) => ({
+            id: Utils.encode(entry.positionId),
+            name: entry.position?.name ?? null,
+            departament: entry.position?.departament?.name ?? null,
         })),
         questions: (data.questions ?? []).map((question) => ({
             ...question,
