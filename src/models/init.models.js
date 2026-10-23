@@ -53,7 +53,7 @@ const InductionOption = require('./rrhh/inductionOption.models');
 const InductionProgress = require('./rrhh/inductionProgress.models');
 const InductionAttempt = require('./rrhh/inductionAttempt.models');
 const HrSurvey = require('./rrhh/hrSurvey.models');
-const HrSurveyDepartament = require('./rrhh/hrSurveyDepartament.models');
+const HrSurveyPosition = require('./rrhh/hrSurveyPosition.models');
 const HrSurveyQuestion = require('./rrhh/hrSurveyQuestion.models');
 const HrSurveyOption = require('./rrhh/hrSurveyOption.models');
 const HrSurveyParticipation = require('./rrhh/hrSurveyParticipation.models');
@@ -173,9 +173,9 @@ const initModels = () => {
     Staff.hasMany(InductionAttempt, { as: "inductionAttempts", foreignKey: "staff_id" });
 
     // Encuestas RRHH (anónimas: HrSurveyResponse no se asocia con Staff). foreignKey usa el nombre del atributo (no el field) para no duplicar columnas.
-    HrSurvey.hasMany(HrSurveyDepartament, { as: "departaments", foreignKey: "surveyId", onDelete: "CASCADE", hooks: true });
-    HrSurveyDepartament.belongsTo(HrSurvey, { as: "survey", foreignKey: "surveyId" });
-    HrSurveyDepartament.belongsTo(Departaments, { as: "departament", foreignKey: "departamentId" });
+    HrSurvey.hasMany(HrSurveyPosition, { as: "positions", foreignKey: "surveyId", onDelete: "CASCADE", hooks: true });
+    HrSurveyPosition.belongsTo(HrSurvey, { as: "survey", foreignKey: "surveyId" });
+    HrSurveyPosition.belongsTo(Positions, { as: "position", foreignKey: "positionId" });
 
     HrSurvey.hasMany(HrSurveyQuestion, { as: "questions", foreignKey: "surveyId", onDelete: "CASCADE", hooks: true });
     HrSurveyQuestion.belongsTo(HrSurvey, { as: "survey", foreignKey: "surveyId" });

@@ -53,7 +53,7 @@ router.post('/questions/import', requireRRHH, uploadHrSurveyQuestionsMatrix, HrS
  * @openapi
  * /hr-surveys/me:
  *   get:
- *     summary: Listar las encuestas del colaborador autenticado (asignadas a su departamento o ya respondidas)
+ *     summary: Listar las encuestas del colaborador autenticado (asignadas a su cargo o ya respondidas)
  *     tags: [HrSurveys]
  *     security:
  *       - bearerAuth: []
@@ -123,7 +123,7 @@ router.get('/me/:survey_id', HrSurveyResponseController.getMineDetail);
  *       400:
  *         description: Encuesta no abierta o respuestas inválidas
  *       403:
- *         description: Usuario inactivo o encuesta no asignada a su departamento
+ *         description: Usuario inactivo, sin departamento o encuesta no asignada a su cargo
  *       409:
  *         description: Ya respondiste esta encuesta
  */
@@ -133,13 +133,13 @@ router.post('/me/:survey_id/responses', HrSurveyResponseController.submit);
  * @openapi
  * /hr-surveys:
  *   get:
- *     summary: Listar las encuestas con estado, departamentos y participación
+ *     summary: Listar las encuestas con estado, cargos y participación
  *     tags: [HrSurveys]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Lista de encuestas (id, name, startsAt, endsAt, active, status, departaments, responded, assigned)
+ *         description: Lista de encuestas (id, name, startsAt, endsAt, active, status, positions, responded, assigned)
  *   post:
  *     summary: Crear una encuesta (borrador o publicada)
  *     tags: [HrSurveys]
@@ -158,7 +158,7 @@ router.post('/me/:survey_id/responses', HrSurveyResponseController.submit);
  *               startsAt: { type: string, format: date }
  *               endsAt: { type: string, format: date }
  *               active: { type: boolean }
- *               departamentIds:
+ *               positionIds:
  *                 type: array
  *                 items: { type: string }
  *               questions:
@@ -168,7 +168,7 @@ router.post('/me/:survey_id/responses', HrSurveyResponseController.submit);
  *       201:
  *         description: Encuesta creada
  *       400:
- *         description: Datos inválidos (al publicar se exigen fechas, departamentos y preguntas válidas)
+ *         description: Datos inválidos (al publicar se exigen fechas, cargos y preguntas válidas)
  */
 router.get('/', requireRRHH, HrSurveyController.getAll);
 router.post('/', requireRRHH, HrSurveyController.create);
@@ -201,7 +201,7 @@ router.get('/:survey_id/results', authJwt.hasAnyRole(['admin', 'rrhh']), HrSurve
  * @openapi
  * /hr-surveys/{survey_id}:
  *   get:
- *     summary: Obtener una encuesta con sus preguntas y departamentos
+ *     summary: Obtener una encuesta con sus preguntas y cargos
  *     tags: [HrSurveys]
  *     security:
  *       - bearerAuth: []
@@ -217,7 +217,7 @@ router.get('/:survey_id/results', authJwt.hasAnyRole(['admin', 'rrhh']), HrSurve
  *       404:
  *         description: Encuesta no encontrada
  *   put:
- *     summary: Actualizar una encuesta (con respuestas solo nombre, descripción, cierre y departamentos nuevos)
+ *     summary: Actualizar una encuesta (con respuestas solo nombre, descripción, cierre y cargos nuevos)
  *     tags: [HrSurveys]
  *     security:
  *       - bearerAuth: []

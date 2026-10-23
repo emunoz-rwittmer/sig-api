@@ -7,8 +7,8 @@ async function createDepartment(name = 'Operaciones') {
     return Departaments.create({ name });
 }
 
-async function createPosition(name = 'Analista') {
-    return Positions.create({ name });
+async function createPosition(name = 'Analista', departamentId = null) {
+    return Positions.create({ name, departamentId });
 }
 
 async function createCompanyWithYacht(companyName = 'Test Company', yachtName = 'Test Yacht') {
@@ -29,4 +29,10 @@ async function createCompanyWithYacht(companyName = 'Test Company', yachtName = 
     return { company, yacht };
 }
 
-module.exports = { createDepartment, createPosition, createCompanyWithYacht };
+// Cargo dentro de un departamento homónimo (p. ej. para asignar encuestas por cargo).
+async function createAssignablePosition(name = 'Operaciones') {
+    const departament = await createDepartment(name);
+    return createPosition(name, departament.id);
+}
+
+module.exports = { createDepartment, createPosition, createAssignablePosition, createCompanyWithYacht };

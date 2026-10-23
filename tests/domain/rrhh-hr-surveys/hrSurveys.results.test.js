@@ -1,7 +1,7 @@
 const request = require('supertest');
 const { bootTestApp, shutdownTestApp } = require('../../helpers/testApp');
 const { createAuthenticatedUser, TEST_USER } = require('../../helpers/auth');
-const { createDepartment, createPosition } = require('../../helpers/staffFixtures');
+const { createAssignablePosition, createPosition } = require('../../helpers/staffFixtures');
 const Staff = require('../../../src/models/catalogs/staff.models');
 const Roles = require('../../../src/models/catalogs/roles.models');
 const Users = require('../../../src/models/catalogs/user.models');
@@ -39,8 +39,7 @@ afterAll(async () => {
 const bearer = (token) => ({ Authorization: `Bearer ${token}` });
 
 let staffCounter = 0;
-async function createStaffFixture(departament) {
-    const position = await createPosition();
+async function createStaffFixture(position) {
     staffCounter += 1;
     // email es STRING(50) y único: corto y con contador.
     return Staff.create({
@@ -49,7 +48,7 @@ async function createStaffFixture(departament) {
         email: `hsr-${staffCounter}-${Date.now() % 1e8}@example.com`,
         cellPhone: '0966666666',
         password: 'Sup3rSecret!',
-        departamentId: departament.id,
+        departamentId: position.departamentId,
         positionId: position.id,
         contractType: 'Fijo',
         active: true,
@@ -95,12 +94,12 @@ async function submitAs(staff, surveyHash, { choice, scale, comment }) {
 }
 
 async function setup() {
-    const d1 = await createDepartment('Cocina');
-    const d2 = await createDepartment('Cubierta');
-    const s1 = await createStaffFixture(d1);
-    const s2 = await createStaffFixture(d1);
-    const pending = await createStaffFixture(d1);
-    const s3 = await createStaffFixture(d2);
+    const p1 = await createAssignablePosition('Cocina');
+    const p2 = await createAssignablePosition('Cubierta');
+    const s1 = await createStaffFixture(p1);
+    const s2 = await createStaffFixture(p1);
+    const pending = await createStaffFixture(p1);
+    const s3 = await createStaffFixture(p2);
     const created = await request(app)
         .post('/api/hr-surveys')
         .set(bearer(adminToken))
@@ -109,7 +108,7 @@ async function setup() {
             startsAt: '2020-01-01',
             endsAt: '2099-12-31',
             active: true,
-            departamentIds: [Utils.encode(d1.id), Utils.encode(d2.id)],
+            positionIds: [Utils.encode(p1.id), Utils.encode(p2.id)],
             questions: surveyQuestions(),
         });
     expect(created.status).toBe(201);
@@ -118,12 +117,12 @@ async function setup() {
     await submitAs(s1, surveyHash, { choice: 'Bueno', scale: 4, comment: 'Todo bien' });
     await submitAs(s2, surveyHash, { choice: 'Malo', scale: 2 });
     await submitAs(s3, surveyHash, { choice: 'Bueno', scale: 5 });
-    return { d1, d2, s1, s2, s3, pending, surveyHash };
+    return { p1, p2, s1, s2, s3, pending, surveyHash };
 }
 
 describe('HR surveys results (rrhh only)', () => {
     it('tabulates averages, participation and comments with hashed ids', async () => {
-        const { d1, d2, surveyHash } = await setup();
+        const { p1, p2, surveyHash } = await setup();
 
         const response = await request(app).get(`/api/hr-surveys/${surveyHash}/results`).set(bearer(rrhhToken));
         expect(response.status).toBe(200);
@@ -136,8 +135,8 @@ describe('HR surveys results (rrhh only)', () => {
             status: 'open',
         });
 
-        const h1 = Utils.encode(d1.id);
-        const h2 = Utils.encode(d2.id);
+        const h1 = Utils.encode(p1.departamentId);
+        const h2 = Utils.encode(p2.departamentId);
         expect(response.body.participation).toEqual(expect.arrayContaining([
             { departamentId: h1, name: 'Cocina', responded: 2, assigned: 3 },
             { departamentId: h2, name: 'Cubierta', responded: 1, assigned: 1 },
@@ -155,6 +154,34 @@ describe('HR surveys results (rrhh only)', () => {
         expect(scale.overall).toBe(3.67);
         expect(scale.byDepartament).toEqual({ [h1]: 3, [h2]: 5 });
         expect(comments.comments).toEqual([{ departamentId: h1, text: 'Todo bien' }]);
+    });
+
+    it('groups positions of the same departament and ignores unassigned positions', async () => {
+        const chef = await createAssignablePosition('Galley');
+        const cook = await createPosition('Ayudante', chef.departamentId);
+        const waiter = await createPosition('Mesero', chef.departamentId);
+        const s1 = await createStaffFixture(chef);
+        await createStaffFixture(cook);
+        await createStaffFixture(waiter);
+        const created = await request(app)
+            .post('/api/hr-surveys')
+            .set(bearer(adminToken))
+            .send({
+                name: 'Por cargo',
+                startsAt: '2020-01-01',
+                endsAt: '2099-12-31',
+                active: true,
+                positionIds: [Utils.encode(chef.id), Utils.encode(cook.id)],
+                questions: surveyQuestions(),
+            });
+        expect(created.status).toBe(201);
+        await submitAs(s1, created.body.surveyId, { choice: 'Bueno', scale: 4 });
+
+        const response = await request(app).get(`/api/hr-surveys/${created.body.surveyId}/results`).set(bearer(rrhhToken));
+        expect(response.status).toBe(200);
+        expect(response.body.participation).toEqual([
+            { departamentId: Utils.encode(chef.departamentId), name: 'Galley', responded: 1, assigned: 2 },
+        ]);
     });
 
     it('never leaks staff ids or response/answer uuids', async () => {

@@ -18,15 +18,17 @@ CREATE TABLE IF NOT EXISTS hr_surveys (
     updatedAt DATETIME NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS hr_survey_departaments (
+-- 2026-10-23: la encuesta se asigna por cargo (antes hr_survey_departaments).
+-- Para un ambiente que ya tenía la tabla anterior: 2026-10-23-rrhh-encuestas-cargos-migration.sql
+CREATE TABLE IF NOT EXISTS hr_survey_positions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     survey_id INT NOT NULL,
-    departament_id INT NOT NULL,
+    position_id INT NOT NULL,
     createdAt DATETIME NOT NULL,
     updatedAt DATETIME NOT NULL,
-    UNIQUE KEY uq_hr_survey_departament (survey_id, departament_id),
-    CONSTRAINT fk_hr_survey_departaments_survey FOREIGN KEY (survey_id) REFERENCES hr_surveys(id) ON DELETE CASCADE,
-    CONSTRAINT fk_hr_survey_departaments_departament FOREIGN KEY (departament_id) REFERENCES departaments(id)
+    UNIQUE KEY uq_hr_survey_position (survey_id, position_id),
+    CONSTRAINT fk_hr_survey_positions_survey FOREIGN KEY (survey_id) REFERENCES hr_surveys(id) ON DELETE CASCADE,
+    CONSTRAINT fk_hr_survey_positions_position FOREIGN KEY (position_id) REFERENCES positions(id)
 );
 
 CREATE TABLE IF NOT EXISTS hr_survey_questions (

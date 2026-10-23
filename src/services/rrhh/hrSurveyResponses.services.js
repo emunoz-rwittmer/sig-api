@@ -2,7 +2,7 @@ const { Op } = require('sequelize');
 const db = require('../../utils/database');
 const Staff = require('../../models/catalogs/staff.models');
 const HrSurvey = require('../../models/rrhh/hrSurvey.models');
-const HrSurveyDepartament = require('../../models/rrhh/hrSurveyDepartament.models');
+const HrSurveyPosition = require('../../models/rrhh/hrSurveyPosition.models');
 const HrSurveyQuestion = require('../../models/rrhh/hrSurveyQuestion.models');
 const HrSurveyOption = require('../../models/rrhh/hrSurveyOption.models');
 const HrSurveyParticipation = require('../../models/rrhh/hrSurveyParticipation.models');
@@ -24,7 +24,7 @@ const isBlank = (value) => value === undefined || value === null || String(value
 const isUnanswered = (answer) => isBlank(answer.optionId) && isBlank(answer.value) && isBlank(answer.text);
 
 async function findStaff(staffId) {
-    const staff = await Staff.findByPk(staffId, { attributes: ['id', 'departamentId', 'active'] });
+    const staff = await Staff.findByPk(staffId, { attributes: ['id', 'departamentId', 'positionId', 'active'] });
     if (!staff) throw new AppError('Usuario no encontrado', 404);
     return staff;
 }
@@ -33,15 +33,15 @@ async function hasParticipation(surveyId, staffId, transaction) {
     return Boolean(await HrSurveyParticipation.count({ where: { surveyId, staffId }, transaction }));
 }
 
-async function isAssigned(surveyId, departamentId) {
-    if (!departamentId) return false;
-    return Boolean(await HrSurveyDepartament.count({ where: { surveyId, departamentId } }));
+async function isAssigned(surveyId, positionId) {
+    if (!positionId) return false;
+    return Boolean(await HrSurveyPosition.count({ where: { surveyId, positionId } }));
 }
 
 /**
  * Una encuesta es visible para el colaborador si está publicada y asignada
- * a su departamento actual, o si ya participó en ella (aunque luego haya
- * cambiado de departamento).
+ * a su cargo actual, o si ya participó en ella (aunque luego haya cambiado
+ * de cargo).
  */
 async function findVisibleSurvey(staff, surveyId) {
     const survey = await HrSurvey.findByPk(surveyId, {
@@ -55,7 +55,7 @@ async function findVisibleSurvey(staff, surveyId) {
 
     const [answered, assigned] = await Promise.all([
         hasParticipation(surveyId, staff.id),
-        isAssigned(surveyId, staff.departamentId),
+        isAssigned(surveyId, staff.positionId),
     ]);
     if (!answered && !assigned) throw new AppError(NOT_FOUND, 404);
 
@@ -95,8 +95,8 @@ class HrSurveyResponseService {
     static async listMine(staffId) {
         const staff = await findStaff(staffId);
         const [assignments, participations] = await Promise.all([
-            staff.departamentId
-                ? HrSurveyDepartament.findAll({ where: { departamentId: staff.departamentId }, attributes: ['surveyId'] })
+            staff.positionId
+                ? HrSurveyPosition.findAll({ where: { positionId: staff.positionId }, attributes: ['surveyId'] })
                 : [],
             HrSurveyParticipation.findAll({ where: { staffId }, attributes: ['surveyId'] }),
         ]);
@@ -153,7 +153,9 @@ class HrSurveyResponseService {
         if (!staff.active) throw new AppError('Tu usuario no está activo', 403);
         if (statusOf(survey) !== 'open') throw new AppError('La encuesta no está abierta', 400);
         if (answered) throw new AppError(ALREADY_ANSWERED, 409);
-        if (!assigned) throw new AppError('Esta encuesta no está asignada a tu departamento', 403);
+        if (!assigned) throw new AppError('Esta encuesta no está asignada a tu cargo', 403);
+        // Los resultados se tabulan por departamento: sin él, la respuesta no tendría dónde contarse.
+        if (!staff.departamentId) throw new AppError('Tu usuario no tiene un departamento asignado', 403);
 
         const rows = buildAnswerRows(survey.questions, answers);
         const departamentId = staff.departamentId;

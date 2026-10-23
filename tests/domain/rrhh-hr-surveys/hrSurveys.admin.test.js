@@ -1,14 +1,14 @@
 const request = require('supertest');
 const { bootTestApp, shutdownTestApp } = require('../../helpers/testApp');
 const { createAuthenticatedUser, TEST_USER } = require('../../helpers/auth');
-const { createDepartment, createPosition } = require('../../helpers/staffFixtures');
+const { createAssignablePosition } = require('../../helpers/staffFixtures');
 const Staff = require('../../../src/models/catalogs/staff.models');
 const Roles = require('../../../src/models/catalogs/roles.models');
 const Users = require('../../../src/models/catalogs/user.models');
 const HrSurvey = require('../../../src/models/rrhh/hrSurvey.models');
 const HrSurveyQuestion = require('../../../src/models/rrhh/hrSurveyQuestion.models');
 const HrSurveyOption = require('../../../src/models/rrhh/hrSurveyOption.models');
-const HrSurveyDepartament = require('../../../src/models/rrhh/hrSurveyDepartament.models');
+const HrSurveyPosition = require('../../../src/models/rrhh/hrSurveyPosition.models');
 const HrSurveyParticipation = require('../../../src/models/rrhh/hrSurveyParticipation.models');
 const HrSurveyResponse = require('../../../src/models/rrhh/hrSurveyResponse.models');
 const Utils = require('../../../src/utils/Utils');
@@ -28,8 +28,7 @@ afterAll(async () => {
 const auth = (token = adminToken) => ({ Authorization: `Bearer ${token}` });
 
 let staffCounter = 0;
-async function createStaffFixture(departament, overrides = {}) {
-    const position = await createPosition();
+async function createStaffFixture(position, overrides = {}) {
     staffCounter += 1;
     const suffix = `${Date.now()}-${staffCounter}-${Math.floor(Math.random() * 1e6)}`;
     return Staff.create({
@@ -38,7 +37,7 @@ async function createStaffFixture(departament, overrides = {}) {
         email: `hs-${staffCounter}-${Date.now()}@example.com`,
         cellPhone: '0966666666',
         password: 'Sup3rSecret!',
-        departamentId: departament.id,
+        departamentId: position.departamentId,
         positionId: position.id,
         contractType: 'Fijo',
         active: true,
@@ -56,31 +55,31 @@ const validQuestions = () => [
     { statement: 'Satisfacción general', type: 'scale', required: true, scaleMin: 1, scaleMax: 5 },
 ];
 
-const validPayload = (departamentIds, overrides = {}) => ({
+const validPayload = (positionIds, overrides = {}) => ({
     name: 'Clima laboral',
     description: 'Encuesta anónima',
     startsAt: '2020-01-01',
     endsAt: '2099-12-31',
     active: true,
-    departamentIds,
+    positionIds,
     questions: validQuestions(),
     ...overrides,
 });
 
 // Crea una encuesta publicada con una respuesta sembrada directamente en BD.
 async function createSurveyWithResponse() {
-    const departament = await createDepartment('Con respuestas');
+    const position = await createAssignablePosition('Con respuestas');
     const response = await request(app)
         .post('/api/hr-surveys')
         .set(auth())
-        .send(validPayload([Utils.encode(departament.id)]));
+        .send(validPayload([Utils.encode(position.id)]));
     expect(response.status).toBe(201);
     const surveyId = Utils.decode(response.body.surveyId);
 
-    const staff = await createStaffFixture(departament);
-    await HrSurveyParticipation.create({ surveyId, staffId: staff.id, departamentId: departament.id });
-    await HrSurveyResponse.create({ surveyId, departamentId: departament.id });
-    return { surveyHash: response.body.surveyId, surveyId, departament };
+    const staff = await createStaffFixture(position);
+    await HrSurveyParticipation.create({ surveyId, staffId: staff.id, departamentId: position.departamentId });
+    await HrSurveyResponse.create({ surveyId, departamentId: position.departamentId });
+    return { surveyHash: response.body.surveyId, surveyId, position };
 }
 
 describe('HR surveys admin', () => {
@@ -98,13 +97,13 @@ describe('HR surveys admin', () => {
         expect(response.status).toBe(400);
     });
 
-    it('rejects publishing without departaments', async () => {
+    it('rejects publishing without positions', async () => {
         const response = await request(app)
             .post('/api/hr-surveys')
             .set(auth())
             .send(validPayload([]));
         expect(response.status).toBe(400);
-        expect(response.body.message ?? response.body.data ?? JSON.stringify(response.body)).toMatch(/departamento/i);
+        expect(response.body.message ?? response.body.data ?? JSON.stringify(response.body)).toMatch(/cargo/i);
     });
 
     it('does not publish an incomplete draft with a bare { active: true }', async () => {
@@ -132,11 +131,11 @@ describe('HR surveys admin', () => {
     });
 
     it('refuses to publish a draft whose endsAt already passed', async () => {
-        const departament = await createDepartment('Cierre pasado');
+        const position = await createAssignablePosition('Cierre pasado');
         const created = await request(app)
             .post('/api/hr-surveys')
             .set(auth())
-            .send(validPayload([Utils.encode(departament.id)], { active: false, startsAt: '2020-01-01', endsAt: '2020-02-01' }));
+            .send(validPayload([Utils.encode(position.id)], { active: false, startsAt: '2020-01-01', endsAt: '2020-02-01' }));
         expect(created.status).toBe(201);
         const response = await request(app)
             .put(`/api/hr-surveys/${created.body.surveyId}`).set(auth()).send({ active: true });
@@ -145,11 +144,11 @@ describe('HR surveys admin', () => {
     });
 
     it('clears the dates of an unlocked draft when null is sent', async () => {
-        const departament = await createDepartment('Limpiar fechas');
+        const position = await createAssignablePosition('Limpiar fechas');
         const created = await request(app)
             .post('/api/hr-surveys')
             .set(auth())
-            .send(validPayload([Utils.encode(departament.id)], { active: false }));
+            .send(validPayload([Utils.encode(position.id)], { active: false }));
         const response = await request(app)
             .put(`/api/hr-surveys/${created.body.surveyId}`).set(auth()).send({ startsAt: null, endsAt: '' });
         expect(response.status).toBe(200);
@@ -158,38 +157,38 @@ describe('HR surveys admin', () => {
         expect(survey.endsAt).toBeNull();
     });
 
-    it('lists an open survey with the active staff of its departament as assigned', async () => {
-        const departament = await createDepartment('Asignados');
-        await createStaffFixture(departament);
-        await createStaffFixture(departament);
-        await createStaffFixture(departament, { active: false });
+    it('lists an open survey with the active staff of its position as assigned', async () => {
+        const position = await createAssignablePosition('Asignados');
+        await createStaffFixture(position);
+        await createStaffFixture(position);
+        await createStaffFixture(position, { active: false });
 
         const created = await request(app)
             .post('/api/hr-surveys')
             .set(auth())
-            .send(validPayload([Utils.encode(departament.id)], { name: 'Listada' }));
+            .send(validPayload([Utils.encode(position.id)], { name: 'Listada' }));
         expect(created.status).toBe(201);
 
         const list = await request(app).get('/api/hr-surveys').set(auth());
         expect(list.status).toBe(200);
         const entry = list.body.find((survey) => survey.id === created.body.surveyId);
         expect(entry).toMatchObject({ name: 'Listada', status: 'open', active: true, responded: 0, assigned: 2 });
-        expect(entry.departaments).toEqual([{ id: expect.any(String), name: 'Asignados' }]);
-        expect(entry.departaments[0].id).toBe(Utils.encode(departament.id));
+        expect(entry.positions).toEqual([{ id: expect.any(String), name: 'Asignados', departament: 'Asignados' }]);
+        expect(entry.positions[0].id).toBe(Utils.encode(position.id));
     });
 
     it('counts responded plus pending active staff as assigned', async () => {
-        const departament = await createDepartment('Mixto');
-        const respondent = await createStaffFixture(departament);
-        await createStaffFixture(departament);
+        const position = await createAssignablePosition('Mixto');
+        const respondent = await createStaffFixture(position);
+        await createStaffFixture(position);
 
         const created = await request(app)
             .post('/api/hr-surveys')
             .set(auth())
-            .send(validPayload([Utils.encode(departament.id)], { name: 'Mixta' }));
+            .send(validPayload([Utils.encode(position.id)], { name: 'Mixta' }));
         const surveyId = Utils.decode(created.body.surveyId);
-        await HrSurveyParticipation.create({ surveyId, staffId: respondent.id, departamentId: departament.id });
-        await HrSurveyResponse.create({ surveyId, departamentId: departament.id });
+        await HrSurveyParticipation.create({ surveyId, staffId: respondent.id, departamentId: position.departamentId });
+        await HrSurveyResponse.create({ surveyId, departamentId: position.departamentId });
 
         const list = await request(app).get('/api/hr-surveys').set(auth());
         const entry = list.body.find((survey) => survey.id === created.body.surveyId);
@@ -197,11 +196,11 @@ describe('HR surveys admin', () => {
     });
 
     it('returns the detail with hashed ids, ordered questions and numeric scores', async () => {
-        const departament = await createDepartment('Detalle');
+        const position = await createAssignablePosition('Detalle');
         const created = await request(app)
             .post('/api/hr-surveys')
             .set(auth())
-            .send(validPayload([Utils.encode(departament.id)], { name: 'Detalle' }));
+            .send(validPayload([Utils.encode(position.id)], { name: 'Detalle' }));
 
         const response = await request(app).get(`/api/hr-surveys/${created.body.surveyId}`).set(auth());
         expect(response.status).toBe(200);
@@ -209,29 +208,29 @@ describe('HR surveys admin', () => {
         expect(response.body.status).toBe('open');
         expect(response.body.questions.map((q) => q.type)).toEqual(['opcion multiple', 'scale']);
         expect(response.body.questions[0].options.map((o) => o.score)).toEqual([5, 1]);
-        expect(response.body.departaments[0].id).toBe(Utils.encode(departament.id));
+        expect(response.body.positions[0].id).toBe(Utils.encode(position.id));
     });
 
     it('rejects score changes once the survey has responses', async () => {
-        const { surveyHash, departament } = await createSurveyWithResponse();
+        const { surveyHash, position } = await createSurveyWithResponse();
         const questions = validQuestions();
         questions[0].options[0].score = 4;
 
         const response = await request(app)
             .put(`/api/hr-surveys/${surveyHash}`)
             .set(auth())
-            .send(validPayload([Utils.encode(departament.id)], { questions }));
+            .send(validPayload([Utils.encode(position.id)], { questions }));
         expect(response.status).toBe(400);
         expect(JSON.stringify(response.body)).toContain('La encuesta ya tiene respuestas');
     });
 
     it('accepts an unchanged payload with a new name and endsAt once the survey has responses', async () => {
-        const { surveyHash, surveyId, departament } = await createSurveyWithResponse();
+        const { surveyHash, surveyId, position } = await createSurveyWithResponse();
 
         const response = await request(app)
             .put(`/api/hr-surveys/${surveyHash}`)
             .set(auth())
-            .send(validPayload([Utils.encode(departament.id)], {
+            .send(validPayload([Utils.encode(position.id)], {
                 name: 'Nuevo nombre',
                 description: 'Nueva descripción',
                 endsAt: '2098-06-30',
@@ -245,8 +244,8 @@ describe('HR surveys admin', () => {
     });
 
     it('rejects changing startsAt or active once the survey has responses', async () => {
-        const { surveyHash, departament } = await createSurveyWithResponse();
-        const ids = [Utils.encode(departament.id)];
+        const { surveyHash, position } = await createSurveyWithResponse();
+        const ids = [Utils.encode(position.id)];
 
         const startsAt = await request(app)
             .put(`/api/hr-surveys/${surveyHash}`).set(auth()).send(validPayload(ids, { startsAt: '2021-01-01' }));
@@ -258,20 +257,20 @@ describe('HR surveys admin', () => {
     });
 
     it('rejects an endsAt earlier than startsAt once the survey has responses', async () => {
-        const { surveyHash, departament } = await createSurveyWithResponse();
+        const { surveyHash, position } = await createSurveyWithResponse();
         const response = await request(app)
             .put(`/api/hr-surveys/${surveyHash}`)
             .set(auth())
-            .send(validPayload([Utils.encode(departament.id)], { endsAt: '2019-12-31' }));
+            .send(validPayload([Utils.encode(position.id)], { endsAt: '2019-12-31' }));
         expect(response.status).toBe(400);
     });
 
     it('rejects an invalid endsAt once the survey has responses', async () => {
-        const { surveyHash, departament } = await createSurveyWithResponse();
+        const { surveyHash, position } = await createSurveyWithResponse();
         const response = await request(app)
             .put(`/api/hr-surveys/${surveyHash}`)
             .set(auth())
-            .send(validPayload([Utils.encode(departament.id)], { endsAt: 'garbage' }));
+            .send(validPayload([Utils.encode(position.id)], { endsAt: 'garbage' }));
         expect(response.status).toBe(400);
     });
 
@@ -282,9 +281,9 @@ describe('HR surveys admin', () => {
         expect(response.status).toBe(400);
     });
 
-    it('rejects removing a departament once the survey has responses, but allows adding one', async () => {
-        const { surveyHash, surveyId, departament } = await createSurveyWithResponse();
-        const extra = await createDepartment('Extra');
+    it('rejects removing a position once the survey has responses, but allows adding one', async () => {
+        const { surveyHash, surveyId, position } = await createSurveyWithResponse();
+        const extra = await createAssignablePosition('Extra');
 
         const removal = await request(app)
             .put(`/api/hr-surveys/${surveyHash}`)
@@ -295,9 +294,9 @@ describe('HR surveys admin', () => {
         const addition = await request(app)
             .put(`/api/hr-surveys/${surveyHash}`)
             .set(auth())
-            .send(validPayload([Utils.encode(departament.id), Utils.encode(extra.id)]));
+            .send(validPayload([Utils.encode(position.id), Utils.encode(extra.id)]));
         expect(addition.status).toBe(200);
-        expect(await HrSurveyDepartament.count({ where: { surveyId } })).toBe(2);
+        expect(await HrSurveyPosition.count({ where: { surveyId } })).toBe(2);
     });
 
     it('refuses to delete a survey with responses', async () => {
@@ -308,11 +307,11 @@ describe('HR surveys admin', () => {
     });
 
     it('deletes a survey without responses and cascades to its children', async () => {
-        const departament = await createDepartment('Borrar');
+        const position = await createAssignablePosition('Borrar');
         const created = await request(app)
             .post('/api/hr-surveys')
             .set(auth())
-            .send(validPayload([Utils.encode(departament.id)], { name: 'Borrable' }));
+            .send(validPayload([Utils.encode(position.id)], { name: 'Borrable' }));
         const surveyId = Utils.decode(created.body.surveyId);
         const questionIds = (await HrSurveyQuestion.findAll({ where: { surveyId } })).map((q) => q.id);
         expect(questionIds).toHaveLength(2);
@@ -323,15 +322,15 @@ describe('HR surveys admin', () => {
         expect(await HrSurvey.findByPk(surveyId)).toBeNull();
         expect(await HrSurveyQuestion.count({ where: { surveyId } })).toBe(0);
         expect(await HrSurveyOption.count({ where: { questionId: questionIds } })).toBe(0);
-        expect(await HrSurveyDepartament.count({ where: { surveyId } })).toBe(0);
+        expect(await HrSurveyPosition.count({ where: { surveyId } })).toBe(0);
     });
 
     it('replaces questions on a survey without responses', async () => {
-        const departament = await createDepartment('Reemplazo');
+        const position = await createAssignablePosition('Reemplazo');
         const created = await request(app)
             .post('/api/hr-surveys')
             .set(auth())
-            .send(validPayload([Utils.encode(departament.id)], { name: 'Reemplazable' }));
+            .send(validPayload([Utils.encode(position.id)], { name: 'Reemplazable' }));
         const surveyId = Utils.decode(created.body.surveyId);
         const oldQuestionIds = (await HrSurveyQuestion.findAll({ where: { surveyId } })).map((q) => q.id);
 
