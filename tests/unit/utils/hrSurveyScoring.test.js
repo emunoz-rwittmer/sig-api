@@ -9,7 +9,7 @@ const {
     resolveSurveyStatus,
     scoreAnswer,
     computeResults,
-    computeDimension,
+    computeReport,
 } = require('../../../src/utils/hrSurveyScoring');
 
 const opts = (n) => Array.from({ length: n }, (_, i) => ({ id: i + 1, text: `Op ${i + 1}`, score: i }));
@@ -189,26 +189,58 @@ describe('hrSurveyScoring', () => {
         });
     });
 
-    describe('computeDimension', () => {
-        const answer = (score) => ({ questionId: 2, score });
-        const response = (key, score) => ({ key, answers: [answer(score)] });
+    describe('computeReport', () => {
+        const questions = [
+            { id: 2, type: 'scale', scaleMin: 1, scaleMax: 5, category: 'Liderazgo' },
+            { id: 3, type: 'lista', options: [{ score: 0 }, { score: 2 }], category: null },
+        ];
+        const response = (staffType, scale, option) => ({
+            staffType,
+            answers: [{ questionId: 2, score: scale }, { questionId: 3, score: option }],
+        });
         const groups = [{ id: 'administrativo', name: 'Administrativo' }, { id: 'operativo', name: 'Operativo' }];
+        const dimensions = [{ key: 'staffType', groups, keysOf: (entry) => [entry.staffType] }];
 
-        it('promedia por grupo, enmascara los de menos de 3 respuestas y agrupa lo anterior como Sin clasificar', () => {
-            const { groups: rows, byQuestion } = computeDimension({
-                questions: [scale()],
-                groups,
-                responses: [response('operativo', 4), response('operativo', 5), response('operativo', 3), response('administrativo', 5), response(null, 2)],
-                participationCounts: new Map([['operativo', 3], ['administrativo', 1], [null, 1]]),
-                assignedPending: new Map([['operativo', 2]]),
+        it('normaliza a 1-5, enmascara grupos de menos de 3 respuestas y manda lo no clasificado aparte', () => {
+            const report = computeReport({
+                questions,
+                dimensions,
+                members: [
+                    { staffType: 'operativo', responded: true },
+                    { staffType: 'operativo', responded: true },
+                    { staffType: 'operativo', responded: true },
+                    { staffType: 'administrativo', responded: false },
+                    { staffType: null, responded: true },
+                ],
+                responses: [response('operativo', 5, 2), response('operativo', 4, 2), response('operativo', 3, 0), response(null, 2, 0)],
             });
 
-            expect(rows).toEqual([
-                { id: 'administrativo', name: 'Administrativo', responded: 1, assigned: 1, responses: 1, masked: true, average: null },
-                { id: 'operativo', name: 'Operativo', responded: 3, assigned: 5, responses: 3, masked: false, average: 4 },
-                { id: 'none', name: 'Sin clasificar', responded: 1, assigned: 1, responses: 1, masked: true, average: null },
+            // Opción con puntajes 0-2 pasa a 1-5: 2 -> 5, 0 -> 1.
+            expect(report.questions.map((q) => q.average)).toEqual([3.5, 3]);
+            expect(report.overall).toMatchObject({ invited: 5, responded: 4, responses: 4, masked: false });
+            expect(report.categories).toEqual([{ name: 'Liderazgo', questions: 1, average: 3.5 }]);
+
+            const { groups: rows, byQuestion } = report.dimensions.staffType;
+            expect(rows.map(({ id, invited, responded, responses, masked }) => ({ id, invited, responded, responses, masked }))).toEqual([
+                { id: 'operativo', invited: 3, responded: 3, responses: 3, masked: false },
+                { id: 'administrativo', invited: 1, responded: 0, responses: 0, masked: true },
+                { id: 'none', invited: 1, responded: 1, responses: 1, masked: true },
             ]);
-            expect(byQuestion[2]).toEqual({ administrativo: null, operativo: 4, none: null });
+            expect(rows[0].average).toBe(3.83);
+            expect(byQuestion[2]).toEqual({ operativo: 4, administrativo: null, none: null });
+        });
+
+        it('cuenta una respuesta en cada empresa del colaborador y enmascara todo con menos de 3 respuestas', () => {
+            const companies = [{ id: 1, name: 'A' }, { id: 2, name: 'B' }];
+            const report = computeReport({
+                questions,
+                dimensions: [{ key: 'company', groups: companies, keysOf: (entry) => entry.companyIds ?? [] }],
+                members: [{ companyIds: [1, 2], responded: true }],
+                responses: [{ companyIds: [1, 2], answers: [{ questionId: 2, score: 5 }] }],
+            });
+
+            expect(report.dimensions.company.groups.map(({ id, responses }) => [id, responses])).toEqual([[1, 1], [2, 1]]);
+            expect(report.overall).toMatchObject({ masked: true, average: null });
         });
     });
 });

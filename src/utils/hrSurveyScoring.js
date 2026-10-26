@@ -188,6 +188,7 @@ function computeResults({ questions, departaments, responses, participationCount
             questionId: question.id,
             statement: question.statement,
             type: question.type,
+            category: question.category ?? null,
             overall: average(scoredEntries.map((entry) => entry.score)),
             byDepartament,
         };
@@ -216,56 +217,117 @@ function computeResults({ questions, departaments, responses, participationCount
 const MIN_GROUP_RESPONSES = 3;
 const UNCLASSIFIED = 'none';
 
-/**
- * Tabula por una dimensión (departamento, cargo, tipo de personal...).
- * Cada respuesta trae `key` (id del grupo o null). Devuelve los grupos con su
- * participación y promedio, y el promedio por pregunta de cada grupo; los grupos
- * con menos de MIN_GROUP_RESPONSES respuestas salen enmascarados (promedios null).
- */
-function computeDimension({ questions, groups, responses, participationCounts, assignedPending }) {
-    const keyOf = (key) => (key == null ? UNCLASSIFIED : key);
-    const known = new Set(groups.map(({ id }) => id));
-    const all = [...groups];
-    // Respuestas/participaciones sin grupo (datos anteriores a esta dimensión) van aparte.
-    const hasUnclassified = responses.some(({ key }) => key == null || !known.has(key))
-        || participationCounts?.has(null)
-        || assignedPending?.has(null);
-    if (hasUnclassified) all.push({ id: UNCLASSIFIED, name: 'Sin clasificar' });
-    const allIds = new Set(all.map(({ id }) => id));
-    const groupOf = (key) => (allIds.has(keyOf(key)) ? keyOf(key) : UNCLASSIFIED);
+// Puntaje de una respuesta llevado a la escala 1-5 del reporte (escala 1-5 queda igual).
+// Escala: usa su rango; opciones: el menor y mayor puntaje de sus opciones.
+function normalizeScore(question, score) {
+    if (score == null) return null;
+    let min;
+    let max;
+    if (question.type === 'scale') {
+        min = Number(question.scaleMin);
+        max = Number(question.scaleMax);
+    } else {
+        const scores = (question.options ?? []).map((option) => Number(option.score));
+        min = Math.min(...scores);
+        max = Math.max(...scores);
+    }
+    if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return null;
+    return 1 + ((Number(score) - min) / (max - min)) * 4;
+}
 
-    const rows = all.map(({ id, name }) => {
-        const inGroup = responses.filter((response) => groupOf(response.key) === id);
-        const scores = inGroup.flatMap(({ answers }) => answers.filter((a) => a.score != null).map((a) => Number(a.score)));
-        const responded = participationCounts?.get(id === UNCLASSIFIED ? null : id) ?? 0;
-        const masked = inGroup.length < MIN_GROUP_RESPONSES;
+const bucket = (value) => Math.min(5, Math.max(1, Math.round(value)));
+const distOf = (values) => values.reduce((dist, value) => { dist[bucket(value) - 1] += 1; return dist; }, [0, 0, 0, 0, 0]);
+
+/**
+ * Reporte de resultados. `members` son los invitados (quienes ya participaron y los
+ * pendientes) y `responses` las respuestas anónimas; ambos traen sus atributos de puesto.
+ * Cada dimensión define `keysOf(entry)` -> ids de grupo (varios si el colaborador tiene
+ * varias empresas) y sus `groups`. Lo que no cae en ningún grupo va a "Sin clasificar".
+ * Los grupos con menos de MIN_GROUP_RESPONSES respuestas salen enmascarados (promedios null).
+ */
+function computeReport({ questions, dimensions, members, responses }) {
+    const rows = responses.map((response) => ({
+        ...response,
+        scored: questions.flatMap((question) => response.answers
+            .filter((answer) => String(answer.questionId) === String(question.id))
+            .map((answer) => ({ question, value: normalizeScore(question, answer.score) }))
+            .filter(({ value }) => value != null)),
+    }));
+
+    const pool = (entries) => entries.flatMap(({ scored }) => scored);
+    const questionValues = (entries, question) => pool(entries)
+        .filter((item) => String(item.question.id) === String(question.id)).map(({ value }) => value);
+
+    const allValues = pool(rows).map(({ value }) => value);
+    const overallMasked = rows.length < MIN_GROUP_RESPONSES;
+    const overall = {
+        invited: members.length,
+        responded: members.filter((member) => member.responded).length,
+        responses: rows.length,
+        masked: overallMasked,
+        average: overallMasked ? null : average(allValues),
+        dist: overallMasked ? [0, 0, 0, 0, 0] : distOf(allValues),
+    };
+
+    const questionRows = questions.map((question) => {
+        const values = overallMasked ? [] : questionValues(rows, question);
         return {
-            id,
-            name,
-            responded,
-            assigned: responded + (assignedPending?.get(id === UNCLASSIFIED ? null : id) ?? 0),
-            responses: inGroup.length,
-            masked,
-            average: masked ? null : average(scores),
+            questionId: question.id,
+            average: average(values),
+            count: values.length,
+            dist: distOf(values),
         };
     });
 
-    const byQuestion = {};
-    for (const question of questions) {
-        const perGroup = {};
-        for (const { id, masked } of rows) {
-            if (masked) { perGroup[id] = null; continue; }
-            const scores = responses
-                .filter((response) => groupOf(response.key) === id)
-                .flatMap(({ answers }) => answers)
-                .filter((a) => String(a.questionId) === String(question.id) && a.score != null)
-                .map((a) => Number(a.score));
-            perGroup[id] = average(scores);
+    const categoryNames = [...new Set(questions.map((question) => question.category).filter(Boolean))];
+    const categories = categoryNames.map((name) => {
+        const inCategory = questions.filter((question) => question.category === name);
+        const values = overallMasked ? [] : pool(rows)
+            .filter((item) => item.question.category === name).map(({ value }) => value);
+        return { name, questions: inCategory.length, average: average(values) };
+    }).sort((a, b) => (b.average ?? 0) - (a.average ?? 0));
+
+    const result = {};
+    for (const { key, groups, keysOf } of dimensions) {
+        const known = new Set(groups.map(({ id }) => id));
+        const groupIdsOf = (entry) => {
+            const ids = (keysOf(entry) ?? []).filter((id) => known.has(id));
+            return ids.length ? ids : [UNCLASSIFIED];
+        };
+        const memberIn = (id) => members.filter((member) => groupIdsOf(member).includes(id));
+        const rowsIn = (id) => rows.filter((row) => groupIdsOf(row).includes(id));
+
+        const all = [...groups];
+        if (members.some((m) => groupIdsOf(m)[0] === UNCLASSIFIED) || rows.some((r) => groupIdsOf(r)[0] === UNCLASSIFIED)) {
+            all.push({ id: UNCLASSIFIED, name: 'Sin clasificar' });
         }
-        byQuestion[question.id] = perGroup;
+
+        const groupRows = all.map(({ id, name }) => {
+            const inGroup = rowsIn(id);
+            const invited = memberIn(id);
+            const masked = inGroup.length < MIN_GROUP_RESPONSES;
+            return {
+                id,
+                name,
+                invited: invited.length,
+                responded: invited.filter((member) => member.responded).length,
+                responses: inGroup.length,
+                masked,
+                average: masked ? null : average(pool(inGroup).map(({ value }) => value)),
+            };
+        }).sort((a, b) => (b.average ?? -1) - (a.average ?? -1) || a.name.localeCompare(b.name));
+
+        const byQuestion = {};
+        for (const question of questions) {
+            byQuestion[question.id] = {};
+            for (const { id, masked } of groupRows) {
+                byQuestion[question.id][id] = masked ? null : average(questionValues(rowsIn(id), question));
+            }
+        }
+        result[key] = { groups: groupRows, byQuestion };
     }
 
-    return { groups: rows, byQuestion };
+    return { overall, questions: questionRows, categories, dimensions: result };
 }
 
 module.exports = {
@@ -279,7 +341,7 @@ module.exports = {
     resolveSurveyStatus,
     scoreAnswer,
     computeResults,
-    computeDimension,
+    computeReport,
     MIN_GROUP_RESPONSES,
     UNCLASSIFIED,
     isValidDay,

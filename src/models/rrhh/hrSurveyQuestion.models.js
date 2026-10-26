@@ -10,6 +10,8 @@ const HrSurveyQuestion = db.define('hr_survey_question', {
     required: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
     scaleMin: { type: DataTypes.TINYINT.UNSIGNED, allowNull: true, field: 'scale_min' },
     scaleMax: { type: DataTypes.TINYINT.UNSIGNED, allowNull: true, field: 'scale_max' },
+    // Agrupa preguntas en la reportería (ej. Liderazgo, Compañerismo). Opcional.
+    category: { type: DataTypes.STRING(80), allowNull: true },
     sortOrder: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0, field: 'sort_order' },
 }, { tableName: 'hr_survey_questions' });
 

@@ -79,7 +79,7 @@ const toDimensionDto = ({ groups, byQuestion }) => ({
     ),
 });
 
-const toResultsDto = ({ survey, participation, questions, dimensions }) => ({
+const toResultsDto = ({ survey, participation, questions, report }) => ({
     survey: {
         id: Utils.encode(survey.id),
         name: survey.name,
@@ -97,7 +97,13 @@ const toResultsDto = ({ survey, participation, questions, dimensions }) => ({
         distribution: question.distribution?.map((entry) => ({ ...entry, optionId: Utils.encode(entry.optionId) })),
         comments: question.comments?.map((entry) => ({ ...entry, departamentId: Utils.encode(entry.departamentId) })),
     })),
-    dimensions: Object.fromEntries(Object.entries(dimensions).map(([name, dimension]) => [name, toDimensionDto(dimension)])),
+    report: {
+        overall: report.overall,
+        categories: report.categories,
+        companies: report.companies.map((company) => ({ ...company, id: Utils.encode(company.id) })),
+        questions: report.questions.map((question) => ({ ...question, questionId: Utils.encode(question.questionId) })),
+        dimensions: Object.fromEntries(Object.entries(report.dimensions).map(([name, dimension]) => [name, toDimensionDto(dimension)])),
+    },
 });
 
 const getAll = async (req, res, next) => {
@@ -122,7 +128,8 @@ const getById = async (req, res, next) => {
 const getResults = async (req, res, next) => {
     try {
         const surveyId = decodeId(req.params.survey_id, 'survey_id');
-        const result = await HrSurveyService.getResults(surveyId);
+        const companyId = req.query.companyId ? decodeId(req.query.companyId, 'companyId') : undefined;
+        const result = await HrSurveyService.getResults(surveyId, { companyId });
         res.status(200).json(toResultsDto(result));
     } catch (error) {
         next(error);

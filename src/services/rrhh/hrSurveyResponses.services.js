@@ -1,6 +1,7 @@
 const { Op } = require('sequelize');
 const db = require('../../utils/database');
 const Staff = require('../../models/catalogs/staff.models');
+const StaffCompany = require('../../models/catalogs/staffCompany.models');
 const HrSurvey = require('../../models/rrhh/hrSurvey.models');
 const HrSurveyPosition = require('../../models/rrhh/hrSurveyPosition.models');
 const HrSurveyQuestion = require('../../models/rrhh/hrSurveyQuestion.models');
@@ -160,13 +161,14 @@ class HrSurveyResponseService {
         const rows = buildAnswerRows(survey.questions, answers);
         const departamentId = staff.departamentId;
         const { positionId, staffType } = staff;
+        const companyIds = (await StaffCompany.findAll({ where: { staffId }, attributes: ['companyId'] })).map((row) => row.companyId);
 
         try {
             await db.transaction(async (transaction) => {
                 // La participación va primero: la unicidad (survey_id, staff_id)
                 // hace fallar de inmediato un envío concurrente duplicado.
-                await HrSurveyParticipation.create({ surveyId, staffId, departamentId, positionId, staffType }, { transaction });
-                const response = await HrSurveyResponse.create({ surveyId, departamentId, positionId, staffType }, { transaction });
+                await HrSurveyParticipation.create({ surveyId, staffId, departamentId, positionId, staffType, companyIds }, { transaction });
+                const response = await HrSurveyResponse.create({ surveyId, departamentId, positionId, staffType, companyIds }, { transaction });
                 if (rows.length) {
                     await HrSurveyAnswer.bulkCreate(
                         rows.map((row) => ({ ...row, responseId: response.id })),
