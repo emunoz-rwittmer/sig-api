@@ -253,7 +253,7 @@ const sendEmailGuiaRemisionCreada = (dataMail, fileName, filePath) => {
     return sendMail({
         to: RECIPIENTS.belen,
         from: FROM_EMAIL,
-        cc: RECIPIENTS.enrique,
+        cc: [RECIPIENTS.enrique, RECIPIENTS.edwin],
         subject: 'Confirmación de guía de remisión',
         html,
         attachments: [
