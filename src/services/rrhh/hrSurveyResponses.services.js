@@ -24,7 +24,7 @@ const isBlank = (value) => value === undefined || value === null || String(value
 const isUnanswered = (answer) => isBlank(answer.optionId) && isBlank(answer.value) && isBlank(answer.text);
 
 async function findStaff(staffId) {
-    const staff = await Staff.findByPk(staffId, { attributes: ['id', 'departamentId', 'positionId', 'active'] });
+    const staff = await Staff.findByPk(staffId, { attributes: ['id', 'departamentId', 'positionId', 'staffType', 'active'] });
     if (!staff) throw new AppError('Usuario no encontrado', 404);
     return staff;
 }
@@ -159,13 +159,14 @@ class HrSurveyResponseService {
 
         const rows = buildAnswerRows(survey.questions, answers);
         const departamentId = staff.departamentId;
+        const { positionId, staffType } = staff;
 
         try {
             await db.transaction(async (transaction) => {
                 // La participación va primero: la unicidad (survey_id, staff_id)
                 // hace fallar de inmediato un envío concurrente duplicado.
-                await HrSurveyParticipation.create({ surveyId, staffId, departamentId }, { transaction });
-                const response = await HrSurveyResponse.create({ surveyId, departamentId }, { transaction });
+                await HrSurveyParticipation.create({ surveyId, staffId, departamentId, positionId, staffType }, { transaction });
+                const response = await HrSurveyResponse.create({ surveyId, departamentId, positionId, staffType }, { transaction });
                 if (rows.length) {
                     await HrSurveyAnswer.bulkCreate(
                         rows.map((row) => ({ ...row, responseId: response.id })),

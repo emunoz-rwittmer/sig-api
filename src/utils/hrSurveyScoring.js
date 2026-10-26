@@ -212,6 +212,62 @@ function computeResults({ questions, departaments, responses, participationCount
     return { participation, questions: resultQuestions };
 }
 
+// Grupos con menos respuestas que esto no muestran promedios (protege el anonimato).
+const MIN_GROUP_RESPONSES = 3;
+const UNCLASSIFIED = 'none';
+
+/**
+ * Tabula por una dimensión (departamento, cargo, tipo de personal...).
+ * Cada respuesta trae `key` (id del grupo o null). Devuelve los grupos con su
+ * participación y promedio, y el promedio por pregunta de cada grupo; los grupos
+ * con menos de MIN_GROUP_RESPONSES respuestas salen enmascarados (promedios null).
+ */
+function computeDimension({ questions, groups, responses, participationCounts, assignedPending }) {
+    const keyOf = (key) => (key == null ? UNCLASSIFIED : key);
+    const known = new Set(groups.map(({ id }) => id));
+    const all = [...groups];
+    // Respuestas/participaciones sin grupo (datos anteriores a esta dimensión) van aparte.
+    const hasUnclassified = responses.some(({ key }) => key == null || !known.has(key))
+        || participationCounts?.has(null)
+        || assignedPending?.has(null);
+    if (hasUnclassified) all.push({ id: UNCLASSIFIED, name: 'Sin clasificar' });
+    const allIds = new Set(all.map(({ id }) => id));
+    const groupOf = (key) => (allIds.has(keyOf(key)) ? keyOf(key) : UNCLASSIFIED);
+
+    const rows = all.map(({ id, name }) => {
+        const inGroup = responses.filter((response) => groupOf(response.key) === id);
+        const scores = inGroup.flatMap(({ answers }) => answers.filter((a) => a.score != null).map((a) => Number(a.score)));
+        const responded = participationCounts?.get(id === UNCLASSIFIED ? null : id) ?? 0;
+        const masked = inGroup.length < MIN_GROUP_RESPONSES;
+        return {
+            id,
+            name,
+            responded,
+            assigned: responded + (assignedPending?.get(id === UNCLASSIFIED ? null : id) ?? 0),
+            responses: inGroup.length,
+            masked,
+            average: masked ? null : average(scores),
+        };
+    });
+
+    const byQuestion = {};
+    for (const question of questions) {
+        const perGroup = {};
+        for (const { id, masked } of rows) {
+            if (masked) { perGroup[id] = null; continue; }
+            const scores = responses
+                .filter((response) => groupOf(response.key) === id)
+                .flatMap(({ answers }) => answers)
+                .filter((a) => String(a.questionId) === String(question.id) && a.score != null)
+                .map((a) => Number(a.score));
+            perGroup[id] = average(scores);
+        }
+        byQuestion[question.id] = perGroup;
+    }
+
+    return { groups: rows, byQuestion };
+}
+
 module.exports = {
     QUESTION_TYPES,
     OPTION_TYPES,
@@ -223,5 +279,8 @@ module.exports = {
     resolveSurveyStatus,
     scoreAnswer,
     computeResults,
+    computeDimension,
+    MIN_GROUP_RESPONSES,
+    UNCLASSIFIED,
     isValidDay,
 };

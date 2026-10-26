@@ -130,6 +130,10 @@ router.get('/:staff_id/embarques-count',StaffController.getEmbarquesCount);
  *                 type: string
  *               contractType:
  *                 type: string
+ *               staffType:
+ *                 type: string
+ *                 enum: [administrativo, operativo]
+ *                 description: Clasificación del personal para reportería de encuestas
  *               departamentId:
  *                 type: string
  *                 description: ID de departamento codificado (hashids)

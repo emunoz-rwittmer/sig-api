@@ -11,7 +11,7 @@ const HrSurveyOption = require('../../models/rrhh/hrSurveyOption.models');
 const HrSurveyParticipation = require('../../models/rrhh/hrSurveyParticipation.models');
 const HrSurveyResponse = require('../../models/rrhh/hrSurveyResponse.models');
 const HrSurveyAnswer = require('../../models/rrhh/hrSurveyAnswer.models');
-const { validateSurveyForPublish, resolveSurveyStatus, computeResults, isValidDay } = require('../../utils/hrSurveyScoring');
+const { validateSurveyForPublish, resolveSurveyStatus, computeResults, computeDimension, isValidDay } = require('../../utils/hrSurveyScoring');
 const AppError = require('../../errors/AppError');
 
 const DATE_FORMAT = 'YYYY-MM-DD';
@@ -125,23 +125,64 @@ async function countResponses(surveyId) {
  * por su departamento (los resultados se tabulan por departamento).
  * Devuelve Map<departamentId, n>; el personal sin departamento no puede responder y no cuenta.
  */
-async function countAssignedPending(surveyId, positionIds) {
+async function countAssignedPending(surveyId, positionIds, field = 'departamentId') {
     const result = new Map();
     if (!positionIds.length) return result;
 
     const rows = await Staff.findAll({
-        attributes: ['departamentId', [fn('COUNT', col('id')), 'total']],
+        attributes: [field, [fn('COUNT', col('id')), 'total']],
         where: {
             active: true,
             positionId: positionIds,
             departamentId: { [Op.ne]: null },
             id: { [Op.notIn]: literal(`(SELECT staff_id FROM hr_survey_participations WHERE survey_id = ${Number(surveyId)})`) },
         },
-        group: ['departamentId'],
+        group: [field],
         raw: true,
     });
-    rows.forEach((row) => result.set(row.departamentId, Number(row.total)));
+    rows.forEach((row) => result.set(row[field], Number(row.total)));
     return result;
+}
+
+const STAFF_TYPE_GROUPS = [
+    { id: 'administrativo', name: 'Administrativo' },
+    { id: 'operativo', name: 'Operativo' },
+];
+
+// Resultados por departamento, cargo y tipo de personal (los dos últimos solo cuentan
+// respuestas nuevas: las anteriores caen en "Sin clasificar").
+async function buildDimensions({ survey, responses, departaments, participationCounts, assignedPending }) {
+    const positionIds = survey.positions.map((entry) => entry.positionId);
+    const countParticipation = async (field) => {
+        const rows = await HrSurveyParticipation.findAll({
+            where: { surveyId: survey.id },
+            attributes: [field, [fn('COUNT', col('id')), 'total']],
+            group: [field],
+            raw: true,
+        });
+        return new Map(rows.map((row) => [row[field], Number(row.total)]));
+    };
+    const [positionCounts, typeCounts, positionPending, typePending] = await Promise.all([
+        countParticipation('positionId'),
+        countParticipation('staffType'),
+        countAssignedPending(survey.id, positionIds, 'positionId'),
+        countAssignedPending(survey.id, positionIds, 'staffType'),
+    ]);
+
+    const positions = survey.positions.map(({ positionId, position }) => ({ id: positionId, name: position?.name ?? `Cargo ${positionId}` }));
+    const extraPositionIds = [...new Set([...positionCounts.keys(), ...responses.map((r) => r.positionId)])]
+        .filter((positionId) => positionId != null && !positions.some(({ id }) => id === positionId));
+    if (extraPositionIds.length) {
+        const extra = await Positions.findAll({ where: { id: extraPositionIds }, attributes: ['id', 'name'] });
+        extra.forEach(({ id, name }) => positions.push({ id, name }));
+    }
+
+    const base = { questions: sortByOrder(survey.questions) };
+    return {
+        departament: computeDimension({ ...base, groups: departaments, responses: responses.map((r) => ({ ...r, key: r.departamentId })), participationCounts, assignedPending }),
+        position: computeDimension({ ...base, groups: positions, responses: responses.map((r) => ({ ...r, key: r.positionId })), participationCounts: positionCounts, assignedPending: positionPending }),
+        staffType: computeDimension({ ...base, groups: STAFF_TYPE_GROUPS, responses: responses.map((r) => ({ ...r, key: r.staffType })), participationCounts: typeCounts, assignedPending: typePending }),
+    };
 }
 
 const withStatus = (survey) => resolveSurveyStatus({
@@ -210,7 +251,7 @@ class HrSurveyService {
         const [responseRows, participationRows] = await Promise.all([
             HrSurveyResponse.findAll({
                 where: { surveyId: id },
-                attributes: ['id', 'departamentId'],
+                attributes: ['id', 'departamentId', 'positionId', 'staffType'],
                 include: [{ model: HrSurveyAnswer, as: 'answers', attributes: ['questionId', 'optionId', 'score', 'text'] }],
             }),
             HrSurveyParticipation.findAll({
@@ -224,6 +265,8 @@ class HrSurveyService {
         const participationCounts = new Map(participationRows.map((row) => [row.departamentId, Number(row.total)]));
         const responses = responseRows.map((response) => ({
             departamentId: response.departamentId,
+            positionId: response.positionId,
+            staffType: response.staffType,
             answers: response.answers.map((answer) => ({
                 questionId: answer.questionId,
                 optionId: answer.optionId,
@@ -261,7 +304,9 @@ class HrSurveyService {
             assignedPending,
         });
 
-        return { survey: { ...survey.toJSON(), status: withStatus(survey) }, ...results };
+        const dimensions = await buildDimensions({ survey, responses, departaments, participationCounts, assignedPending });
+
+        return { survey: { ...survey.toJSON(), status: withStatus(survey) }, ...results, dimensions };
     }
 
     static async create(data) {
