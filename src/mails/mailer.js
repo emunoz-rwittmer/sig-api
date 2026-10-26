@@ -15,7 +15,7 @@ const RECIPIENTS = {
     belen: 'belen@rwittmer.com',
     edwin: 'edwin@rwittmer.com',
     fabian: 'fabian@rwittmer.com',
-    pablo: 'pablo@rwittmer.com',
+    felix: 'felix@rwittmer.com',
     enrique: 'enrique@rwittmer.com',
     mirian: 'mirian@rwittmer.com',
     marjuri: 'marjuri@rwittmer.com',
@@ -155,7 +155,7 @@ const sendEmailNewRequest = (companyName) => {
     return sendMail({
         to: RECIPIENTS.fabian,
         from: FROM_EMAIL,
-        cc: RECIPIENTS.pablo,
+        cc: RECIPIENTS.felix,
         subject: 'Requerimiento recibido',
         html,
     });

@@ -9,6 +9,8 @@ const HrSurveyResponse = db.define('hr_survey_response', {
     // Atributos del puesto al responder, para tabular por cargo / tipo. Nulos en respuestas anteriores.
     positionId: { type: DataTypes.INTEGER, allowNull: true, field: 'position_id' },
     staffType: { type: DataTypes.STRING(20), allowNull: true, field: 'staff_type' },
+    // Ids de las empresas del colaborador al responder (puede tener varias). Nulo en respuestas anteriores.
+    companyIds: { type: DataTypes.JSON, allowNull: true, field: 'company_ids' },
 }, { tableName: 'hr_survey_responses', timestamps: false });
 
 module.exports = HrSurveyResponse;

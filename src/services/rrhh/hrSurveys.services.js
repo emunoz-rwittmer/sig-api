@@ -3,6 +3,9 @@ const { Op, fn, col, literal } = require('sequelize');
 const db = require('../../utils/database');
 const Staff = require('../../models/catalogs/staff.models');
 const Departaments = require('../../models/catalogs/departament.models');
+const StaffCompany = require('../../models/catalogs/staffCompany.models');
+const Company = require('../../models/catalogs/company.models');
+const Yacht = require('../../models/catalogs/yacht.models');
 const Positions = require('../../models/catalogs/positions.models');
 const HrSurvey = require('../../models/rrhh/hrSurvey.models');
 const HrSurveyPosition = require('../../models/rrhh/hrSurveyPosition.models');
@@ -11,7 +14,7 @@ const HrSurveyOption = require('../../models/rrhh/hrSurveyOption.models');
 const HrSurveyParticipation = require('../../models/rrhh/hrSurveyParticipation.models');
 const HrSurveyResponse = require('../../models/rrhh/hrSurveyResponse.models');
 const HrSurveyAnswer = require('../../models/rrhh/hrSurveyAnswer.models');
-const { validateSurveyForPublish, resolveSurveyStatus, computeResults, computeDimension, isValidDay } = require('../../utils/hrSurveyScoring');
+const { validateSurveyForPublish, resolveSurveyStatus, computeResults, computeReport, isValidDay } = require('../../utils/hrSurveyScoring');
 const AppError = require('../../errors/AppError');
 
 const DATE_FORMAT = 'YYYY-MM-DD';
@@ -37,6 +40,7 @@ const FULL_INCLUDE = [
 const toDay = (value) => dayjs(value).format(DATE_FORMAT);
 const draftName = (name) => String(name ?? '').trim() || DRAFT_NAME;
 const sortByOrder = (list) => [...(list ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
+const nullableText = (value) => String(value ?? '').trim() || null;
 const nullableNumber = (value) => (value === undefined || value === null || value === '' ? null : Number(value));
 
 // Forma comparable de una pregunta, igual para lo guardado y para el payload.
@@ -46,6 +50,7 @@ const normalizeQuestion = (question) => ({
     required: question.required === undefined ? true : Boolean(question.required),
     scaleMin: nullableNumber(question.scaleMin),
     scaleMax: nullableNumber(question.scaleMax),
+    category: nullableText(question.category),
     options: (question.options ?? []).map((option) => ({
         text: String(option.text ?? ''),
         score: Number(option.score),
@@ -86,6 +91,7 @@ async function createQuestions(surveyId, questions, transaction) {
             required: input.required === undefined ? true : Boolean(input.required),
             scaleMin: nullableNumber(input.scaleMin),
             scaleMax: nullableNumber(input.scaleMax),
+            category: nullableText(input.category),
             sortOrder: index,
         }, { transaction });
 
@@ -148,41 +154,89 @@ const STAFF_TYPE_GROUPS = [
     { id: 'administrativo', name: 'Administrativo' },
     { id: 'operativo', name: 'Operativo' },
 ];
+const OFFICE_GROUP = { id: 'office', name: 'Oficina' };
 
-// Resultados por departamento, cargo y tipo de personal (los dos últimos solo cuentan
-// respuestas nuevas: las anteriores caen en "Sin clasificar").
-async function buildDimensions({ survey, responses, departaments, participationCounts, assignedPending }) {
-    const positionIds = survey.positions.map((entry) => entry.positionId);
-    const countParticipation = async (field) => {
-        const rows = await HrSurveyParticipation.findAll({
-            where: { surveyId: survey.id },
-            attributes: [field, [fn('COUNT', col('id')), 'total']],
-            group: [field],
+const includesCompany = (entry, companyId) => (entry.companyIds ?? []).includes(companyId);
+
+// Invitados de la encuesta: quienes ya participaron y el personal activo pendiente de los cargos asignados.
+async function loadMembers(surveyId, positionIds) {
+    const [participations, pending] = await Promise.all([
+        HrSurveyParticipation.findAll({
+            where: { surveyId },
+            attributes: ['departamentId', 'positionId', 'staffType', 'companyIds'],
             raw: true,
-        });
-        return new Map(rows.map((row) => [row[field], Number(row.total)]));
-    };
-    const [positionCounts, typeCounts, positionPending, typePending] = await Promise.all([
-        countParticipation('positionId'),
-        countParticipation('staffType'),
-        countAssignedPending(survey.id, positionIds, 'positionId'),
-        countAssignedPending(survey.id, positionIds, 'staffType'),
+        }),
+        positionIds.length ? Staff.findAll({
+            attributes: ['departamentId', 'positionId', 'staffType'],
+            where: {
+                active: true,
+                positionId: positionIds,
+                departamentId: { [Op.ne]: null },
+                id: { [Op.notIn]: literal(`(SELECT staff_id FROM hr_survey_participations WHERE survey_id = ${Number(surveyId)})`) },
+            },
+            include: [{ model: StaffCompany, as: 'companies', attributes: ['companyId'] }],
+        }) : [],
     ]);
+    return [
+        ...participations.map((row) => ({ ...row, responded: true })),
+        ...pending.map((staff) => ({
+            departamentId: staff.departamentId,
+            positionId: staff.positionId,
+            staffType: staff.staffType,
+            companyIds: staff.companies.map(({ companyId }) => companyId),
+            responded: false,
+        })),
+    ];
+}
+
+// Reporte por departamento, cargo, tipo de personal, empresa y yate. `companyId` filtra toda la
+// población a una empresa. Las respuestas anteriores a estos campos caen en "Sin clasificar".
+async function buildReport({ survey, responses, departaments, companyId }) {
+    const positionIds = survey.positions.map((entry) => entry.positionId);
+    let members = await loadMembers(survey.id, positionIds);
 
     const positions = survey.positions.map(({ positionId, position }) => ({ id: positionId, name: position?.name ?? `Cargo ${positionId}` }));
-    const extraPositionIds = [...new Set([...positionCounts.keys(), ...responses.map((r) => r.positionId)])]
+    const extraPositionIds = [...new Set([...members.map((m) => m.positionId), ...responses.map((r) => r.positionId)])]
         .filter((positionId) => positionId != null && !positions.some(({ id }) => id === positionId));
     if (extraPositionIds.length) {
         const extra = await Positions.findAll({ where: { id: extraPositionIds }, attributes: ['id', 'name'] });
         extra.forEach(({ id, name }) => positions.push({ id, name }));
     }
 
-    const base = { questions: sortByOrder(survey.questions) };
-    return {
-        departament: computeDimension({ ...base, groups: departaments, responses: responses.map((r) => ({ ...r, key: r.departamentId })), participationCounts, assignedPending }),
-        position: computeDimension({ ...base, groups: positions, responses: responses.map((r) => ({ ...r, key: r.positionId })), participationCounts: positionCounts, assignedPending: positionPending }),
-        staffType: computeDimension({ ...base, groups: STAFF_TYPE_GROUPS, responses: responses.map((r) => ({ ...r, key: r.staffType })), participationCounts: typeCounts, assignedPending: typePending }),
+    const companyIds = [...new Set([...members, ...responses].flatMap((entry) => entry.companyIds ?? []))];
+    const companies = companyIds.length
+        ? (await Company.findAll({ where: { id: companyIds }, attributes: ['id', 'name'], include: [{ model: Yacht, as: 'yacht', attributes: ['name'] }] }))
+            .map((company) => ({ id: company.id, name: company.name, yachtName: company.yacht?.name ?? null }))
+            .sort((a, b) => a.name.localeCompare(b.name))
+        : [];
+    const yachtCompanyIds = new Set(companies.filter(({ yachtName }) => yachtName).map(({ id }) => id));
+
+    let scoped = responses;
+    if (companyId) {
+        members = members.filter((member) => includesCompany(member, companyId));
+        scoped = responses.filter((response) => includesCompany(response, companyId));
+    }
+
+    const yachtKeys = (entry) => {
+        const ids = entry.companyIds ?? [];
+        const yachts = ids.filter((id) => yachtCompanyIds.has(id));
+        if (yachts.length) return yachts;
+        return ids.length ? [OFFICE_GROUP.id] : [];
     };
+
+    const report = computeReport({
+        questions: sortByOrder(survey.questions),
+        members,
+        responses: scoped,
+        dimensions: [
+            { key: 'company', groups: companies.map(({ id, name }) => ({ id, name })), keysOf: (entry) => entry.companyIds ?? [] },
+            { key: 'departament', groups: departaments, keysOf: (entry) => [entry.departamentId] },
+            { key: 'position', groups: positions, keysOf: (entry) => [entry.positionId] },
+            { key: 'yacht', groups: [...companies.filter(({ yachtName }) => yachtName).map(({ id, yachtName }) => ({ id, name: yachtName })), OFFICE_GROUP], keysOf: yachtKeys },
+            { key: 'staffType', groups: STAFF_TYPE_GROUPS, keysOf: (entry) => [entry.staffType] },
+        ],
+    });
+    return { ...report, companies: companies.map(({ id, name }) => ({ id, name })) };
 }
 
 const withStatus = (survey) => resolveSurveyStatus({
@@ -238,7 +292,7 @@ class HrSurveyService {
      * Tabulación agregada. Los ids salen crudos (el controlador los codifica) y nunca
      * se devuelven ids de respuestas ni de personas.
      */
-    static async getResults(id) {
+    static async getResults(id, { companyId } = {}) {
         const survey = await HrSurvey.findByPk(id, {
             include: FULL_INCLUDE,
             order: [
@@ -251,7 +305,7 @@ class HrSurveyService {
         const [responseRows, participationRows] = await Promise.all([
             HrSurveyResponse.findAll({
                 where: { surveyId: id },
-                attributes: ['id', 'departamentId', 'positionId', 'staffType'],
+                attributes: ['id', 'departamentId', 'positionId', 'staffType', 'companyIds'],
                 include: [{ model: HrSurveyAnswer, as: 'answers', attributes: ['questionId', 'optionId', 'score', 'text'] }],
             }),
             HrSurveyParticipation.findAll({
@@ -267,6 +321,7 @@ class HrSurveyService {
             departamentId: response.departamentId,
             positionId: response.positionId,
             staffType: response.staffType,
+            companyIds: response.companyIds,
             answers: response.answers.map((answer) => ({
                 questionId: answer.questionId,
                 optionId: answer.optionId,
@@ -304,9 +359,9 @@ class HrSurveyService {
             assignedPending,
         });
 
-        const dimensions = await buildDimensions({ survey, responses, departaments, participationCounts, assignedPending });
+        const report = await buildReport({ survey, responses, departaments, companyId });
 
-        return { survey: { ...survey.toJSON(), status: withStatus(survey) }, ...results, dimensions };
+        return { survey: { ...survey.toJSON(), status: withStatus(survey) }, ...results, report };
     }
 
     static async create(data) {

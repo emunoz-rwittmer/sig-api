@@ -9,6 +9,7 @@ const HrSurveyParticipation = db.define('hr_survey_participation', {
     departamentId: { type: DataTypes.INTEGER, allowNull: false, field: 'departament_id' },
     positionId: { type: DataTypes.INTEGER, allowNull: true, field: 'position_id' },
     staffType: { type: DataTypes.STRING(20), allowNull: true, field: 'staff_type' },
+    companyIds: { type: DataTypes.JSON, allowNull: true, field: 'company_ids' },
 }, {
     tableName: 'hr_survey_participations',
     timestamps: false,
