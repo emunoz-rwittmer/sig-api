@@ -66,7 +66,20 @@ const toDetailDto = (survey) => {
     };
 };
 
-const toResultsDto = ({ survey, participation, questions }) => ({
+// Los ids numéricos salen en hash; las claves 'none' / 'administrativo' / 'operativo' pasan tal cual.
+const encodeGroupId = (id) => (/^\d+$/.test(String(id)) ? Utils.encode(Number(id)) : id);
+
+const toDimensionDto = ({ groups, byQuestion }) => ({
+    groups: groups.map((group) => ({ ...group, id: encodeGroupId(group.id) })),
+    byQuestion: Object.fromEntries(
+        Object.entries(byQuestion).map(([questionId, perGroup]) => [
+            Utils.encode(Number(questionId)),
+            Object.fromEntries(Object.entries(perGroup).map(([id, value]) => [encodeGroupId(id), value])),
+        ]),
+    ),
+});
+
+const toResultsDto = ({ survey, participation, questions, dimensions }) => ({
     survey: {
         id: Utils.encode(survey.id),
         name: survey.name,
@@ -84,6 +97,7 @@ const toResultsDto = ({ survey, participation, questions }) => ({
         distribution: question.distribution?.map((entry) => ({ ...entry, optionId: Utils.encode(entry.optionId) })),
         comments: question.comments?.map((entry) => ({ ...entry, departamentId: Utils.encode(entry.departamentId) })),
     })),
+    dimensions: Object.fromEntries(Object.entries(dimensions).map(([name, dimension]) => [name, toDimensionDto(dimension)])),
 });
 
 const getAll = async (req, res, next) => {

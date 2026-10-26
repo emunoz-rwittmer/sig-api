@@ -78,6 +78,11 @@ const Staff = db.define('staff', {
         allowNull: true,
         defaultValue: 0
     },
+    staffType: {
+        type: DataTypes.ENUM("administrativo", "operativo"),
+        allowNull: true,
+        field: "staff_type",
+    },
     contractType: {
         type: DataTypes.STRING,
         allowNull: true,

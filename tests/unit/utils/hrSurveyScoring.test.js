@@ -9,6 +9,7 @@ const {
     resolveSurveyStatus,
     scoreAnswer,
     computeResults,
+    computeDimension,
 } = require('../../../src/utils/hrSurveyScoring');
 
 const opts = (n) => Array.from({ length: n }, (_, i) => ({ id: i + 1, text: `Op ${i + 1}`, score: i }));
@@ -185,6 +186,29 @@ describe('hrSurveyScoring', () => {
                 { departamentId: 2, name: 'D2', responded: 1, assigned: 1 },
                 { departamentId: 3, name: 'D3', responded: 0, assigned: 4 },
             ]);
+        });
+    });
+
+    describe('computeDimension', () => {
+        const answer = (score) => ({ questionId: 2, score });
+        const response = (key, score) => ({ key, answers: [answer(score)] });
+        const groups = [{ id: 'administrativo', name: 'Administrativo' }, { id: 'operativo', name: 'Operativo' }];
+
+        it('promedia por grupo, enmascara los de menos de 3 respuestas y agrupa lo anterior como Sin clasificar', () => {
+            const { groups: rows, byQuestion } = computeDimension({
+                questions: [scale()],
+                groups,
+                responses: [response('operativo', 4), response('operativo', 5), response('operativo', 3), response('administrativo', 5), response(null, 2)],
+                participationCounts: new Map([['operativo', 3], ['administrativo', 1], [null, 1]]),
+                assignedPending: new Map([['operativo', 2]]),
+            });
+
+            expect(rows).toEqual([
+                { id: 'administrativo', name: 'Administrativo', responded: 1, assigned: 1, responses: 1, masked: true, average: null },
+                { id: 'operativo', name: 'Operativo', responded: 3, assigned: 5, responses: 3, masked: false, average: 4 },
+                { id: 'none', name: 'Sin clasificar', responded: 1, assigned: 1, responses: 1, masked: true, average: null },
+            ]);
+            expect(byQuestion[2]).toEqual({ administrativo: null, operativo: 4, none: null });
         });
     });
 });
