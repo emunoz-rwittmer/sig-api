@@ -137,6 +137,7 @@ describe('HR surveys staff self-service', () => {
                 endsAt: '2099-12-31',
                 status: 'open',
                 answered: false,
+                questionCount: 4,
             });
 
             const others = await request(app).get('/api/hr-surveys/me').set(bearer(otherToken));

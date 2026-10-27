@@ -110,6 +110,12 @@ class HrSurveyResponseService {
             where: { id: { [Op.in]: surveyIds }, active: true },
             order: [['startsAt', 'DESC'], ['id', 'DESC']],
         });
+        // Conteo de preguntas por encuesta para la tarjeta del portal ("N preguntas · ≈ X min").
+        const counts = await HrSurveyQuestion.count({
+            where: { surveyId: { [Op.in]: surveys.map((survey) => survey.id) } },
+            group: ['surveyId'],
+        });
+        const questionCountById = new Map(counts.map((row) => [row.surveyId, Number(row.count)]));
 
         return surveys.map((survey) => ({
             id: survey.id,
@@ -119,6 +125,7 @@ class HrSurveyResponseService {
             endsAt: survey.endsAt,
             status: statusOf(survey),
             answered: answeredIds.has(survey.id),
+            questionCount: questionCountById.get(survey.id) ?? 0,
         }));
     }
 
