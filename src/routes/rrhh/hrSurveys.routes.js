@@ -5,7 +5,7 @@ const authJwt = require('../../middlewares/auth.middleware');
 const { uploadHrSurveyQuestionsMatrix } = require('../../utils/uploadConfiguration');
 
 const router = Router();
-const requireRRHH = authJwt.hasAnyRole(['admin', 'rrhh']);
+const requireRRHH = authJwt.hasAnyRole(['admin', 'rrhh', 'psicologos' ]);
 
 // Las rutas fijas (/questions/*, y luego /me y /:survey_id/results) van antes de /:survey_id.
 
