@@ -101,7 +101,7 @@ class InductionAttemptService {
         const induction = await assertStaffAssigned(staffId, inductionId);
 
         const progress = await InductionProgress.findOne({ where: { inductionId, staffId } });
-        if (!progress?.materialViewedAt) {
+        if (!progress || (induction.materials.length && !progress.materialViewedAt)) {
             throw new AppError('Debes revisar el material antes de rendir el cuestionario', 400);
         }
 
