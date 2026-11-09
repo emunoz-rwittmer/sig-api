@@ -316,7 +316,7 @@ function groupRowsBy(rows, keyFn) {
     return groups;
 }
 
-async function getPersonas({ yate, evaluado, funcion, area, anio, tipoEvaluacion } = {}) {
+async function getPersonas({ yate, evaluado, funcion, area, anio, tipoEvaluacion, desde, hasta } = {}) {
     const allRows = await loadEvaluations();
     const cargoMap = funcion ? await buildCargoMap(allRows) : new Map();
     const areaMap = area ? await buildAreaMap(allRows) : new Map();
@@ -430,11 +430,19 @@ async function getPersonas({ yate, evaluado, funcion, area, anio, tipoEvaluacion
     // `scoped` ya viene ordenado por fecha descendente (loadEvaluations hace
     // ORDER BY createdAt DESC) — se limita a las 30 más recientes; sin filtro
     // esto puede ser el historial completo de la flota (miles de filas).
-    const comentarios = scoped.flatMap((row) =>
-        (row.respuestas || [])
-            .filter((r) => r.answer && typeof SurveyScoring.asignarPuntaje(r.answer) !== 'number')
-            .map((r) => ({ evaluado: row.evaluated, evaluador: row.evaluator, texto: r.answer }))
-    ).slice(0, 30);
+    // desde/hasta (YYYY-MM-DD, inclusivos) acotan solo las observaciones.
+    const desdeDate = desde ? new Date(`${desde}T00:00:00`) : null;
+    const hastaDate = hasta ? new Date(`${hasta}T23:59:59.999`) : null;
+    const comentarios = scoped
+        .filter((row) => {
+            const fecha = evaluationDate(row);
+            return (!desdeDate || fecha >= desdeDate) && (!hastaDate || fecha <= hastaDate);
+        })
+        .flatMap((row) =>
+            (row.respuestas || [])
+                .filter((r) => r.answer && typeof SurveyScoring.asignarPuntaje(r.answer) !== 'number')
+                .map((r) => ({ evaluado: row.evaluated, evaluador: row.evaluator, texto: r.answer, fecha: evaluationDate(row).toISOString() }))
+        ).slice(0, 30);
 
     return {
         years,
