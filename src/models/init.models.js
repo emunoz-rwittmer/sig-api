@@ -67,6 +67,7 @@ const FormQuestion = require('./operations/surveys/formQuestion.models');
 const ProductConfiguration = require('./operations/inventory/productConfiguration');
 const RequestItems = require('./operations/yachtRequest/requestItems.models');
 const StaffDocumentation = require('./catalogs/staffDocumentation.models');
+require('./reports/bonusIncident.models');
 const Documentation = require('./catalogs/documentation.models');
 const StockHistory = require('./operations/inventory/stockHistory.models');
 const Cruise = require('./bar/cruises.models');

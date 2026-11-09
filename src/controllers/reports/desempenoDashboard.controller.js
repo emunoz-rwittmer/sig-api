@@ -74,7 +74,41 @@ const getDesempenoColaborador = async (req, res, next) => {
     }
 };
 
+const Bono = require('../../services/reports/bonoDesempeno.services');
+
+const getBonoCumplimiento = async (req, res, next) => {
+    try {
+        res.status(200).json(await Bono.getCumplimiento({ anio: asString(req.query.anio), semestre: asString(req.query.semestre) }));
+    } catch (error) {
+        next(error);
+    }
+};
+
+const createBonoIncident = async (req, res, next) => {
+    try {
+        const { staffId, kind, date, description } = req.body;
+        if (!staffId || !['memo', 'reglamento'].includes(kind) || !/^\d{4}-\d{2}-\d{2}$/.test(date || '')) {
+            return res.status(400).json({ message: 'staffId, kind (memo|reglamento) y date (YYYY-MM-DD) son obligatorios' });
+        }
+        res.status(201).json(await Bono.createIncident({ staffId, kind, date, description }));
+    } catch (error) {
+        next(error);
+    }
+};
+
+const deleteBonoIncident = async (req, res, next) => {
+    try {
+        await Bono.deleteIncident(req.params.id);
+        res.status(204).end();
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
+    getBonoCumplimiento,
+    createBonoIncident,
+    deleteBonoIncident,
     getDesempenoOverview,
     getDesempenoYates,
     getDesempenoPersonas,
