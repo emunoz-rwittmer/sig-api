@@ -6,6 +6,7 @@ const StaffCompany = require('../../models/catalogs/staffCompany.models');
 const StaffReadRegulation = require('../../models/rrhh/readRegulation.models');
 const Regulation = require('../../models/rrhh/regulation.models');
 const db = require('../../utils/database');
+const AppError = require('../../errors/AppError');
 const { byDisplayOrder } = require('../../utils/displayOrder');
 
 class RegulationService {
@@ -253,6 +254,14 @@ class RegulationService {
         }
     }
 
+
+    /** Vuelve a "pendiente" la lectura de todos los colaboradores de un reglamento (p. ej. tras actualizar el documento). */
+    static async resetReads(regulationId) {
+        const regulation = await Regulation.findByPk(regulationId, { attributes: ['id'] });
+        if (!regulation) throw new AppError('Reglamento no encontrado', 404);
+        const [reset] = await StaffReadRegulation.update({ read: false }, { where: { regulationId, read: true } });
+        return reset;
+    }
 
     static async readAceptRegulation(id) {
         try {
