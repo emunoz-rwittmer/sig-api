@@ -6,6 +6,7 @@ const db = require('../../utils/database');
 const Recipe = require('../../models/bar/recipe.models');
 const RecipeDetail = require('../../models/bar/recipeDetail.models');
 const AppError = require('../../errors/AppError');
+const { CUSTOM_COCKTAIL, CUSTOM_COCKTAIL_PRICE } = require('../../utils/customCocktail');
 
 class ProductBarService {
 
@@ -13,6 +14,8 @@ class ProductBarService {
         try {
             const result = await ProductBar.findAll({
                 attributes: ['id', 'name', 'category', 'productId', 'price', 'active', 'createdAt'],
+                // El producto ancla de los cócteles personalizados no es del catálogo: no se lista ni se edita.
+                where: { name: { [Op.ne]: CUSTOM_COCKTAIL.name } },
                 include: [
                     {
                         model: Recipe,
@@ -45,7 +48,7 @@ class ProductBarService {
             ];
 
             const products = await Product.findAll({
-                attributes: ['id', 'name'],
+                attributes: ['id', 'name', 'unit'],
                 include: [
                     {
                         model: ProductConfiguration,
@@ -66,6 +69,22 @@ class ProductBarService {
             throw error;
         }
     }
+    /** true si todos los ids son ingredientes de bar (los mismos que ofrece getProductsForBar). */
+    static async areBarIngredients(ids) {
+        const products = await ProductBarService.getProductsForBar();
+        const allowed = new Set(products.map((product) => product.id));
+        return ids.every((id) => allowed.has(id));
+    }
+
+    /** Producto ancla de los cócteles armados por el barman; se crea la primera vez. */
+    static async getCustomCocktail() {
+        const [product] = await ProductBar.findOrCreate({
+            where: { name: CUSTOM_COCKTAIL.name },
+            defaults: { ...CUSTOM_COCKTAIL, price: CUSTOM_COCKTAIL_PRICE, type: 'RECIPE', active: false },
+        });
+        return product;
+    }
+
     static async getProductById(id) {
         try {
             const result = await ProductBar.findOne({
