@@ -1,5 +1,6 @@
 const ConsumerCard = require('../../models/bar/consumerCard.models');
 const ConsumerCardItems = require('../../models/bar/consumerCardItems.models');
+const ConsumerCardItemIngredient = require('../../models/bar/consumerCardItemIngredient.models');
 const CortecyCard = require('../../models/bar/cortecyCard.models');
 const CortecyCardItems = require('../../models/bar/cortecyCardItems.models');
 const Cruise = require('../../models/bar/cruises.models');
@@ -251,7 +252,19 @@ class ConsumerCardService {
 
                 const productBarPlain = productBar.get({ plain: true });
 
-                if (productBarPlain.type === 'DIRECT') {
+                // Cóctel armado al momento: descuenta sus ingredientes como si fuera una receta.
+                const isCustom = item.ingredients?.length > 0;
+
+                if (isCustom) {
+                    await deductRecipeStock(
+                        warehouse.id,
+                        { id: productBarPlain.id, recipe: { recipe_details: item.ingredients } },
+                        item,
+                        userId,
+                        numberCard,
+                        transaction
+                    );
+                } else if (productBarPlain.type === 'DIRECT') {
                     await deductDirectStock(
                         warehouse.id,
                         productBarPlain,
@@ -271,12 +284,19 @@ class ConsumerCardService {
                     );
                 }
 
-                await ConsumerCardItems.create({
+                const createdItem = await ConsumerCardItems.create({
                     consumerCardId: consumerCard.id,
                     productId: item.id,
                     quantity: item.quantity,
                     price: item.price * item.quantity,
                 }, { transaction });
+
+                if (isCustom) {
+                    await ConsumerCardItemIngredient.bulkCreate(
+                        item.ingredients.map(({ productId, quantity }) => ({ consumerCardItemId: createdItem.id, productId, quantity })),
+                        { transaction }
+                    );
+                }
             }
 
             await consumerCard.update({ totalCount: newTotal }, { transaction });

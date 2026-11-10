@@ -5,6 +5,7 @@ const path = require('path');
 const ConsumerCardCount = require('../../models/bar/consumerCardCount.model');
 const ConsumerCardService = require('../../services/bar/consumerCard.services');
 const CruiseService = require('../../services/bar/cruise.services');
+const ProductBarService = require('../../services/bar/productsBar.services');
 const ProductBar = require('../../models/bar/productBar.models');
 const Utils = require('../../utils/Utils');
 const { sendBarConsumption, sendInvoiceEmail } = require('../../mails/mailer');
@@ -59,6 +60,44 @@ const getAllConsumer = async (req, res, next) => {
     }
 }
 
+const MAX_CUSTOM_INGREDIENTS = 15;
+const MAX_INGREDIENT_QUANTITY = 50;
+const MAX_CUSTOM_UNITS = 20;
+
+/**
+ * Valida y normaliza un cóctel armado por el barman: precio y cantidad propios,
+ * ingredientes solo de bar y apuntando al producto ancla "Cóctel personalizado".
+ */
+const buildCustomCocktailItem = async (item) => {
+    const quantity = Number(item.quantity);
+    const price = Number(item.price);
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > MAX_CUSTOM_UNITS) {
+        throw new AppError('Cantidad inválida en el cóctel personalizado', 400);
+    }
+    if (!Number.isFinite(price) || price <= 0) {
+        throw new AppError('Indica el precio del cóctel personalizado', 400);
+    }
+
+    const rawIngredients = Array.isArray(item.ingredients) ? item.ingredients : [];
+    if (!rawIngredients.length || rawIngredients.length > MAX_CUSTOM_INGREDIENTS) {
+        throw new AppError(`El cóctel personalizado necesita entre 1 y ${MAX_CUSTOM_INGREDIENTS} ingredientes`, 400);
+    }
+    const ingredients = rawIngredients.map((ingredient) => {
+        const amount = Number(ingredient.quantity);
+        if (!(amount > 0 && amount <= MAX_INGREDIENT_QUANTITY)) {
+            throw new AppError('Cantidad de ingrediente inválida', 400);
+        }
+        return { productId: decodeId(ingredient.productId, 'productId del ingrediente'), quantity: amount };
+    });
+
+    if (!(await ProductBarService.areBarIngredients(ingredients.map(({ productId }) => productId)))) {
+        throw new AppError('Alguno de los ingredientes no está disponible en el bar', 400);
+    }
+
+    const anchor = await ProductBarService.getCustomCocktail();
+    return { id: anchor.id, quantity, price, ingredients };
+};
+
 const createConsumerCard = async (req, res) => {
     try {
         const data = req.body;
@@ -68,10 +107,9 @@ const createConsumerCard = async (req, res) => {
             throw new Error('No se han agregado items a la tarjeta de consumo');
         }
 
-        data.cardItems = data.cardItems.map(item => ({
-            ...item,
-            id: Utils.decode(item.id)
-        }));
+        data.cardItems = await Promise.all(data.cardItems.map((item) => (item.custom
+            ? buildCustomCocktailItem(item)
+            : { ...item, id: Utils.decode(item.id) })));
 
         const result = await ConsumerCardService.createConsumerCard(data);
         if (result && result.passenger.email) {

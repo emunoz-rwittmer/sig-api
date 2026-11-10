@@ -5,6 +5,8 @@ const Yacht = require('../../models/catalogs/yacht.models');
 const ConsumerCardService = require('./consumerCard.services');
 const db = require('../../utils/database');
 const ConsumerCardItems = require('../../models/bar/consumerCardItems.models');
+const ConsumerCardItemIngredient = require('../../models/bar/consumerCardItemIngredient.models');
+const Product = require('../../models/operations/inventory/product.models');
 const ProductBar = require('../../models/bar/productBar.models');
 const Cruise = require('../../models/bar/cruises.models');
 const { where } = require('sequelize');
@@ -40,6 +42,11 @@ class PassengerService {
                                     model: ProductBar,
                                     as: 'product',
                                     attributes: ['name', 'price', 'category'],
+                                }, {
+                                    model: ConsumerCardItemIngredient,
+                                    as: 'ingredients',
+                                    attributes: ['quantity'],
+                                    include: [{ model: Product, as: 'product', attributes: ['name', 'unit'] }],
                                 }]
                             }]
                     },
