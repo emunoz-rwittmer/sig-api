@@ -6,6 +6,7 @@ const ConsumerCardCount = require('../../models/bar/consumerCardCount.model');
 const ConsumerCardService = require('../../services/bar/consumerCard.services');
 const CruiseService = require('../../services/bar/cruise.services');
 const ProductBarService = require('../../services/bar/productsBar.services');
+const { CUSTOM_COCKTAIL_PRICE } = require('../../utils/customCocktail');
 const ProductBar = require('../../models/bar/productBar.models');
 const Utils = require('../../utils/Utils');
 const { sendBarConsumption, sendInvoiceEmail } = require('../../mails/mailer');
@@ -65,17 +66,13 @@ const MAX_INGREDIENT_QUANTITY = 50;
 const MAX_CUSTOM_UNITS = 20;
 
 /**
- * Valida y normaliza un cóctel armado por el barman: precio y cantidad propios,
- * ingredientes solo de bar y apuntando al producto ancla "Cóctel personalizado".
+ * Valida y normaliza un cóctel armado por el barman: cantidad propia, precio fijo del
+ * servidor, ingredientes solo de bar y apuntando al producto ancla "Cóctel personalizado".
  */
 const buildCustomCocktailItem = async (item) => {
     const quantity = Number(item.quantity);
-    const price = Number(item.price);
-    if (!Number.isInteger(quantity) || quantity < 1 || quantity > MAX_CUSTOM_UNITS) {
+        if (!Number.isInteger(quantity) || quantity < 1 || quantity > MAX_CUSTOM_UNITS) {
         throw new AppError('Cantidad inválida en el cóctel personalizado', 400);
-    }
-    if (!Number.isFinite(price) || price <= 0) {
-        throw new AppError('Indica el precio del cóctel personalizado', 400);
     }
 
     const rawIngredients = Array.isArray(item.ingredients) ? item.ingredients : [];
@@ -95,7 +92,7 @@ const buildCustomCocktailItem = async (item) => {
     }
 
     const anchor = await ProductBarService.getCustomCocktail();
-    return { id: anchor.id, quantity, price, ingredients };
+    return { id: anchor.id, quantity, price: CUSTOM_COCKTAIL_PRICE, ingredients };
 };
 
 const createConsumerCard = async (req, res) => {

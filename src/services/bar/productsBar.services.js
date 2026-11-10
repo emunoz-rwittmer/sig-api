@@ -6,7 +6,7 @@ const db = require('../../utils/database');
 const Recipe = require('../../models/bar/recipe.models');
 const RecipeDetail = require('../../models/bar/recipeDetail.models');
 const AppError = require('../../errors/AppError');
-const { CUSTOM_COCKTAIL } = require('../../utils/customCocktail');
+const { CUSTOM_COCKTAIL, CUSTOM_COCKTAIL_PRICE } = require('../../utils/customCocktail');
 
 class ProductBarService {
 
@@ -80,7 +80,7 @@ class ProductBarService {
     static async getCustomCocktail() {
         const [product] = await ProductBar.findOrCreate({
             where: { name: CUSTOM_COCKTAIL.name },
-            defaults: { ...CUSTOM_COCKTAIL, price: 0, type: 'RECIPE', active: false },
+            defaults: { ...CUSTOM_COCKTAIL, price: CUSTOM_COCKTAIL_PRICE, type: 'RECIPE', active: false },
         });
         return product;
     }
