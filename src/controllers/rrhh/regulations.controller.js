@@ -150,6 +150,16 @@ const deleteRegulation = async (req, res, next) => {
     }
 }
 
+const resetReadings = async (req, res, next) => {
+    try {
+        const regulationId = decodeId(req.params.regulation_id, 'regulation_id');
+        const reset = await RegulationService.resetReads(regulationId);
+        res.status(200).json({ data: 'regulation reads reset successfully', reset });
+    } catch (error) {
+        next(error);
+    }
+}
+
 const readAceptRegulation = async (req, res, next) => {
     try {
         const regulationReadId = decodeId(req.params.regulation_id, 'regulation_id');
@@ -204,6 +214,7 @@ const RegulationController = {
     getAllStaffsRegulations,
     createRegulation,
     updateRegulation,
+    resetReadings,
     deleteRegulation,
     readAceptRegulation
 }

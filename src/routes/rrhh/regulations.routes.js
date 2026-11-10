@@ -168,6 +168,29 @@ router.put('/updateRegulation/:regulation_id', uploadPdfFile, RegulationControll
  *       200:
  *         description: Reglamento eliminado
  */
+/**
+ * @openapi
+ * /regulations/{regulation_id}/reset-reads:
+ *   put:
+ *     summary: Reiniciar las lecturas de un reglamento (todos vuelven a pendiente)
+ *     tags: [Regulations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: regulation_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de reglamento codificado (hashids)
+ *     responses:
+ *       200:
+ *         description: Cantidad de lecturas reiniciadas
+ *       404:
+ *         description: Reglamento no encontrado
+ */
+router.put('/:regulation_id/reset-reads', RegulationController.resetReadings);
+
 router.delete('/:regulation_id', RegulationController.deleteRegulation);
 
 //READ REGULATIONS
