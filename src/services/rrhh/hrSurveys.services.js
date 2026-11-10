@@ -263,6 +263,7 @@ class HrSurveyService {
             return {
                 id: survey.id,
                 name: survey.name,
+                displayOrder: survey.displayOrder,
                 startsAt: survey.startsAt,
                 endsAt: survey.endsAt,
                 active: survey.active,
