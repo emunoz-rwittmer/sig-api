@@ -15,6 +15,11 @@ const Regulation = db.define('regulation', {
         type: DataTypes.TEXT,
         allowNull: false,
     },
+    displayOrder: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        field: 'display_order',
+    },
     companyId: {
         type: DataTypes.INTEGER,
         allowNull: false,

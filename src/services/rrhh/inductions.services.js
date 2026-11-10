@@ -10,6 +10,7 @@ const InductionOption = require('../../models/rrhh/inductionOption.models');
 const InductionProgress = require('../../models/rrhh/inductionProgress.models');
 const InductionAttempt = require('../../models/rrhh/inductionAttempt.models');
 const { validateQuestionSet, validateQuestionsToShow, remainingAttempts, resolveStatus } = require('../../utils/inductionScoring');
+const { byDisplayOrder } = require('../../utils/displayOrder');
 const AppError = require('../../errors/AppError');
 
 const FULL_INCLUDE = [
@@ -61,7 +62,7 @@ class InductionService {
     static async list() {
         const inductions = await Induction.findAll({
             include: FULL_INCLUDE,
-            order: [['createdAt', 'DESC']],
+            order: [...byDisplayOrder('induction'), ['createdAt', 'DESC']],
         });
 
         return Promise.all(inductions.map(async (induction) => {
@@ -98,6 +99,7 @@ class InductionService {
             const induction = await Induction.create({
                 name: draftName(data.name),
                 description: data.description ?? null,
+                displayOrder: data.displayOrder ?? null,
                 passingScore: data.passingScore ?? DEFAULT_PASSING_SCORE,
                 maxAttempts: data.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
                 questionsToShow: data.questionsToShow ?? null,
@@ -141,6 +143,7 @@ class InductionService {
             await induction.update({
                 name: data.name !== undefined ? draftName(data.name) : induction.name,
                 description: data.description !== undefined ? data.description : induction.description,
+                displayOrder: data.displayOrder !== undefined ? data.displayOrder : induction.displayOrder,
                 passingScore: data.passingScore ?? induction.passingScore,
                 maxAttempts: data.maxAttempts ?? induction.maxAttempts,
                 questionsToShow: data.questionsToShow !== undefined ? data.questionsToShow : induction.questionsToShow,
@@ -253,7 +256,7 @@ class InductionService {
         // Los borradores no se asignan a nadie hasta publicarse.
         const inductions = await Induction.findAll({
             where: { id: [...new Set(inductionIds)], active: true },
-            order: [['createdAt', 'DESC']],
+            order: [...byDisplayOrder('induction'), ['createdAt', 'DESC']],
         });
         const attempts = await InductionAttempt.findAll({ where: { inductionId: inductions.map((i) => i.id), staffId } });
         const progressRows = await InductionProgress.findAll({ where: { inductionId: inductions.map((i) => i.id), staffId } });

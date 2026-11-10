@@ -6,12 +6,13 @@ const StaffCompany = require('../../models/catalogs/staffCompany.models');
 const StaffReadRegulation = require('../../models/rrhh/readRegulation.models');
 const Regulation = require('../../models/rrhh/regulation.models');
 const db = require('../../utils/database');
+const { byDisplayOrder } = require('../../utils/displayOrder');
 
 class RegulationService {
     static async getAllCompanies() {
         try {
             const result = await Regulation.findAll({
-                attributes: ['id', 'name', 'file', 'companyId', 'createdAt'],
+                attributes: ['id', 'name', 'file', 'companyId', 'displayOrder', 'createdAt'],
                 include: [
                     {
                         model: StaffReadRegulation,
@@ -21,7 +22,7 @@ class RegulationService {
                     },
                     { model: Company, as: 'company', attributes: ['name'] },
                 ],
-                order: [['createdAt', 'DESC']],
+                order: [...byDisplayOrder('regulation'), ['createdAt', 'DESC']],
             });
             return result;
         } catch (error) {
@@ -60,12 +61,13 @@ class RegulationService {
         try {
             const result = await Regulation.findAll({
                 where: { companyId },
-                attributes: ['id', 'name', 'file', 'createdAt'],
+                attributes: ['id', 'name', 'file', 'displayOrder', 'createdAt'],
                 include: [{
                     model: StaffReadRegulation,
                     as: 'reads',
                     include: [{ model: Staff, as: 'staff', attributes: [], where: { active: true } }]
-                }]
+                }],
+                order: [...byDisplayOrder('regulation'), ['createdAt', 'DESC']],
             });
 
             const count = await StaffCompany.count({
@@ -109,12 +111,13 @@ class RegulationService {
             const result = await StaffReadRegulation.findAll({
                 where: { staffId },
                 attributes: ['id', 'read', 'createdAt', 'updatedAt'],
+                order: byDisplayOrder('regulation'),
                 include:
                     [
                         {
                             model: Regulation,
                             as: 'regulation',
-                            attributes: ['id', 'name', 'file', 'createdAt'],
+                            attributes: ['id', 'name', 'file', 'displayOrder', 'createdAt'],
                             include:
                                 [
                                     {

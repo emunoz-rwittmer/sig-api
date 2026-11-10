@@ -3,6 +3,7 @@ const Utils = require('../../utils/Utils');
 const Staffervice = require('../../services/catalogs/staff.services');
 const { sendEmailConfirmacion } = require('../../mails/mailer');
 const AppError = require('../../errors/AppError');
+const { parseDisplayOrder } = require('../../utils/displayOrder');
 const path = require('path');
 const fsPromises = require('fs').promises;
 const moment = require('moment');
@@ -109,6 +110,7 @@ const createRegulation = async (req, res, next) => {
         }
         data.file = `/uploads/pdfs/${req.file.filename}`
         data.companyId = decodeId(data.companyId, 'companyId')
+        data.displayOrder = parseDisplayOrder(data.displayOrder);
         const result = await RegulationService.createRegulation(data);
         if (result) {
             res.status(200).json({ data: 'resource created successfully' });
@@ -125,6 +127,7 @@ const updateRegulation = async (req, res, next) => {
         if (data.companyId) {
             data.companyId = decodeId(data.companyId, 'companyId')
         }
+        data.displayOrder = parseDisplayOrder(data.displayOrder);
         if (req.file) {
             data.file = `/uploads/pdfs/${req.file.filename}`
         }

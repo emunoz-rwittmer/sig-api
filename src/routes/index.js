@@ -15,6 +15,7 @@ const tradingRoutes = require("./rrhh/trading.routes");
 const formatsRoutes = require("./rrhh/formats.routes");
 const inductionsRoutes = require("./rrhh/inductions.routes");
 const hrSurveysRoutes = require("./rrhh/hrSurveys.routes");
+const displayOrdersController = require("../controllers/rrhh/displayOrders.controller");
 const maintenanceRoutes = require("./catalogs/maintenance.routes");
 
 //Operations
@@ -59,6 +60,7 @@ const routerApi = (app) => {
   app.use("/api/formats", authJwt.verifyToken, formatsRoutes);
   app.use("/api/inductions", authJwt.verifyToken, inductionsRoutes);
   app.use("/api/hr-surveys", authJwt.verifyToken, hrSurveysRoutes);
+  app.get("/api/display-orders/:module", authJwt.verifyToken, displayOrdersController.list);
   //OPERATIONS
   app.use("/api/questions", authJwt.verifyToken, questiondRoutes);
   app.use("/api/forms", formsRoutes);

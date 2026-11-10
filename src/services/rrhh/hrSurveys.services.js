@@ -16,6 +16,7 @@ const HrSurveyResponse = require('../../models/rrhh/hrSurveyResponse.models');
 const HrSurveyAnswer = require('../../models/rrhh/hrSurveyAnswer.models');
 const { validateSurveyForPublish, resolveSurveyStatus, computeResults, computeReport, isValidDay } = require('../../utils/hrSurveyScoring');
 const AppError = require('../../errors/AppError');
+const { byDisplayOrder } = require('../../utils/displayOrder');
 
 const DATE_FORMAT = 'YYYY-MM-DD';
 const DRAFT_NAME = 'Encuesta sin título';
@@ -249,7 +250,7 @@ class HrSurveyService {
     static async getAll() {
         const surveys = await HrSurvey.findAll({
             include: [POSITIONS_INCLUDE],
-            order: [['createdAt', 'DESC']],
+            order: [...byDisplayOrder('hr_survey'), ['createdAt', 'DESC']],
         });
 
         return Promise.all(surveys.map(async (survey) => {
@@ -380,6 +381,7 @@ class HrSurveyService {
             const survey = await HrSurvey.create({
                 name: draftName(data.name),
                 description: data.description ?? null,
+                displayOrder: data.displayOrder ?? null,
                 startsAt: data.startsAt ?? null,
                 endsAt: data.endsAt ?? null,
                 active,
@@ -414,6 +416,7 @@ class HrSurveyService {
             await survey.update({
                 name: data.name !== undefined ? draftName(data.name) : survey.name,
                 description: data.description !== undefined ? data.description : survey.description,
+                displayOrder: data.displayOrder !== undefined ? data.displayOrder : survey.displayOrder,
                 startsAt: next.startsAt,
                 endsAt: next.endsAt,
                 active,
@@ -459,6 +462,7 @@ class HrSurveyService {
             await survey.update({
                 name: data.name !== undefined ? draftName(data.name) : survey.name,
                 description: data.description !== undefined ? data.description : survey.description,
+                displayOrder: data.displayOrder !== undefined ? data.displayOrder : survey.displayOrder,
                 endsAt,
             }, { transaction });
 

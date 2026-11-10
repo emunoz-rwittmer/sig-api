@@ -2,6 +2,7 @@ const HrSurveyService = require('../../services/rrhh/hrSurveys.services');
 const { buildQuestionsTemplate, parseQuestionsWorkbook } = require('../../utils/hrSurveyQuestionsMatrix');
 const Utils = require('../../utils/Utils');
 const AppError = require('../../errors/AppError');
+const { parseDisplayOrder } = require('../../utils/displayOrder');
 
 const decodeId = (value, fieldName) => {
     let id;
@@ -27,6 +28,7 @@ const optionalDate = (value) => (value === undefined ? undefined : (value || nul
 const buildSurveyPayload = (body) => ({
     name: body.name,
     description: body.description,
+    displayOrder: parseDisplayOrder(body.displayOrder),
     startsAt: optionalDate(body.startsAt),
     endsAt: optionalDate(body.endsAt),
     active: body.active,
