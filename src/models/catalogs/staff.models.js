@@ -21,6 +21,7 @@ const Staff = db.define('staff', {
     ciStaff: {
         type: DataTypes.STRING,
         allowNull: true,
+        unique: true,
         field: "ci_staff",
     },
     email: {

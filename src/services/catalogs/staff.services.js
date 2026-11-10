@@ -14,6 +14,26 @@ const Documentation = require('../../models/catalogs/documentation.models');
 const Yacht = require('../../models/catalogs/yacht.models');
 const ShipmentDates = require('../../models/operations/surveys/shipmentDates.models');
 const Utils = require('../../utils/Utils');
+const AppError = require('../../errors/AppError');
+
+const CI_DUPLICATE_MESSAGE = 'Ya existe un colaborador registrado con esta cédula';
+
+// Pre-chequeo para dar un 409 claro; el índice único de BD cubre la carrera entre dos requests.
+const assertCiAvailable = async (ciStaff, transaction, excludeId) => {
+    if (!ciStaff) return;
+    const where = { ciStaff };
+    if (excludeId) where.id = { [Op.ne]: excludeId };
+    if (await Staff.findOne({ where, attributes: ['id'], transaction })) {
+        throw new AppError(CI_DUPLICATE_MESSAGE, 409);
+    }
+};
+
+const mapUniqueError = (error) => {
+    if (error.name === 'SequelizeUniqueConstraintError' && error.fields && 'ci_staff' in error.fields) {
+        return new AppError(CI_DUPLICATE_MESSAGE, 409);
+    }
+    return error;
+};
 
 const DOCUMENT_EXPIRY_WINDOW_DAYS = 30;
 
@@ -366,6 +386,8 @@ class Staffervice {
 
         try {
             const { companyId = [], ...staff } = staffData;
+            if (typeof staff.ciStaff === 'string') staff.ciStaff = staff.ciStaff.trim();
+            await assertCiAvailable(staff.ciStaff, transaction);
 
             const newStaff = await Staff.create(staff, { transaction });
 
@@ -438,7 +460,7 @@ class Staffervice {
 
         } catch (error) {
             await transaction.rollback();
-            throw error;
+            throw mapUniqueError(error);
         }
     }
 
@@ -447,6 +469,8 @@ class Staffervice {
 
         try {
             const { companyId, ...staff } = staffData;
+            if (typeof staff.ciStaff === 'string') staff.ciStaff = staff.ciStaff.trim();
+            await assertCiAvailable(staff.ciStaff, transaction, id);
 
             await Staff.update(staff, {
                 where: { id },
@@ -491,7 +515,7 @@ class Staffervice {
             return true;
         } catch (error) {
             await transaction.rollback();
-            throw error;
+            throw mapUniqueError(error);
         }
     }
 
