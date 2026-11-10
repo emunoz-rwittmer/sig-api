@@ -15,6 +15,11 @@ const Induction = db.define('induction', {
         type: DataTypes.TEXT,
         allowNull: true,
     },
+    displayOrder: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        field: 'display_order',
+    },
     passingScore: {
         type: DataTypes.TINYINT.UNSIGNED,
         allowNull: false,

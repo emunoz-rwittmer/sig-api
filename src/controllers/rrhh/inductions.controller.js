@@ -3,6 +3,7 @@ const { toAdminDto } = require('../../utils/inductionPresenters');
 const { buildQuestionsTemplate, parseQuestionsWorkbook } = require('../../utils/inductionQuestionsMatrix');
 const Utils = require('../../utils/Utils');
 const AppError = require('../../errors/AppError');
+const { parseDisplayOrder } = require('../../utils/displayOrder');
 
 const decodeId = (value, fieldName) => {
     let id;
@@ -22,6 +23,7 @@ const decodeIds = (values, fieldName) => (values ?? []).map((value) => decodeId(
 const buildInductionPayload = (body) => ({
     name: body.name,
     description: body.description,
+    displayOrder: parseDisplayOrder(body.displayOrder),
     passingScore: body.passingScore !== undefined ? Number(body.passingScore) : undefined,
     maxAttempts: body.maxAttempts !== undefined ? Number(body.maxAttempts) : undefined,
     questionsToShow: body.questionsToShow !== undefined

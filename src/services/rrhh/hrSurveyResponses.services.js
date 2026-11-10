@@ -11,6 +11,7 @@ const HrSurveyResponse = require('../../models/rrhh/hrSurveyResponse.models');
 const HrSurveyAnswer = require('../../models/rrhh/hrSurveyAnswer.models');
 const { resolveSurveyStatus, scoreAnswer } = require('../../utils/hrSurveyScoring');
 const AppError = require('../../errors/AppError');
+const { byDisplayOrder } = require('../../utils/displayOrder');
 
 const ALREADY_ANSWERED = 'Ya respondiste esta encuesta';
 const NOT_FOUND = 'Encuesta no encontrada';
@@ -108,7 +109,7 @@ class HrSurveyResponseService {
 
         const surveys = await HrSurvey.findAll({
             where: { id: { [Op.in]: surveyIds }, active: true },
-            order: [['startsAt', 'DESC'], ['id', 'DESC']],
+            order: [...byDisplayOrder('hr_survey'), ['startsAt', 'DESC'], ['id', 'DESC']],
         });
         // Conteo de preguntas por encuesta para la tarjeta del portal ("N preguntas · ≈ X min").
         const counts = await HrSurveyQuestion.count({
