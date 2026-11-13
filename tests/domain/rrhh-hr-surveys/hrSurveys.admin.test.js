@@ -299,6 +299,17 @@ describe('HR surveys admin', () => {
         expect(await HrSurveyPosition.count({ where: { surveyId } })).toBe(2);
     });
 
+    it('resets a survey: clears responses and participation, keeps questions', async () => {
+        const { surveyHash, surveyId } = await createSurveyWithResponse();
+        const response = await request(app).post(`/api/hr-surveys/${surveyHash}/reset`).set(auth());
+        expect(response.status).toBe(200);
+
+        expect(await HrSurveyResponse.count({ where: { surveyId } })).toBe(0);
+        expect(await HrSurveyParticipation.count({ where: { surveyId } })).toBe(0);
+        expect(await HrSurvey.findByPk(surveyId)).not.toBeNull();
+        expect(await HrSurveyQuestion.count({ where: { surveyId } })).toBe(2);
+    });
+
     it('refuses to delete a survey with responses', async () => {
         const { surveyHash, surveyId } = await createSurveyWithResponse();
         const response = await request(app).delete(`/api/hr-surveys/${surveyHash}`).set(auth());

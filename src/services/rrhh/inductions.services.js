@@ -244,6 +244,24 @@ class InductionService {
         return progress.reload();
     }
 
+    /**
+     * Reinicia la inducción: borra intentos y avance (material revisado,
+     * intentos extra, preguntas sorteadas). Con `staffId` solo afecta a ese
+     * colaborador; sin él, a todo el personal. La inducción, su material y
+     * sus preguntas se conservan.
+     */
+    static async resetProgress(inductionId, staffId) {
+        const induction = await Induction.findByPk(inductionId);
+        if (!induction) throw new AppError('Inducción no encontrada', 404);
+
+        const where = staffId ? { inductionId, staffId } : { inductionId };
+        return db.transaction(async (transaction) => {
+            const attempts = await InductionAttempt.destroy({ where, transaction });
+            const progress = await InductionProgress.destroy({ where, transaction });
+            return { attempts, progress };
+        });
+    }
+
     static async getInductionsForStaff(staffId) {
         const companyIds = (await StaffCompany.findAll({ where: { staffId }, attributes: ['companyId'] }))
             .map((entry) => entry.companyId);

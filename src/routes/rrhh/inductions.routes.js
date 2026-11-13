@@ -355,4 +355,53 @@ router.get('/:induction_id/staffs', requireRRHH, InductionController.getStaffPro
  */
 router.post('/:induction_id/staff/:staff_id/extra-attempt', requireRRHH, InductionController.grantExtraAttempt);
 
+/**
+ * @openapi
+ * /inductions/{induction_id}/reset:
+ *   post:
+ *     summary: Reiniciar la inducción (borra intentos y avance de todo el personal)
+ *     tags: [Inductions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: induction_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Reiniciada
+ *       404:
+ *         description: No encontrada
+ */
+router.post('/:induction_id/reset', requireRRHH, InductionController.resetProgress);
+
+/**
+ * @openapi
+ * /inductions/{induction_id}/staff/{staff_id}/reset:
+ *   post:
+ *     summary: Reiniciar la inducción solo para un trabajador (borra sus intentos y avance)
+ *     tags: [Inductions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: induction_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: staff_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Reiniciada para el trabajador
+ *       404:
+ *         description: Inducción no encontrada
+ */
+router.post('/:induction_id/staff/:staff_id/reset', requireRRHH, InductionController.resetStaffProgress);
+
 module.exports = router;

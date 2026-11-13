@@ -8,6 +8,7 @@ const Induction = require('../../../src/models/rrhh/induction.models');
 const InductionQuestion = require('../../../src/models/rrhh/inductionQuestion.models');
 const InductionOption = require('../../../src/models/rrhh/inductionOption.models');
 const InductionProgress = require('../../../src/models/rrhh/inductionProgress.models');
+const InductionAttempt = require('../../../src/models/rrhh/inductionAttempt.models');
 const Utils = require('../../../src/utils/Utils');
 
 let app;
@@ -31,7 +32,7 @@ async function createStaffFixture(overrides = {}) {
     return Staff.create({
         firstName: 'TEST_AUTOMATED',
         lastName: `Inductions${uniqueSuffix}`,
-        email: `inductions-test-${uniqueSuffix}@example.com`,
+        email: `ind-${uniqueSuffix}@example.com`,
         cellPhone: '0966666666',
         password: 'Sup3rSecret!',
         departamentId: departament.id,
@@ -325,6 +326,77 @@ describe('RRHH Inductions', () => {
                 .set('Authorization', `Bearer ${staffToken}`)
                 .send({ answers: wrongAnswers });
             expect(retryAttempt.status).toBe(200);
+        });
+    });
+
+    describe('POST /api/inductions/:induction_id/reset', () => {
+        it('clears attempts and progress so the staff starts over', async () => {
+            const { company } = await createCompanyWithYacht();
+            const staff = await createStaffFixture();
+            await StaffCompany.create({ staffId: staff.id, companyId: company.id });
+            const induction = await createInductionFixture({ companyIds: [company.id], passingScore: 99, maxAttempts: 1 });
+            const staffToken = await loginStaff(staff);
+
+            await request(app)
+                .put(`/api/inductions/me/${Utils.encode(induction.id)}/viewed`)
+                .set('Authorization', `Bearer ${staffToken}`);
+            const questions = await InductionQuestion.findAll({ where: { inductionId: induction.id }, include: [{ model: InductionOption, as: 'options' }] });
+            const wrongAnswers = questions.map((question) => ({
+                questionId: Utils.encode(question.id),
+                optionId: Utils.encode(question.options.find((option) => !option.isCorrect).id),
+            }));
+            const attempt = await request(app)
+                .post(`/api/inductions/me/${Utils.encode(induction.id)}/attempts`)
+                .set('Authorization', `Bearer ${staffToken}`)
+                .send({ answers: wrongAnswers });
+            expect(attempt.body.remainingAttempts).toBe(0);
+
+            const reset = await request(app)
+                .post(`/api/inductions/${Utils.encode(induction.id)}/reset`)
+                .set('Authorization', `Bearer ${adminToken}`);
+            expect(reset.status).toBe(200);
+
+            expect(await InductionAttempt.count({ where: { inductionId: induction.id } })).toBe(0);
+            expect(await InductionProgress.count({ where: { inductionId: induction.id } })).toBe(0);
+            expect(await Induction.findByPk(induction.id)).not.toBeNull();
+            expect(await InductionQuestion.count({ where: { inductionId: induction.id } })).toBe(questions.length);
+
+            const mine = await getMine(staffToken, induction.id);
+            expect(mine.attemptsUsed).toBe(0);
+            expect(mine.remainingAttempts).toBe(1);
+            expect(mine.materialViewedAt).toBeNull();
+        });
+
+        it('resets a single staff member without touching the others', async () => {
+            const { company } = await createCompanyWithYacht();
+            const target = await createStaffFixture();
+            const other = await createStaffFixture();
+            await StaffCompany.create({ staffId: target.id, companyId: company.id });
+            await StaffCompany.create({ staffId: other.id, companyId: company.id });
+            const induction = await createInductionFixture({ companyIds: [company.id] });
+
+            for (const staff of [target, other]) {
+                const token = await loginStaff(staff);
+                await request(app)
+                    .put(`/api/inductions/me/${Utils.encode(induction.id)}/viewed`)
+                    .set('Authorization', `Bearer ${token}`);
+            }
+            expect(await InductionProgress.count({ where: { inductionId: induction.id } })).toBe(2);
+
+            const reset = await request(app)
+                .post(`/api/inductions/${Utils.encode(induction.id)}/staff/${Utils.encode(target.id)}/reset`)
+                .set('Authorization', `Bearer ${adminToken}`);
+            expect(reset.status).toBe(200);
+
+            expect(await InductionProgress.count({ where: { inductionId: induction.id, staffId: target.id } })).toBe(0);
+            expect(await InductionProgress.count({ where: { inductionId: induction.id, staffId: other.id } })).toBe(1);
+        });
+
+        it('returns 404 for an unknown induction', async () => {
+            const response = await request(app)
+                .post(`/api/inductions/${Utils.encode(99999999)}/reset`)
+                .set('Authorization', `Bearer ${adminToken}`);
+            expect(response.status).toBe(404);
         });
     });
 

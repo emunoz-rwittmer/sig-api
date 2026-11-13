@@ -188,7 +188,30 @@ const grantExtraAttempt = async (req, res, next) => {
     }
 };
 
+const resetProgress = async (req, res, next) => {
+    try {
+        const inductionId = decodeId(req.params.induction_id, 'induction_id');
+        await InductionService.resetProgress(inductionId);
+        res.status(200).json({ data: 'resource reset successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+const resetStaffProgress = async (req, res, next) => {
+    try {
+        const inductionId = decodeId(req.params.induction_id, 'induction_id');
+        const staffId = decodeId(req.params.staff_id, 'staff_id');
+        await InductionService.resetProgress(inductionId, staffId);
+        res.status(200).json({ data: 'resource reset successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
 const InductionController = {
+    resetProgress,
+    resetStaffProgress,
     getAll,
     getById,
     create,
