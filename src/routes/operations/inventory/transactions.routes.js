@@ -1,7 +1,84 @@
 const { Router } = require('express');
 const TransactionController  = require ('../../../controllers/operations/inventory/transactions.controller');
+const TransactionHistoryController = require('../../../controllers/operations/inventory/transactionHistory.controller');
 
 const router = Router();
+
+/**
+ * @openapi
+ * /transactions/history:
+ *   get:
+ *     summary: Historial paginado de transacciones de inventario con filtros y totales
+ *     tags: [Transactions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: from
+ *         schema: { type: string, format: date-time }
+ *         description: Inicio del rango (ISO, inclusive)
+ *       - in: query
+ *         name: to
+ *         schema: { type: string, format: date-time }
+ *         description: Fin del rango (ISO, inclusive)
+ *       - in: query
+ *         name: movements
+ *         schema: { type: string, example: 'ENTRY,TRANSFER' }
+ *         description: Movimientos separados por coma (ENTRY, TRANSFER, EXIT, BAR_CONSUMPTION, ADJUST)
+ *       - in: query
+ *         name: warehouseId
+ *         schema: { type: string }
+ *         description: Bodega involucrada como origen o destino (hashid)
+ *       - in: query
+ *         name: warehouseFromId
+ *         schema: { type: string }
+ *         description: Bodega de origen (hashid)
+ *       - in: query
+ *         name: warehouseToId
+ *         schema: { type: string }
+ *         description: Bodega de destino (hashid)
+ *       - in: query
+ *         name: userId
+ *         schema: { type: string }
+ *         description: Responsable (hashid)
+ *       - in: query
+ *         name: productId
+ *         schema: { type: string }
+ *         description: Producto (hashid)
+ *       - in: query
+ *         name: search
+ *         schema: { type: string }
+ *         description: Texto libre sobre producto, SKU, número de registro o referencia
+ *       - in: query
+ *         name: sortOrder
+ *         schema: { type: string, enum: [asc, desc] }
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: pageSize
+ *         schema: { type: integer, default: 25, maximum: 100 }
+ *     responses:
+ *       200:
+ *         description: "{ rows, total, page, pageSize, totalPages, summary: { total, byMovement, products, responsibles } }"
+ *       400:
+ *         description: Fecha, movimiento o ID codificado inválido
+ */
+router.get('/history', TransactionHistoryController.getHistory);
+
+/**
+ * @openapi
+ * /transactions/history/filters:
+ *   get:
+ *     summary: Opciones para los filtros del historial (bodegas, responsables y productos con movimientos)
+ *     tags: [Transactions]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: "{ warehouses, responsibles, products }"
+ */
+router.get('/history/filters', TransactionHistoryController.getHistoryFilters);
 
 /**
  * @openapi

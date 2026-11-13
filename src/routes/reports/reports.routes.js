@@ -101,6 +101,39 @@ router.get('/transactions/stock/:stock_id', authJwt.verifyToken, excelReports.ge
 
 /**
  * @openapi
+ * /reports/transactions/history:
+ *   get:
+ *     summary: Excel del historial de transacciones de inventario (hojas Resumen, Detalle y Por producto)
+ *     description: Acepta los mismos filtros que GET /transactions/history, sin paginación.
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - { in: query, name: from, schema: { type: string, format: date-time } }
+ *       - { in: query, name: to, schema: { type: string, format: date-time } }
+ *       - { in: query, name: movements, schema: { type: string } }
+ *       - { in: query, name: warehouseId, schema: { type: string } }
+ *       - { in: query, name: warehouseFromId, schema: { type: string } }
+ *       - { in: query, name: warehouseToId, schema: { type: string } }
+ *       - { in: query, name: userId, schema: { type: string } }
+ *       - { in: query, name: productId, schema: { type: string } }
+ *       - { in: query, name: search, schema: { type: string } }
+ *       - { in: query, name: sortOrder, schema: { type: string, enum: [asc, desc] } }
+ *     responses:
+ *       200:
+ *         description: Archivo Excel generado
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       400:
+ *         description: Filtro inválido o el resultado supera el tope de filas exportables
+ */
+router.get('/transactions/history', authJwt.verifyToken, excelReports.generateTransactionHistoryExcel);
+
+/**
+ * @openapi
  * /reports/evaluations/generalReport/{company_id}:
  *   get:
  *     summary: Generar el reporte Excel general de evaluaciones de una compañía
