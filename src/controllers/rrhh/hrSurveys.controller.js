@@ -167,6 +167,16 @@ const remove = async (req, res, next) => {
     }
 };
 
+const resetResponses = async (req, res, next) => {
+    try {
+        const surveyId = decodeId(req.params.survey_id, 'survey_id');
+        await HrSurveyService.resetResponses(surveyId);
+        res.status(200).json({ data: 'resource reset successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
 const downloadQuestionsTemplate = async (req, res, next) => {
     try {
         const buffer = buildQuestionsTemplate();
@@ -193,6 +203,7 @@ const importQuestions = async (req, res, next) => {
 };
 
 const HrSurveyController = {
+    resetResponses,
     getAll,
     getById,
     getResults,

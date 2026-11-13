@@ -473,6 +473,28 @@ class HrSurveyService {
         });
     }
 
+    /**
+     * Reinicia la encuesta: borra respuestas anónimas, sus respuestas por
+     * pregunta y la participación del personal, para que todos vuelvan a
+     * responder. La encuesta, sus preguntas y cargos se conservan.
+     */
+    static async resetResponses(id) {
+        const survey = await HrSurvey.findByPk(id);
+        if (!survey) throw new AppError('Encuesta no encontrada', 404);
+
+        return db.transaction(async (transaction) => {
+            const responseIds = (await HrSurveyResponse.findAll({
+                where: { surveyId: id }, attributes: ['id'], transaction,
+            })).map((response) => response.id);
+            if (responseIds.length) {
+                await HrSurveyAnswer.destroy({ where: { responseId: responseIds }, transaction });
+            }
+            const responses = await HrSurveyResponse.destroy({ where: { surveyId: id }, transaction });
+            const participations = await HrSurveyParticipation.destroy({ where: { surveyId: id }, transaction });
+            return { responses, participations };
+        });
+    }
+
     static async remove(id) {
         const survey = await HrSurvey.findByPk(id);
         if (!survey) throw new AppError('Encuesta no encontrada', 404);

@@ -249,6 +249,28 @@ router.get('/:survey_id/results', authJwt.hasAnyRole(['admin', 'rrhh']), HrSurve
  *       400:
  *         description: La encuesta ya tiene respuestas
  */
+/**
+ * @openapi
+ * /hr-surveys/{survey_id}/reset:
+ *   post:
+ *     summary: Reiniciar la encuesta (borra respuestas y participación; roles admin y rrhh)
+ *     tags: [HrSurveys]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: survey_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Reiniciada
+ *       404:
+ *         description: No encontrada
+ */
+router.post('/:survey_id/reset', authJwt.hasAnyRole(['admin', 'rrhh']), HrSurveyController.resetResponses);
+
 router.get('/:survey_id', requireRRHH, HrSurveyController.getById);
 router.put('/:survey_id', requireRRHH, HrSurveyController.update);
 router.delete('/:survey_id', requireRRHH, HrSurveyController.remove);
