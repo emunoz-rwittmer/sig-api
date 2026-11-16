@@ -14,8 +14,10 @@ const CRITERIA = {
     cap_operaciones: { role: 'capitan', label: 'Evaluación Operaciones - Capitanes', weight: 0.4, frecuencia: 'Cada desembarque' },
     cap_administrativa: { role: 'capitan', label: 'Evaluación Administrativa - Capitanes', weight: 0.4, frecuencia: '3 veces por semana (relevos)' },
     cap_liderazgo: { role: 'capitan', label: 'Evaluación Liderazgo - Capitanes', weight: 0.2, frecuencia: 'Semanal' },
-    crew_capitan: { role: 'tripulante', label: 'Evaluación del capitán', weight: 0.5, frecuencia: 'Cada desembarque' },
-    crew_hoteleria: { role: 'tripulante', label: 'Evaluación de Hotelería', weight: 0.5, frecuencia: '3 veces por semana (relevos)' },
+    crew_capitan: { role: 'tripulante', label: 'Evaluación del capitán', weight: 1, frecuencia: 'Cada desembarque' },
+    // Informativo: se registra y se exporta pero no pondera ni exige datos (nadie la tiene aún).
+    // Para reactivarla: capitán 0.5, hotelería 0.5 y quitar `informativo`.
+    crew_hoteleria: { role: 'tripulante', label: 'Evaluación de Hotelería', weight: 0, informativo: true, frecuencia: '3 veces por semana (relevos)' },
 };
 // Documentos "al día": vigentes o por vencer (aún no vencidos).
 const DOC_OK = ['valid', 'expiring'];
@@ -50,8 +52,11 @@ function semesterBounds(anio, semestre) {
     return { start: new Date(anio, m0, 1), end: new Date(anio, m0 + 6, 0, 23, 59, 59, 999), m0 };
 }
 
+const isoDate = (d) => (d ? new Date(d).toISOString().slice(0, 10) : null);
+
 // Función pura: todo el cálculo, sin tocar BD (probada en bonoDesempeno.test.js).
-function buildCumplimiento({ rows, staff, docs, incidents, anio, semestre }) {
+// `withDetail` agrega las respuestas por pregunta (solo las usa el Excel).
+function buildCumplimiento({ rows, staff, docs, incidents, anio, semestre, withDetail = false }) {
     const { start, end, m0 } = semesterBounds(anio, semestre);
     const byName = new Map(staff.map((s) => [norm(`${s.firstName} ${s.lastName}`), s]));
     const quarters = [
@@ -61,6 +66,7 @@ function buildCumplimiento({ rows, staff, docs, incidents, anio, semestre }) {
 
     // staffId -> criterio -> [notas T1, notas T2] (solo evaluaciones completadas del semestre)
     const scores = new Map();
+    const evals = new Map(); // staffId -> detalle de cada evaluación usada
     rows.forEach((row) => {
         const crit = criterionOf(row.formulario?.name);
         const person = byName.get(norm(row.evaluated));
@@ -73,6 +79,25 @@ function buildCumplimiento({ rows, staff, docs, incidents, anio, semestre }) {
         byCrit[crit] = byCrit[crit] || [[], []];
         byCrit[crit][q].push(score);
         scores.set(person.id, byCrit);
+        const list = evals.get(person.id) || [];
+        list.push({
+            id: row.id,
+            criterio: crit,
+            label: CRITERIA[crit].label,
+            trimestre: quarters[q].key,
+            fecha: isoDate(d),
+            evaluador: row.evaluator,
+            formulario: row.formulario?.name,
+            empresa: row.empresa?.name,
+            yate: row.empresa?.yacht?.name,
+            semana: row.periodWeek,
+            puntaje: round2(score),
+            comentario: row.comment,
+            ...(withDetail && {
+                respuestas: (row.respuestas || []).map((r) => ({ pregunta: r.pregunta?.title, respuesta: r.answer, puntaje: SurveyScoring.asignarPuntaje(r.answer) })),
+            }),
+        });
+        evals.set(person.id, list);
     });
 
     const personas = staff
@@ -87,7 +112,7 @@ function buildCumplimiento({ rows, staff, docs, incidents, anio, semestre }) {
                     n: mine[key]?.[i]?.length || 0,
                 }));
                 return {
-                    key, label: c.label, weight: c.weight, frecuencia: c.frecuencia, porTrimestre,
+                    key, label: c.label, weight: c.weight, informativo: !!c.informativo, frecuencia: c.frecuencia, porTrimestre,
                     valor: round2(avg(porTrimestre.map((t) => t.valor).filter((v) => v !== null))),
                 };
             });
@@ -98,14 +123,19 @@ function buildCumplimiento({ rows, staff, docs, incidents, anio, semestre }) {
                 return { trimestre: q.key, valor: w ? round2(withData.reduce((a, c) => a + c.porTrimestre[i].valor * c.weight, 0) / w) : null };
             });
             const nota = round2(avg(trimestres.map((t) => t.valor).filter((v) => v !== null)));
-            const sinDatos = criterios.filter((c) => c.valor === null).map((c) => c.label);
+            const sinDatos = criterios.filter((c) => !CRITERIA[c.key].informativo && c.valor === null).map((c) => c.label);
 
             const myDocs = docs.filter((d) => d.staffId === s.id);
             const okDocs = myDocs.filter((d) => DOC_OK.includes(d.status)).length;
             const docsPct = myDocs.length ? Math.round((okDocs / myDocs.length) * 100) : 100;
             const myIncidents = incidents.filter((i) => i.staffId === s.id);
 
+            // La política aplica solo a quien estuvo en todos los trimestres del año (ingreso al 1 de enero o antes).
+            const ingreso = s.dateEntry ? new Date(s.dateEntry) : null;
+            const todoElAnio = !ingreso || ingreso <= new Date(anio, 0, 1, 23, 59, 59);
+
             const razones = [];
+            if (!todoElAnio) razones.push(`Ingresó el ${isoDate(ingreso)}: no estuvo en todos los trimestres de ${anio}`);
             if (nota === null || nota < MIN_SCORE) razones.push(`Nota ${nota ?? '—'} menor a ${MIN_SCORE}`);
             if (sinDatos.length) razones.push(`Sin evaluaciones de: ${sinDatos.join(', ')}`);
             if (docsPct < 100) razones.push(`Documentos al día ${docsPct}% (se exige 100%)`);
@@ -114,6 +144,9 @@ function buildCumplimiento({ rows, staff, docs, incidents, anio, semestre }) {
                 staffId: s.id,
                 nombre: `${s.firstName} ${s.lastName}`.replace(/\s+/g, ' ').trim(),
                 rol: role,
+                fechaIngreso: isoDate(ingreso),
+                todoElAnio,
+                evaluaciones: (evals.get(s.id) || []).sort((a, b) => a.fecha.localeCompare(b.fecha)),
                 criterios, trimestres, nota,
                 documentos: {
                     total: myDocs.length, alDia: okDocs, porcentaje: docsPct,
@@ -129,7 +162,7 @@ function buildCumplimiento({ rows, staff, docs, incidents, anio, semestre }) {
     return { anio, semestre, minScore: MIN_SCORE, personas, resumen: { total: personas.length, aptos: personas.filter((p) => p.apto).length } };
 }
 
-async function getCumplimiento({ anio, semestre } = {}) {
+async function getCumplimiento({ anio, semestre, withDetail = false } = {}) {
     const year = Number(anio) || new Date().getFullYear();
     const sem = Number(semestre) === 2 ? 2 : 1;
     const { start, end } = semesterBounds(year, sem);
@@ -137,7 +170,7 @@ async function getCumplimiento({ anio, semestre } = {}) {
     const rows = await EvaluationService.getEvaluationsByCompany(undefined, new Date(start.getTime() - 45 * 864e5), new Date(end.getTime() + 45 * 864e5));
     const staff = await Staff.findAll({
         where: { active: true },
-        attributes: ['id', 'firstName', 'lastName'],
+        attributes: ['id', 'firstName', 'lastName', 'dateEntry'],
         include: [{ model: Positions, as: 'staff_position', attributes: ['name'] }],
     });
     const docs = await StaffDocumentation.findAll({
@@ -145,7 +178,7 @@ async function getCumplimiento({ anio, semestre } = {}) {
         include: [{ model: Documentation, as: 'document', attributes: ['name', 'required'], where: { required: true } }],
     });
     const incidents = await BonusIncident.findAll({ where: { date: { [Op.between]: [start, end] } } });
-    return buildCumplimiento({ rows, staff, docs, incidents, anio: year, semestre: sem });
+    return buildCumplimiento({ rows, staff, docs, incidents, anio: year, semestre: sem, withDetail });
 }
 
 const createIncident = ({ staffId, kind, date, description }) => BonusIncident.create({ staffId, kind, date, description });

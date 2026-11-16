@@ -388,6 +388,7 @@ router.get('/desempeno/colaborador', authJwt.verifyToken, authJwt.hasAnyRole(DES
 
 // Cumplimiento del bono de desempeño (criterios en bonoDesempeno.services.js).
 router.get('/bono-desempeno', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO_DASHBOARD_ROLES), desempenoDashboard.getBonoCumplimiento);
+router.get('/bono-desempeno/excel', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO_DASHBOARD_ROLES), excelReports.generateBonoExcel);
 router.post('/bono-desempeno/incidentes', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO_DASHBOARD_ROLES), desempenoDashboard.createBonoIncident);
 router.delete('/bono-desempeno/incidentes/:id', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO_DASHBOARD_ROLES), desempenoDashboard.deleteBonoIncident);
 
