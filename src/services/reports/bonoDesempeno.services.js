@@ -12,12 +12,12 @@ const SurveyScoring = require('../../utils/surveyScoring');
 const MIN_SCORE = 4.8;
 const CRITERIA = {
     cap_operaciones: { role: 'capitan', label: 'Evaluación Operaciones - Capitanes', weight: 0.4, frecuencia: 'Cada desembarque' },
-    cap_administrativa: { role: 'capitan', label: 'Evaluación Administrativa - Capitanes', weight: 0.4, frecuencia: '3 veces por semana (relevos)' },
+    cap_administrativa: { role: 'capitan', label: 'Evaluación Administrativa - Capitanes', weight: 0.4, frecuencia: '1 vez cada 3 semanas (relevos)' },
     cap_liderazgo: { role: 'capitan', label: 'Evaluación Liderazgo - Capitanes', weight: 0.2, frecuencia: 'Semanal' },
     crew_capitan: { role: 'tripulante', label: 'Evaluación del capitán', weight: 1, frecuencia: 'Cada desembarque' },
     // Informativo: se registra y se exporta pero no pondera ni exige datos (nadie la tiene aún).
     // Para reactivarla: capitán 0.5, hotelería 0.5 y quitar `informativo`.
-    crew_hoteleria: { role: 'tripulante', label: 'Evaluación de Hotelería', weight: 0, informativo: true, frecuencia: '3 veces por semana (relevos)' },
+    crew_hoteleria: { role: 'tripulante', label: 'Evaluación de Hotelería', weight: 0, informativo: true, frecuencia: '1 vez cada 3 semanas (relevos)' },
 };
 // Documentos "al día": vigentes o por vencer (aún no vencidos).
 const DOC_OK = ['valid', 'expiring'];
