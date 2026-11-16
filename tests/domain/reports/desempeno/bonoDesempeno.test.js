@@ -58,12 +58,28 @@ describe('buildCumplimiento', () => {
         expect(p.razones).toHaveLength(2);
     });
 
-    it('criterio sin datos (hotelería) deja al tripulante no apto', () => {
-        const rows = [row('Evaluación desempeño - Timoneles/Marineros', 'Luis Sol', 0, '5'), row('Evaluación desempeño - Timoneles/Marineros', 'Luis Sol', 4, '5')];
+    it('hotelería es informativa: sin datos no bloquea y no pondera, pero sus notas se conservan', () => {
+        const rows = [
+            row('Evaluación desempeño - Timoneles/Marineros', 'Luis Sol', 0, '5'), row('Evaluación desempeño - Timoneles/Marineros', 'Luis Sol', 4, '5'),
+            row('Servicio de Hotelería', 'Luis Sol', 0, '1'),
+        ];
         const [p] = buildCumplimiento({ ...base, rows, staff: [marinero] }).personas;
         expect(p.rol).toBe('tripulante');
+        expect(p.nota).toBe(5); // la hotelería con 1 no baja la nota
+        expect(p.apto).toBe(true);
+        expect(p.criterios.find((c) => c.key === 'crew_hoteleria').valor).toBe(1);
+        expect(p.evaluaciones).toHaveLength(3);
+    });
+
+    it('quien ingresó después del 1 de enero no estuvo todos los trimestres y no es apto', () => {
+        const rows = [...allCap(0, '5'), ...allCap(4, '5')];
+        const tarde = { ...cap, dateEntry: new Date(2026, 1, 15) };
+        const [p] = buildCumplimiento({ ...base, rows, staff: [tarde] }).personas;
+        expect(p.todoElAnio).toBe(false);
         expect(p.apto).toBe(false);
-        expect(p.razones.join()).toMatch(/Hotelería/);
+        const [ok] = buildCumplimiento({ ...base, rows, staff: [{ ...cap, dateEntry: new Date(2025, 5, 1) }] }).personas;
+        expect(ok.apto).toBe(true);
+        expect(ok.fechaIngreso).toBe('2025-06-01');
     });
 
     it('ignora evaluaciones caducadas y fuera del semestre', () => {
