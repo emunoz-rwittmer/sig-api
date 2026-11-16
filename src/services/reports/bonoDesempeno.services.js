@@ -144,6 +144,8 @@ function buildCumplimiento({ rows, staff, docs, incidents, anio, semestre, withD
                 staffId: s.id,
                 nombre: `${s.firstName} ${s.lastName}`.replace(/\s+/g, ' ').trim(),
                 rol: role,
+                cargo: s.staff_position?.name || null,
+                yates: [...new Set((evals.get(s.id) || []).map((e) => e.yate).filter(Boolean))],
                 fechaIngreso: isoDate(ingreso),
                 todoElAnio,
                 evaluaciones: (evals.get(s.id) || []).sort((a, b) => a.fecha.localeCompare(b.fecha)),

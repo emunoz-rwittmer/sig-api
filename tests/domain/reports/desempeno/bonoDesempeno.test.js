@@ -71,6 +71,13 @@ describe('buildCumplimiento', () => {
         expect(p.evaluaciones).toHaveLength(3);
     });
 
+    it('expone cargo y los yates donde fue evaluado', () => {
+        const mk = (m, yate) => ({ ...row('Evaluación desempeño - Timoneles/Marineros', 'Luis Sol', m, '5'), empresa: { yacht: { name: yate } } });
+        const [p] = buildCumplimiento({ ...base, rows: [mk(0, 'Alba'), mk(1, 'Alba'), mk(4, 'Brisa')], staff: [marinero] }).personas;
+        expect(p.cargo).toBe('Timonel / Marinero');
+        expect(p.yates.sort()).toEqual(['Alba', 'Brisa']);
+    });
+
     it('quien ingresó después del 1 de enero no estuvo todos los trimestres y no es apto', () => {
         const rows = [...allCap(0, '5'), ...allCap(4, '5')];
         const tarde = { ...cap, dateEntry: new Date(2026, 1, 15) };
