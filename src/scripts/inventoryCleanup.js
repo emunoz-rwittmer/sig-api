@@ -14,6 +14,8 @@
 //   linen       Marca sin control de stock los productos con stock ficticio (>= 90.000) y lo deja en 0.
 //   yachts      Encera el stock de las bodegas de yate (nunca registraron salidas, así que la
 //               cifra no es real). Desde ahí el stock lo fija lo que el yate declara al pedir.
+//   uio         Encera el stock de la bodega central de Quito, para arrancar desde un conteo
+//               físico (que se registra después con Nueva transacción > Ajuste).
 //   duplicates  Fusiona productos con el mismo nombre en el que tiene configuración activa
 //               y más movimientos; el otro queda inactivo y apuntando al vigente.
 
@@ -38,6 +40,33 @@ const run = async () => {
     const t = await db.transaction();
     const q = async (sql, replacements = {}) => (await db.query(sql, { replacements, transaction: t }))[0];
     const now = new Date();
+
+    // Deja en 0 el stock de las bodegas que cumplen `where`, con un ajuste por fila para
+    // que quede el rastro de cuánto había.
+    const zeroWarehouses = async (label, where, reason, note) => {
+        const rows = await q(`
+            SELECT s.id, s.product_id, s.warehouse_id, s.quantity, p.type, p.presentacion
+            FROM stocks s
+            JOIN warehouses w ON w.id = s.warehouse_id AND ${where}
+            JOIN products p ON p.id = s.product_id
+            WHERE s.quantity <> 0`);
+        for (const row of rows) {
+            const quantity = Number(row.quantity);
+            const view = Math.abs(row.type === 'CONSUMABLE' ? quantity / Number(row.presentacion) : quantity);
+            await q('UPDATE stocks SET quantity = 0, updatedAt = :now WHERE id = :id', { now, id: row.id });
+            await q(`INSERT INTO transactions (type, product_id, warehouse_from_id, warehouse_to_id, quantity, reason, note, createdAt, updatedAt)
+                     VALUES ('ADJUST', :productId, :fromId, :toId, :quantity, :reason, :note, :now, :now)`, {
+                productId: row.product_id,
+                fromId: quantity > 0 ? row.warehouse_id : null,
+                toId: quantity > 0 ? null : row.warehouse_id,
+                quantity: Math.round(view * 100) / 100,
+                reason,
+                note,
+                now,
+            });
+        }
+        console.log(`${label}: ${rows.length} filas de stock enceradas`);
+    };
 
     const tasks = {
         async transit() {
@@ -107,26 +136,11 @@ const run = async () => {
         },
 
         async yachts() {
-            const rows = await q(`
-                SELECT s.id, s.product_id, s.warehouse_id, s.quantity, p.type, p.presentacion
-                FROM stocks s
-                JOIN warehouses w ON w.id = s.warehouse_id AND w.type = 'Yate'
-                JOIN products p ON p.id = s.product_id
-                WHERE s.quantity <> 0`);
-            for (const row of rows) {
-                const quantity = Number(row.quantity);
-                const view = Math.abs(row.type === 'CONSUMABLE' ? quantity / Number(row.presentacion) : quantity);
-                await q('UPDATE stocks SET quantity = 0, updatedAt = :now WHERE id = :id', { now, id: row.id });
-                await q(`INSERT INTO transactions (type, product_id, warehouse_from_id, warehouse_to_id, quantity, reason, note, createdAt, updatedAt)
-                         VALUES ('ADJUST', :productId, :fromId, :toId, :quantity, 'Regularización inicial de yates', 'Encerado antes de usar el stock declarado', :now, :now)`, {
-                    productId: row.product_id,
-                    fromId: quantity > 0 ? row.warehouse_id : null,
-                    toId: quantity > 0 ? null : row.warehouse_id,
-                    quantity: Math.round(view * 100) / 100,
-                    now,
-                });
-            }
-            console.log(`yachts: ${rows.length} filas de stock de yates enceradas`);
+            await zeroWarehouses('yachts', "w.type = 'Yate'", 'Regularización inicial de yates', 'Encerado antes de usar el stock declarado');
+        },
+
+        async uio() {
+            await zeroWarehouses('uio', "w.location = 'Quito' AND w.type = 'Central'", 'Regularización inicial de UIO', 'Encerado antes del conteo físico');
         },
 
         async duplicates() {
