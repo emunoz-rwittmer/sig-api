@@ -155,7 +155,7 @@ const sendEmailRegisterNovelty = (counter, observations) => {
     return sendMail({
         to: RECIPIENTS.edwin,
         from: FROM_EMAIL,
-        cc: RECIPIENTS.belen,
+        cc: [RECIPIENTS.belen, RECIPIENTS.edison],
         subject: `Registro ${counter} ingresado con novedad`,
         html,
     });
