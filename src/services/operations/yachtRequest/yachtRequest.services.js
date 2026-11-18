@@ -1,3 +1,4 @@
+const TransactionService = require('../inventory/transactions.services');
 const Staff = require('../../../models/catalogs/staff.models');
 const Warehouse = require('../../../models/catalogs/wareHouse.models');
 const requestItems = require('../../../models/operations/yachtRequest/requestItems.models');
@@ -209,12 +210,46 @@ class RequestService {
             }));
 
             await requestItems.bulkCreate(productsRequest, { transaction });
+            await RequestService.applyDeclaredStock(result, data.products, transaction);
 
             await transaction.commit();
             return result;
         } catch (error) {
             await transaction.rollback();
             throw error;
+        }
+    }
+
+    // A bordo no se registra cada consumo: lo que el yate declara tener al pedir es su
+    // conteo. El stock de su bodega queda igual a lo declarado; lo que bajó desde el
+    // último conteo (más lo que recibió) se registra como salida por consumo. Lo que el
+    // yate no contó (stock null) no se toca.
+    static async applyDeclaredStock(request, items, transaction) {
+        const declared = items.filter(item => item.stock !== null && item.stock !== undefined && item.stock !== '');
+        if (!declared.length) return;
+
+        const configurations = await ProductConfiguration.findAll({
+            where: { id: declared.map(item => item.configurationId) },
+            include: [{ model: Product, as: 'product' }],
+            transaction
+        });
+        const productByConfiguration = new Map(configurations.map(configuration => [configuration.id, configuration.product]));
+
+        for (const item of declared) {
+            const product = productByConfiguration.get(Number(item.configurationId));
+            const counted = Number(item.stock);
+            if (!product || product.controlsStock === false || !Number.isFinite(counted) || counted < 0) continue;
+
+            await TransactionService.applyCountedStock({
+                product,
+                warehouseId: request.warehouseId,
+                companyId: null,
+                counted,
+                userId: request.userId,
+                reason: 'Stock declarado en requerimiento',
+                note: request.name ?? null,
+                down: { type: 'OUT', reason: 'Consumo a bordo' }
+            }, transaction);
         }
     }
 

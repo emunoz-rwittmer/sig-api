@@ -14,6 +14,8 @@ const Request = require('../../../src/models/operations/yachtRequest/request.mod
 const RequestItems = require('../../../src/models/operations/yachtRequest/requestItems.models');
 const Product = require('../../../src/models/operations/inventory/product.models');
 const ProductConfiguration = require('../../../src/models/operations/inventory/productConfiguration');
+const Stock = require('../../../src/models/operations/inventory/stock.models');
+const Transaction = require('../../../src/models/operations/inventory/transaction.models');
 const Utils = require('../../../src/utils/Utils');
 
 let app;
@@ -224,6 +226,49 @@ describe('POST /api/requests — crear solicitud', () => {
 
         expect(response.status).toBe(200);
         expect(response.body.data).toBe('resource created successfully');
+    });
+
+    it('el stock declarado pasa a ser el stock del yate: lo que bajó es consumo y lo no contado no se toca', async () => {
+        const { yacht } = await createCompanyWithYacht(`DeclYacht-${suffix()}`);
+        const warehouse = await createWarehouseFixture(yacht.id);
+        const staff = await createStaffFixture();
+        const [consumed, found, uncounted, zero] = await Promise.all([1, 2, 3, 4].map(() => createProductFixture()));
+        const configs = await Promise.all([consumed, found, uncounted, zero].map((product) => createProductConfigFixture(product.id)));
+        await Stock.create({ productId: consumed.id, warehouseId: warehouse.id, quantity: 20 });
+        await Stock.create({ productId: found.id, warehouseId: warehouse.id, quantity: 2 });
+        await Stock.create({ productId: uncounted.id, warehouseId: warehouse.id, quantity: 9 });
+        await Stock.create({ productId: zero.id, warehouseId: warehouse.id, quantity: 4 });
+
+        const response = await auth(request(app).post('/api/requests').send({
+            warehouseId: Utils.encode(warehouse.id),
+            userId: Utils.encode(staff.id),
+            name: `Requerimiento-${suffix()}`,
+            group: 'food_request',
+            status: 'Pendiente',
+            products: [
+                { configurationId: configs[0].id, stock: 5, order: 10 },
+                { configurationId: configs[1].id, stock: 6, order: 0 },
+                { configurationId: configs[2].id, stock: null, order: 3 },
+                { configurationId: configs[3].id, stock: 0, order: 8 },
+            ],
+        }));
+
+        expect(response.status).toBe(200);
+        const stockOf = async (product) => Number((await Stock.findOne({ where: { productId: product.id, warehouseId: warehouse.id } })).quantity);
+        expect(await stockOf(consumed)).toBe(5);
+        expect(await stockOf(found)).toBe(6);
+        expect(await stockOf(uncounted)).toBe(9);
+        expect(await stockOf(zero)).toBe(0);
+
+        const consumption = await Transaction.findOne({ where: { productId: consumed.id } });
+        expect(consumption).toMatchObject({ type: 'OUT', reason: 'Consumo a bordo', warehouseFromId: warehouse.id, warehouseToId: null, userId: staff.id });
+        expect(Number(consumption.quantity)).toBe(15);
+        const surplus = await Transaction.findOne({ where: { productId: found.id } });
+        expect(surplus).toMatchObject({ type: 'ADJUST', reason: 'Stock declarado en requerimiento', warehouseToId: warehouse.id });
+        expect(await Transaction.count({ where: { productId: uncounted.id } })).toBe(0);
+
+        const savedItem = await RequestItems.findOne({ where: { configurationId: configs[2].id } });
+        expect(savedItem.stock).toBeNull();
     });
 
     it('guarda puerto de entrega, fecha requerida y nota, y los devuelve al consultar la solicitud', async () => {

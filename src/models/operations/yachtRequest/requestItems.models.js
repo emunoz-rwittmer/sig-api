@@ -17,9 +17,10 @@ const RequestItems = db.define('request_items', {
     allowNull: false,
     field: 'configuration_id'
   },
+  // Lo que el yate declara tener a bordo. null = no lo contó (no es lo mismo que 0).
   stock: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
   },
   order: {
     type: DataTypes.INTEGER,
