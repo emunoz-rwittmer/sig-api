@@ -23,6 +23,8 @@ class ProductService {
     static async getAll() {
         try {
             const result = await Product.findAll({
+                // Los productos fusionados en otro no se ofrecen en el catálogo.
+                where: { mergedIntoId: null },
                 attributes: ['id', 'name', 'sku', 'type', 'unit', 'presentationQuantity', 'active', 'controlsStock', 'createdAt'],
                 include: [{
                     model: ProductConfiguration,
