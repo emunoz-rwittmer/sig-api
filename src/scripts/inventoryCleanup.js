@@ -14,6 +14,11 @@
 //   linen       Marca sin control de stock los productos con stock ficticio (>= 90.000) y lo deja en 0.
 //   yachts      Encera el stock de las bodegas de yate (nunca registraron salidas, así que la
 //               cifra no es real). Desde ahí el stock lo fija lo que el yate declara al pedir.
+//   uio         Encera el stock de la bodega central de Quito, para arrancar desde un conteo
+//               físico (que se registra después con Nueva transacción > Ajuste).
+//   writeoff    Elimina las bodegas "De baja": sus transferencias históricas pasan a ser
+//               salidas por baja y se borra el stock que acumulaban. Se detiene sin tocar
+//               nada si alguna otra tabla depende de ellas.
 //   duplicates  Fusiona productos con el mismo nombre en el que tiene configuración activa
 //               y más movimientos; el otro queda inactivo y apuntando al vigente.
 
@@ -38,6 +43,33 @@ const run = async () => {
     const t = await db.transaction();
     const q = async (sql, replacements = {}) => (await db.query(sql, { replacements, transaction: t }))[0];
     const now = new Date();
+
+    // Deja en 0 el stock de las bodegas que cumplen `where`, con un ajuste por fila para
+    // que quede el rastro de cuánto había.
+    const zeroWarehouses = async (label, where, reason, note) => {
+        const rows = await q(`
+            SELECT s.id, s.product_id, s.warehouse_id, s.quantity, p.type, p.presentacion
+            FROM stocks s
+            JOIN warehouses w ON w.id = s.warehouse_id AND ${where}
+            JOIN products p ON p.id = s.product_id
+            WHERE s.quantity <> 0`);
+        for (const row of rows) {
+            const quantity = Number(row.quantity);
+            const view = Math.abs(row.type === 'CONSUMABLE' ? quantity / Number(row.presentacion) : quantity);
+            await q('UPDATE stocks SET quantity = 0, updatedAt = :now WHERE id = :id', { now, id: row.id });
+            await q(`INSERT INTO transactions (type, product_id, warehouse_from_id, warehouse_to_id, quantity, reason, note, createdAt, updatedAt)
+                     VALUES ('ADJUST', :productId, :fromId, :toId, :quantity, :reason, :note, :now, :now)`, {
+                productId: row.product_id,
+                fromId: quantity > 0 ? row.warehouse_id : null,
+                toId: quantity > 0 ? null : row.warehouse_id,
+                quantity: Math.round(view * 100) / 100,
+                reason,
+                note,
+                now,
+            });
+        }
+        console.log(`${label}: ${rows.length} filas de stock enceradas`);
+    };
 
     const tasks = {
         async transit() {
@@ -107,26 +139,56 @@ const run = async () => {
         },
 
         async yachts() {
-            const rows = await q(`
-                SELECT s.id, s.product_id, s.warehouse_id, s.quantity, p.type, p.presentacion
-                FROM stocks s
-                JOIN warehouses w ON w.id = s.warehouse_id AND w.type = 'Yate'
-                JOIN products p ON p.id = s.product_id
-                WHERE s.quantity <> 0`);
-            for (const row of rows) {
-                const quantity = Number(row.quantity);
-                const view = Math.abs(row.type === 'CONSUMABLE' ? quantity / Number(row.presentacion) : quantity);
-                await q('UPDATE stocks SET quantity = 0, updatedAt = :now WHERE id = :id', { now, id: row.id });
-                await q(`INSERT INTO transactions (type, product_id, warehouse_from_id, warehouse_to_id, quantity, reason, note, createdAt, updatedAt)
-                         VALUES ('ADJUST', :productId, :fromId, :toId, :quantity, 'Regularización inicial de yates', 'Encerado antes de usar el stock declarado', :now, :now)`, {
-                    productId: row.product_id,
-                    fromId: quantity > 0 ? row.warehouse_id : null,
-                    toId: quantity > 0 ? null : row.warehouse_id,
-                    quantity: Math.round(view * 100) / 100,
-                    now,
-                });
+            await zeroWarehouses('yachts', "w.type = 'Yate'", 'Regularización inicial de yates', 'Encerado antes de usar el stock declarado');
+        },
+
+        async uio() {
+            await zeroWarehouses('uio', "w.location = 'Quito' AND w.type = 'Central'", 'Regularización inicial de UIO', 'Encerado antes del conteo físico');
+        },
+
+        // Las bajas ahora son una Salida con motivo, así que las bodegas "De baja" sobran.
+        // Sus transferencias históricas se conservan convertidas en salidas por baja; se
+        // borra solo el stock acumulado ahí (mercadería ya dada de baja) y la bodega.
+        async writeoff() {
+            const warehouses = await q("SELECT id, name FROM warehouses WHERE type = 'De baja'");
+            if (!warehouses.length) {
+                console.log('writeoff: no hay bodegas De baja');
+                return;
             }
-            console.log(`yachts: ${rows.length} filas de stock de yates enceradas`);
+            const ids = warehouses.map((warehouse) => warehouse.id);
+
+            // Si algo inesperado depende de estas bodegas, no se toca nada.
+            const [blockers] = await q(`
+                SELECT
+                    (SELECT COUNT(*) FROM transactions WHERE warehouse_from_id IN (:ids)) fromThem,
+                    (SELECT COUNT(*) FROM requests WHERE warehouse_id IN (:ids)) requests,
+                    (SELECT COUNT(*) FROM laundryYachts WHERE warehouse_id IN (:ids)) laundry,
+                    (SELECT COUNT(*) FROM stock_histories h JOIN stocks s ON s.id = h.stock_id WHERE s.warehouse_id IN (:ids)) histories`, { ids });
+            const blocked = Object.entries(blockers).filter(([, count]) => Number(count) > 0);
+            if (blocked.length) {
+                throw new Error(`writeoff: hay datos que dependen de las bodegas De baja (${blocked.map(([name, count]) => `${name}: ${count}`).join(', ')}). No se eliminó nada.`);
+            }
+
+            let transfers = 0;
+            let edits = 0;
+            for (const warehouse of warehouses) {
+                // Transferencia a "De baja" = salida por baja. Queda el nombre de la bodega en la nota.
+                const moved = await q(`
+                    UPDATE transactions
+                    SET warehouse_to_id = NULL, reason = IFNULL(reason, 'Baja'), note = IFNULL(note, :note)
+                    WHERE warehouse_to_id = :id AND warehouse_from_id IS NOT NULL`, { id: warehouse.id, note: `Antes: transferencia a ${warehouse.name}` });
+                // Ediciones manuales del stock de la propia bodega De baja: se conservan como ajuste.
+                const edited = await q(`
+                    UPDATE transactions
+                    SET warehouse_to_id = NULL, type = 'ADJUST', reason = IFNULL(reason, 'Edición en bodega De baja'), note = IFNULL(note, :note)
+                    WHERE warehouse_to_id = :id AND warehouse_from_id IS NULL`, { id: warehouse.id, note: `Bodega eliminada: ${warehouse.name}` });
+                transfers += moved.affectedRows;
+                edits += edited.affectedRows;
+            }
+
+            const stocks = await q('DELETE FROM stocks WHERE warehouse_id IN (:ids)', { ids });
+            await q('DELETE FROM warehouses WHERE id IN (:ids)', { ids });
+            console.log(`writeoff: ${warehouses.map((warehouse) => warehouse.name).join(', ')} eliminadas; ${transfers} transferencias pasan a salida por baja, ${edits} ediciones a ajuste, ${stocks.affectedRows} filas de stock borradas`);
         },
 
         async duplicates() {
