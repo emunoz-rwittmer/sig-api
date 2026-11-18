@@ -154,6 +154,29 @@ router.get('/',OrderController.getAllOrders);
  *         description: Error inesperado
  */
 router.get('/:order_id',OrderController.getOrderById);
+
+/**
+ * @openapi
+ * /orders/{order_id}/dispatch-summary:
+ *   get:
+ *     summary: Cuadre por SKU del pedido contra lo despachado a tránsito (pedido, ingresado, despachado, pendiente)
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: order_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de la orden codificado (hashids)
+ *     responses:
+ *       200:
+ *         description: Lista de filas por SKU
+ *       400:
+ *         description: ID codificado inválido
+ */
+router.get('/:order_id/dispatch-summary', OrderController.getDispatchSummary);
 router.post('/', uploadExcelFile, OrderController.createOrder);
 router.put('/:order_id', OrderController.updateOrder);
 

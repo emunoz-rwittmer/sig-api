@@ -6,6 +6,8 @@ const orderItems = require('../../../models/operations/orders/orderItems.models'
 const Register = require('../../../models/operations/inventory/register.models');
 const Quantity = require('../../../utils/quantity');
 const AppError = require('../../../errors/AppError');
+const OrderService = require('../orders/orders.services');
+const { TRANSIT_WAREHOUSE_ID } = require('../../../utils/warehouses');
 
 class TransactionService {
 
@@ -131,7 +133,7 @@ class TransactionService {
     }
 
     static async transactionWarehouse(transactionData) {
-        const { products, warehouseFromId, warehouseToId, userId, companyId, formattedCounter } = transactionData;
+        const { products, warehouseFromId, warehouseToId, userId, companyId, formattedCounter, orderId } = transactionData;
 
         const transaction = await db.transaction();
 
@@ -177,6 +179,7 @@ class TransactionService {
                 counter: formattedCounter,
                 userId,
                 companyId,
+                orderId,
                 products: totalProducts
             }, { transaction });
 
@@ -261,6 +264,10 @@ class TransactionService {
                     type: 'OUT',
                     registerId: register.id
                 }, { transaction });
+            }
+
+            if (orderId) {
+                await OrderService.markDistributedIfComplete(orderId, transaction);
             }
 
             await transaction.commit();
@@ -354,159 +361,187 @@ class TransactionService {
         return orderItems.update(data, { where: { id: itemId } });
     }
 
-    static async incomeProductsRegister(transactionData) {
+    // Suma (o resta, con delta negativo) al stock; lo crea en 0 si no existe.
+    static async adjustStock(where, delta, transaction) {
+        const [stock] = await Stock.findOrCreate({
+            where,
+            defaults: { quantity: 0 },
+            transaction,
+            lock: transaction.LOCK.UPDATE
+        });
+        // Math.round para evitar problemas de precisión al sumar decimales
+        stock.quantity = Math.round(((Number(stock.quantity) || 0) + delta) * 100) / 100;
+        await stock.save({ transaction });
+        return stock;
+    }
 
+    // Recepción libre en GPS: entra lo que realmente llegó. Las diferencias contra
+    // lo despachado no tocan la bodega origen; quedan en tránsito (positivo si faltó,
+    // negativo si sobró) como novedad pendiente hasta resolveRegisterNovelty.
+    static async incomeProductsRegister({ lines, warehouseToId, userId, registerId, observations }) {
         const transaction = await db.transaction();
-        const { transactiones, warehouseToId, companyId, userId, registerId, observations } = transactionData;
 
         try {
-            // Validar que haya productos
-            if (!Array.isArray(transactiones) || transactiones.length === 0) {
+            if (!Array.isArray(lines) || lines.length === 0) {
                 throw new AppError('No hay productos para procesar', 400);
             }
 
-            // Filtrar productos con cantidad válida (> 0)
-            const validProducts = transactiones.filter(product => {
-                const quantity = Number(product.quantity);
-                return Number.isFinite(quantity) && quantity > 0;
-            });
-
-            if (validProducts.length === 0) {
-                throw new AppError('No hay productos válidos con cantidad mayor a 0', 400);
+            const register = await Register.findByPk(registerId, { transaction, lock: transaction.LOCK.UPDATE });
+            if (!register) {
+                throw new AppError('Registro no encontrado', 404);
+            }
+            if (register.isResived) {
+                throw new AppError('Este registro ya fue ingresado', 400);
             }
 
-            const transactionResults = await Promise.all(validProducts.map(async (transac) => {
-                const quantity = Number(transac.quantity);
-                let originalTransaction = null;
-                let quantityDifference = 0;
+            const dispatched = await Transaction.findAll({
+                where: { registerId: String(register.id), warehouseToId: TRANSIT_WAREHOUSE_ID, type: 'OUT' },
+                transaction
+            });
+            if (dispatched.length === 0) {
+                throw new AppError('El registro no corresponde a un despacho en tránsito', 400);
+            }
 
-                if (transac.id) {
-                    originalTransaction = await Transaction.findOne({
-                        where: { id: transac.id },
-                        transaction,
-                        lock: transaction.LOCK.UPDATE
-                    });
+            const sentByProduct = new Map();
+            for (const line of dispatched) {
+                sentByProduct.set(line.productId, (sentByProduct.get(line.productId) || 0) + Number(line.quantity));
+            }
 
-                    if (!originalTransaction) {
-                        throw new AppError(`Transacción original no encontrada para el producto ${transac.product.name}`, 400);
-                    }
-
-                    quantityDifference = quantity - originalTransaction.quantity;
+            const receivedByProduct = new Map();
+            for (const line of lines) {
+                const quantity = Number(line.quantity);
+                if (!Number.isInteger(line.productId) || !Number.isFinite(quantity) || quantity < 0) {
+                    throw new AppError('Producto o cantidad inválidos', 400);
                 }
+                receivedByProduct.set(line.productId, (receivedByProduct.get(line.productId) || 0) + quantity);
+            }
 
-                const sourceWarehouseId = 9;
-                const productId = transac.product.id;
+            let hasNovelty = false;
+            const results = [];
 
-                if (quantityDifference !== 0 && !observations) {
-                    throw new AppError(`La cantidad del producto ${transac.product.name} ha cambiado, debe ingresar observaciones`, 400);
+            // Un producto despachado que no viene en el payload cuenta como no recibido (0).
+            for (const productId of new Set([...sentByProduct.keys(), ...receivedByProduct.keys()])) {
+                const sent = sentByProduct.get(productId) || 0;
+                const received = receivedByProduct.get(productId) || 0;
+                if (sent !== received) hasNovelty = true;
+                if (received <= 0) continue;
+
+                const product = await Product.findByPk(productId, { transaction });
+                if (!product) {
+                    throw new AppError('Producto no encontrado', 400);
                 }
+                const normalizedQty = Quantity.normalizeQuantity(product, received);
 
-                if (originalTransaction && observations && observations.trim() !== '' && quantityDifference !== 0) {
+                await TransactionService.adjustStock(
+                    { productId, warehouseId: TRANSIT_WAREHOUSE_ID, companyId: register.companyId },
+                    -normalizedQty,
+                    transaction
+                );
+                // Sin companyId a propósito: la central de GPS junta el stock de todas las empresas.
+                await TransactionService.adjustStock({ productId, warehouseId: warehouseToId }, normalizedQty, transaction);
 
-                    originalTransaction.quantity = quantity;
-                    await originalTransaction.save({ transaction });
-
-                    const stockFromSource = await Stock.findOne({
-                        where: {
-                            productId,
-                            warehouseId: originalTransaction.warehouseFromId,
-                            companyId
-                        },
-                        transaction,
-                        lock: transaction.LOCK.UPDATE
-                    });
-
-                    if (!stockFromSource) {
-                        throw new AppError(`Stock no encontrado para el producto ${transac.product.name} en bodega origen`, 400);
-                    }
-
-                    stockFromSource.quantity -= quantityDifference;
-                    if (stockFromSource.quantity < 0) {
-                        throw new AppError(`Stock insuficiente en bodega origen para el producto ${transac.product.name}: No se puede restar diferencia de ${quantityDifference}`, 400);
-                    }
-
-                    await stockFromSource.save({ transaction });
-
-                    const [stockWarehouse9] = await Stock.findOrCreate({
-                        where: {
-                            productId,
-                            warehouseId: sourceWarehouseId,
-                            companyId
-                        },
-                        defaults: { quantity: 0 },
-                        transaction,
-                        lock: transaction.LOCK.UPDATE
-                    });
-
-                    const currentQty = Number(stockWarehouse9.quantity) || 0;
-                    const newQty = Math.round((currentQty + quantityDifference) * 100) / 100;
-
-                    stockWarehouse9.quantity = newQty;
-                    await stockWarehouse9.save({ transaction });
-                }
-
-                const stockFrom = await Stock.findOne({
-                    where: {
-                        productId,
-                        warehouseId: sourceWarehouseId,
-                        companyId
-                    },
-                    transaction,
-                    lock: transaction.LOCK.UPDATE
-                });
-
-                if (!stockFrom) {
-                    throw new AppError(`Stock no encontrado para el producto ${transac.product.name} en almacén origen`, 400);
-                }
-                if (stockFrom.quantity < quantity) {
-                    throw new AppError(`Stock insuficiente para el producto ${transac.product.name}: Disponible: ${stockFrom.quantity}, Solicitado: ${quantity}`, 400);
-                }
-
-                stockFrom.quantity -= quantity;
-                await stockFrom.save({ transaction });
-
-                const whereToCondition = {
-                    productId,
-                    warehouseId: warehouseToId,
-                };
-
-                const [stockToInstance] = await Stock.findOrCreate({
-                    where: whereToCondition,
-                    defaults: { quantity: 0 },
-                    transaction,
-                    lock: transaction.LOCK.UPDATE
-                });
-
-                const currentQty = Number(stockToInstance.quantity) || 0;
-                const newQty = Math.round((currentQty + quantity) * 100) / 100;
-
-                stockToInstance.quantity = newQty;
-                await stockToInstance.save({ transaction });
-
-                return await Transaction.create({
+                results.push(await Transaction.create({
                     productId,
                     userId,
-                    warehouseFromId: sourceWarehouseId,
+                    warehouseFromId: TRANSIT_WAREHOUSE_ID,
                     warehouseToId,
-                    quantity,
-                    type: 'OUT'
-                }, { transaction });
-            }));
+                    quantity: received,
+                    type: 'OUT',
+                    registerId: register.id
+                }, { transaction }));
+            }
 
-            // Actualizar registro una sola vez al final
-            await Register.update(
-                {
-                    isResived: true,
-                    observations
-                },
-                {
-                    where: { id: registerId },
-                    transaction
-                }
-            );
+            if (hasNovelty && !observations?.trim()) {
+                throw new AppError('Hay diferencias con lo despachado, debe ingresar observaciones', 400);
+            }
+
+            await register.update({
+                isResived: true,
+                observations,
+                receivedBy: userId,
+                receivedAt: new Date(),
+                noveltyStatus: hasNovelty ? 'pendiente' : null
+            }, { transaction });
 
             await transaction.commit();
-            return transactionResults;
+            return { hasNovelty, register, transactions: results };
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
+    }
+
+    // El encargado de la bodega origen regulariza la novedad: lo que faltó en GPS
+    // vuelve de tránsito al origen y lo que llegó de más se descuenta del origen.
+    // Tránsito queda cuadrado para ese registro.
+    static async resolveRegisterNovelty({ registerId, userId }) {
+        const transaction = await db.transaction();
+
+        try {
+            const register = await Register.findByPk(registerId, { transaction, lock: transaction.LOCK.UPDATE });
+            if (!register) {
+                throw new AppError('Registro no encontrado', 404);
+            }
+            if (register.noveltyStatus !== 'pendiente') {
+                throw new AppError('El registro no tiene novedades pendientes', 400);
+            }
+
+            const lines = await Transaction.findAll({
+                where: { registerId: String(register.id), type: 'OUT' },
+                transaction
+            });
+            const originId = lines.find(line => line.warehouseToId === TRANSIT_WAREHOUSE_ID)?.warehouseFromId;
+            if (!originId) {
+                throw new AppError('El registro no corresponde a un despacho en tránsito', 400);
+            }
+
+            // diferencia = despachado - recibido
+            const diffByProduct = new Map();
+            for (const line of lines) {
+                const sign = line.warehouseToId === TRANSIT_WAREHOUSE_ID ? 1 : -1;
+                diffByProduct.set(line.productId, (diffByProduct.get(line.productId) || 0) + sign * Number(line.quantity));
+            }
+
+            for (const [productId, diff] of diffByProduct) {
+                if (diff === 0) continue;
+
+                const product = await Product.findByPk(productId, { transaction });
+                const normalizedQty = Quantity.normalizeQuantity(product, Math.abs(diff));
+                const toOrigin = diff > 0 ? normalizedQty : -normalizedQty;
+
+                const originStock = await TransactionService.adjustStock(
+                    { productId, warehouseId: originId, companyId: register.companyId },
+                    toOrigin,
+                    transaction
+                );
+                if (originStock.quantity < 0) {
+                    throw new AppError(`Stock insuficiente en bodega origen para ${product.name}: llegaron ${Math.abs(diff)} de más a GPS. Ingrese primero ese stock a la bodega origen`, 400);
+                }
+                await TransactionService.adjustStock(
+                    { productId, warehouseId: TRANSIT_WAREHOUSE_ID, companyId: register.companyId },
+                    -toOrigin,
+                    transaction
+                );
+
+                await Transaction.create({
+                    productId,
+                    userId,
+                    warehouseFromId: diff > 0 ? TRANSIT_WAREHOUSE_ID : originId,
+                    warehouseToId: diff > 0 ? originId : TRANSIT_WAREHOUSE_ID,
+                    quantity: Math.abs(diff),
+                    type: 'ADJUST',
+                    registerId: register.id
+                }, { transaction });
+            }
+
+            await register.update({
+                noveltyStatus: 'resuelta',
+                resolvedBy: userId,
+                resolvedAt: new Date()
+            }, { transaction });
+
+            await transaction.commit();
+            return register;
         } catch (error) {
             await transaction.rollback();
             throw error;

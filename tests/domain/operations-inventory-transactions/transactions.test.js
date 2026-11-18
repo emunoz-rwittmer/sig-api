@@ -1,4 +1,10 @@
+jest.mock('../../../src/mails/mailer', () => ({
+    sendEmailRegisterNovelty: jest.fn(),
+}));
+
 const request = require('supertest');
+const jwt = require('jsonwebtoken');
+const { sendEmailRegisterNovelty } = require('../../../src/mails/mailer');
 const axios = require('axios');
 const { bootTestApp, shutdownTestApp } = require('../../helpers/testApp');
 const { createAuthenticatedUser } = require('../../helpers/auth');
@@ -604,115 +610,246 @@ describe('POST /api/transactions/incomeProductsInWarehouse', () => {
 });
 
 // =========================================================================
-// POST /api/transactions/incomeProductsRegister
+// POST /api/transactions/incomeProductsRegister  (recepción libre en GPS)
 // =========================================================================
 
-describe('POST /api/transactions/incomeProductsRegister', () => {
-    it('devuelve 200 en el flujo normal', async () => {
-        const { company } = await createCompanyWithYacht(`IPR-Co-${suffix()}`);
-        const register = await createRegisterFixture({ companyId: company.id });
-        const product = await createProductFixture();
-        await createStockFixture(product.id, 9, company.id, { quantity: 20 });
-        const staff = await createStaffFixture();
+// Despacho UIO -> tránsito (9) ya hecho: stock en tránsito y línea del registro.
+async function createDispatchFixture({ sent = 10, originQuantity = 0, orderId } = {}) {
+    const { company } = await createCompanyWithYacht(`Disp-Co-${suffix()}`);
+    const origin = await createWarehouseFixture();
+    const product = await createProductFixture();
+    const dispatcher = await createStaffFixture();
+    const register = await createRegisterFixture({ companyId: company.id, userId: dispatcher.id, orderId });
+    await createStockFixture(product.id, origin.id, company.id, { quantity: originQuantity });
+    await createStockFixture(product.id, 9, company.id, { quantity: sent });
+    const line = await Transaction.create({
+        productId: product.id,
+        userId: dispatcher.id,
+        warehouseFromId: origin.id,
+        warehouseToId: 9,
+        quantity: sent,
+        type: 'OUT',
+        registerId: register.id,
+    });
+    return { company, origin, product, dispatcher, register, line };
+}
 
-        const response = await auth(
-            request(app)
-                .post('/api/transactions/incomeProductsRegister')
-                .send({
-                    id: Utils.encode(register.id),
-                    companyId: Utils.encode(company.id),
-                    userId: Utils.encode(staff.id),
-                    transactiones: [{ quantity: 6, product: { id: product.id, name: product.name } }],
-                })
-        );
+const stockQty = async (productId, warehouseId) => {
+    const stock = await Stock.findOne({ where: { productId, warehouseId } });
+    return stock ? Number(stock.quantity) : null;
+};
+
+const receive = (register, transactiones, observations) => auth(
+    request(app)
+        .post('/api/transactions/incomeProductsRegister')
+        .send({ id: Utils.encode(register.id), transactiones, observations })
+);
+
+describe('POST /api/transactions/incomeProductsRegister', () => {
+    it('ingresa a GPS sin novedad y guarda como receptor al usuario de la sesión, no al despachador', async () => {
+        const { product, register, dispatcher, line } = await createDispatchFixture({ sent: 10 });
+        const sessionUserId = Utils.decode(jwt.decode(token).id);
+
+        const response = await receive(register, [{ id: line.id, quantity: 10, product: { id: product.id } }]);
 
         expect(response.status).toBe(200);
+        expect(await stockQty(product.id, 9)).toBe(0);
+        expect(await stockQty(product.id, 2)).toBe(10);
 
-        const stockFrom = await Stock.findOne({ where: { productId: product.id, warehouseId: 9, companyId: company.id } });
-        const stockTo = await Stock.findOne({ where: { productId: product.id, warehouseId: 2 } });
-        expect(Number(stockFrom.quantity)).toBe(14);
-        expect(Number(stockTo.quantity)).toBe(6);
+        const refreshed = await Register.findByPk(register.id);
+        expect(refreshed.isResived).toBe(true);
+        expect(refreshed.noveltyStatus).toBeNull();
+        expect(refreshed.receivedBy).toBe(sessionUserId);
 
-        const refreshedRegister = await Register.findByPk(register.id);
-        expect(refreshedRegister.isResived).toBe(true);
+        const reception = await Transaction.findOne({ where: { registerId: String(register.id), warehouseFromId: 9 } });
+        expect(reception.userId).toBe(sessionUserId);
+        expect(reception.userId).not.toBe(dispatcher.id);
+        expect(sendEmailRegisterNovelty).not.toHaveBeenCalled();
     });
 
-    it('devuelve 400 cuando la cantidad cambió sin observations', async () => {
-        const { company } = await createCompanyWithYacht(`IPR-NoObs-${suffix()}`);
-        const register = await createRegisterFixture({ companyId: company.id });
-        const product = await createProductFixture();
-        const staff = await createStaffFixture();
-        const original = await Transaction.create({
-            productId: product.id,
-            userId: staff.id,
-            warehouseFromId: 9,
-            warehouseToId: 2,
-            quantity: 5,
-            type: 'OUT',
-        });
+    it('con faltante: ingresa lo recibido, no toca el origen ni la línea despachada y deja la novedad pendiente', async () => {
+        const { product, register, origin, line } = await createDispatchFixture({ sent: 10, originQuantity: 5 });
 
-        const response = await auth(
-            request(app)
-                .post('/api/transactions/incomeProductsRegister')
-                .send({
-                    id: Utils.encode(register.id),
-                    companyId: Utils.encode(company.id),
-                    userId: Utils.encode(staff.id),
-                    transactiones: [{ id: original.id, quantity: 9, product: { id: product.id, name: product.name } }],
-                })
-        );
+        const response = await receive(register, [{ id: line.id, quantity: 7, product: { id: product.id } }], 'Llegaron 3 rotos');
+
+        expect(response.status).toBe(200);
+        expect(await stockQty(product.id, 2)).toBe(7);
+        expect(await stockQty(product.id, 9)).toBe(3);
+        expect(await stockQty(product.id, origin.id)).toBe(5);
+        expect(Number((await Transaction.findByPk(line.id)).quantity)).toBe(10);
+
+        const refreshed = await Register.findByPk(register.id);
+        expect(refreshed.noveltyStatus).toBe('pendiente');
+        expect(refreshed.observations).toBe('Llegaron 3 rotos');
+        expect(sendEmailRegisterNovelty).toHaveBeenCalledWith(register.counter, 'Llegaron 3 rotos');
+    });
+
+    it('con sobrante y un producto que no estaba en el registro: no bloquea y tránsito queda en negativo', async () => {
+        const { product, register, line } = await createDispatchFixture({ sent: 10 });
+        const extra = await createProductFixture();
+
+        const response = await receive(register, [
+            { id: line.id, quantity: 12, product: { id: product.id } },
+            { productId: Utils.encode(extra.id), quantity: 2 },
+        ], 'Llegó de más');
+
+        expect(response.status).toBe(200);
+        expect(await stockQty(product.id, 2)).toBe(12);
+        expect(await stockQty(product.id, 9)).toBe(-2);
+        expect(await stockQty(extra.id, 2)).toBe(2);
+        expect(await stockQty(extra.id, 9)).toBe(-2);
+    });
+
+    it('devuelve 400 si hay diferencias sin observaciones y no mueve stock', async () => {
+        const { product, register, line } = await createDispatchFixture({ sent: 10 });
+
+        const response = await receive(register, [{ id: line.id, quantity: 9, product: { id: product.id } }]);
 
         expect(response.status).toBe(400);
         expect(response.body.error.code).toBe('AppError');
+        expect(await stockQty(product.id, 9)).toBe(10);
+        expect((await Register.findByPk(register.id)).isResived).toBe(false);
     });
 
-    it('devuelve 400 cuando la transacción original no existe', async () => {
-        const { company } = await createCompanyWithYacht(`IPR-NoOrig-${suffix()}`);
-        const register = await createRegisterFixture({ companyId: company.id });
-        const product = await createProductFixture();
-        const staff = await createStaffFixture();
+    it('devuelve 400 si el registro ya fue ingresado (no duplica el movimiento)', async () => {
+        const { product, register, line } = await createDispatchFixture({ sent: 10 });
+        const payload = [{ id: line.id, quantity: 10, product: { id: product.id } }];
 
-        const response = await auth(
-            request(app)
-                .post('/api/transactions/incomeProductsRegister')
-                .send({
-                    id: Utils.encode(register.id),
-                    companyId: Utils.encode(company.id),
-                    userId: Utils.encode(staff.id),
-                    transactiones: [{ id: 999999, quantity: 3, product: { id: product.id, name: product.name } }],
-                })
-        );
+        await receive(register, payload);
+        const second = await receive(register, payload);
 
-        expect(response.status).toBe(400);
-        expect(response.body.error.code).toBe('AppError');
+        expect(second.status).toBe(400);
+        expect(await stockQty(product.id, 2)).toBe(10);
     });
 
-    it('devuelve 400 cuando el stock de origen es insuficiente', async () => {
-        const { company } = await createCompanyWithYacht(`IPR-Insuf-${suffix()}`);
-        const register = await createRegisterFixture({ companyId: company.id });
+    it('devuelve 400 si el registro no es un despacho a tránsito', async () => {
+        const register = await createRegisterFixture();
         const product = await createProductFixture();
-        await createStockFixture(product.id, 9, company.id, { quantity: 1 });
-        const staff = await createStaffFixture();
 
-        const response = await auth(
-            request(app)
-                .post('/api/transactions/incomeProductsRegister')
-                .send({
-                    id: Utils.encode(register.id),
-                    companyId: Utils.encode(company.id),
-                    userId: Utils.encode(staff.id),
-                    transactiones: [{ quantity: 5, product: { id: product.id, name: product.name } }],
-                })
-        );
+        const response = await receive(register, [{ quantity: 3, product: { id: product.id } }]);
 
         expect(response.status).toBe(400);
-        expect(response.body.error.code).toBe('AppError');
     });
 
     it('devuelve 403 sin JWT', async () => {
         const response = await request(app).post('/api/transactions/incomeProductsRegister').send({});
 
         expect(response.status).toBe(403);
+    });
+});
+
+// =========================================================================
+// POST /api/transactions/resolveRegisterNovelty
+// =========================================================================
+
+const resolve = (register) => auth(
+    request(app)
+        .post('/api/transactions/resolveRegisterNovelty')
+        .send({ id: Utils.encode(register.id) })
+);
+
+describe('POST /api/transactions/resolveRegisterNovelty', () => {
+    it('devuelve al origen lo que faltó y deja tránsito en 0', async () => {
+        const { product, register, origin, line } = await createDispatchFixture({ sent: 10, originQuantity: 5 });
+        await receive(register, [{ id: line.id, quantity: 7, product: { id: product.id } }], 'Faltaron 3');
+
+        const response = await resolve(register);
+
+        expect(response.status).toBe(200);
+        expect(await stockQty(product.id, 9)).toBe(0);
+        expect(await stockQty(product.id, origin.id)).toBe(8);
+        expect(await stockQty(product.id, 2)).toBe(7);
+
+        const refreshed = await Register.findByPk(register.id);
+        expect(refreshed.noveltyStatus).toBe('resuelta');
+        expect(refreshed.resolvedBy).toBe(Utils.decode(jwt.decode(token).id));
+
+        const adjust = await Transaction.findOne({ where: { registerId: String(register.id), type: 'ADJUST' } });
+        expect(Number(adjust.quantity)).toBe(3);
+        expect(adjust.warehouseToId).toBe(origin.id);
+    });
+
+    it('descuenta del origen lo que llegó de más y deja tránsito en 0', async () => {
+        const { product, register, origin, line } = await createDispatchFixture({ sent: 10, originQuantity: 5 });
+        await receive(register, [{ id: line.id, quantity: 12, product: { id: product.id } }], 'Sobraron 2');
+
+        const response = await resolve(register);
+
+        expect(response.status).toBe(200);
+        expect(await stockQty(product.id, 9)).toBe(0);
+        expect(await stockQty(product.id, origin.id)).toBe(3);
+    });
+
+    it('devuelve 400 si el origen no tiene stock para cubrir el sobrante y no cambia nada', async () => {
+        const { product, register, origin, line } = await createDispatchFixture({ sent: 10, originQuantity: 1 });
+        await receive(register, [{ id: line.id, quantity: 12, product: { id: product.id } }], 'Sobraron 2');
+
+        const response = await resolve(register);
+
+        expect(response.status).toBe(400);
+        expect(await stockQty(product.id, origin.id)).toBe(1);
+        expect(await stockQty(product.id, 9)).toBe(-2);
+        expect((await Register.findByPk(register.id)).noveltyStatus).toBe('pendiente');
+    });
+
+    it('devuelve 400 si el registro no tiene novedad pendiente', async () => {
+        const { register } = await createDispatchFixture();
+
+        const response = await resolve(register);
+
+        expect(response.status).toBe(400);
+    });
+});
+
+// =========================================================================
+// Match pedido <-> despacho
+// =========================================================================
+
+describe('Despacho ligado a un pedido', () => {
+    const dispatch = (ctx, quantity) => auth(
+        request(app)
+            .post('/api/transactions/transactionBetweenWarehouse')
+            .send({
+                products: [{ id: Utils.encode(ctx.product.id), name: ctx.product.name, quantity }],
+                userName: 'Tester',
+                location: 'GPS',
+                companyId: Utils.encode(ctx.order.companyId),
+                warehouseFromId: Utils.encode(ctx.origin.id),
+                warehouseToId: Utils.encode(9),
+                userId: Utils.encode(ctx.order.userId),
+                orderId: Utils.encode(ctx.order.id),
+            })
+    );
+
+    it('cuadra pedido vs. despachos parciales y marca Distribuido al completar', async () => {
+        const order = await createOrderFixture({ status: 'Procesado' });
+        const origin = await createWarehouseFixture();
+        const product = await createProductFixture();
+        // El SKU del pedido llega con ceros a la izquierda; el producto se guarda sin ellos.
+        await createOrderItemFixture(order.id, { sku: `00${product.sku}`, quantity: 10, originalQuantity: 12, status: 'ingresado' });
+        await createStockFixture(product.id, origin.id, order.companyId, { quantity: 10 });
+        const ctx = { order, origin, product };
+        const summary = () => auth(request(app).get(`/api/orders/${Utils.encode(order.id)}/dispatch-summary`));
+
+        expect((await dispatch(ctx, 4)).status).toBe(200);
+
+        let response = await summary();
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual([expect.objectContaining({
+            sku: product.sku,
+            productId: Utils.encode(product.id),
+            ordered: 12,
+            entered: 10,
+            dispatched: 4,
+            pending: 6,
+        })]);
+        expect((await Order.findByPk(order.id)).status).toBe('Procesado');
+
+        expect((await dispatch(ctx, 6)).status).toBe(200);
+
+        response = await summary();
+        expect(response.body[0].pending).toBe(0);
+        expect((await Order.findByPk(order.id)).status).toBe('Distribuido');
     });
 });
 

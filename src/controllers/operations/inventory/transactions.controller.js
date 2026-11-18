@@ -4,6 +4,8 @@ const Utils = require('../../../utils/Utils');
 const CompanyService = require('../../../services/catalogs/company.services');
 const Consecutivo = require('../../../models/catalogs/consecutivo.model');
 const AppError = require('../../../errors/AppError');
+const { sendEmailRegisterNovelty } = require('../../../mails/mailer');
+const { GPS_WAREHOUSE_ID } = require('../../../utils/warehouses');
 
 const decodeId = (value, fieldName) => {
     let id;
@@ -83,6 +85,7 @@ const transactionWarehouse = async (req, res, next) => {
         const warehouseToId = decodeId(req.body.warehouseToId, 'warehouseToId');
         const userId = decodeId(req.body.userId, 'userId');
         const products = decodeProducts(req.body.products);
+        const orderId = req.body.orderId ? decodeId(req.body.orderId, 'orderId') : null;
 
         const consecutivo = await Consecutivo.findOne({ where: {} }) ?? await Consecutivo.create({ valor: 1 });
 
@@ -95,7 +98,8 @@ const transactionWarehouse = async (req, res, next) => {
             warehouseToId,
             userId,
             companyId,
-            formattedCounter
+            formattedCounter,
+            orderId
         });
 
         if (transactions.success) {
@@ -149,22 +153,42 @@ const updateStatusItem = async (req, res, next) => {
 const incomeProductsRegister = async (req, res, next) => {
     try {
         const { transactiones, observations } = req.body;
-        const warehouseToId = 2
-        const companyId = decodeId(req.body.companyId, 'companyId');
-        const userId = decodeId(req.body.userId, 'userId');
+        // Quien recibe es el usuario de la sesión, no el despachador del registro.
+        const userId = decodeId(req.userId, 'usuario');
         const registerId = decodeId(req.body.id, 'id');
+        const lines = (transactiones ?? []).map((line) => ({
+            // Los productos agregados en la recepción llegan con el id codificado del catálogo.
+            productId: line.productId ? decodeId(line.productId, 'productId') : Number(line.product?.id),
+            quantity: line.quantity,
+        }));
 
-        await TransactionService.incomeProductsRegister({
-            transactiones,
-            warehouseToId,
-            companyId,
+        const { hasNovelty, register } = await TransactionService.incomeProductsRegister({
+            lines,
+            warehouseToId: GPS_WAREHOUSE_ID,
             userId,
             registerId,
             observations
         });
 
+        if (hasNovelty) {
+            sendEmailRegisterNovelty(register.counter, observations);
+        }
+
         res.status(200).json({ data: 'Transacción completada correctamente.' });
 
+    } catch (error) {
+        next(error);
+    }
+}
+
+const resolveRegisterNovelty = async (req, res, next) => {
+    try {
+        await TransactionService.resolveRegisterNovelty({
+            registerId: decodeId(req.body.id, 'id'),
+            userId: decodeId(req.userId, 'usuario')
+        });
+
+        res.status(200).json({ data: 'Ajuste aplicado correctamente.' });
     } catch (error) {
         next(error);
     }
@@ -197,6 +221,7 @@ const TransactionController = {
     transactionWarehouse,
     incomeProductsInWarehouse,
     incomeProductsRegister,
+    resolveRegisterNovelty,
     printRegister,
     updateStatusItem,
 }

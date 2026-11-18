@@ -2,6 +2,8 @@ const { Router } = require('express');
 const TransactionController  = require ('../../../controllers/operations/inventory/transactions.controller');
 const TransactionHistoryController = require('../../../controllers/operations/inventory/transactionHistory.controller');
 
+const authJwt = require('../../../middlewares/auth.middleware');
+
 const router = Router();
 
 /**
@@ -307,6 +309,39 @@ router.put('/updateStatusItem/:item_id', TransactionController.updateStatusItem)
  *         description: ID codificado inválido, sin productos válidos, transacción original no encontrada, falta observaciones o stock insuficiente
  */
 router.post('/incomeProductsRegister', TransactionController.incomeProductsRegister);
+
+/**
+ * @openapi
+ * /transactions/resolveRegisterNovelty:
+ *   post:
+ *     summary: Regulariza la novedad de un registro (devuelve a origen lo que faltó, descuenta lo que llegó de más)
+ *     tags: [Transactions]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [id]
+ *             properties:
+ *               id:
+ *                 type: string
+ *                 description: ID del registro codificado (hashids)
+ *     responses:
+ *       200:
+ *         description: Ajuste aplicado correctamente
+ *       400:
+ *         description: Sin novedades pendientes o stock insuficiente en la bodega origen
+ *       403:
+ *         description: Rol no autorizado
+ */
+router.post(
+    '/resolveRegisterNovelty',
+    authJwt.hasAnyRole(['admin', 'logistica_uio', 'gerencia_uio']),
+    TransactionController.resolveRegisterNovelty
+);
 
 /**
  * @openapi

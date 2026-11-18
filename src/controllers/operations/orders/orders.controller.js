@@ -46,6 +46,19 @@ const getOrderById = async (req, res, next) => {
     }
 }
 
+const getDispatchSummary = async (req, res, next) => {
+    try {
+        const orderId = decodeId(req.params.order_id, 'order_id');
+        const rows = await OrderService.getDispatchSummary(orderId);
+        res.status(200).json(rows.map((row) => ({
+            ...row,
+            productId: row.productId ? Utils.encode(row.productId) : null,
+        })));
+    } catch (error) {
+        next(error);
+    }
+}
+
 const createOrder = async (req, res, next) => {
     try {
         if (!req.file) throw new AppError('Archivo Excel requerido', 400);
@@ -114,6 +127,7 @@ const deleteItem = async (req, res, next) => {
 const OrderController = {
     getAllOrders,
     getOrderById,
+    getDispatchSummary,
     createOrder,
     updateOrder,
     deleteItem
