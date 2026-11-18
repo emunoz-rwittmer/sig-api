@@ -16,6 +16,9 @@
 //               cifra no es real). Desde ahí el stock lo fija lo que el yate declara al pedir.
 //   uio         Encera el stock de la bodega central de Quito, para arrancar desde un conteo
 //               físico (que se registra después con Nueva transacción > Ajuste).
+//   writeoff    Elimina las bodegas "De baja": sus transferencias históricas pasan a ser
+//               salidas por baja y se borra el stock que acumulaban. Se detiene sin tocar
+//               nada si alguna otra tabla depende de ellas.
 //   duplicates  Fusiona productos con el mismo nombre en el que tiene configuración activa
 //               y más movimientos; el otro queda inactivo y apuntando al vigente.
 
@@ -141,6 +144,51 @@ const run = async () => {
 
         async uio() {
             await zeroWarehouses('uio', "w.location = 'Quito' AND w.type = 'Central'", 'Regularización inicial de UIO', 'Encerado antes del conteo físico');
+        },
+
+        // Las bajas ahora son una Salida con motivo, así que las bodegas "De baja" sobran.
+        // Sus transferencias históricas se conservan convertidas en salidas por baja; se
+        // borra solo el stock acumulado ahí (mercadería ya dada de baja) y la bodega.
+        async writeoff() {
+            const warehouses = await q("SELECT id, name FROM warehouses WHERE type = 'De baja'");
+            if (!warehouses.length) {
+                console.log('writeoff: no hay bodegas De baja');
+                return;
+            }
+            const ids = warehouses.map((warehouse) => warehouse.id);
+
+            // Si algo inesperado depende de estas bodegas, no se toca nada.
+            const [blockers] = await q(`
+                SELECT
+                    (SELECT COUNT(*) FROM transactions WHERE warehouse_from_id IN (:ids)) fromThem,
+                    (SELECT COUNT(*) FROM requests WHERE warehouse_id IN (:ids)) requests,
+                    (SELECT COUNT(*) FROM laundryYachts WHERE warehouse_id IN (:ids)) laundry,
+                    (SELECT COUNT(*) FROM stock_histories h JOIN stocks s ON s.id = h.stock_id WHERE s.warehouse_id IN (:ids)) histories`, { ids });
+            const blocked = Object.entries(blockers).filter(([, count]) => Number(count) > 0);
+            if (blocked.length) {
+                throw new Error(`writeoff: hay datos que dependen de las bodegas De baja (${blocked.map(([name, count]) => `${name}: ${count}`).join(', ')}). No se eliminó nada.`);
+            }
+
+            let transfers = 0;
+            let edits = 0;
+            for (const warehouse of warehouses) {
+                // Transferencia a "De baja" = salida por baja. Queda el nombre de la bodega en la nota.
+                const moved = await q(`
+                    UPDATE transactions
+                    SET warehouse_to_id = NULL, reason = IFNULL(reason, 'Baja'), note = IFNULL(note, :note)
+                    WHERE warehouse_to_id = :id AND warehouse_from_id IS NOT NULL`, { id: warehouse.id, note: `Antes: transferencia a ${warehouse.name}` });
+                // Ediciones manuales del stock de la propia bodega De baja: se conservan como ajuste.
+                const edited = await q(`
+                    UPDATE transactions
+                    SET warehouse_to_id = NULL, type = 'ADJUST', reason = IFNULL(reason, 'Edición en bodega De baja'), note = IFNULL(note, :note)
+                    WHERE warehouse_to_id = :id AND warehouse_from_id IS NULL`, { id: warehouse.id, note: `Bodega eliminada: ${warehouse.name}` });
+                transfers += moved.affectedRows;
+                edits += edited.affectedRows;
+            }
+
+            const stocks = await q('DELETE FROM stocks WHERE warehouse_id IN (:ids)', { ids });
+            await q('DELETE FROM warehouses WHERE id IN (:ids)', { ids });
+            console.log(`writeoff: ${warehouses.map((warehouse) => warehouse.name).join(', ')} eliminadas; ${transfers} transferencias pasan a salida por baja, ${edits} ediciones a ajuste, ${stocks.affectedRows} filas de stock borradas`);
         },
 
         async duplicates() {
