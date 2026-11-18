@@ -168,14 +168,14 @@ describe('GET /api/reports/transactions/history', () => {
 
         const detail = XLSX.utils.sheet_to_json(workbook.Sheets.Detalle, { range: 3 });
         expect(detail.filter((row) => row['N°'] !== undefined && typeof row['N°'] === 'number')).toHaveLength(3);
-        expect(detail[0]).toMatchObject({ Movimiento: 'Salida / ajuste', Producto: 'Agua mineral', 'Bodega origen': 'Bodega Quito' });
+        expect(detail[0]).toMatchObject({ Movimiento: 'Salida', Producto: 'Agua mineral', 'Bodega origen': 'Bodega Quito' });
 
         const resumen = XLSX.utils.sheet_to_json(workbook.Sheets.Resumen, { header: 1 });
         expect(resumen.find((row) => row[0] === 'Producto')?.[1]).toBe('Agua mineral · AGUA-01');
 
         const products = XLSX.utils.sheet_to_json(workbook.Sheets['Por producto'], { range: 3 });
         expect(products).toHaveLength(1);
-        expect(products[0]).toMatchObject({ Producto: 'Agua mineral', Movimientos: 3, Ingreso: 10, Transferencia: 4, 'Salida / ajuste': 1 });
+        expect(products[0]).toMatchObject({ Producto: 'Agua mineral', Movimientos: 3, Ingreso: 10, Transferencia: 4, Salida: 1 });
     });
 
     it('devuelve 400 ante un filtro inválido', async () => {

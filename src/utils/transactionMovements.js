@@ -10,7 +10,7 @@
 const MOVEMENTS = {
     ENTRY: { key: 'ENTRY', label: 'Ingreso' },
     TRANSFER: { key: 'TRANSFER', label: 'Transferencia' },
-    EXIT: { key: 'EXIT', label: 'Salida / ajuste' },
+    EXIT: { key: 'EXIT', label: 'Salida' },
     BAR_CONSUMPTION: { key: 'BAR_CONSUMPTION', label: 'Consumo bar' },
     ADJUST: { key: 'ADJUST', label: 'Ajuste' },
 };

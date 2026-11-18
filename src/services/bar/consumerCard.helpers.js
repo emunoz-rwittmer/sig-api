@@ -5,7 +5,8 @@ const Transaction = require('../../models/operations/inventory/transaction.model
 const db = require('../../utils/database');
 
 const UNIT_CONVERTERS = {
-    'ml': 29.5735,
+    // Onza de bar: 30 ml (medida del jigger), no la onza líquida exacta de 29.57.
+    'ml': 30,
     'unit': 1
 };
 
@@ -71,7 +72,7 @@ async function deductRecipeStock(warehouseId, productBar, item, userId, numberCa
         });
 
         if (!stock) {
-            throw new Error(`stock not found for product ${stock.product.name}`);
+            throw new Error(`Stock not found for product ${productBar.productId} in warehouse ${warehouseId}`);
         }
 
         const product = await Product.findByPk(productBar.productId, { transaction });
@@ -115,7 +116,7 @@ async function deductRecipeStock(warehouseId, productBar, item, userId, numberCa
             });
 
             if (!ingredientStock) {
-                throw new Error(`Ingredient stock not found for product ${ingredientStock.product.name} in recipe`);
+                throw new Error(`Ingredient stock not found for product ${detail.productId} in warehouse ${warehouseId}`);
             }
 
             const product = await Product.findByPk(detail.productId, { transaction });

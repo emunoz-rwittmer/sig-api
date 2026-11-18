@@ -491,7 +491,10 @@ describe('PUT /api/products/upadate/stock/:stock_id — actualizar stock', () =>
 
         const transactions = await Transaction.findAll({ where: { productId: stock.productId } });
         expect(transactions).toHaveLength(1);
-        expect(transactions[0].type).toBe('IN');
+        // La edición manual de stock queda como ajuste, no como ingreso
+        expect(transactions[0].type).toBe('ADJUST');
+        expect(transactions[0].reason).toBe('Edición manual de stock');
+        expect(transactions[0].warehouseToId).toBe(stock.warehouseId);
     });
 
     it('devuelve 400 con hashid inválido en stock_id', async () => {
