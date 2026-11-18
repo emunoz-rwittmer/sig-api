@@ -33,6 +33,37 @@ const Register = db.define('register', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  orderId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'order_id'
+  },
+  receivedBy: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'received_by'
+  },
+  receivedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'received_at'
+  },
+  // null = sin novedad | 'pendiente' | 'resuelta'
+  noveltyStatus: {
+    type: DataTypes.STRING(20),
+    allowNull: true,
+    field: 'novelty_status'
+  },
+  resolvedBy: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'resolved_by'
+  },
+  resolvedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'resolved_at'
+  },
 });
 
 module.exports = Register;

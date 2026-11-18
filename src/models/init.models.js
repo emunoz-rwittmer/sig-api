@@ -282,6 +282,9 @@ const initModels = () => {
 
     Staff.hasMany(Register, { foreignKey: 'user_id', as: 'registros' });
     Register.belongsTo(Staff, { foreignKey: 'user_id', as: 'responsable' });
+    Register.belongsTo(Staff, { foreignKey: 'received_by', as: 'receptor' });
+    Register.belongsTo(Staff, { foreignKey: 'resolved_by', as: 'resolutor' });
+    Register.belongsTo(Order, { foreignKey: 'order_id', as: 'pedido' });
 
     Product.hasMany(ProductConfiguration, { as: 'configurations', foreignKey: 'product_id', onDelete: "CASCADE", hooks: true });
     ProductConfiguration.belongsTo(Product, { as: "product", foreignKey: "product_id" });

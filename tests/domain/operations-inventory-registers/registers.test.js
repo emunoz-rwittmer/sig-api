@@ -4,6 +4,9 @@ const { createAuthenticatedUser } = require('../../helpers/auth');
 const { createDepartment, createPosition, createCompanyWithYacht } = require('../../helpers/staffFixtures');
 const Staff = require('../../../src/models/catalogs/staff.models');
 const Register = require('../../../src/models/operations/inventory/register.models');
+const Product = require('../../../src/models/operations/inventory/product.models');
+const Transaction = require('../../../src/models/operations/inventory/transaction.models');
+const Warehouse = require('../../../src/models/catalogs/wareHouse.models');
 const Utils = require('../../../src/utils/Utils');
 const RegisterService = require('../../../src/services/operations/inventory/registers.services');
 
@@ -62,6 +65,13 @@ async function createRegisterFixture(overrides = {}) {
 describe('GET /api/registers — lista de registros', () => {
     it('devuelve 200 con la lista de registros y los ids codificados como hashid', async () => {
         const register = await createRegisterFixture();
+        const notTransit = await createRegisterFixture();
+        const product = await Product.create({ name: 'Producto registro', sku: `SKU-REG-${suffix()}`, type: 'DISCRETE', unit: 'unidad', active: true });
+        for (const id of [1, 2, 5, 9]) await Warehouse.create({ id, name: `Bodega ${id}`, location: 'Bodega Test', type: 'Central' });
+        const line = { productId: product.id, userId: register.userId, quantity: 5, type: 'OUT' };
+        await Transaction.create({ ...line, warehouseFromId: 1, warehouseToId: 9, registerId: register.id });
+        await Transaction.create({ ...line, warehouseFromId: 9, warehouseToId: 2, quantity: 4, registerId: register.id });
+        await Transaction.create({ ...line, warehouseFromId: 2, warehouseToId: 5, registerId: notTransit.id });
 
         const response = await auth(request(app).get('/api/registers'));
 
@@ -70,6 +80,11 @@ describe('GET /api/registers — lista de registros', () => {
 
         const found = response.body.find((r) => r.id === Utils.encode(register.id));
         expect(found).toBeDefined();
+        // transactiones = lo despachado a tránsito; recepciones = lo ingresado a GPS
+        expect(found.transactiones.map((t) => Number(t.quantity))).toEqual([5]);
+        expect(found.recepciones.map((t) => Number(t.quantity))).toEqual([4]);
+        // Los registros que no van a tránsito no se listan
+        expect(response.body.find((r) => r.id === Utils.encode(notTransit.id))).toBeUndefined();
         expect(found.companyId).toBe(Utils.encode(register.companyId));
         expect(found.userId).toBe(Utils.encode(register.userId));
     });

@@ -150,6 +150,17 @@ const sendEmailNewOrder = (companyName) => {
     });
 }
 
+const sendEmailRegisterNovelty = (counter, observations) => {
+    const html = MailsOrder.htmlRegisterNovelty(counter, observations)
+    return sendMail({
+        to: RECIPIENTS.edwin,
+        from: FROM_EMAIL,
+        cc: RECIPIENTS.belen,
+        subject: `Registro ${counter} ingresado con novedad`,
+        html,
+    });
+}
+
 const sendEmailNewRequest = (companyName) => {
     const html = MailsOrder.htmlNewRequest(companyName)
     return sendMail({
@@ -275,6 +286,7 @@ module.exports = {
     sendEmailCommentCard,
     sendEmailPasswordStaff,
     sendEmailNewOrder,
+    sendEmailRegisterNovelty,
     sendConfirmationEmail,
     sendDispatchEmail,
     sendEmailNewRequest,
