@@ -108,8 +108,9 @@ class OrderService {
         }) : [];
 
         const skus = [...new Set(items.map(item => normalizeSku(item.sku)))];
-        const products = await Product.findAll({ where: { sku: skus }, attributes: ['id', 'sku'], transaction });
-        const productBySku = new Map(products.map(product => [product.sku, product]));
+        const products = await Product.findAll({ where: { sku: skus }, attributes: ['id', 'sku', 'mergedIntoId'], transaction });
+        // El SKU de un producto fusionado cuenta como el producto vigente.
+        const productBySku = new Map(products.map(product => [product.sku, { id: product.mergedIntoId ?? product.id }]));
 
         const dispatchedByProduct = new Map();
         for (const line of lines) {
