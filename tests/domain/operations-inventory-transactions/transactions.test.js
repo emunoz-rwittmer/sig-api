@@ -969,6 +969,67 @@ describe('Salida y ajuste de stock', () => {
 });
 
 // =========================================================================
+// Productos sin control de stock y productos fusionados
+// =========================================================================
+
+describe('Productos sin control de stock y fusionados', () => {
+    it('sin control de stock: la transferencia y la salida se registran sin validar ni mover cantidades; el ajuste se rechaza', async () => {
+        await Consecutivo.destroy({ where: {} });
+        await Consecutivo.create({ valor: 1 });
+        const { company } = await createCompanyWithYacht(`NoCtrl-${suffix()}`);
+        const from = await createWarehouseFixture();
+        const to = await createWarehouseFixture();
+        const linen = await createProductFixture({ controlsStock: false });
+        const staff = await createStaffFixture();
+        const line = { id: Utils.encode(linen.id), name: linen.name, quantity: 8 };
+
+        const transfer = await auth(request(app).post('/api/transactions/transactionBetweenWarehouse').send({
+            products: [line],
+            userName: 'Tester',
+            location: 'GPS',
+            companyId: Utils.encode(company.id),
+            warehouseFromId: Utils.encode(from.id),
+            warehouseToId: Utils.encode(to.id),
+            userId: Utils.encode(staff.id),
+        }));
+        const exit = await auth(request(app).post('/api/transactions/exitProducts').send({
+            warehouseFromId: Utils.encode(from.id), products: [line], reason: 'Baja por daño',
+        }));
+        const adjust = await auth(request(app).post('/api/transactions/adjustProducts').send({
+            warehouseId: Utils.encode(from.id), products: [line], reason: 'Conteo físico',
+        }));
+
+        expect(transfer.status).toBe(200);
+        expect(exit.status).toBe(200);
+        expect(adjust.status).toBe(400);
+        expect(await Stock.count({ where: { productId: linen.id } })).toBe(0);
+        expect(await Transaction.count({ where: { productId: linen.id } })).toBe(2);
+    });
+
+    it('el SKU de un producto fusionado ingresa el pedido al producto vigente', async () => {
+        const current = await createProductFixture();
+        const merged = await createProductFixture({ active: false, mergedIntoId: current.id });
+        const warehouse = await createWarehouseFixture();
+        const order = await createOrderFixture();
+        const item = await createOrderItemFixture(order.id, { sku: merged.sku });
+        const staff = await createStaffFixture();
+
+        const response = await auth(request(app).post(`/api/transactions/productEntryInWarehouse/${warehouse.id}`).send({
+            id: item.id,
+            product: merged.name,
+            sku: merged.sku,
+            quantity: 6,
+            companyId: order.companyId,
+            user: Utils.encode(staff.id),
+        }));
+
+        expect(response.status).toBe(200);
+        expect(await stockQty(current.id, warehouse.id)).toBe(6);
+        expect(await Stock.count({ where: { productId: merged.id } })).toBe(0);
+    });
+});
+
+// =========================================================================
 // PUT /api/transactions/printRegister
 // =========================================================================
 

@@ -43,6 +43,11 @@ class TransactionService {
                 lock: t.LOCK.UPDATE
             });
 
+            // SKU de un producto fusionado (el proveedor cambió el código): se usa el vigente.
+            if (product?.mergedIntoId) {
+                product = await Product.findByPk(product.mergedIntoId, { transaction: t, lock: t.LOCK.UPDATE });
+            }
+
             if (!product) {
                 product = await Product.create(productAttributes, { transaction: t });
             }
@@ -193,6 +198,8 @@ class TransactionService {
                     lock: transaction.LOCK.UPDATE
                 });
 
+                if (infoProduct.controlsStock === false) continue;
+
                 const stockFrom = await Stock.findOne({
                     where: {
                         productId,
@@ -219,6 +226,12 @@ class TransactionService {
                     transaction,
                     lock: transaction.LOCK.UPDATE
                 });
+
+                if (infoProduct.controlsStock === false) {
+                    // Sin control de stock (p. ej. lencería): solo queda el movimiento.
+                    await Transaction.create({ productId, userId, warehouseFromId, warehouseToId, quantity, type: 'OUT', registerId: register.id }, { transaction });
+                    continue;
+                }
 
                 const stockFrom = await Stock.findOne({
                     where: {
@@ -313,6 +326,10 @@ class TransactionService {
                         lock: transaction.LOCK.UPDATE
                     });
 
+                    if (infoProduct.controlsStock === false) {
+                        return Transaction.create({ productId: product.id, userId, warehouseToId, quantity, type: 'IN' }, { transaction });
+                    }
+
                     const whereCondition = {
                         productId: product.id,
                         warehouseId: warehouseToId,
@@ -406,14 +423,17 @@ class TransactionService {
                     throw new AppError('Producto no encontrado', 400);
                 }
                 const normalizedQty = Quantity.normalizeQuantity(product, quantity);
-                const stock = await TransactionService.findStockRow({ productId: product.id, warehouseId: warehouseFromId, companyId }, transaction);
 
-                if (!stock || Number(stock.quantity) < normalizedQty) {
-                    throw new AppError(`Stock insuficiente para ${product.name}. Disponible: ${stock ? Quantity.viewCorrectQuantity(product, stock.quantity) : 0}, Solicitado: ${quantity}`, 400);
+                if (product.controlsStock !== false) {
+                    const stock = await TransactionService.findStockRow({ productId: product.id, warehouseId: warehouseFromId, companyId }, transaction);
+
+                    if (!stock || Number(stock.quantity) < normalizedQty) {
+                        throw new AppError(`Stock insuficiente para ${product.name}. Disponible: ${stock ? Quantity.viewCorrectQuantity(product, stock.quantity) : 0}, Solicitado: ${quantity}`, 400);
+                    }
+
+                    stock.quantity = Math.round((Number(stock.quantity) - normalizedQty) * 100) / 100;
+                    await stock.save({ transaction });
                 }
-
-                stock.quantity = Math.round((Number(stock.quantity) - normalizedQty) * 100) / 100;
-                await stock.save({ transaction });
 
                 results.push(await Transaction.create({
                     productId: product.id,
@@ -451,6 +471,9 @@ class TransactionService {
                 const product = await Product.findByPk(item.id, { transaction });
                 if (!product) {
                     throw new AppError('Producto no encontrado', 400);
+                }
+                if (product.controlsStock === false) {
+                    throw new AppError(`${product.name} no lleva control de stock: no se puede ajustar`, 400);
                 }
                 const target = Quantity.normalizeQuantity(product, counted);
                 const stock = await TransactionService.findStockRow({ productId: product.id, warehouseId, companyId }, transaction)
@@ -553,13 +576,15 @@ class TransactionService {
                 }
                 const normalizedQty = Quantity.normalizeQuantity(product, received);
 
-                await TransactionService.adjustStock(
-                    { productId, warehouseId: TRANSIT_WAREHOUSE_ID, companyId: register.companyId },
-                    -normalizedQty,
-                    transaction
-                );
-                // Sin companyId a propósito: la central de GPS junta el stock de todas las empresas.
-                await TransactionService.adjustStock({ productId, warehouseId: warehouseToId }, normalizedQty, transaction);
+                if (product.controlsStock !== false) {
+                    await TransactionService.adjustStock(
+                        { productId, warehouseId: TRANSIT_WAREHOUSE_ID, companyId: register.companyId },
+                        -normalizedQty,
+                        transaction
+                    );
+                    // Sin companyId a propósito: la central de GPS junta el stock de todas las empresas.
+                    await TransactionService.adjustStock({ productId, warehouseId: warehouseToId }, normalizedQty, transaction);
+                }
 
                 results.push(await Transaction.create({
                     productId,
@@ -627,6 +652,7 @@ class TransactionService {
                 if (diff === 0) continue;
 
                 const product = await Product.findByPk(productId, { transaction });
+                if (product.controlsStock === false) continue;
                 const normalizedQty = Quantity.normalizeQuantity(product, Math.abs(diff));
                 const toOrigin = diff > 0 ? normalizedQty : -normalizedQty;
 
