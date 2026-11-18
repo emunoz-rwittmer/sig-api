@@ -148,7 +148,7 @@ const run = async () => {
             // Tablas que apuntan al producto, aparte de stocks (que se suma fila por fila).
             const references = [
                 ['transactions', 'product_id'], ['product_configurations', 'product_id'], ['product_bars', 'product_id'],
-                ['recipe_details', 'productId'], ['consumer_card_item_ingredients', 'product_id'], ['laundryyachts', 'product_id'],
+                ['recipe_details', 'productId'], ['consumer_card_item_ingredients', 'product_id'], ['laundryYachts', 'product_id'],
                 ['maintenance_record_materials', 'product_id'], ['maintenance_rule_materials', 'product_id'],
             ];
 
