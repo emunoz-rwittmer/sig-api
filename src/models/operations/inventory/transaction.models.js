@@ -45,6 +45,15 @@ const Transaction = db.define('transaction', {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
   },
+  // Motivo de una salida o ajuste (consumo, baja, conteo físico...)
+  reason: {
+    type: DataTypes.STRING(60),
+    allowNull: true,
+  },
+  note: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
 });
 
 module.exports = Transaction;

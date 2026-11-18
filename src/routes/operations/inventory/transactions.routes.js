@@ -257,6 +257,83 @@ router.post('/incomeProductsInWarehouse', TransactionController.incomeProductsIn
  */
 router.put('/updateStatusItem/:item_id', TransactionController.updateStatusItem);
 
+// Mismos roles que pueden registrar transacciones en la pantalla de inventario.
+const STOCK_MOVEMENT_ROLES = ['admin', 'rrhh', 'gerencia_gps', 'gerencia_uio', 'logistica_uio', 'logistica_gps', 'operaciones_gps'];
+
+/**
+ * @openapi
+ * /transactions/exitProducts:
+ *   post:
+ *     summary: Salida de stock con motivo (consumo, baja, pérdida...)
+ *     tags: [Transactions]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [warehouseFromId, products, reason]
+ *             properties:
+ *               warehouseFromId: { type: string, description: ID de la bodega codificado (hashids) }
+ *               companyId: { type: string, description: Requerido si la bodega separa el stock por empresa }
+ *               reason: { type: string }
+ *               note: { type: string }
+ *               products:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     id: { type: string }
+ *                     quantity: { type: number }
+ *     responses:
+ *       200:
+ *         description: Salida registrada
+ *       400:
+ *         description: Sin motivo, sin productos, cantidad inválida o stock insuficiente
+ *       403:
+ *         description: Rol no autorizado
+ */
+router.post('/exitProducts', authJwt.hasAnyRole(STOCK_MOVEMENT_ROLES), TransactionController.exitProducts);
+
+/**
+ * @openapi
+ * /transactions/adjustProducts:
+ *   post:
+ *     summary: Ajuste de stock al conteo físico, con motivo. Registra solo la diferencia.
+ *     tags: [Transactions]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [warehouseId, products, reason]
+ *             properties:
+ *               warehouseId: { type: string, description: ID de la bodega codificado (hashids) }
+ *               companyId: { type: string, description: Requerido si la bodega separa el stock por empresa }
+ *               reason: { type: string }
+ *               note: { type: string }
+ *               products:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     id: { type: string }
+ *                     quantity: { type: number, description: Cantidad contada }
+ *     responses:
+ *       200:
+ *         description: Ajuste registrado
+ *       400:
+ *         description: Sin motivo, sin productos o conteo inválido
+ *       403:
+ *         description: Rol no autorizado
+ */
+router.post('/adjustProducts', authJwt.hasAnyRole(STOCK_MOVEMENT_ROLES), TransactionController.adjustProducts);
+
 /**
  * @openapi
  * /transactions/incomeProductsRegister:

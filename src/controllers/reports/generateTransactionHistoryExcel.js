@@ -57,7 +57,7 @@ const DETAIL_COLUMNS = [
     { title: 'Bodega destino', width: 26 },
     { title: 'Responsable', width: 28 },
     { title: 'N° registro', width: 13 },
-    { title: 'Referencia', width: 26 },
+    { title: 'Referencia / motivo', width: 32 },
 ];
 
 const PRODUCT_COLUMNS = [
@@ -267,7 +267,7 @@ function writeDetailSheet(wb, styles, { rows, generatedAt, period }) {
         ws.cell(row, 10).string(item.warehouseTo?.name ?? '—').style(style);
         ws.cell(row, 11).string(item.responsible?.fullName || 'Sin registrar').style(style);
         ws.cell(row, 12).string(item.register?.counter ?? '').style(style).style(styles.mono);
-        ws.cell(row, 13).string(item.referenceId ?? '').style(style).style(styles.mono);
+        ws.cell(row, 13).string(item.referenceId ?? [item.reason, item.note].filter(Boolean).join(' · ')).style(style).style(styles.mono);
     });
 
     const totalRow = headerRow + rows.length + 1;

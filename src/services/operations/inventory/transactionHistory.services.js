@@ -66,6 +66,7 @@ function buildWhere(filters = {}) {
                 { '$product.sku$': like },
                 { '$registro.counter$': like },
                 { referenceId: like },
+                { reason: like },
             ],
         });
     }
@@ -97,6 +98,8 @@ function serializeTransaction(transaction) {
             : null,
         register: plain.registro ? { id: plain.registro.id, counter: plain.registro.counter } : null,
         referenceId: plain.referenceId,
+        reason: plain.reason,
+        note: plain.note,
     };
 }
 

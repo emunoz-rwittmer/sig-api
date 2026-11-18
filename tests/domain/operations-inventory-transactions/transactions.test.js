@@ -854,6 +854,121 @@ describe('Despacho ligado a un pedido', () => {
 });
 
 // =========================================================================
+// POST /api/transactions/exitProducts  y  /adjustProducts
+// =========================================================================
+
+describe('Salida y ajuste de stock', () => {
+    const post = (path, body) => auth(request(app).post(`/api/transactions/${path}`).send(body));
+    const line = (product, quantity) => ({ id: Utils.encode(product.id), name: product.name, quantity });
+
+    it('salida: descuenta el stock y registra el motivo con el usuario de la sesión', async () => {
+        const warehouse = await createWarehouseFixture();
+        const product = await createProductFixture();
+        await Stock.create({ productId: product.id, warehouseId: warehouse.id, quantity: 10 });
+
+        const response = await post('exitProducts', {
+            warehouseFromId: Utils.encode(warehouse.id),
+            products: [line(product, 4)],
+            reason: 'Baja por daño',
+            note: 'Caja mojada',
+        });
+
+        expect(response.status).toBe(200);
+        expect(await stockQty(product.id, warehouse.id)).toBe(6);
+
+        const tx = await Transaction.findOne({ where: { productId: product.id } });
+        expect(tx).toMatchObject({ type: 'OUT', warehouseFromId: warehouse.id, warehouseToId: null, reason: 'Baja por daño', note: 'Caja mojada' });
+        expect(Number(tx.quantity)).toBe(4);
+        expect(tx.userId).toBe(Utils.decode(jwt.decode(token).id));
+    });
+
+    it('salida: 400 sin motivo o con stock insuficiente, sin tocar el stock', async () => {
+        const warehouse = await createWarehouseFixture();
+        const product = await createProductFixture();
+        await Stock.create({ productId: product.id, warehouseId: warehouse.id, quantity: 3 });
+        const base = { warehouseFromId: Utils.encode(warehouse.id), products: [line(product, 5)] };
+
+        expect((await post('exitProducts', base)).status).toBe(400);
+        expect((await post('exitProducts', { ...base, reason: 'Consumo interno' })).status).toBe(400);
+        expect(await stockQty(product.id, warehouse.id)).toBe(3);
+    });
+
+    it('salida: en una bodega con stock por empresa exige la empresa y descuenta solo de esa', async () => {
+        const warehouse = await createWarehouseFixture();
+        const product = await createProductFixture();
+        const { company: a } = await createCompanyWithYacht(`Exit-A-${suffix()}`);
+        const { company: b } = await createCompanyWithYacht(`Exit-B-${suffix()}`);
+        await createStockFixture(product.id, warehouse.id, a.id, { quantity: 10 });
+        await createStockFixture(product.id, warehouse.id, b.id, { quantity: 10 });
+        const base = { warehouseFromId: Utils.encode(warehouse.id), products: [line(product, 4)], reason: 'Vencido' };
+
+        expect((await post('exitProducts', base)).status).toBe(400);
+        expect((await post('exitProducts', { ...base, companyId: Utils.encode(b.id) })).status).toBe(200);
+
+        const rows = await Stock.findAll({ where: { productId: product.id, warehouseId: warehouse.id } });
+        expect(Object.fromEntries(rows.map((row) => [row.companyId, Number(row.quantity)]))).toEqual({ [a.id]: 10, [b.id]: 6 });
+    });
+
+    it('ajuste: deja el stock igual al conteo y registra solo la diferencia, en el sentido correcto', async () => {
+        const warehouse = await createWarehouseFixture();
+        const missing = await createProductFixture();
+        const surplus = await createProductFixture();
+        const same = await createProductFixture();
+        const fresh = await createProductFixture();
+        await Stock.create({ productId: missing.id, warehouseId: warehouse.id, quantity: 10 });
+        await Stock.create({ productId: surplus.id, warehouseId: warehouse.id, quantity: 10 });
+        await Stock.create({ productId: same.id, warehouseId: warehouse.id, quantity: 10 });
+
+        const response = await post('adjustProducts', {
+            warehouseId: Utils.encode(warehouse.id),
+            products: [line(missing, 7), line(surplus, 12), line(same, 10), line(fresh, 5)],
+            reason: 'Conteo físico',
+        });
+
+        expect(response.status).toBe(200);
+        expect(await stockQty(missing.id, warehouse.id)).toBe(7);
+        expect(await stockQty(surplus.id, warehouse.id)).toBe(12);
+        expect(await stockQty(fresh.id, warehouse.id)).toBe(5);
+
+        const down = await Transaction.findOne({ where: { productId: missing.id } });
+        expect(down).toMatchObject({ type: 'ADJUST', warehouseFromId: warehouse.id, warehouseToId: null, reason: 'Conteo físico' });
+        expect(Number(down.quantity)).toBe(3);
+        const up = await Transaction.findOne({ where: { productId: surplus.id } });
+        expect(up).toMatchObject({ type: 'ADJUST', warehouseFromId: null, warehouseToId: warehouse.id });
+        expect(Number(up.quantity)).toBe(2);
+        // Sin diferencia no se registra nada
+        expect(await Transaction.count({ where: { productId: same.id } })).toBe(0);
+    });
+
+    it('ajuste: un producto en ml se cuenta en botellas (con decimales) y el stock queda en ml', async () => {
+        const warehouse = await createWarehouseFixture();
+        const bottle = await createProductFixture({ type: 'CONSUMABLE', unit: 'ml', presentationQuantity: 750 });
+        await Stock.create({ productId: bottle.id, warehouseId: warehouse.id, quantity: 3000 });
+
+        const response = await post('adjustProducts', {
+            warehouseId: Utils.encode(warehouse.id),
+            products: [line(bottle, 3.5)],
+            reason: 'Conteo físico',
+        });
+
+        expect(response.status).toBe(200);
+        expect(await stockQty(bottle.id, warehouse.id)).toBe(2625);
+        const tx = await Transaction.findOne({ where: { productId: bottle.id } });
+        expect(Number(tx.quantity)).toBe(0.5);
+        expect(tx.warehouseFromId).toBe(warehouse.id);
+    });
+
+    it('ajuste: 400 sin motivo o con conteo negativo', async () => {
+        const warehouse = await createWarehouseFixture();
+        const product = await createProductFixture();
+        const base = { warehouseId: Utils.encode(warehouse.id), products: [line(product, 5)] };
+
+        expect((await post('adjustProducts', base)).status).toBe(400);
+        expect((await post('adjustProducts', { ...base, products: [line(product, -1)], reason: 'Conteo físico' })).status).toBe(400);
+    });
+});
+
+// =========================================================================
 // PUT /api/transactions/printRegister
 // =========================================================================
 

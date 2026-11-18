@@ -361,6 +361,127 @@ class TransactionService {
         return orderItems.update(data, { where: { id: itemId } });
     }
 
+    // Fila de stock de un producto en una bodega. UIO guarda una fila por empresa y
+    // las demás bodegas una sola sin empresa: con empresa se usa su fila (o la
+    // compartida); sin empresa solo se acepta si no hay ambigüedad.
+    static async findStockRow({ productId, warehouseId, companyId }, transaction) {
+        const rows = await Stock.findAll({
+            where: { productId, warehouseId },
+            transaction,
+            lock: transaction.LOCK.UPDATE
+        });
+        if (companyId) {
+            return rows.find(row => row.companyId === companyId) ?? rows.find(row => row.companyId == null) ?? null;
+        }
+        if (rows.length > 1) {
+            throw new AppError('El producto tiene stock de varias empresas en esta bodega: selecciona la empresa', 400);
+        }
+        return rows[0] ?? null;
+    }
+
+    static validateMovement({ products, reason }) {
+        if (!Array.isArray(products) || products.length === 0) {
+            throw new AppError('No hay productos para procesar', 400);
+        }
+        if (!reason?.trim()) {
+            throw new AppError('El motivo es requerido', 400);
+        }
+    }
+
+    // Salida: stock que deja el inventario con un motivo (consumo, baja, pérdida...).
+    static async exitProducts({ products, warehouseFromId, companyId, userId, reason, note }) {
+        TransactionService.validateMovement({ products, reason });
+        const transaction = await db.transaction();
+
+        try {
+            const results = [];
+            for (const item of products) {
+                const quantity = Number(item.quantity);
+                if (!Number.isFinite(quantity) || quantity <= 0) {
+                    throw new AppError('Cantidad debe ser un número mayor a 0', 400);
+                }
+
+                const product = await Product.findByPk(item.id, { transaction });
+                if (!product) {
+                    throw new AppError('Producto no encontrado', 400);
+                }
+                const normalizedQty = Quantity.normalizeQuantity(product, quantity);
+                const stock = await TransactionService.findStockRow({ productId: product.id, warehouseId: warehouseFromId, companyId }, transaction);
+
+                if (!stock || Number(stock.quantity) < normalizedQty) {
+                    throw new AppError(`Stock insuficiente para ${product.name}. Disponible: ${stock ? Quantity.viewCorrectQuantity(product, stock.quantity) : 0}, Solicitado: ${quantity}`, 400);
+                }
+
+                stock.quantity = Math.round((Number(stock.quantity) - normalizedQty) * 100) / 100;
+                await stock.save({ transaction });
+
+                results.push(await Transaction.create({
+                    productId: product.id,
+                    userId,
+                    warehouseFromId,
+                    quantity,
+                    type: 'OUT',
+                    reason: reason.trim(),
+                    note: note?.trim() || null
+                }, { transaction }));
+            }
+
+            await transaction.commit();
+            return results;
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
+    }
+
+    // Ajuste: el stock queda igual al conteo físico. Se registra solo la diferencia,
+    // como entrada (sobraba) o salida (faltaba) de la bodega, con su motivo.
+    static async adjustProducts({ products, warehouseId, companyId, userId, reason, note }) {
+        TransactionService.validateMovement({ products, reason });
+        const transaction = await db.transaction();
+
+        try {
+            const results = [];
+            for (const item of products) {
+                const counted = Number(item.quantity);
+                if (!Number.isFinite(counted) || counted < 0) {
+                    throw new AppError('El conteo debe ser un número mayor o igual a 0', 400);
+                }
+
+                const product = await Product.findByPk(item.id, { transaction });
+                if (!product) {
+                    throw new AppError('Producto no encontrado', 400);
+                }
+                const target = Quantity.normalizeQuantity(product, counted);
+                const stock = await TransactionService.findStockRow({ productId: product.id, warehouseId, companyId }, transaction)
+                    ?? await Stock.create({ productId: product.id, warehouseId, companyId: companyId ?? null, quantity: 0 }, { transaction });
+
+                const diff = Math.round((target - Number(stock.quantity)) * 100) / 100;
+                if (diff === 0) continue;
+
+                stock.quantity = target;
+                await stock.save({ transaction });
+
+                results.push(await Transaction.create({
+                    productId: product.id,
+                    userId,
+                    warehouseFromId: diff < 0 ? warehouseId : null,
+                    warehouseToId: diff > 0 ? warehouseId : null,
+                    quantity: Number(Quantity.viewCorrectQuantity(product, Math.abs(diff))),
+                    type: 'ADJUST',
+                    reason: reason.trim(),
+                    note: note?.trim() || null
+                }, { transaction }));
+            }
+
+            await transaction.commit();
+            return results;
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
+    }
+
     // Suma (o resta, con delta negativo) al stock; lo crea en 0 si no existe.
     static async adjustStock(where, delta, transaction) {
         const [stock] = await Stock.findOrCreate({

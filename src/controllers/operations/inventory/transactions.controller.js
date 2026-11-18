@@ -139,6 +139,38 @@ const incomeProductsInWarehouse = async (req, res, next) => {
     }
 }
 
+const exitProducts = async (req, res, next) => {
+    try {
+        await TransactionService.exitProducts({
+            products: decodeProducts(req.body.products),
+            warehouseFromId: decodeId(req.body.warehouseFromId, 'warehouseFromId'),
+            companyId: req.body.companyId ? decodeId(req.body.companyId, 'companyId') : null,
+            userId: decodeId(req.userId, 'usuario'),
+            reason: req.body.reason,
+            note: req.body.note
+        });
+        res.status(200).json({ data: 'Transacción completada correctamente.' });
+    } catch (error) {
+        next(error);
+    }
+}
+
+const adjustProducts = async (req, res, next) => {
+    try {
+        await TransactionService.adjustProducts({
+            products: decodeProducts(req.body.products),
+            warehouseId: decodeId(req.body.warehouseId, 'warehouseId'),
+            companyId: req.body.companyId ? decodeId(req.body.companyId, 'companyId') : null,
+            userId: decodeId(req.userId, 'usuario'),
+            reason: req.body.reason,
+            note: req.body.note
+        });
+        res.status(200).json({ data: 'Transacción completada correctamente.' });
+    } catch (error) {
+        next(error);
+    }
+}
+
 const updateStatusItem = async (req, res, next) => {
     try {
         const itemId = decodeId(req.params.item_id, 'item_id');
@@ -220,6 +252,8 @@ const TransactionController = {
     productEntryInWarehouse,
     transactionWarehouse,
     incomeProductsInWarehouse,
+    exitProducts,
+    adjustProducts,
     incomeProductsRegister,
     resolveRegisterNovelty,
     printRegister,

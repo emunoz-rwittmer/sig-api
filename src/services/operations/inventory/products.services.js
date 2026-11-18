@@ -359,7 +359,9 @@ class ProductService {
                     warehouseToId: isIncrease ? currentPlain.warehouseId : null,
 
                     quantity: Math.abs(diffNormal),
-                    type: isIncrease ? 'IN' : 'OUT',
+                    // Antes quedaba como IN/OUT y se confundía con ingresos y salidas reales.
+                    type: 'ADJUST',
+                    reason: 'Edición manual de stock',
 
                 }, { transaction: t });
             }
