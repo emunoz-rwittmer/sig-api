@@ -35,6 +35,7 @@ const login = async (req, res, next) => {
 
         userData.id = Utils.encode(userData.id);
         userData.rol = result.user.user_rol?.name;
+        userData.kind = 'user';
         userData.sessionId = sessioId;
 
         const token = await Tokens.generateAccessToken(userData);
@@ -122,6 +123,7 @@ const loginStaffs = async (req, res, next) => {
         const userData = { id, firstName, lastName };
         userData.id = Utils.encode(userData.id);
         userData.rol = result.user.rol?.name
+        userData.kind = 'staff';
 
         const sessioId = Tokens.getSessionRandom();
         const token = await Tokens.generateAccessToken(userData);

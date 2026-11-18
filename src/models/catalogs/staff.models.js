@@ -60,6 +60,12 @@ const Staff = db.define('staff', {
         allowNull: true,
         field: "role_id",
     },
+    // Perfil de acceso (módulo Accesos). null = aún se rige por su rol.
+    accessProfileId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        field: "access_profile_id",
+    },
     description: {
         type: DataTypes.STRING,
         allowNull: true,
