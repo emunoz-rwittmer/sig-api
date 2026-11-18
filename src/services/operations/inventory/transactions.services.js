@@ -454,6 +454,32 @@ class TransactionService {
         }
     }
 
+    // Deja el stock de un producto igual a lo contado y registra solo la diferencia.
+    // `down` permite que la baja se registre distinto de la subida: el conteo que
+    // declara un yate baja como salida por consumo, no como ajuste.
+    static async applyCountedStock({ product, warehouseId, companyId, counted, userId, reason, note, down }, transaction) {
+        const target = Quantity.normalizeQuantity(product, counted);
+        const stock = await TransactionService.findStockRow({ productId: product.id, warehouseId, companyId }, transaction)
+            ?? await Stock.create({ productId: product.id, warehouseId, companyId: companyId ?? null, quantity: 0 }, { transaction });
+
+        const diff = Math.round((target - Number(stock.quantity)) * 100) / 100;
+        if (diff === 0) return null;
+
+        stock.quantity = target;
+        await stock.save({ transaction });
+
+        return Transaction.create({
+            productId: product.id,
+            userId,
+            warehouseFromId: diff < 0 ? warehouseId : null,
+            warehouseToId: diff > 0 ? warehouseId : null,
+            quantity: Number(Quantity.viewCorrectQuantity(product, Math.abs(diff))),
+            type: diff < 0 ? (down?.type ?? 'ADJUST') : 'ADJUST',
+            reason: diff < 0 ? (down?.reason ?? reason) : reason,
+            note
+        }, { transaction });
+    }
+
     // Ajuste: el stock queda igual al conteo físico. Se registra solo la diferencia,
     // como entrada (sobraba) o salida (faltaba) de la bodega, con su motivo.
     static async adjustProducts({ products, warehouseId, companyId, userId, reason, note }) {
@@ -475,26 +501,11 @@ class TransactionService {
                 if (product.controlsStock === false) {
                     throw new AppError(`${product.name} no lleva control de stock: no se puede ajustar`, 400);
                 }
-                const target = Quantity.normalizeQuantity(product, counted);
-                const stock = await TransactionService.findStockRow({ productId: product.id, warehouseId, companyId }, transaction)
-                    ?? await Stock.create({ productId: product.id, warehouseId, companyId: companyId ?? null, quantity: 0 }, { transaction });
-
-                const diff = Math.round((target - Number(stock.quantity)) * 100) / 100;
-                if (diff === 0) continue;
-
-                stock.quantity = target;
-                await stock.save({ transaction });
-
-                results.push(await Transaction.create({
-                    productId: product.id,
-                    userId,
-                    warehouseFromId: diff < 0 ? warehouseId : null,
-                    warehouseToId: diff > 0 ? warehouseId : null,
-                    quantity: Number(Quantity.viewCorrectQuantity(product, Math.abs(diff))),
-                    type: 'ADJUST',
-                    reason: reason.trim(),
-                    note: note?.trim() || null
-                }, { transaction }));
+                const movement = await TransactionService.applyCountedStock(
+                    { product, warehouseId, companyId, counted, userId, reason: reason.trim(), note: note?.trim() || null },
+                    transaction
+                );
+                if (movement) results.push(movement);
             }
 
             await transaction.commit();

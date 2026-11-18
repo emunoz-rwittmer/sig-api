@@ -12,6 +12,8 @@
 //   orders      Cierra los pedidos "Pendiente" que ya no tienen ítems por ingresar.
 //   units       Pone unidad "unit" a los productos DISCRETE que no la tienen.
 //   linen       Marca sin control de stock los productos con stock ficticio (>= 90.000) y lo deja en 0.
+//   yachts      Encera el stock de las bodegas de yate (nunca registraron salidas, así que la
+//               cifra no es real). Desde ahí el stock lo fija lo que el yate declara al pedir.
 //   duplicates  Fusiona productos con el mismo nombre en el que tiene configuración activa
 //               y más movimientos; el otro queda inactivo y apuntando al vigente.
 
@@ -102,6 +104,29 @@ const run = async () => {
                 await q('UPDATE stocks SET quantity = 0, updatedAt = :now WHERE product_id IN (:ids)', { now, ids });
             }
             console.log(`linen: ${ids.length} productos marcados sin control de stock`);
+        },
+
+        async yachts() {
+            const rows = await q(`
+                SELECT s.id, s.product_id, s.warehouse_id, s.quantity, p.type, p.presentacion
+                FROM stocks s
+                JOIN warehouses w ON w.id = s.warehouse_id AND w.type = 'Yate'
+                JOIN products p ON p.id = s.product_id
+                WHERE s.quantity <> 0`);
+            for (const row of rows) {
+                const quantity = Number(row.quantity);
+                const view = Math.abs(row.type === 'CONSUMABLE' ? quantity / Number(row.presentacion) : quantity);
+                await q('UPDATE stocks SET quantity = 0, updatedAt = :now WHERE id = :id', { now, id: row.id });
+                await q(`INSERT INTO transactions (type, product_id, warehouse_from_id, warehouse_to_id, quantity, reason, note, createdAt, updatedAt)
+                         VALUES ('ADJUST', :productId, :fromId, :toId, :quantity, 'Regularización inicial de yates', 'Encerado antes de usar el stock declarado', :now, :now)`, {
+                    productId: row.product_id,
+                    fromId: quantity > 0 ? row.warehouse_id : null,
+                    toId: quantity > 0 ? null : row.warehouse_id,
+                    quantity: Math.round(view * 100) / 100,
+                    now,
+                });
+            }
+            console.log(`yachts: ${rows.length} filas de stock de yates enceradas`);
         },
 
         async duplicates() {
