@@ -7,8 +7,8 @@
 //   npm run inventory:cleanup -- --apply --db=<DB_NAME>        (escribe)
 //
 // Tareas:
-//   transit     Deja en tránsito (UIO-GPS) solo lo que explican los registros sin recibir;
-//               el resto se saca con un ajuste "Regularización de tránsito".
+//   transit     Deja en tránsito (UIO-GPS) solo lo que explican los registros sin recibir y las
+//               novedades pendientes; el resto se saca con un ajuste "Regularización de tránsito".
 //   orders      Cierra los pedidos "Pendiente" que ya no tienen ítems por ingresar.
 //   units       Pone unidad "unit" a los productos DISCRETE que no la tienen.
 //   linen       Marca sin control de stock los productos con stock ficticio (>= 90.000) y lo deja en 0.
@@ -39,17 +39,21 @@ const run = async () => {
 
     const tasks = {
         async transit() {
-            // Lo que justifican los registros a tránsito aún sin recibir, en la unidad del stock.
+            // Lo que debe haber en tránsito, en la unidad del stock: lo despachado en registros
+            // sin recibir, más la diferencia (despachado - recibido) de los recibidos con
+            // novedad pendiente, que se queda ahí hasta que origen aplique el ajuste.
             const rows = await q(`
                 SELECT s.id, s.product_id, s.quantity, p.name, p.type, p.presentacion, IFNULL(pend.q, 0) explained
                 FROM stocks s
                 JOIN products p ON p.id = s.product_id
                 LEFT JOIN (
-                    SELECT t.product_id, r.company_id, SUM(t.quantity * IF(p2.type = 'CONSUMABLE', p2.presentacion, 1)) q
+                    SELECT t.product_id, r.company_id,
+                        SUM(IF(t.warehouse_to_id = :transit, 1, -1) * t.quantity * IF(p2.type = 'CONSUMABLE', p2.presentacion, 1)) q
                     FROM registers r
-                    JOIN transactions t ON t.register_id = r.id AND t.warehouse_to_id = :transit AND t.type = 'OUT'
+                    JOIN transactions t ON t.register_id = r.id AND t.type = 'OUT'
+                        AND (t.warehouse_to_id = :transit OR t.warehouse_from_id = :transit)
                     JOIN products p2 ON p2.id = t.product_id
-                    WHERE r.isResived = 0
+                    WHERE r.isResived = 0 OR r.novelty_status = 'pendiente'
                     GROUP BY t.product_id, r.company_id
                 ) pend ON pend.product_id = s.product_id AND pend.company_id <=> s.company_id
                 WHERE s.warehouse_id = :transit AND s.quantity <> IFNULL(pend.q, 0)`, { transit: TRANSIT_WAREHOUSE_ID });
@@ -90,8 +94,9 @@ const run = async () => {
         },
 
         async linen() {
-            const rows = await q('SELECT DISTINCT product_id FROM stocks WHERE quantity >= :fake', { fake: FAKE_STOCK });
+            const rows = await q('SELECT DISTINCT p.id product_id, p.name FROM stocks s JOIN products p ON p.id = s.product_id WHERE s.quantity >= :fake ORDER BY p.name', { fake: FAKE_STOCK });
             const ids = rows.map((row) => row.product_id);
+            rows.forEach((row) => console.log(`linen: ${row.name}`));
             if (ids.length) {
                 await q('UPDATE products SET controls_stock = 0, updatedAt = :now WHERE id IN (:ids)', { now, ids });
                 await q('UPDATE stocks SET quantity = 0, updatedAt = :now WHERE product_id IN (:ids)', { now, ids });
