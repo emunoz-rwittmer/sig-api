@@ -24,7 +24,7 @@ const Passenger = require('../models/bar/passenger.models');
 const ConsumerCardCount = require('../models/bar/consumerCardCount.model');
 const ConsumerCard = require('../models/bar/consumerCard.models');
 const CortecyCard = require('../models/bar/cortecyCard.models');
-const { isWeeklyEvaluationCrewEnabled } = require('../utils/weeklyEvaluationCrewControl');
+const { getDisabledCompanyIds, getEvaluationPeriod } = require('../utils/weeklyEvaluationCrewControl');
 
 
 function getWeekRange() {
@@ -313,213 +313,242 @@ const generateWeeklyCruisesAndPassengerInfo = async (req, res) => {
     }
 };
 
-const generateWeeklyEvaluationCrew = async () => {
-    try {
-        const now = moment();
-        const evaluationWeekStart = now.clone().day(5).startOf('day');
-        if (evaluationWeekStart.isAfter(now)) {
-            evaluationWeekStart.subtract(7, 'days');
-        }
-        const periodWeek = `${evaluationWeekStart.format('YYYY-MM-DD')}_${evaluationWeekStart.clone().add(7, 'days').format('YYYY-MM-DD')}`;
-        const expirationDate = now.clone().add(3, "days").toDate();
-        const evaluationRunAt = now.toDate();
-        const startOfToday = now.clone().startOf('day');
-        const startOfTomorrow = startOfToday.clone().add(1, 'day');
+/**
+ * Crea las evaluaciones semanales (capitán ↔ tripulación) de los barcos activos.
+ * `companyIds` limita la corrida a esas empresas (envío manual desde el panel).
+ * Nunca duplica: omite lo ya creado hoy o en la misma semana evaluada.
+ * Devuelve cuántas creó por empresa; los errores se propagan.
+ */
+const createWeeklyEvaluationCrew = async ({ companyIds = null } = {}) => {
+    const now = moment();
+    const periodWeek = getEvaluationPeriod(now);
+    const onlyCompanies = companyIds ? new Set(companyIds) : null;
+    const disabledCompanies = await getDisabledCompanyIds();
+    const expirationDate = now.clone().add(3, "days").toDate();
+    const evaluationRunAt = now.toDate();
+    const startOfToday = now.clone().startOf('day');
+    const startOfTomorrow = startOfToday.clone().add(1, 'day');
 
-        const embarkedStaff = await ShipmentDates.findAll({
-            where: {
-                // "now" debe caer dentro de [shipmentDate, dischargeDate]: solo cuenta
-                // quien ya esta embarcado al momento de disparar la tarea. Quien todavia
-                // no llega (shipmentDate futuro) se evalua la semana siguiente, ya embarcado.
-                shipmentDate: { [Op.lte]: evaluationRunAt },
-                [Op.or]: [
-                    { dischargeDate: null },
-                    { dischargeDate: { [Op.gte]: evaluationRunAt } }
+    const embarkedStaff = await ShipmentDates.findAll({
+        where: {
+            // "now" debe caer dentro de [shipmentDate, dischargeDate]: solo cuenta
+            // quien ya esta embarcado al momento de disparar la tarea. Quien todavia
+            // no llega (shipmentDate futuro) se evalua la semana siguiente, ya embarcado.
+            shipmentDate: { [Op.lte]: evaluationRunAt },
+            [Op.or]: [
+                { dischargeDate: null },
+                { dischargeDate: { [Op.gte]: evaluationRunAt } }
+            ]
+        },
+        include: [
+            {
+                model: StaffCompany,
+                as: "empresa",
+                required: true,
+                include: [
+                    {
+                        model: Staff,
+                        as: "staff",
+                        where: { active: true },
+                        attributes: ["id", "firstName", "lastName"],
+                        include: [
+                            {
+                                model: Positions,
+                                as: "staff_position",
+                                attributes: ["id", "name"]
+                            }
+                        ]
+                    },
+                    {
+                        model: Company,
+                        as: "company",
+                        attributes: ["id", "name"]
+                    }
                 ]
-            },
-            include: [
+            }
+        ]
+    });
+
+    const captainByCompany = {};
+    const crewList = [];
+
+    for (const shipment of embarkedStaff) {
+        if (!shipment.empresa) {
+            console.warn("Shipment sin empresa:", shipment.id);
+            continue;
+        }
+
+        const companyId = shipment.empresa.companyId;
+        const staff = shipment.empresa.staff;
+
+        if (!staff || !staff.staff_position) continue;
+
+        if (disabledCompanies.has(companyId)) continue;
+        if (onlyCompanies && !onlyCompanies.has(companyId)) continue;
+
+        const positionName = staff.staff_position.name;
+        const fullName = `${staff.firstName} ${staff.lastName}`;
+
+        if (positionName === "Capitán") {
+            captainByCompany[companyId] = {
+                ...staff.toJSON(),
+                fullName
+            };
+        } else {
+            crewList.push({
+                companyId,
+                ...staff.toJSON(),
+                fullName
+            });
+        }
+    }
+
+    const forms = await Form.findAll({ where: { active: true } });
+
+    const formsByPosition = {};
+    for (const form of forms) {
+        let positions = [];
+        try {
+            if (typeof form.positions === "string") {
+                if (form.positions.startsWith("[")) {
+                    positions = JSON.parse(form.positions);
+                } else {
+                    positions = [form.positions];
+                }
+            } else if (Array.isArray(form.positions)) {
+                positions = form.positions;
+            }
+        } catch (error) {
+            console.warn("Positions mal formateado en form:", form.id);
+            positions = [];
+        }
+
+        for (const pos of positions) {
+            if (!formsByPosition[pos]) {
+                formsByPosition[pos] = [];
+            }
+            formsByPosition[pos].push(form);
+        }
+    }
+
+    const existingEvaluations = await FormRespond.findAll({
+        where: {
+            [Op.or]: [
+                { periodWeek },
                 {
-                    model: StaffCompany,
-                    as: "empresa",
-                    required: true,
-                    include: [
-                        {
-                            model: Staff,
-                            as: "staff",
-                            where: { active: true },
-                            attributes: ["id", "firstName", "lastName"],
-                            include: [
-                                {
-                                    model: Positions,
-                                    as: "staff_position",
-                                    attributes: ["id", "name"]
-                                }
-                            ]
-                        },
-                        {
-                            model: Company,
-                            as: "company",
-                            attributes: ["id", "name"]
-                        }
-                    ]
+                    createdAt: {
+                        [Op.gte]: startOfToday.toDate(),
+                        [Op.lt]: startOfTomorrow.toDate()
+                    }
                 }
             ]
-        });
-
-        const captainByCompany = {};
-        const crewList = [];
-
-        for (const shipment of embarkedStaff) {
-            if (!shipment.empresa) {
-                console.warn("Shipment sin empresa:", shipment.id);
-                continue;
-            }
-
-            const companyId = shipment.empresa.companyId;
-            const staff = shipment.empresa.staff;
-
-            if (!staff || !staff.staff_position) continue;
-
-            if (Number.isInteger(companyId) && companyId > 0 &&
-                !isWeeklyEvaluationCrewEnabled({ companyId })) {
-                continue;
-            }
-
-            const positionName = staff.staff_position.name;
-            const fullName = `${staff.firstName} ${staff.lastName}`;
-
-            if (positionName === "Capitán") {
-                captainByCompany[companyId] = {
-                    ...staff.toJSON(),
-                    fullName
-                };
-            } else {
-                crewList.push({
-                    companyId,
-                    ...staff.toJSON(),
-                    fullName
-                });
-            }
         }
+    });
 
-        const forms = await Form.findAll({ where: { active: true } });
+    const existingSet = new Set();
+    for (const ev of existingEvaluations) {
+        const key = `${ev.companyId}_${ev.formId}_${ev.evaluator}_${ev.evaluated}`;
+        existingSet.add(key);
+    }
 
-        const formsByPosition = {};
-        for (const form of forms) {
-            let positions = [];
-            try {
-                if (typeof form.positions === "string") {
-                    if (form.positions.startsWith("[")) {
-                        positions = JSON.parse(form.positions);
-                    } else {
-                        positions = [form.positions];
-                    }
-                } else if (Array.isArray(form.positions)) {
-                    positions = form.positions;
-                }
-            } catch (error) {
-                console.warn("Positions mal formateado en form:", form.id);
-                positions = [];
-            }
+    const newEvaluations = [];
 
-            for (const pos of positions) {
-                if (!formsByPosition[pos]) {
-                    formsByPosition[pos] = [];
-                }
-                formsByPosition[pos].push(form);
-            }
-        }
+    for (const crew of crewList) {
+        const captain = captainByCompany[crew.companyId];
+        if (!captain) continue;
 
-        const existingEvaluations = await FormRespond.findAll({
-            where: {
-                createdAt: {
-                    [Op.gte]: startOfToday.toDate(),
-                    [Op.lt]: startOfTomorrow.toDate()
-                }
-            }
-        });
+        const positionEncoded = Utils.encode(crew.staff_position.id);
+        const crewForms = formsByPosition[positionEncoded] || [];
 
-        const existingSet = new Set();
-        for (const ev of existingEvaluations) {
-            const key = `${ev.companyId}_${ev.formId}_${ev.evaluator}_${ev.evaluated}`;
+        for (const form of crewForms) {
+            const evaluator = captain.fullName;
+            const evaluated = crew.fullName;
+            const key = `${crew.companyId}_${form.id}_${evaluator}_${evaluated}`;
+
+            if (existingSet.has(key)) continue;
+
+            newEvaluations.push({
+                companyId: crew.companyId,
+                formId: form.id,
+                evaluator,
+                evaluated,
+                state: "Pendiente",
+                expirationDate,
+                periodWeek
+            });
+
             existingSet.add(key);
         }
+    }
 
-        const newEvaluations = [];
+    for (const crew of crewList) {
+        const captain = captainByCompany[crew.companyId];
+        if (!captain) continue;
 
-        for (const crew of crewList) {
-            const captain = captainByCompany[crew.companyId];
-            if (!captain) continue;
+        const positionEncoded = Utils.encode(captain.staff_position.id);
+        const captainForms = formsByPosition[positionEncoded] || [];
 
-            const positionEncoded = Utils.encode(crew.staff_position.id);
-            const crewForms = formsByPosition[positionEncoded] || [];
+        for (const form of captainForms) {
+            if (form.isAdministrative) continue;
 
-            for (const form of crewForms) {
-                const evaluator = captain.fullName;
-                const evaluated = crew.fullName;
-                const key = `${crew.companyId}_${form.id}_${evaluator}_${evaluated}`;
+            const evaluator = crew.fullName;
+            const evaluated = captain.fullName;
+            const key = `${crew.companyId}_${form.id}_${evaluator}_${evaluated}`;
 
-                if (existingSet.has(key)) continue;
+            if (existingSet.has(key)) continue;
 
-                newEvaluations.push({
-                    companyId: crew.companyId,
-                    formId: form.id,
-                    evaluator,
-                    evaluated,
-                    state: "Pendiente",
-                    expirationDate,
-                    periodWeek
-                });
+            newEvaluations.push({
+                companyId: crew.companyId,
+                formId: form.id,
+                evaluator,
+                evaluated,
+                state: "Pendiente",
+                expirationDate,
+                periodWeek
+            });
 
-                existingSet.add(key);
-            }
+            existingSet.add(key);
         }
+    }
 
-        for (const crew of crewList) {
-            const captain = captainByCompany[crew.companyId];
-            if (!captain) continue;
+    if (newEvaluations.length > 0) {
+        await FormRespond.bulkCreate(newEvaluations);
+    }
 
-            const positionEncoded = Utils.encode(captain.staff_position.id);
-            const captainForms = formsByPosition[positionEncoded] || [];
+    const createdByCompany = {};
+    for (const evaluation of newEvaluations) {
+        createdByCompany[evaluation.companyId] = (createdByCompany[evaluation.companyId] || 0) + 1;
+    }
 
-            for (const form of captainForms) {
-                if (form.isAdministrative) continue;
+    console.log("======================================");
+    console.log(companyIds ? "WEEKLY CREW EVALUATION - ENVIO MANUAL" : "CRON WEEKLY CREW EVALUATION - EJECUTADO");
+    console.log("Evaluaciones creadas:", newEvaluations.length);
+    console.log("Periodo:", periodWeek);
+    console.log("======================================");
 
-                const evaluator = crew.fullName;
-                const evaluated = captain.fullName;
-                const key = `${crew.companyId}_${form.id}_${evaluator}_${evaluated}`;
+    return { periodWeek, created: newEvaluations.length, createdByCompany };
+};
 
-                if (existingSet.has(key)) continue;
-
-                newEvaluations.push({
-                    companyId: crew.companyId,
-                    formId: form.id,
-                    evaluator,
-                    evaluated,
-                    state: "Pendiente",
-                    expirationDate,
-                    periodWeek
-                });
-
-                existingSet.add(key);
-            }
-        }
-
-        if (newEvaluations.length > 0) {
-            await FormRespond.bulkCreate(newEvaluations);
-        }
-
-        console.log("======================================");
-        console.log("CRON WEEKLY CREW EVALUATION - EJECUTADO");
-        console.log("Evaluaciones creadas:", newEvaluations.length);
-        console.log("Periodo:", periodWeek);
-        console.log("======================================");
-
+const generateWeeklyEvaluationCrew = async () => {
+    try {
+        await createWeeklyEvaluationCrew();
         await sendEmailEvaluationCrew();
-
     } catch (error) {
         console.error("Error ejecutando cron job de evaluaciones:", error);
     }
+};
+
+/** Envío manual desde el panel para los barcos elegidos (deben estar activos). */
+const sendWeeklyEvaluationCrewNow = async (companyIds) => {
+    const result = await createWeeklyEvaluationCrew({ companyIds });
+    if (result.created > 0) {
+        try {
+            await sendEmailEvaluationCrew();
+        } catch (error) {
+            console.error("Error enviando aviso de evaluaciones creadas:", error);
+        }
+    }
+    return result;
 };
 
 function computeExpiryStage(expiryDate, now) {
@@ -657,6 +686,7 @@ const CronJobs = {
     generateWeeklyCommentCard,
     generateWeeklyCruisesAndPassengerInfo,
     generateWeeklyEvaluationCrew,
+    sendWeeklyEvaluationCrewNow,
     checkExpiringStaffDocuments
 }
 

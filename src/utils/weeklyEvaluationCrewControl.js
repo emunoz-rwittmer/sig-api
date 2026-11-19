@@ -1,43 +1,52 @@
-// Editar esta lista permite conservar el estado después de reiniciar el servicio.
-const initialWeeklyEvaluationCrewStatus = [
-    { companyId: 3, enabled: false },
-];
+const moment = require('moment');
+const WeeklyEvaluationSetting = require('../models/operations/surveys/weeklyEvaluationSetting.models');
 
-function validateTarget(target) {
-    const companyId = target?.companyId;
+// El estado vive en `weekly_evaluation_settings` y se cambia desde el panel
+// (Evaluaciones → Envío semanal). Una empresa sin fila se considera activa.
 
+function validateCompanyId(companyId) {
     if (!Number.isInteger(companyId) || companyId <= 0) {
         throw new TypeError('companyId debe ser un entero positivo');
     }
-
     return companyId;
 }
 
-function createKey(target) {
-    return validateTarget(target);
+async function getDisabledCompanyIds() {
+    const rows = await WeeklyEvaluationSetting.findAll({
+        where: { enabled: false },
+        attributes: ['companyId'],
+    });
+    return new Set(rows.map((row) => row.companyId));
 }
 
-const weeklyEvaluationCrewStatus = new Map(
-    initialWeeklyEvaluationCrewStatus.map((target) => [createKey(target), target.enabled])
-);
-
-function setWeeklyEvaluationCrewEnabled(target) {
-    const key = createKey(target);
-
-    if (typeof target.enabled !== 'boolean') {
+async function setWeeklyEvaluationCrewEnabled({ companyId, enabled }) {
+    validateCompanyId(companyId);
+    if (typeof enabled !== 'boolean') {
         throw new TypeError('enabled debe ser booleano');
     }
 
-    weeklyEvaluationCrewStatus.set(key, target.enabled);
-    return target.enabled;
+    const [setting] = await WeeklyEvaluationSetting.findOrCreate({
+        where: { companyId },
+        defaults: { companyId, enabled },
+    });
+    if (setting.enabled !== enabled) {
+        await setting.update({ enabled });
+    }
+    return enabled;
 }
 
-function isWeeklyEvaluationCrewEnabled(target) {
-    const key = createKey(target);
-    return weeklyEvaluationCrewStatus.get(key) ?? true;
+// Semana evaluada: de viernes a viernes, empezando el último viernes <= now.
+function getEvaluationPeriod(now = moment()) {
+    const weekStart = moment(now).day(5).startOf('day');
+    if (weekStart.isAfter(now)) {
+        weekStart.subtract(7, 'days');
+    }
+    return `${weekStart.format('YYYY-MM-DD')}_${weekStart.clone().add(7, 'days').format('YYYY-MM-DD')}`;
 }
 
 module.exports = {
+    validateCompanyId,
+    getDisabledCompanyIds,
     setWeeklyEvaluationCrewEnabled,
-    isWeeklyEvaluationCrewEnabled
+    getEvaluationPeriod,
 };
