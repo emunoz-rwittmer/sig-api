@@ -66,7 +66,8 @@ const MODULES = [
     {
         group: 'Inventario', key: 'inventory.transactions', label: 'Transacciones', usesWarehouses: true,
         actions: [VIEW, { ...EDIT, legacy: MOVE_STOCK }, DELETE, { key: 'adjust', label: 'Ajustar stock', legacy: MOVE_STOCK }],
-        legacy: { user: INVENTORY_PANEL, staff: ['logistica_uio', ...GERENCIA] },
+        // GPS no tenía el menú Transacciones, pero sí registraba salidas y ajustes desde Inventario.
+        legacy: { user: INVENTORY_PANEL, staff: ['logistica_uio', 'logistica_gps', 'operaciones_gps', ...GERENCIA] },
     },
     {
         group: 'Inventario', key: 'inventory.registers', label: 'Registros', usesWarehouses: true,
