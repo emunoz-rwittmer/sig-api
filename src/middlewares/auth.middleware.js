@@ -16,6 +16,8 @@ const verifyToken = async (req, res, next) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithm: 'HS512' });
         req.userRol = decoded.rol;
         req.userId = decoded.id;
+        // 'user' (panel) o 'staff'. Los tokens anteriores a los perfiles no lo traen.
+        req.userKind = decoded.kind;
         return next();
     } catch (err) {
         const decodedExpired = jwt.decode(token);
@@ -34,6 +36,7 @@ const verifyToken = async (req, res, next) => {
                 lastName: refreshDecoded.lastName,
                 email: refreshDecoded.email,
                 rol: refreshDecoded.rol,
+                kind: refreshDecoded.kind,
                 sessionId: refreshDecoded.sessionId,
             });
 
@@ -53,6 +56,14 @@ const isAdmin = async (req, res, next) => {
     }
 }
 
+// Administrador del panel: el único que gestiona los accesos. Un staff nunca lo es.
+const isPanelAdmin = (req, res, next) => {
+    if (req.userRol === 'admin' && req.userKind !== 'staff') {
+        return next();
+    }
+    return res.status(403).json({ data: "Require Admin Role!" });
+};
+
 const isAdminOfSurveys = async (req, res, next) => {
     if (req.userRol === 'admin' || req.userRol === 'surveys') {
         next();
@@ -71,6 +82,7 @@ const hasAnyRole = (allowedRoles) => async (req, res, next) => {
 const authJwt = {
     verifyToken,
     isAdmin,
+    isPanelAdmin,
     isAdminOfSurveys,
     hasAnyRole
 };

@@ -2,6 +2,10 @@ const { Router } = require('express');
 const OrderController  = require ('../../../controllers/operations/orders/orders.controller');
 const { uploadExcelFile } = require('../../../utils/uploadConfiguration');
 
+const { requireAccess } = require('../../../middlewares/access.middleware');
+
+const ORDERS = 'inventory.orders';
+
 const router = Router();
 
 /**
@@ -87,6 +91,9 @@ const router = Router();
  *       500:
  *         description: Error inesperado
  */
+// Una transacción de salida se puede enlazar a un pedido: quien registra transacciones también los lee.
+router.use(requireAccess([[ORDERS, 'view'], ['inventory.transactions', 'edit']]));
+
 router.get('/',OrderController.getAllOrders);
 
 /**
@@ -177,8 +184,8 @@ router.get('/:order_id',OrderController.getOrderById);
  *         description: ID codificado inválido
  */
 router.get('/:order_id/dispatch-summary', OrderController.getDispatchSummary);
-router.post('/', uploadExcelFile, OrderController.createOrder);
-router.put('/:order_id', OrderController.updateOrder);
+router.post('/', requireAccess([[ORDERS, 'edit']]), uploadExcelFile, OrderController.createOrder);
+router.put('/:order_id', requireAccess([[ORDERS, 'edit'], [ORDERS, 'process']]), OrderController.updateOrder);
 
 //ITEMS ORDER
 /**
@@ -208,6 +215,6 @@ router.put('/:order_id', OrderController.updateOrder);
  *       500:
  *         description: Error inesperado
  */
-router.delete('/deleteItem/:item_id', OrderController.deleteItem);
+router.delete('/deleteItem/:item_id', requireAccess([[ORDERS, 'delete']]), OrderController.deleteItem);
 
 module.exports = router;

@@ -1,6 +1,8 @@
 const { Router } = require('express');
 const RegisterController  = require ('../../../controllers/operations/inventory/registers.controller');
 
+const { requireAccess } = require('../../../middlewares/access.middleware');
+
 const router = Router();
 
 /**
@@ -39,6 +41,6 @@ const router = Router();
  *       500:
  *         description: Error inesperado
  */
-router.get('/', RegisterController.getAllRegisters);
+router.get('/', requireAccess([['inventory.registers', 'view']]), RegisterController.getAllRegisters);
 
 module.exports = router;

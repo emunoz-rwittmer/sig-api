@@ -5,6 +5,8 @@ const authJwt = require('../../middlewares/auth.middleware');
 const router = Router();
 
 const DESEMPENO_DASHBOARD_ROLES = ['admin', 'psicologos', 'rrhh', 'gerencia_gps', 'gerencia_uio'];
+const { guard } = require('../../middlewares/access.middleware');
+const desempenoGuard = guard(['evaluations'], { reads: true, legacyRoles: DESEMPENO_DASHBOARD_ROLES });
 
 /**
  * @openapi
@@ -257,7 +259,7 @@ router.get('/comentCards/generateReport/:yacht_id', authJwt.verifyToken, excelRe
  *       403:
  *         description: Token no proporcionado o rol no autorizado
  */
-router.get('/desempeno/overview', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO_DASHBOARD_ROLES), desempenoDashboard.getDesempenoOverview);
+router.get('/desempeno/overview', authJwt.verifyToken, desempenoGuard, desempenoDashboard.getDesempenoOverview);
 
 /**
  * @openapi
@@ -284,7 +286,7 @@ router.get('/desempeno/overview', authJwt.verifyToken, authJwt.hasAnyRole(DESEMP
  *       403:
  *         description: Token no proporcionado o rol no autorizado
  */
-router.get('/desempeno/yates', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO_DASHBOARD_ROLES), desempenoDashboard.getDesempenoYates);
+router.get('/desempeno/yates', authJwt.verifyToken, desempenoGuard, desempenoDashboard.getDesempenoYates);
 
 /**
  * @openapi
@@ -328,7 +330,7 @@ router.get('/desempeno/yates', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO
  *       403:
  *         description: Token no proporcionado o rol no autorizado
  */
-router.get('/desempeno/personas', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO_DASHBOARD_ROLES), desempenoDashboard.getDesempenoPersonas);
+router.get('/desempeno/personas', authJwt.verifyToken, desempenoGuard, desempenoDashboard.getDesempenoPersonas);
 
 /**
  * @openapi
@@ -358,7 +360,7 @@ router.get('/desempeno/personas', authJwt.verifyToken, authJwt.hasAnyRole(DESEMP
  *       403:
  *         description: Token no proporcionado o rol no autorizado
  */
-router.get('/desempeno/preguntas', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO_DASHBOARD_ROLES), desempenoDashboard.getDesempenoPreguntas);
+router.get('/desempeno/preguntas', authJwt.verifyToken, desempenoGuard, desempenoDashboard.getDesempenoPreguntas);
 
 /**
  * @openapi
@@ -384,12 +386,12 @@ router.get('/desempeno/preguntas', authJwt.verifyToken, authJwt.hasAnyRole(DESEM
  *       403:
  *         description: Token no proporcionado o rol no autorizado
  */
-router.get('/desempeno/colaborador', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO_DASHBOARD_ROLES), desempenoDashboard.getDesempenoColaborador);
+router.get('/desempeno/colaborador', authJwt.verifyToken, desempenoGuard, desempenoDashboard.getDesempenoColaborador);
 
 // Cumplimiento del bono de desempeño (criterios en bonoDesempeno.services.js).
-router.get('/bono-desempeno', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO_DASHBOARD_ROLES), desempenoDashboard.getBonoCumplimiento);
-router.get('/bono-desempeno/excel', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO_DASHBOARD_ROLES), excelReports.generateBonoExcel);
-router.post('/bono-desempeno/incidentes', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO_DASHBOARD_ROLES), desempenoDashboard.createBonoIncident);
-router.delete('/bono-desempeno/incidentes/:id', authJwt.verifyToken, authJwt.hasAnyRole(DESEMPENO_DASHBOARD_ROLES), desempenoDashboard.deleteBonoIncident);
+router.get('/bono-desempeno', authJwt.verifyToken, desempenoGuard, desempenoDashboard.getBonoCumplimiento);
+router.get('/bono-desempeno/excel', authJwt.verifyToken, desempenoGuard, excelReports.generateBonoExcel);
+router.post('/bono-desempeno/incidentes', authJwt.verifyToken, desempenoGuard, desempenoDashboard.createBonoIncident);
+router.delete('/bono-desempeno/incidentes/:id', authJwt.verifyToken, desempenoGuard, desempenoDashboard.deleteBonoIncident);
 
 module.exports = router;

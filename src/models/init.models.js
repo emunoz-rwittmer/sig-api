@@ -1,5 +1,6 @@
 const Users = require('./catalogs/user.models');
 const Roles = require('./catalogs/roles.models');
+const AccessProfile = require('./catalogs/accessProfile.models');
 const Positions = require('./catalogs/positions.models');
 const Departaments = require('./catalogs/departament.models');
 const Yacht = require('./catalogs/yacht.models');
@@ -105,6 +106,9 @@ const initModels = () => {
     Roles.hasMany(Users, { as: "rol_user", foreignKey: "role_id" });
 
     Staff.belongsTo(Roles, { as: "rol", foreignKey: "role_id" });
+
+    Users.belongsTo(AccessProfile, { as: "accessProfile", foreignKey: "access_profile_id" });
+    Staff.belongsTo(AccessProfile, { as: "accessProfile", foreignKey: "access_profile_id" });
     Roles.hasMany(Staff, { as: "staffs", foreignKey: "role_id" });
 
     Staff.belongsTo(Positions, { as: "staff_position", foreignKey: "position_id" });

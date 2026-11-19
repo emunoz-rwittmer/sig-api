@@ -1,7 +1,22 @@
 const authRoutes = require("./catalogs/auth.routes");
 const usersRoutes = require("./catalogs/users.routes");
 const authJwt = require("../middlewares/auth.middleware");
+const { guard, requireAccess } = require("../middlewares/access.middleware");
+
+// Cada submódulo de mantenimiento protege sus propias rutas.
+const maintenanceGuard = (req, res, next) => {
+  const module = req.path.startsWith('/rule') ? 'maintenance.rules'
+    : req.path.startsWith('/records') ? 'maintenance.log' : 'maintenance.book';
+  return guard([module])(req, res, next);
+};
+const indicatorsGuard = guard(['indicators']);
+// El personal edita su propio perfil, foto, firma y documentos desde su portal.
+const staffGuard = (req, res, next) => {
+  const own = req.userKind !== 'user' && req.userId && req.path.split('/').includes(String(req.userId));
+  return own || req.path === '/me/password' ? next() : guard(['catalogs.staff'])(req, res, next);
+};
 const rolesRoutes = require("./catalogs/roles.routes");
+const accessRoutes = require("./catalogs/access.routes");
 const departamentsRoutes = require("./catalogs/departaments.routes");
 const positionsRoutes = require("./catalogs/positions.routes");
 const documentationRoutes = require("./catalogs/documentation.routes");
@@ -45,28 +60,30 @@ const downloadsRoutes = require("./downloads/downloads.routes");
 const routerApi = (app) => {
 
   app.use("/api/auth", authRoutes);
-  app.use("/api/users", authJwt.verifyToken, authJwt.isAdmin, usersRoutes)
-  app.use("/api/roles", authJwt.verifyToken, authJwt.isAdmin, rolesRoutes);
-  app.use("/api/staffs", authJwt.verifyToken, staffRoutes);
-  app.use("/api/departaments", authJwt.verifyToken, departamentsRoutes);
-  app.use("/api/positions", authJwt.verifyToken, positionsRoutes);
-  app.use("/api/documentation", authJwt.verifyToken, documentationRoutes);
-  app.use("/api/yachts", authJwt.verifyToken, yachtRoutes);
-  app.use("/api/companies", authJwt.verifyToken, companyRoutes);
-  app.use("/api/maintenance", authJwt.verifyToken, maintenanceRoutes);
+  app.use("/api/users", authJwt.verifyToken, guard(['users'], { reads: true, legacyRoles: ['admin'] }), usersRoutes)
+  // El rol se elige al crear usuarios y personal.
+  app.use("/api/roles", authJwt.verifyToken, requireAccess([['users', 'view'], ['catalogs.staff', 'view']], ['admin']), rolesRoutes);
+  app.use("/api/access", authJwt.verifyToken, accessRoutes);
+  app.use("/api/staffs", authJwt.verifyToken, staffGuard, staffRoutes);
+  app.use("/api/departaments", authJwt.verifyToken, guard(['catalogs.departments']), departamentsRoutes);
+  app.use("/api/positions", authJwt.verifyToken, guard(['catalogs.positions']), positionsRoutes);
+  app.use("/api/documentation", authJwt.verifyToken, guard(['catalogs.documentation']), documentationRoutes);
+  app.use("/api/yachts", authJwt.verifyToken, guard(['yachts']), yachtRoutes);
+  app.use("/api/companies", authJwt.verifyToken, guard(['companies']), companyRoutes);
+  app.use("/api/maintenance", authJwt.verifyToken, maintenanceGuard, maintenanceRoutes);
   //RRHH
-  app.use("/api/regulations", authJwt.verifyToken, regulationsRoutes);
-  app.use("/api/tradings", authJwt.verifyToken, tradingRoutes);
+  app.use("/api/regulations", authJwt.verifyToken, guard(['rrhh.regulations'], { selfService: [/^\/aceptar_reglamento\//] }), regulationsRoutes);
+  app.use("/api/tradings", authJwt.verifyToken, guard(['rrhh.training'], { selfService: [/\/view$/] }), tradingRoutes);
   app.use("/api/formats", authJwt.verifyToken, formatsRoutes);
   app.use("/api/inductions", authJwt.verifyToken, inductionsRoutes);
   app.use("/api/hr-surveys", authJwt.verifyToken, hrSurveysRoutes);
   app.get("/api/display-orders/:module", authJwt.verifyToken, displayOrdersController.list);
   //OPERATIONS
-  app.use("/api/questions", authJwt.verifyToken, questiondRoutes);
+  app.use("/api/questions", authJwt.verifyToken, guard(['evaluations']), questiondRoutes);
   app.use("/api/forms", formsRoutes);
   app.use("/api/coment_cards", comentCardRoutes);
-  app.use("/api/evaluations", authJwt.verifyToken, evaluationRoutes);
-  app.use("/api/crew_boarding", authJwt.verifyToken, crewBoadingRoutes);
+  app.use("/api/evaluations", authJwt.verifyToken, guard(['evaluations'], { selfService: [/\/respondEvaluation$/, /\/draft$/] }), evaluationRoutes);
+  app.use("/api/crew_boarding", authJwt.verifyToken, guard(['evaluations']), crewBoadingRoutes);
   app.use("/api/orders", authJwt.verifyToken, ordersRoutes);
   app.use("/api/warehouse", authJwt.verifyToken, warehouseRoutes);
   app.use("/api/transactions", authJwt.verifyToken, transactionsRoutes);
@@ -75,16 +92,16 @@ const routerApi = (app) => {
   app.use("/api/registers", authJwt.verifyToken, registerRoutes);
   app.use("/api/shipping_guides", authJwt.verifyToken, shippingGuideRoutes);
   //INDICATORS
-  app.use("/api/indicators", authJwt.verifyToken, indicatorsRoutes);
-  app.use("/api/probabilities", authJwt.verifyToken, probabilityRoutes);
-  app.use("/api/impact", authJwt.verifyToken, impactRoutes);
-  app.use("/api/procedures", authJwt.verifyToken, processRoutes);
-  app.use("/api/levels", authJwt.verifyToken, levelRoutes);
-  app.use("/api/strategy", authJwt.verifyToken, startegryRoutes);
+  app.use("/api/indicators", authJwt.verifyToken, indicatorsGuard, indicatorsRoutes);
+  app.use("/api/probabilities", authJwt.verifyToken, indicatorsGuard, probabilityRoutes);
+  app.use("/api/impact", authJwt.verifyToken, indicatorsGuard, impactRoutes);
+  app.use("/api/procedures", authJwt.verifyToken, indicatorsGuard, processRoutes);
+  app.use("/api/levels", authJwt.verifyToken, indicatorsGuard, levelRoutes);
+  app.use("/api/strategy", authJwt.verifyToken, indicatorsGuard, startegryRoutes);
   //REPORTS
   app.use("/api/reports", reportRoutes);
   app.use("/api/downloads", authJwt.verifyToken, downloadsRoutes);
-  app.use("/api/bar", authJwt.verifyToken, bar)
+  app.use("/api/bar", authJwt.verifyToken, guard(['bar']), bar)
 
 };
 

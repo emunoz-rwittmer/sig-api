@@ -39,6 +39,12 @@ const Users= db.define('users',{
         allowNull: false,
         field:"role_id",
     }, 
+    // Perfil de acceso (módulo Accesos). null = aún se rige por su rol.
+    accessProfileId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        field: "access_profile_id",
+    },
     changePassword: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,

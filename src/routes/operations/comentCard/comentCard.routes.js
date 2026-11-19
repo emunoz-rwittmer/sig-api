@@ -2,6 +2,10 @@ const { Router } = require('express');
 const ComentCardController = require('../../../controllers/operations/comentCard/comentCard.controller');
 const authJwt = require('../../../middlewares/auth.middleware');
 
+const { guard } = require('../../../middlewares/access.middleware');
+
+const cardsGuard = guard(['comment_cards']);
+
 const router = Router();
 
 /**
@@ -96,7 +100,7 @@ router.get('/:card_id', authJwt.verifyToken, ComentCardController.getComentCard)
  *       500:
  *         description: Error inesperado
  */
-router.post('/createComentCard', authJwt.verifyToken, ComentCardController.createComentCard);
+router.post('/createComentCard', authJwt.verifyToken, cardsGuard, ComentCardController.createComentCard);
 
 /**
  * @openapi
@@ -157,7 +161,7 @@ router.post('/createComentCard', authJwt.verifyToken, ComentCardController.creat
  *       500:
  *         description: Error inesperado
  */
-router.put('/updateComentCard/:card_id', authJwt.verifyToken, ComentCardController.updateComentCard);
+router.put('/updateComentCard/:card_id', authJwt.verifyToken, cardsGuard, ComentCardController.updateComentCard);
 
 /**
  * @openapi
@@ -184,7 +188,7 @@ router.put('/updateComentCard/:card_id', authJwt.verifyToken, ComentCardControll
  *       500:
  *         description: Error inesperado
  */
-router.delete('/:card_id', authJwt.verifyToken, ComentCardController.deleteComentCard);
+router.delete('/:card_id', authJwt.verifyToken, cardsGuard, ComentCardController.deleteComentCard);
 
 /**
  * @openapi

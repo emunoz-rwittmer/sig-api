@@ -2,6 +2,7 @@ const WarehouseService = require('../../../services/operations/inventory/warehou
 const Utils = require('../../../utils/Utils');
 const Quantity = require('../../../utils/quantity');
 const AppError = require('../../../errors/AppError');
+const { warehouseScope } = require('../../../middlewares/access.middleware');
 
 const decodeId = (value, fieldName) => {
     let id;
@@ -19,7 +20,9 @@ const decodeId = (value, fieldName) => {
 const getAllWarehouses = async (req, res, next) => {
     try {
         let result = await WarehouseService.getAllWarehouses();
-        const rol = req.userRol
+        // Con perfil limitado a ciertas bodegas, solo se listan esas.
+        const scope = await warehouseScope(req);
+        if (scope) result = result.filter((warehouse) => scope.includes(warehouse.id));
         if (result instanceof Array) {
             result.map((x) => {
                 x.dataValues.id = Utils.encode(x.dataValues.id);

@@ -1,6 +1,21 @@
 const { Router } = require('express');
 const ProductController = require('../../../controllers/operations/inventory/products.controller');
 
+const { requireAccess, requireWarehouses } = require('../../../middlewares/access.middleware');
+const Stock = require('../../../models/operations/inventory/stock.models');
+const Utils = require('../../../utils/Utils');
+
+const STOCK = 'inventory.stock';
+const canEdit = requireAccess([[STOCK, 'edit']]);
+// La bodega de un stock se busca por su id; si no existe, el controlador responde.
+const stockWarehouse = async (req) => {
+    let stock = null;
+    try {
+        stock = await Stock.findByPk(Utils.decode(req.params.stock_id), { attributes: ['warehouseId'] });
+    } catch { /* id inválido */ }
+    return stock ? [stock.warehouseId] : [];
+};
+
 const router = Router();
 
 /**
@@ -161,7 +176,7 @@ router.get('/:product_id', ProductController.getProduct);
  *       400:
  *         description: sku faltante o SKU ya existente
  */
-router.post('/createProduct', ProductController.createProduct);
+router.post('/createProduct', canEdit, ProductController.createProduct);
 
 /**
  * @openapi
@@ -209,8 +224,8 @@ router.post('/createProduct', ProductController.createProduct);
  *       404:
  *         description: Producto no encontrado
  */
-router.put('/updateProduct/:product_id', ProductController.updateProduct);
-router.delete('/:product_id', ProductController.deleteProduct);
+router.put('/updateProduct/:product_id', canEdit, ProductController.updateProduct);
+router.delete('/:product_id', requireAccess([[STOCK, 'delete']]), ProductController.deleteProduct);
 //stock
 /**
  * @openapi
@@ -233,7 +248,7 @@ router.delete('/:product_id', ProductController.deleteProduct);
  *       400:
  *         description: ID codificado inválido
  */
-router.get('/:warehouse_id/stocks', ProductController.getProductsByWarehouse);
+router.get('/:warehouse_id/stocks', requireWarehouses((req) => [req.params.warehouse_id]), ProductController.getProductsByWarehouse);
 
 /**
  * @openapi
@@ -273,7 +288,7 @@ router.get('/:warehouse_id/stocks', ProductController.getProductsByWarehouse);
  *       404:
  *         description: Stock no encontrado
  */
-router.put('/upadate/stock/:stock_id', ProductController.updateStock);
+router.put('/upadate/stock/:stock_id', canEdit, requireWarehouses(stockWarehouse), ProductController.updateStock);
 //configuration
 /**
  * @openapi
@@ -302,7 +317,7 @@ router.put('/upadate/stock/:stock_id', ProductController.updateStock);
  *       404:
  *         description: Configuración no encontrada
  */
-router.put('/configurations/switchConfiguration/:configuration_id', ProductController.switchConfirguration);
+router.put('/configurations/switchConfiguration/:configuration_id', canEdit, ProductController.switchConfirguration);
 
 
 module.exports = router;
