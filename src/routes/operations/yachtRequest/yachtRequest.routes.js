@@ -1,6 +1,11 @@
 const { Router } = require('express');
 const YachtRequestController  = require ('../../../controllers/operations/yachtRequest/yachtRequest.controller');
 
+const { requireAccess } = require('../../../middlewares/access.middleware');
+
+const REQUESTS = 'inventory.requests';
+const canChange = requireAccess([[REQUESTS, 'edit'], [REQUESTS, 'process']]);
+
 const router = Router();
 
 /**
@@ -105,6 +110,8 @@ const router = Router();
  *       500:
  *         description: Error inesperado
  */
+router.use(requireAccess([[REQUESTS, 'view']]));
+
 router.get('/',YachtRequestController.getAllRequests);
 
 /**
@@ -229,8 +236,8 @@ router.get('/search', YachtRequestController.searchRequests);
  *         description: Error inesperado
  */
 router.get('/:request_id',YachtRequestController.getRequestById);
-router.post('/', YachtRequestController.createRequest);
-router.put('/:request_id', YachtRequestController.updateRequest);
+router.post('/', requireAccess([[REQUESTS, 'edit']]), YachtRequestController.createRequest);
+router.put('/:request_id', canChange, YachtRequestController.updateRequest);
 
 /**
  * @openapi
@@ -259,7 +266,7 @@ router.put('/:request_id', YachtRequestController.updateRequest);
  *       500:
  *         description: Error inesperado
  */
-router.put('/updateRequest/:request_id', YachtRequestController.updateRequest);
+router.put('/updateRequest/:request_id', canChange, YachtRequestController.updateRequest);
 
 
 

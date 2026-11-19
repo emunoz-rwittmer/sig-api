@@ -16,6 +16,11 @@ const GERENCIA = ['gerencia_gps', 'gerencia_uio'];
 const ADMIN_PANEL = ['admin', 'rrhh', ...GERENCIA];
 const INVENTORY_PANEL = ['admin', 'cavilar', 'rrhh', ...GERENCIA];
 const EVALUATIONS_PANEL = ['admin', 'psicologos', 'rrhh', ...GERENCIA];
+// Roles que podían mover stock, recibir un registro y aplicar el ajuste de una novedad.
+const MOVE_STOCK = ['admin', 'rrhh', ...GERENCIA, 'logistica_uio', 'logistica_gps', 'operaciones_gps'];
+const RECEIVE = ['admin', 'logistica_gps', 'operaciones_gps'];
+const RESOLVE = ['admin', 'logistica_uio', 'gerencia_uio'];
+const NOT_CAPTAIN = [...INVENTORY_PANEL, 'operaciones_gps', 'logistica_gps'];
 
 const MODULES = [
     { group: 'Administración', key: 'users', label: 'Usuarios', legacy: { user: ['admin'] } },
@@ -56,12 +61,12 @@ const MODULES = [
     },
     {
         group: 'Inventario', key: 'inventory.transactions', label: 'Transacciones', usesWarehouses: true,
-        actions: [...BASE, { key: 'adjust', label: 'Ajustar stock' }],
+        actions: [VIEW, { ...EDIT, legacy: MOVE_STOCK }, DELETE, { key: 'adjust', label: 'Ajustar stock', legacy: MOVE_STOCK }],
         legacy: { user: INVENTORY_PANEL, staff: ['logistica_uio', ...GERENCIA] },
     },
     {
         group: 'Inventario', key: 'inventory.registers', label: 'Registros', usesWarehouses: true,
-        actions: [...BASE, { key: 'resolve', label: 'Aplicar ajuste de novedad' }],
+        actions: [VIEW, { ...EDIT, label: 'Recibir registro', legacy: RECEIVE }, DELETE, { key: 'resolve', label: 'Aplicar ajuste de novedad', legacy: RESOLVE }],
         legacy: { user: INVENTORY_PANEL, staff: ['operaciones_gps', 'logistica_uio', 'logistica_gps', ...GERENCIA] },
     },
     {
@@ -71,7 +76,7 @@ const MODULES = [
     },
     {
         group: 'Inventario', key: 'inventory.requests', label: 'Requerimientos de yates',
-        actions: [...BASE, { key: 'process', label: 'Procesar requerimiento' }],
+        actions: [...BASE, { key: 'process', label: 'Procesar requerimiento', legacy: NOT_CAPTAIN }],
         legacy: { user: INVENTORY_PANEL, staff: ['operaciones_gps', 'capitan', 'logistica_gps', ...GERENCIA] },
     },
     {
@@ -94,7 +99,10 @@ const MODULES = [
 ].map((module) => ({ ...module, actions: module.actions ?? BASE, usesWarehouses: Boolean(module.usesWarehouses) }));
 
 /** Lo que ve el front: sin los datos de migración. */
-const getPublicCatalog = () => MODULES.map(({ legacy: _legacy, ...module }) => module);
+const getPublicCatalog = () => MODULES.map(({ legacy: _legacy, ...module }) => ({
+    ...module,
+    actions: module.actions.map(({ legacy: _roles, ...action }) => action),
+}));
 
 /** Deja solo módulos y acciones que existen; cualquier acción implica poder ver. */
 function sanitizePermissions(permissions) {
@@ -112,7 +120,12 @@ function legacyPermissionsForRole(role) {
     const permissions = {};
     for (const module of MODULES) {
         const roles = [...(module.legacy?.user ?? []), ...(module.legacy?.staff ?? [])];
-        if (roles.includes(role)) permissions[module.key] = module.actions.map((action) => action.key);
+        if (roles.includes(role)) {
+            // Una acción con `legacy` solo pasa a los roles que ya la podían hacer.
+            permissions[module.key] = module.actions
+                .filter((action) => !action.legacy || action.legacy.includes(role))
+                .map((action) => action.key);
+        }
     }
     return permissions;
 }

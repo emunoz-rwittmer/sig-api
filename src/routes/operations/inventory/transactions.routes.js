@@ -2,7 +2,12 @@ const { Router } = require('express');
 const TransactionController  = require ('../../../controllers/operations/inventory/transactions.controller');
 const TransactionHistoryController = require('../../../controllers/operations/inventory/transactionHistory.controller');
 
-const authJwt = require('../../../middlewares/auth.middleware');
+const { requireAccess, requireWarehouses } = require('../../../middlewares/access.middleware');
+const { GPS_WAREHOUSE_ID } = require('../../../utils/warehouses');
+
+const TRANSACTIONS = 'inventory.transactions';
+const REGISTERS = 'inventory.registers';
+const ORDERS = 'inventory.orders';
 
 const router = Router();
 
@@ -66,7 +71,7 @@ const router = Router();
  *       400:
  *         description: Fecha, movimiento o ID codificado inválido
  */
-router.get('/history', TransactionHistoryController.getHistory);
+router.get('/history', requireAccess([[TRANSACTIONS, 'view']]), TransactionHistoryController.getHistory);
 
 /**
  * @openapi
@@ -80,7 +85,7 @@ router.get('/history', TransactionHistoryController.getHistory);
  *       200:
  *         description: "{ warehouses, responsibles, products }"
  */
-router.get('/history/filters', TransactionHistoryController.getHistoryFilters);
+router.get('/history/filters', requireAccess([[TRANSACTIONS, 'view']]), TransactionHistoryController.getHistoryFilters);
 
 /**
  * @openapi
@@ -125,7 +130,12 @@ router.get('/history/filters', TransactionHistoryController.getHistoryFilters);
  *       400:
  *         description: Bodega/item inválido, cantidad inválida, sku faltante, transacción duplicada o item de orden no encontrado
  */
-router.post('/productEntryInWarehouse/:warehouse_id', TransactionController.productEntryInWarehouse);
+router.post(
+    '/productEntryInWarehouse/:warehouse_id',
+    requireAccess([[ORDERS, 'process']]),
+    requireWarehouses((req) => [Number(req.params.warehouse_id)]),
+    TransactionController.productEntryInWarehouse
+);
 
 /**
  * @openapi
@@ -178,7 +188,13 @@ router.post('/productEntryInWarehouse/:warehouse_id', TransactionController.prod
  *       400:
  *         description: ID codificado inválido, productos no válidos, bodegas iguales o stock insuficiente
  */
-router.post('/transactionBetweenWarehouse', TransactionController.transactionWarehouse);
+// También es el despacho de un requerimiento de yate (ProcessRequest).
+router.post(
+    '/transactionBetweenWarehouse',
+    requireAccess([[TRANSACTIONS, 'edit'], ['inventory.requests', 'process']]),
+    requireWarehouses((req) => [req.body.warehouseFromId, req.body.warehouseToId]),
+    TransactionController.transactionWarehouse
+);
 
 /**
  * @openapi
@@ -221,7 +237,12 @@ router.post('/transactionBetweenWarehouse', TransactionController.transactionWar
  *       400:
  *         description: ID codificado inválido o no hay productos válidos con cantidad mayor a 0
  */
-router.post('/incomeProductsInWarehouse', TransactionController.incomeProductsInWarehouse);
+router.post(
+    '/incomeProductsInWarehouse',
+    requireAccess([[TRANSACTIONS, 'edit']]),
+    requireWarehouses((req) => [req.body.warehouseToId]),
+    TransactionController.incomeProductsInWarehouse
+);
 
 /**
  * @openapi
@@ -255,7 +276,7 @@ router.post('/incomeProductsInWarehouse', TransactionController.incomeProductsIn
  *       404:
  *         description: Elemento no encontrado
  */
-router.put('/updateStatusItem/:item_id', TransactionController.updateStatusItem);
+router.put('/updateStatusItem/:item_id', requireAccess([[ORDERS, 'process']]), TransactionController.updateStatusItem);
 
 // Mismos roles que pueden registrar transacciones en la pantalla de inventario.
 const STOCK_MOVEMENT_ROLES = ['admin', 'rrhh', 'gerencia_gps', 'gerencia_uio', 'logistica_uio', 'logistica_gps', 'operaciones_gps'];
@@ -295,7 +316,12 @@ const STOCK_MOVEMENT_ROLES = ['admin', 'rrhh', 'gerencia_gps', 'gerencia_uio', '
  *       403:
  *         description: Rol no autorizado
  */
-router.post('/exitProducts', authJwt.hasAnyRole(STOCK_MOVEMENT_ROLES), TransactionController.exitProducts);
+router.post(
+    '/exitProducts',
+    requireAccess([[TRANSACTIONS, 'edit']], STOCK_MOVEMENT_ROLES),
+    requireWarehouses((req) => [req.body.warehouseFromId]),
+    TransactionController.exitProducts
+);
 
 /**
  * @openapi
@@ -332,7 +358,12 @@ router.post('/exitProducts', authJwt.hasAnyRole(STOCK_MOVEMENT_ROLES), Transacti
  *       403:
  *         description: Rol no autorizado
  */
-router.post('/adjustProducts', authJwt.hasAnyRole(STOCK_MOVEMENT_ROLES), TransactionController.adjustProducts);
+router.post(
+    '/adjustProducts',
+    requireAccess([[TRANSACTIONS, 'adjust']], STOCK_MOVEMENT_ROLES),
+    requireWarehouses((req) => [req.body.warehouseId]),
+    TransactionController.adjustProducts
+);
 
 /**
  * @openapi
@@ -385,7 +416,13 @@ router.post('/adjustProducts', authJwt.hasAnyRole(STOCK_MOVEMENT_ROLES), Transac
  *       400:
  *         description: ID codificado inválido, sin productos válidos, transacción original no encontrada, falta observaciones o stock insuficiente
  */
-router.post('/incomeProductsRegister', TransactionController.incomeProductsRegister);
+// La recepción siempre entra a la Central de Galápagos.
+router.post(
+    '/incomeProductsRegister',
+    requireAccess([[REGISTERS, 'edit']]),
+    requireWarehouses(() => [GPS_WAREHOUSE_ID]),
+    TransactionController.incomeProductsRegister
+);
 
 /**
  * @openapi
@@ -416,7 +453,7 @@ router.post('/incomeProductsRegister', TransactionController.incomeProductsRegis
  */
 router.post(
     '/resolveRegisterNovelty',
-    authJwt.hasAnyRole(['admin', 'logistica_uio', 'gerencia_uio']),
+    requireAccess([[REGISTERS, 'resolve']], ['admin', 'logistica_uio', 'gerencia_uio']),
     TransactionController.resolveRegisterNovelty
 );
 
@@ -468,6 +505,6 @@ router.post(
  *       400:
  *         description: Error al imprimir el registro
  */
-router.put('/printRegister', TransactionController.printRegister);
+router.put('/printRegister', requireAccess([[REGISTERS, 'view']]), TransactionController.printRegister);
 
 module.exports = router;

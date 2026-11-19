@@ -1,5 +1,9 @@
 const { Router } = require('express');
 const WarehouseController  = require ('../../../controllers/operations/inventory/warehouse.controller');
+const { requireAccess, requireWarehouses } = require('../../../middlewares/access.middleware');
+
+const STOCK = 'inventory.stock';
+
 const router = Router();
 
 /**
@@ -57,7 +61,7 @@ const router = Router();
  *         description: Falta name, location o type
  */
 router.get('/',WarehouseController.getAllWarehouses);
-router.post('/', WarehouseController.createWarehouse);
+router.post('/', requireAccess([[STOCK, 'edit']]), WarehouseController.createWarehouse);
 
 /**
  * @openapi
@@ -114,8 +118,8 @@ router.post('/', WarehouseController.createWarehouse);
  *       404:
  *         description: Bodega no encontrada
  */
-router.put('/:warehouse_id', WarehouseController.updateWarehouse);
-router.delete('/:warehouse_id', WarehouseController.deleteWarehouse);
+router.put('/:warehouse_id', requireAccess([[STOCK, 'edit']]), requireWarehouses((req) => [req.params.warehouse_id]), WarehouseController.updateWarehouse);
+router.delete('/:warehouse_id', requireAccess([[STOCK, 'delete']]), requireWarehouses((req) => [req.params.warehouse_id]), WarehouseController.deleteWarehouse);
 //stock
 /**
  * @openapi

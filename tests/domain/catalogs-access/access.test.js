@@ -9,6 +9,7 @@ const Roles = require('../../../src/models/catalogs/roles.models');
 const Warehouse = require('../../../src/models/catalogs/wareHouse.models');
 const AccessProfile = require('../../../src/models/catalogs/accessProfile.models');
 const Utils = require('../../../src/utils/Utils');
+const { legacyPermissionsForRole } = require('../../../src/utils/accessCatalog');
 
 let app;
 let adminToken;
@@ -123,5 +124,60 @@ describe('Accesos: perfiles, asignación y acceso efectivo', () => {
         expect(catalog.status).toBe(200);
         expect(catalog.body.find((module) => module.key === 'inventory.registers')).toMatchObject({ group: 'Inventario', usesWarehouses: true });
         expect(catalog.body[0].legacy).toBeUndefined();
+    });
+});
+
+describe('Accesos fase 2: inventario obedece al perfil', () => {
+    const profileFor = async (staff, permissions, warehouses) => {
+        const created = await admin(request(app).post('/api/access/profiles').send({
+            name: `Perfil ${suffix()}`, permissions, warehouseIds: warehouses.map((warehouse) => Utils.encode(warehouse.id)),
+        }));
+        await admin(request(app).put('/api/access/people').send({
+            people: [{ kind: 'staff', id: Utils.encode(staff.id) }], profileId: created.body.id,
+        }));
+    };
+
+    it('con perfil: solo sus bodegas y solo las acciones marcadas', async () => {
+        const mine = await Warehouse.create({ name: `Mia-${suffix()}`, location: 'Quito', type: 'Central' });
+        const other = await Warehouse.create({ name: `Ajena-${suffix()}`, location: 'Quito', type: 'Central' });
+        // logistica_uio podía ajustar por rol: con perfil manda el perfil, no el rol
+        const { staff, token } = await createStaffLogin('logistica_uio');
+        await profileFor(staff, { 'inventory.transactions': ['view', 'edit'] }, [mine]);
+        const post = (path, body) => as(token, request(app).post(path).send(body));
+
+        const listed = await as(token, request(app).get('/api/warehouse'));
+        expect(listed.body.map((warehouse) => warehouse.id)).toEqual([Utils.encode(mine.id)]);
+
+        const adjust = await post('/api/transactions/adjustProducts', { warehouseId: Utils.encode(mine.id), products: [] });
+        expect(adjust.status).toBe(403);
+
+        const outside = await post('/api/transactions/exitProducts', { warehouseFromId: Utils.encode(other.id), products: [] });
+        expect(outside.status).toBe(403);
+        expect(JSON.stringify(outside.body)).toContain('bodega');
+
+        // en su bodega pasa el control de acceso (lo que falle después es validación del movimiento)
+        const inside = await post('/api/transactions/exitProducts', { warehouseFromId: Utils.encode(mine.id), products: [] });
+        expect(inside.status).not.toBe(403);
+
+        expect((await as(token, request(app).get(`/api/products/${Utils.encode(other.id)}/stocks`))).status).toBe(403);
+        // módulos que el perfil no incluye
+        expect((await as(token, request(app).get('/api/registers'))).status).toBe(403);
+        expect((await as(token, request(app).get('/api/shipping_guides'))).status).toBe(403);
+    });
+
+    it('sin perfil todo sigue por rol, como antes', async () => {
+        const { token } = await createStaffLogin(`rol-${suffix()}`);
+
+        expect((await as(token, request(app).get('/api/registers'))).status).toBe(200);
+        const exit = await as(token, request(app).post('/api/transactions/exitProducts').send({ products: [] }));
+        expect(exit.status).toBe(403);
+        expect(exit.body.data).toBe('Rol no autorizado');
+    });
+
+    it('la semilla no regala acciones que el rol no tenía', () => {
+        expect(legacyPermissionsForRole('capitan')['inventory.requests']).toEqual(['view', 'edit', 'delete']);
+        expect(legacyPermissionsForRole('logistica_gps')['inventory.registers']).toEqual(['view', 'edit', 'delete']);
+        expect(legacyPermissionsForRole('logistica_uio')['inventory.registers']).toEqual(['view', 'delete', 'resolve']);
+        expect(legacyPermissionsForRole('cavilar')['inventory.transactions']).toEqual(['view', 'delete']);
     });
 });
