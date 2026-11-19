@@ -16,6 +16,7 @@ jest.mock('../../../src/models/catalogs/company.models', () => ({}));
 jest.mock('../../../src/models/catalogs/yacht.models', () => ({}));
 jest.mock('../../../src/models/operations/surveys/formRespond.models', () => ({ findAll: jest.fn(), bulkCreate: jest.fn() }));
 jest.mock('../../../src/models/catalogs/positions.models', () => ({}));
+jest.mock('../../../src/models/operations/surveys/weeklyEvaluationSetting.models', () => ({ findAll: jest.fn(), findOrCreate: jest.fn() }));
 jest.mock('../../../src/models/operations/surveys/form.models', () => ({ findAll: jest.fn() }));
 jest.mock('../../../src/utils/database', () => ({}));
 jest.mock('../../../src/models/bar/cruises.models', () => ({}));

@@ -37,6 +37,7 @@ const maintenanceRoutes = require("./catalogs/maintenance.routes");
 const questiondRoutes = require("./operations/surveys/questions.routes");
 const evaluationRoutes = require("./operations/surveys/evaluation.routes");
 const crewBoadingRoutes = require("./operations/surveys/crewBoarding.routes");
+const weeklyEvaluationsRoutes = require("./operations/surveys/weeklyEvaluations.routes");
 const ordersRoutes = require('./operations/orders/order.routes');
 const transactionsRoutes = require('./operations/inventory/transactions.routes');
 const productsRoutes = require('./operations/inventory/products.routes');
@@ -84,6 +85,7 @@ const routerApi = (app) => {
   app.use("/api/coment_cards", comentCardRoutes);
   app.use("/api/evaluations", authJwt.verifyToken, guard(['evaluations'], { selfService: [/\/respondEvaluation$/, /\/draft$/] }), evaluationRoutes);
   app.use("/api/crew_boarding", authJwt.verifyToken, guard(['evaluations']), crewBoadingRoutes);
+  app.use("/api/weekly-evaluations", authJwt.verifyToken, guard(['evaluations'], { reads: true }), weeklyEvaluationsRoutes);
   app.use("/api/orders", authJwt.verifyToken, ordersRoutes);
   app.use("/api/warehouse", authJwt.verifyToken, warehouseRoutes);
   app.use("/api/transactions", authJwt.verifyToken, transactionsRoutes);

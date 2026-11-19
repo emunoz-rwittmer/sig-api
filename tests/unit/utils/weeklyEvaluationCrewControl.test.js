@@ -1,44 +1,58 @@
+jest.mock('../../../src/models/operations/surveys/weeklyEvaluationSetting.models', () => ({
+    findAll: jest.fn(),
+    findOrCreate: jest.fn()
+}));
+
+const moment = require('moment');
+const WeeklyEvaluationSetting = require('../../../src/models/operations/surveys/weeklyEvaluationSetting.models');
+const control = require('../../../src/utils/weeklyEvaluationCrewControl');
+
 describe('weeklyEvaluationCrewControl utils', () => {
-    let control;
+    beforeEach(() => jest.clearAllMocks());
 
-    beforeEach(() => {
-        jest.resetModules();
-        control = require('../../../src/utils/weeklyEvaluationCrewControl');
+    it('devuelve las empresas desactivadas guardadas en la base', async () => {
+        WeeklyEvaluationSetting.findAll.mockResolvedValue([{ companyId: 3 }]);
+
+        const disabled = await control.getDisabledCompanyIds();
+
+        expect(WeeklyEvaluationSetting.findAll).toHaveBeenCalledWith(expect.objectContaining({ where: { enabled: false } }));
+        expect([...disabled]).toEqual([3]);
     });
 
-    it('inicia companyId 1 desactivado', () => {
-        expect(control.isWeeklyEvaluationCrewEnabled({ companyId: 1 })).toBe(false);
+    it('activa una empresa que estaba desactivada', async () => {
+        const setting = { enabled: false, update: jest.fn() };
+        WeeklyEvaluationSetting.findOrCreate.mockResolvedValue([setting, false]);
+
+        await expect(control.setWeeklyEvaluationCrewEnabled({ companyId: 3, enabled: true })).resolves.toBe(true);
+        expect(setting.update).toHaveBeenCalledWith({ enabled: true });
     });
 
-    it('habilita por defecto una compañía no configurada', () => {
-        expect(control.isWeeklyEvaluationCrewEnabled({ companyId: 4 })).toBe(true);
-    });
+    it('no reescribe la fila si el estado no cambia', async () => {
+        const setting = { enabled: false, update: jest.fn() };
+        WeeklyEvaluationSetting.findOrCreate.mockResolvedValue([setting, true]);
 
-    it('puede activar manualmente TipTop II', () => {
-        control.setWeeklyEvaluationCrewEnabled({ companyId: 2, enabled: true });
+        await control.setWeeklyEvaluationCrewEnabled({ companyId: 8, enabled: false });
 
-        expect(control.isWeeklyEvaluationCrewEnabled({ companyId: 2 })).toBe(true);
-    });
-
-    it('puede desactivar otra compañía sin afectar las demás', () => {
-        control.setWeeklyEvaluationCrewEnabled({ companyId: 8, enabled: false });
-
-        expect(control.isWeeklyEvaluationCrewEnabled({ companyId: 8 })).toBe(false);
-        expect(control.isWeeklyEvaluationCrewEnabled({ companyId: 9 })).toBe(true);
+        expect(setting.update).not.toHaveBeenCalled();
     });
 
     it.each([
-        [{}],
-        [{ companyId: '2' }],
-        [{ companyId: 0 }]
-    ])('rechaza identificadores inválidos: %p', (target) => {
-        expect(() => control.isWeeklyEvaluationCrewEnabled(target)).toThrow('companyId');
+        [{ enabled: true }],
+        [{ companyId: '2', enabled: true }],
+        [{ companyId: 0, enabled: true }]
+    ])('rechaza identificadores inválidos: %p', async (target) => {
+        await expect(control.setWeeklyEvaluationCrewEnabled(target)).rejects.toThrow('companyId');
     });
 
-    it('rechaza un estado enabled que no sea booleano', () => {
-        expect(() => control.setWeeklyEvaluationCrewEnabled({
-            companyId: 2,
-            enabled: 'false'
-        })).toThrow('enabled debe ser booleano');
+    it('rechaza un estado enabled que no sea booleano', async () => {
+        await expect(control.setWeeklyEvaluationCrewEnabled({ companyId: 2, enabled: 'false' }))
+            .rejects.toThrow('enabled debe ser booleano');
+    });
+
+    it.each([
+        ['2026-11-19T15:00:00', '2026-11-13_2026-11-20'],
+        ['2026-11-20T08:00:00', '2026-11-20_2026-11-27'],
+    ])('calcula la semana evaluada (viernes a viernes) para %s', (now, expected) => {
+        expect(control.getEvaluationPeriod(moment(now))).toBe(expected);
     });
 });

@@ -62,6 +62,7 @@ const HrSurveyResponse = require('./rrhh/hrSurveyResponse.models');
 const HrSurveyAnswer = require('./rrhh/hrSurveyAnswer.models');
 const ShippingGuideCount = require('./operations/shippingGuide/shippingGuideCount.model');
 const ShipmentDates = require('./operations/surveys/shipmentDates.models');
+const WeeklyEvaluationSetting = require('./operations/surveys/weeklyEvaluationSetting.models');
 const FormRespond = require('./operations/surveys/formRespond.models');
 const FormAnswers = require('./operations/surveys/formAnswers.models');
 const FormQuestion = require('./operations/surveys/formQuestion.models');
@@ -387,6 +388,8 @@ const initModels = () => {
     MaintenanceRecordMaterial.belongsTo(MaintenanceRecord, { as: 'record', foreignKey: 'record_id' });
     MaintenanceRecord.hasMany(MaintenanceRecordMaterial, { as: 'materials', foreignKey: 'record_id', onDelete: 'CASCADE', hooks: true });
     MaintenanceRecordMaterial.belongsTo(Product, { as: 'product', foreignKey: 'product_id' });
+
+    WeeklyEvaluationSetting.belongsTo(Company, { as: 'company', foreignKey: 'company_id' });
 }
 
 module.exports = initModels;
