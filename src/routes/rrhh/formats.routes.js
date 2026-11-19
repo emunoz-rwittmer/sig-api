@@ -1,10 +1,10 @@
 const { Router } = require('express');
 const FormatController = require('../../controllers/rrhh/formats.controller');
 const { uploadPdfFile } = require('../../utils/uploadConfiguration');
-const authJwt = require('../../middlewares/auth.middleware');
 const multer = require("multer");
 const router = Router();
-const requireRRHH = authJwt.hasAnyRole(['admin', 'rrhh']);
+const { guard } = require('../../middlewares/access.middleware');
+const requireRRHH = guard(['rrhh.formats'], { reads: true, legacyRoles: ['admin', 'rrhh'] });
 const upload = multer();
 
 //request

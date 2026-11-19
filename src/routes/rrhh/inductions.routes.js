@@ -1,11 +1,11 @@
 const { Router } = require('express');
 const InductionController = require('../../controllers/rrhh/inductions.controller');
 const InductionAttemptController = require('../../controllers/rrhh/inductionAttempts.controller');
-const authJwt = require('../../middlewares/auth.middleware');
 const { uploadInductionMaterials, uploadInductionQuestionsMatrix } = require('../../utils/uploadConfiguration');
 
 const router = Router();
-const requireRRHH = authJwt.hasAnyRole(['admin', 'rrhh']);
+const { guard } = require('../../middlewares/access.middleware');
+const requireRRHH = guard(['rrhh.inductions'], { reads: true, legacyRoles: ['admin', 'rrhh'] });
 
 // ---- Self-service (trabajador autenticado, identidad desde el token) ----
 

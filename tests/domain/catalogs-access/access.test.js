@@ -179,5 +179,38 @@ describe('Accesos fase 2: inventario obedece al perfil', () => {
         expect(legacyPermissionsForRole('logistica_gps')['inventory.registers']).toEqual(['view', 'edit', 'delete']);
         expect(legacyPermissionsForRole('logistica_uio')['inventory.registers']).toEqual(['view', 'delete', 'resolve']);
         expect(legacyPermissionsForRole('cavilar')['inventory.transactions']).toEqual(['view', 'delete']);
+        expect(legacyPermissionsForRole('psicologos')['rrhh.surveys']).toEqual(['view', 'edit', 'delete']);
+    });
+
+    it('fase 3: el resto de módulos pide editar/eliminar para escribir y deja lo propio', async () => {
+        const { staff, token } = await createStaffLogin(`rol-${suffix()}`);
+        const { staff: other } = await createStaffLogin(`rol-${suffix()}`);
+        await profileFor(staff, { yachts: ['view'], 'rrhh.surveys': ['view', 'edit'] }, []);
+        const put = (path) => as(token, request(app).put(path).send({}));
+
+        // solo "ver" en yates: lee, pero no crea ni elimina
+        expect((await as(token, request(app).get('/api/yachts'))).status).toBe(200);
+        expect((await as(token, request(app).post('/api/yachts/createYacht').send({}))).status).toBe(403);
+        expect((await as(token, request(app).delete('/api/yachts/abc'))).status).toBe(403);
+
+        // su propio perfil sí; el de otra persona necesita el módulo Personal
+        expect((await put(`/api/staffs/updateStaff/${Utils.encode(staff.id)}`)).status).not.toBe(403);
+        expect((await put(`/api/staffs/updateStaff/${Utils.encode(other.id)}`)).status).toBe(403);
+
+        // gestiona encuestas, pero los resultados son un permiso aparte
+        expect((await as(token, request(app).get('/api/hr-surveys'))).status).toBe(200);
+        expect((await as(token, request(app).get('/api/hr-surveys/abc/results'))).status).toBe(403);
+        // un módulo de gestión que el perfil no incluye
+        expect((await as(token, request(app).get('/api/inductions'))).status).toBe(403);
+        // lo personal sigue abierto
+        expect((await as(token, request(app).get('/api/inductions/me'))).status).toBe(200);
+    });
+
+    it('fase 3: sin perfil, las escrituras del resto de módulos siguen como antes', async () => {
+        const { token } = await createStaffLogin(`rol-${suffix()}`);
+
+        expect((await as(token, request(app).post('/api/yachts/createYacht').send({}))).status).not.toBe(403);
+        expect((await as(token, request(app).get('/api/inductions'))).status).toBe(403);
+        expect((await as(token, request(app).get('/api/users'))).status).toBe(403);
     });
 });

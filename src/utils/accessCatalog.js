@@ -33,7 +33,11 @@ const MODULES = [
 
     { group: 'Recursos humanos', key: 'rrhh.regulations', label: 'Reglamentos', legacy: { user: ['admin', 'rrhh'] } },
     { group: 'Recursos humanos', key: 'rrhh.inductions', label: 'Inducciones', legacy: { user: ['admin', 'rrhh'] } },
-    { group: 'Recursos humanos', key: 'rrhh.surveys', label: 'Encuestas', legacy: { user: ['admin', 'rrhh', 'psicologos'] } },
+    {
+        group: 'Recursos humanos', key: 'rrhh.surveys', label: 'Encuestas',
+        actions: [...BASE, { key: 'results', label: 'Ver resultados y reiniciar respuestas', legacy: ['admin', 'rrhh'] }],
+        legacy: { user: ['admin', 'rrhh', 'psicologos'] },
+    },
     { group: 'Recursos humanos', key: 'rrhh.training', label: 'Infórmate', legacy: { user: ['admin', 'rrhh'] } },
     { group: 'Recursos humanos', key: 'rrhh.formats', label: 'Formularios y solicitudes', legacy: { user: ['admin', 'rrhh'] } },
 

@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const RegisterController  = require ('../../../controllers/operations/inventory/registers.controller');
 
-const { requireAccess, requireWarehouses } = require('../../../middlewares/access.middleware');
+const { requireAccess } = require('../../../middlewares/access.middleware');
 
 const router = Router();
 

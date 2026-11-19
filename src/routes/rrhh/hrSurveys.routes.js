@@ -1,11 +1,13 @@
 const { Router } = require('express');
 const HrSurveyController = require('../../controllers/rrhh/hrSurveys.controller');
 const HrSurveyResponseController = require('../../controllers/rrhh/hrSurveyResponses.controller');
-const authJwt = require('../../middlewares/auth.middleware');
 const { uploadHrSurveyQuestionsMatrix } = require('../../utils/uploadConfiguration');
 
 const router = Router();
-const requireRRHH = authJwt.hasAnyRole(['admin', 'rrhh', 'psicologos' ]);
+const { guard, requireAccess } = require('../../middlewares/access.middleware');
+const requireRRHH = guard(['rrhh.surveys'], { reads: true, legacyRoles: ['admin', 'rrhh', 'psicologos'] });
+// Ver resultados y reiniciar respuestas es un permiso aparte: no lo tenía todo el que gestiona encuestas.
+const requireResults = requireAccess([['rrhh.surveys', 'results']], ['admin', 'rrhh']);
 
 // Las rutas fijas (/questions/*, y luego /me y /:survey_id/results) van antes de /:survey_id.
 
@@ -195,7 +197,7 @@ router.post('/', requireRRHH, HrSurveyController.create);
  *       404:
  *         description: Encuesta no encontrada
  */
-router.get('/:survey_id/results', authJwt.hasAnyRole(['admin', 'rrhh']), HrSurveyController.getResults);
+router.get('/:survey_id/results', requireResults, HrSurveyController.getResults);
 
 /**
  * @openapi
@@ -269,7 +271,7 @@ router.get('/:survey_id/results', authJwt.hasAnyRole(['admin', 'rrhh']), HrSurve
  *       404:
  *         description: No encontrada
  */
-router.post('/:survey_id/reset', authJwt.hasAnyRole(['admin', 'rrhh']), HrSurveyController.resetResponses);
+router.post('/:survey_id/reset', requireResults, HrSurveyController.resetResponses);
 
 router.get('/:survey_id', requireRRHH, HrSurveyController.getById);
 router.put('/:survey_id', requireRRHH, HrSurveyController.update);

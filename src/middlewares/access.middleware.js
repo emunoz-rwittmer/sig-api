@@ -68,4 +68,17 @@ const requireWarehouses = (pick) => async (req, res, next) => {
     }
 };
 
-module.exports = { loadAccess, warehouseScope, requireAccess, requireWarehouses };
+/**
+ * Protege un grupo de rutas por el método: POST/PUT/PATCH piden "editar" y DELETE
+ * "eliminar" en alguno de `modules`. Con `reads`, los GET piden "ver" (solo para
+ * rutas que son de gestión; los catálogos que otros módulos leen quedan abiertos).
+ * `selfService` son rutas que cualquiera usa sobre lo suyo (firmar, responder...).
+ */
+const guard = (modules, { reads = false, legacyRoles, selfService = [] } = {}) => (req, res, next) => {
+    const read = ['GET', 'HEAD', 'OPTIONS'].includes(req.method);
+    if ((read && !reads) || selfService.some((pattern) => pattern.test(req.path))) return next();
+    const action = read ? 'view' : req.method === 'DELETE' ? 'delete' : 'edit';
+    return requireAccess(modules.map((module) => [module, action]), legacyRoles)(req, res, next);
+};
+
+module.exports = { loadAccess, warehouseScope, requireAccess, requireWarehouses, guard };
