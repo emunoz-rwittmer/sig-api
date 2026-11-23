@@ -5,6 +5,7 @@ const Yacht = require('../../models/catalogs/yacht.models');
 const YachtEquipment = require('../../models/catalogs/yachtEquipment.models');
 const EquipmentHourReading = require('../../models/catalogs/equipmentHourReading.models');
 const MaintenanceFault = require('../../models/catalogs/maintenanceFault.models');
+const MaintenanceRecordAttachment = require('../../models/catalogs/maintenanceRecordAttachment.models');
 const MaintenanceRule = require('../../models/catalogs/maintenanceRule.models');
 const MaintenanceRuleMaterial = require('../../models/catalogs/maintenanceRuleMaterial.models');
 const MaintenanceRuleAssignment = require('../../models/catalogs/maintenanceRuleAssignment.models');
@@ -324,6 +325,7 @@ class MaintenanceService {
                 { model: YachtEquipment, as: 'equipment', attributes: ['id', 'name'] },
                 { model: MaintenanceRule, as: 'rule', attributes: ['id', 'name'] },
                 { model: MaintenanceFault, as: 'fault', attributes: ['id', 'description', 'severity'] },
+                { model: MaintenanceRecordAttachment, as: 'attachments' },
                 {
                     model: MaintenanceRecordMaterial,
                     as: 'materials',
@@ -340,6 +342,7 @@ class MaintenanceService {
                 { model: YachtEquipment, as: 'equipment', attributes: ['id', 'name'] },
                 { model: MaintenanceRule, as: 'rule', attributes: ['id', 'name'] },
                 { model: MaintenanceFault, as: 'fault', attributes: ['id', 'description', 'severity'] },
+                { model: MaintenanceRecordAttachment, as: 'attachments' },
                 {
                     model: MaintenanceRecordMaterial,
                     as: 'materials',
@@ -451,6 +454,19 @@ class MaintenanceService {
         });
     }
 
+    // ATTACHMENTS
+    static async addAttachments(rows) {
+        return MaintenanceRecordAttachment.bulkCreate(rows);
+    }
+
+    static async getAttachmentById(id) {
+        return MaintenanceRecordAttachment.findByPk(id);
+    }
+
+    static async deleteAttachment(id) {
+        return MaintenanceRecordAttachment.destroy({ where: { id } });
+    }
+
     // FAULTS
     static async getFaults(filters) {
         const where = {};
@@ -556,6 +572,7 @@ class MaintenanceService {
                     include: [
                         { model: MaintenanceRule, as: 'rule', attributes: ['id', 'name'] },
                         { model: MaintenanceFault, as: 'fault', attributes: ['id', 'description', 'severity'] },
+                        { model: MaintenanceRecordAttachment, as: 'attachments' },
                         {
                             model: MaintenanceRecordMaterial,
                             as: 'materials',

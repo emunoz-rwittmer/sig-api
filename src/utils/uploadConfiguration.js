@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const multer = require('multer');
 const uploadMiddleware = require('../middlewares/uploadMiddleware');
 const { createUpload } = require('../utils/multer');
@@ -39,7 +41,32 @@ const hrSurveyQuestionsUpload = multer({
 
 const uploadHrSurveyQuestionsMatrix = uploadMiddleware('single', 'file', hrSurveyQuestionsUpload);
 
+// Evidencia de mantenimiento (fotos, facturas, informes): carpeta fija `uploads/maintenance`
+// (no depende de ?file= en la URL), solo imágenes o PDF y hasta 5 archivos de 10MB.
+const MAINTENANCE_UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads', 'maintenance');
+const maintenanceUpload = multer({
+    storage: multer.diskStorage({
+        destination: (req, file, cb) => {
+            fs.mkdirSync(MAINTENANCE_UPLOAD_DIR, { recursive: true });
+            cb(null, MAINTENANCE_UPLOAD_DIR);
+        },
+        filename: (req, file, cb) => {
+            const extension = path.extname(file.originalname).toLowerCase();
+            const base = path.basename(file.originalname, path.extname(file.originalname)).replace(/[^\w-]+/g, '-').slice(0, 60);
+            cb(null, `${base || 'archivo'}-${Date.now()}-${Math.round(Math.random() * 1e6)}${extension}`);
+        },
+    }),
+    limits: { fileSize: 10 * 1024 * 1024, files: 5 },
+    fileFilter: (req, file, cb) => (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf'
+        ? cb(null, true)
+        : cb(new Error('Solo se aceptan imágenes o PDF'))),
+});
+
+const uploadMaintenanceAttachments = uploadMiddleware('array', 'files', maintenanceUpload);
+
 module.exports =  {
+    MAINTENANCE_UPLOAD_DIR,
+    uploadMaintenanceAttachments,
     uploadExcelFile,
     uploadSingleImage,
     uploadPdfFile,

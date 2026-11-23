@@ -1,4 +1,7 @@
+const fs = require('fs');
+const path = require('path');
 const MaintenanceService = require('../../services/catalogs/maintenance.services');
+const { MAINTENANCE_UPLOAD_DIR } = require('../../utils/uploadConfiguration');
 const AppError = require('../../errors/AppError');
 const Utils = require('../../utils/Utils');
 
@@ -465,6 +468,11 @@ const encodeRecord = (record) => {
     if (record.dataValues.fault) {
         encodeInstanceField(record.dataValues.fault, 'id');
     }
+    (record.dataValues.attachments ?? []).forEach((attachment) => {
+        encodeInstanceField(attachment, 'id');
+        encodeInstanceField(attachment, 'recordId');
+        encodeInstanceField(attachment, 'uploadedById');
+    });
     record.dataValues.materials.forEach((material) => {
         encodeInstanceField(material, 'id');
         encodeInstanceField(material, 'recordId');
@@ -711,6 +719,61 @@ const voidRecord = async (req, res, next) => {
     }
 };
 
+// ATTACHMENTS
+
+// Borra del disco los archivos recién subidos cuando la petición no prospera.
+const discardUploads = (files) => (files ?? []).forEach((file) => fs.unlink(file.path, () => {}));
+
+const addRecordAttachments = async (req, res, next) => {
+    try {
+        const recordId = decodeId(req.params.record_id, 'ID de registro');
+        if (!req.files?.length) {
+            throw new AppError('Adjunta al menos un archivo (imagen o PDF)', 400);
+        }
+        const record = await MaintenanceService.getRecordById(recordId);
+        if (!record) {
+            throw new AppError('Registro no encontrado', 404);
+        }
+        if (record.voidedAt) {
+            throw new AppError('No se pueden adjuntar archivos a un registro anulado', 409);
+        }
+        const actor = getActor(req);
+        await MaintenanceService.addAttachments(req.files.map((file) => ({
+            recordId,
+            fileName: file.originalname,
+            url: `/uploads/maintenance/${file.filename}`,
+            mimeType: file.mimetype,
+            size: file.size,
+            uploadedBy: actor.name,
+            uploadedById: actor.id,
+            uploadedByKind: actor.kind,
+        })));
+        res.status(200).json({ data: 'resource created successfully' });
+    } catch (error) {
+        discardUploads(req.files);
+        next(error);
+    }
+};
+
+const deleteRecordAttachment = async (req, res, next) => {
+    try {
+        const attachmentId = decodeId(req.params.attachment_id, 'ID de adjunto');
+        const attachment = await MaintenanceService.getAttachmentById(attachmentId);
+        if (!attachment) {
+            throw new AppError('Adjunto no encontrado', 404);
+        }
+        const record = await MaintenanceService.getRecordById(attachment.recordId);
+        if (record?.approvedAt || record?.voidedAt) {
+            throw new AppError('Solo se quitan adjuntos de registros pendientes de aprobación', 409);
+        }
+        await MaintenanceService.deleteAttachment(attachmentId);
+        fs.unlink(path.join(MAINTENANCE_UPLOAD_DIR, path.basename(attachment.url)), () => {});
+        res.status(200).json({ data: 'resource deleted successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
 // FAULTS
 
 const FAULT_SEVERITIES = ['baja', 'media', 'alta', 'critica'];
@@ -878,6 +941,8 @@ const MaintenanceController = {
     updateRecord,
     approveRecord,
     voidRecord,
+    addRecordAttachments,
+    deleteRecordAttachment,
     getFaults,
     createFault,
     updateFault,

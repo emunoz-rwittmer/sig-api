@@ -1,5 +1,6 @@
 const { Router } = require('express');
 const MaintenanceController = require('../../controllers/catalogs/maintenance.controller');
+const { uploadMaintenanceAttachments } = require('../../utils/uploadConfiguration');
 
 const router = Router();
 
@@ -756,6 +757,73 @@ router.put('/records/:record_id/approve', MaintenanceController.approveRecord);
  *         description: Error inesperado
  */
 router.post('/records/:record_id/void', MaintenanceController.voidRecord);
+
+/**
+ * @openapi
+ * /maintenance/records/{record_id}/attachments:
+ *   post:
+ *     summary: Adjuntar evidencia a un registro (fotos, factura, informe)
+ *     tags: [Mantenimiento]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: record_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               files:
+ *                 type: array
+ *                 description: Hasta 5 imágenes o PDF de máximo 10MB cada uno.
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *     responses:
+ *       200:
+ *         description: Archivos adjuntados
+ *       400:
+ *         description: Sin archivos, o un archivo que no es imagen ni PDF
+ *       404:
+ *         description: Registro no encontrado
+ *       409:
+ *         description: El registro está anulado
+ *       500:
+ *         description: Error inesperado
+ */
+router.post('/records/:record_id/attachments', uploadMaintenanceAttachments, MaintenanceController.addRecordAttachments);
+
+/**
+ * @openapi
+ * /maintenance/records/attachments/{attachment_id}:
+ *   delete:
+ *     summary: Quitar un adjunto (solo de registros pendientes de aprobación)
+ *     tags: [Mantenimiento]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: attachment_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Adjunto eliminado
+ *       404:
+ *         description: Adjunto no encontrado
+ *       409:
+ *         description: El registro ya fue aprobado o anulado
+ *       500:
+ *         description: Error inesperado
+ */
+router.delete('/records/attachments/:attachment_id', MaintenanceController.deleteRecordAttachment);
 
 // FAULTS
 
