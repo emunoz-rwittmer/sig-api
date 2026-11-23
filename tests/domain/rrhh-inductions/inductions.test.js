@@ -282,6 +282,43 @@ describe('RRHH Inductions', () => {
             expect(Object.keys(passResponse.body.results[0]).sort()).toEqual(['isCorrect', 'questionId']);
         });
 
+        it('resets the induction for the staff member when the last attempt is failed', async () => {
+            const { company } = await createCompanyWithYacht();
+            const staff = await createStaffFixture();
+            await StaffCompany.create({ staffId: staff.id, companyId: company.id });
+            const induction = await createInductionFixture({ companyIds: [company.id], passingScore: 99, maxAttempts: 2 });
+            const staffToken = await loginStaff(staff);
+            const attemptsUrl = `/api/inductions/me/${Utils.encode(induction.id)}/attempts`;
+            const where = { inductionId: induction.id, staffId: staff.id };
+
+            await request(app)
+                .put(`/api/inductions/me/${Utils.encode(induction.id)}/viewed`)
+                .set('Authorization', `Bearer ${staffToken}`);
+
+            const questions = await InductionQuestion.findAll({ where: { inductionId: induction.id }, include: [{ model: InductionOption, as: 'options' }] });
+            const wrongAnswers = questions.map((question) => ({
+                questionId: Utils.encode(question.id),
+                optionId: Utils.encode(question.options.find((option) => !option.isCorrect).id),
+            }));
+
+            const first = await request(app).post(attemptsUrl).set('Authorization', `Bearer ${staffToken}`).send({ answers: wrongAnswers });
+            expect(first.body.reset).toBe(false);
+            expect(first.body.remainingAttempts).toBe(1);
+
+            const last = await request(app).post(attemptsUrl).set('Authorization', `Bearer ${staffToken}`).send({ answers: wrongAnswers });
+            expect(last.status).toBe(200);
+            expect(last.body.passed).toBe(false);
+            expect(last.body.reset).toBe(true);
+            expect(last.body.remainingAttempts).toBe(2);
+            expect(await InductionAttempt.count({ where })).toBe(0);
+            expect(await InductionProgress.count({ where })).toBe(0);
+
+            // Empieza de cero: hay que revisar el material otra vez antes de rendir.
+            const beforeMaterial = await request(app).post(attemptsUrl).set('Authorization', `Bearer ${staffToken}`).send({ answers: wrongAnswers });
+            expect(beforeMaterial.status).toBe(400);
+        });
+
+        // Colaboradores que ya estaban sin intentos antes del reinicio automático.
         it('blocks a new attempt once max attempts are exhausted, then unblocks after an extra attempt is granted', async () => {
             const { company } = await createCompanyWithYacht();
             const staff = await createStaffFixture();
@@ -299,13 +336,9 @@ describe('RRHH Inductions', () => {
                 optionId: Utils.encode(question.options.find((option) => !option.isCorrect).id),
             }));
 
-            const firstAttempt = await request(app)
-                .post(`/api/inductions/me/${Utils.encode(induction.id)}/attempts`)
-                .set('Authorization', `Bearer ${staffToken}`)
-                .send({ answers: wrongAnswers });
-            expect(firstAttempt.status).toBe(200);
-            expect(firstAttempt.body.passed).toBe(false);
-            expect(firstAttempt.body.remainingAttempts).toBe(0);
+            await InductionAttempt.create({
+                inductionId: induction.id, staffId: staff.id, correctCount: 0, totalQuestions: questions.length, score: 0, passed: false,
+            });
 
             const blockedAttempt = await request(app)
                 .post(`/api/inductions/me/${Utils.encode(induction.id)}/attempts`)
@@ -334,7 +367,8 @@ describe('RRHH Inductions', () => {
             const { company } = await createCompanyWithYacht();
             const staff = await createStaffFixture();
             await StaffCompany.create({ staffId: staff.id, companyId: company.id });
-            const induction = await createInductionFixture({ companyIds: [company.id], passingScore: 99, maxAttempts: 1 });
+            // Dos intentos: con uno solo, reprobar ya reinicia sola la inducción.
+            const induction = await createInductionFixture({ companyIds: [company.id], passingScore: 99, maxAttempts: 2 });
             const staffToken = await loginStaff(staff);
 
             await request(app)
@@ -349,7 +383,7 @@ describe('RRHH Inductions', () => {
                 .post(`/api/inductions/me/${Utils.encode(induction.id)}/attempts`)
                 .set('Authorization', `Bearer ${staffToken}`)
                 .send({ answers: wrongAnswers });
-            expect(attempt.body.remainingAttempts).toBe(0);
+            expect(attempt.body.remainingAttempts).toBe(1);
 
             const reset = await request(app)
                 .post(`/api/inductions/${Utils.encode(induction.id)}/reset`)
@@ -363,7 +397,7 @@ describe('RRHH Inductions', () => {
 
             const mine = await getMine(staffToken, induction.id);
             expect(mine.attemptsUsed).toBe(0);
-            expect(mine.remainingAttempts).toBe(1);
+            expect(mine.remainingAttempts).toBe(2);
             expect(mine.materialViewedAt).toBeNull();
         });
 
