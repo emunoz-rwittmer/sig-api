@@ -132,15 +132,27 @@ class InductionAttemptService {
         const graded = gradeAttempt(selectedQuestions, givenAnswers);
         const passed = graded.score >= induction.passingScore;
 
-        await InductionAttempt.create({
-            inductionId,
-            staffId,
-            correctCount: graded.correctCount,
-            totalQuestions: graded.total,
-            score: graded.score,
-            passed,
-            answers: givenAnswers,
+        const remainingAfter = remainingAttempts({
+            maxAttempts: induction.maxAttempts,
+            extraAttempts: progress.extraAttempts,
+            usedAttempts: usedAttempts + 1,
         });
+        // Reprobó con su último intento: la inducción se reinicia sola y la rinde de nuevo desde el material.
+        const reset = !passed && remainingAfter <= 0;
+
+        if (reset) {
+            await InductionService.resetProgress(inductionId, staffId);
+        } else {
+            await InductionAttempt.create({
+                inductionId,
+                staffId,
+                correctCount: graded.correctCount,
+                totalQuestions: graded.total,
+                score: graded.score,
+                passed,
+                answers: givenAnswers,
+            });
+        }
 
         return {
             correctCount: graded.correctCount,
@@ -149,11 +161,8 @@ class InductionAttemptService {
             passed,
             // Solo acierto/error por pregunta: nunca la opción correcta.
             results: graded.detail.map(({ questionId, isCorrect }) => ({ questionId, isCorrect })),
-            remainingAttempts: remainingAttempts({
-                maxAttempts: induction.maxAttempts,
-                extraAttempts: progress.extraAttempts,
-                usedAttempts: usedAttempts + 1,
-            }),
+            remainingAttempts: reset ? induction.maxAttempts : remainingAfter,
+            reset,
         };
     }
 }
