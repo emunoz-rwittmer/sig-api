@@ -95,6 +95,51 @@ const updateEquipment = async (req, res, next) => {
     }
 };
 
+// HOUR READINGS
+
+const parsePastDate = (value, fieldName) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime()) || date > new Date()) {
+        throw new AppError(`${fieldName} debe ser una fecha válida y no futura`, 400);
+    }
+    return date;
+};
+
+const parseHours = (value, fieldName) => {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+        throw new AppError(`${fieldName} debe ser un número mayor o igual a 0`, 400);
+    }
+    return value;
+};
+
+const createHourReading = async (req, res, next) => {
+    try {
+        const equipmentId = decodeId(req.params.equipment_id, 'ID de equipo');
+        const equipment = await MaintenanceService.getEquipmentById(equipmentId);
+        if (!equipment) {
+            throw new AppError('Equipo no encontrado', 404);
+        }
+        const reading = parseHours(req.body.reading, 'reading');
+        const readAt = req.body.readAt ? parsePastDate(req.body.readAt, 'readAt') : new Date();
+
+        const current = await MaintenanceService.getCurrentHours(equipmentId);
+        if (current && reading < current.hours) {
+            throw new AppError(`La lectura no puede ser menor a la última registrada (${current.hours} h)`, 400);
+        }
+
+        await MaintenanceService.createHourReading({
+            equipmentId,
+            reading,
+            readAt,
+            registeredById: req.userId ? decodeId(req.userId, 'usuario') : null,
+            registeredByKind: req.userKind ?? null,
+        });
+        res.status(200).json({ data: 'resource created successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
 // RULES
 
 const PERIODICITY_UNITS = ['horas', 'dias', 'meses', 'anios'];
@@ -221,12 +266,25 @@ const getEquipmentRules = async (req, res, next) => {
     }
 };
 
+// Línea base opcional: solo se tocan los campos que vienen en el body (null los limpia).
+const parseBaseline = (body) => {
+    const baseline = {};
+    if (body.baselineDate !== undefined) {
+        baseline.baselineDate = body.baselineDate === null ? null : parsePastDate(body.baselineDate, 'baselineDate');
+    }
+    if (body.baselineHours !== undefined) {
+        baseline.baselineHours = body.baselineHours === null ? null : parseHours(body.baselineHours, 'baselineHours');
+    }
+    return baseline;
+};
+
 const createRuleAssignment = async (req, res, next) => {
     try {
         const { equipmentId, ruleId } = req.body;
         if (!equipmentId || !ruleId) {
             throw new AppError('equipmentId y ruleId son obligatorios', 400);
         }
+        const baseline = parseBaseline(req.body);
         const decodedEquipmentId = decodeId(equipmentId, 'ID de equipo');
         const decodedRuleId = decodeId(ruleId, 'ID de regla');
 
@@ -243,7 +301,7 @@ const createRuleAssignment = async (req, res, next) => {
             throw new AppError('Esta regla ya está asignada a este equipo', 409);
         }
 
-        await MaintenanceService.createRuleAssignment(decodedEquipmentId, decodedRuleId);
+        await MaintenanceService.createRuleAssignment(decodedEquipmentId, decodedRuleId, baseline);
         res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
         next(error);
@@ -254,14 +312,16 @@ const updateRuleAssignment = async (req, res, next) => {
     try {
         const assignmentId = decodeId(req.params.assignment_id, 'ID de asignación');
         const { active } = req.body;
-        if (typeof active !== 'boolean') {
-            throw new AppError('active es obligatorio y debe ser booleano', 400);
+        const data = parseBaseline(req.body);
+        if (typeof active === 'boolean') data.active = active;
+        if (active !== undefined && typeof active !== 'boolean' || !Object.keys(data).length) {
+            throw new AppError('Envía active (booleano) o la línea base (baselineDate, baselineHours)', 400);
         }
         const existing = await MaintenanceService.getRuleAssignmentById(assignmentId);
         if (!existing) {
             throw new AppError('Asignación no encontrada', 404);
         }
-        await MaintenanceService.updateRuleAssignment(assignmentId, active);
+        await MaintenanceService.updateRuleAssignment(assignmentId, data);
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
         next(error);
@@ -544,6 +604,7 @@ const MaintenanceController = {
     getAllEquipment,
     createEquipment,
     updateEquipment,
+    createHourReading,
     getAllRules,
     createRule,
     updateRule,

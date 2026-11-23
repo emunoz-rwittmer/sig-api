@@ -83,6 +83,7 @@ const CortecyCard = require('./bar/cortecyCard.models');
 const Recipe = require('./bar/recipe.models');
 const RecipeDetail = require('./bar/recipeDetail.models');
 const YachtEquipment = require('./catalogs/yachtEquipment.models');
+const EquipmentHourReading = require('./catalogs/equipmentHourReading.models');
 const MaintenanceRule = require('./catalogs/maintenanceRule.models');
 const MaintenanceRuleAssignment = require('./catalogs/maintenanceRuleAssignment.models');
 const MaintenanceRuleMaterial = require('./catalogs/maintenanceRuleMaterial.models');
@@ -368,6 +369,9 @@ const initModels = () => {
     // MAINTENANCE DOMAIN
     YachtEquipment.belongsTo(Yacht, { as: 'yacht', foreignKey: 'yacht_id' });
     Yacht.hasMany(YachtEquipment, { as: 'equipment', foreignKey: 'yacht_id', onDelete: 'CASCADE', hooks: true });
+
+    EquipmentHourReading.belongsTo(YachtEquipment, { as: 'equipment', foreignKey: 'equipment_id' });
+    YachtEquipment.hasMany(EquipmentHourReading, { as: 'hourReadings', foreignKey: 'equipment_id', onDelete: 'CASCADE', hooks: true });
 
     MaintenanceRuleAssignment.belongsTo(YachtEquipment, { as: 'equipment', foreignKey: 'equipment_id' });
     YachtEquipment.hasMany(MaintenanceRuleAssignment, { as: 'ruleAssignments', foreignKey: 'equipment_id', onDelete: 'CASCADE', hooks: true });

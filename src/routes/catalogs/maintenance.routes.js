@@ -122,6 +122,48 @@ router.post('/equipment', MaintenanceController.createEquipment);
  */
 router.put('/equipment/:equipment_id', MaintenanceController.updateEquipment);
 
+/**
+ * @openapi
+ * /maintenance/equipment/{equipment_id}/hours:
+ *   post:
+ *     summary: Registrar una lectura de horómetro del equipo
+ *     tags: [Mantenimiento]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: equipment_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID codificado del equipo
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [reading]
+ *             properties:
+ *               reading:
+ *                 type: number
+ *                 description: Horas acumuladas; no puede ser menor a la última lectura conocida.
+ *               readAt:
+ *                 type: string
+ *                 format: date-time
+ *                 description: Cuándo se tomó la lectura (por defecto, ahora).
+ *     responses:
+ *       200:
+ *         description: Lectura registrada
+ *       400:
+ *         description: Lectura inválida o menor a la última registrada
+ *       404:
+ *         description: Equipo no encontrado
+ *       500:
+ *         description: Error inesperado
+ */
+router.post('/equipment/:equipment_id/hours', MaintenanceController.createHourReading);
+
 // RULES
 
 /**

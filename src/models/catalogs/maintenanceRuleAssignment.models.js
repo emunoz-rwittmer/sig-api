@@ -17,6 +17,17 @@ const MaintenanceRuleAssignment = db.define('maintenance_rule_assignment', {
         allowNull: false,
         field: 'rule_id',
     },
+    // Línea base: último servicio conocido antes de llevar el equipo en el sistema.
+    baselineDate: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: 'baseline_date',
+    },
+    baselineHours: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+        field: 'baseline_hours',
+    },
     active: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
