@@ -27,6 +27,24 @@ const resolveCurrentHours = (readings, records) => [
     ...records.filter((record) => record.hoursReading != null).map((record) => ({ hours: record.hoursReading, readAt: record.performedAt })),
 ].reduce((top, item) => (!top || item.hours > top.hours ? item : top), null);
 
+// Uso del equipo en horas por día, medido entre la primera y la última lectura de los últimos meses.
+// Sirve para estimar cuándo vence una regla por horas; null si no hay datos suficientes.
+const USAGE_WINDOW_DAYS = 120;
+const MIN_USAGE_SPAN_DAYS = 7;
+const estimateDailyUsage = (readings, records) => {
+    const since = dayjs().subtract(USAGE_WINDOW_DAYS, 'day');
+    const points = [
+        ...readings.map((item) => ({ hours: item.reading, at: dayjs(item.readAt) })),
+        ...records.filter((record) => record.hoursReading != null).map((record) => ({ hours: record.hoursReading, at: dayjs(record.performedAt) })),
+    ].filter((point) => point.at.isAfter(since)).sort((a, b) => a.at.valueOf() - b.at.valueOf());
+    if (points.length < 2) return null;
+    const first = points[0];
+    const last = points[points.length - 1];
+    const days = last.at.diff(first.at, 'day', true);
+    if (days < MIN_USAGE_SPAN_DAYS || last.hours <= first.hours) return null;
+    return (last.hours - first.hours) / days;
+};
+
 const groupByEquipment = (rows) => {
     const map = new Map();
     rows.forEach((row) => {
@@ -488,8 +506,18 @@ class MaintenanceService {
 
         return assignments.map((assignment) => {
             const equipmentRecords = recordsByEquipment.get(assignment.equipmentId) ?? [];
-            const current = resolveCurrentHours(readingsByEquipment.get(assignment.equipmentId) ?? [], equipmentRecords);
-            return buildRuleAlert(assignment, equipmentRecords, current);
+            const equipmentReadings = readingsByEquipment.get(assignment.equipmentId) ?? [];
+            const current = resolveCurrentHours(equipmentReadings, equipmentRecords);
+            const alert = buildRuleAlert(assignment, equipmentRecords, current);
+            if (alert.remainingHours == null) return alert;
+            // Fecha estimada de un vencimiento por horas según el uso real del equipo.
+            const hoursPerDay = estimateDailyUsage(equipmentReadings, equipmentRecords);
+            if (!hoursPerDay) return alert;
+            return {
+                ...alert,
+                hoursPerDay: Math.round(hoursPerDay * 10) / 10,
+                estimatedDueAt: dayjs().add(Math.max(0, alert.remainingHours) / hoursPerDay, 'day').toISOString(),
+            };
         });
     }
 

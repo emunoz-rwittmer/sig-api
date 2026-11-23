@@ -97,6 +97,17 @@ describe('catalogs/maintenance - intervals', () => {
         expect(book.body.equipment[0].rules[0]).toMatchObject({ periodicityValue: 100, intervalOverridden: true, assignmentId: Utils.encode(assignment.id) });
     });
 
+    it('estimates when an hour-based rule falls due from the equipment usage', async () => {
+        const { yacht, equipment, rule, addRecord } = await setup('Usage', { periodicityValue: 250, periodicityUnit: 'horas' });
+        await addRecord(1000, 20);
+        await auth(request(app).post(`/api/maintenance/equipment/${Utils.encode(equipment.id)}/hours`)).send({ reading: 1100 });
+
+        // 100 h en 20 días = 5 h/día; quedan 150 h -> unos 30 días.
+        const alert = await getAlert(yacht.id, equipment.id, rule.id);
+        expect(alert.hoursPerDay).toBe(5);
+        expect(Math.round(dayjs(alert.estimatedDueAt).diff(dayjs(), 'day', true))).toBe(30);
+    });
+
     it('postpones the current due date with a reason until the next record of the rule', async () => {
         const { yacht, equipment, rule, assignment, addRecord } = await setup('Postpone', { periodicityValue: 250, periodicityUnit: 'horas' });
         await addRecord(1000, 20);
