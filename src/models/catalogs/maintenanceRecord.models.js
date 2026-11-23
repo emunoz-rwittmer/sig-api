@@ -51,10 +51,36 @@ const MaintenanceRecord = db.define('maintenance_record', {
         type: DataTypes.TEXT,
         allowNull: true,
     },
+    // Quién lo cargó en el sistema (usuario logueado); `responsible` es quien hizo el trabajo.
+    createdBy: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'created_by',
+    },
+    createdById: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        field: 'created_by_id',
+    },
+    createdByKind: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'created_by_kind',
+    },
     approvedBy: {
         type: DataTypes.STRING,
         allowNull: true,
         field: 'approved_by',
+    },
+    approvedById: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        field: 'approved_by_id',
+    },
+    approvedByKind: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'approved_by_kind',
     },
     approvedAt: {
         type: DataTypes.DATE,

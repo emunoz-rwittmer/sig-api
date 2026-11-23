@@ -4,6 +4,7 @@ const db = require('../../utils/database');
 const Yacht = require('../../models/catalogs/yacht.models');
 const YachtEquipment = require('../../models/catalogs/yachtEquipment.models');
 const EquipmentHourReading = require('../../models/catalogs/equipmentHourReading.models');
+const MaintenanceFault = require('../../models/catalogs/maintenanceFault.models');
 const MaintenanceRule = require('../../models/catalogs/maintenanceRule.models');
 const MaintenanceRuleMaterial = require('../../models/catalogs/maintenanceRuleMaterial.models');
 const MaintenanceRuleAssignment = require('../../models/catalogs/maintenanceRuleAssignment.models');
@@ -248,6 +249,7 @@ class MaintenanceService {
             include: [
                 { model: YachtEquipment, as: 'equipment', attributes: ['id', 'name'] },
                 { model: MaintenanceRule, as: 'rule', attributes: ['id', 'name'] },
+                { model: MaintenanceFault, as: 'fault', attributes: ['id', 'description', 'severity'] },
                 {
                     model: MaintenanceRecordMaterial,
                     as: 'materials',
@@ -263,6 +265,7 @@ class MaintenanceService {
             include: [
                 { model: YachtEquipment, as: 'equipment', attributes: ['id', 'name'] },
                 { model: MaintenanceRule, as: 'rule', attributes: ['id', 'name'] },
+                { model: MaintenanceFault, as: 'fault', attributes: ['id', 'description', 'severity'] },
                 {
                     model: MaintenanceRecordMaterial,
                     as: 'materials',
@@ -285,7 +288,18 @@ class MaintenanceService {
                 hoursReading: data.hoursReading,
                 observation: data.observation,
                 maintenanceType: data.maintenanceType,
+                createdBy: data.createdBy,
+                createdById: data.createdById,
+                createdByKind: data.createdByKind,
             }, { transaction });
+
+            // El registro que atiende una falla la cierra en la misma transacción.
+            if (data.fault) {
+                await MaintenanceFault.update(
+                    { status: 'cerrada', recordId: record.id, closedAt: data.performedAt, cause: data.fault.cause },
+                    { where: { id: data.fault.id }, transaction },
+                );
+            }
 
             if (data.materials.length) {
                 const materials = data.materials.map((m) => ({
@@ -338,12 +352,38 @@ class MaintenanceService {
         }
     }
 
-    static async approveRecord(id, approvedBy) {
+    static async approveRecord(id, approver) {
         await MaintenanceRecord.update(
-            { approvedBy, approvedAt: new Date() },
+            { approvedBy: approver.name, approvedById: approver.id, approvedByKind: approver.kind, approvedAt: new Date() },
             { where: { id } }
         );
         return MaintenanceService.getRecordById(id);
+    }
+
+    // FAULTS
+    static async getFaults(filters) {
+        const where = {};
+        if (filters.yachtId) where.yachtId = filters.yachtId;
+        if (filters.equipmentId) where.equipmentId = filters.equipmentId;
+        if (filters.status) where.status = filters.status;
+        return MaintenanceFault.findAll({
+            where,
+            // 'abierta' < 'cerrada': las abiertas primero, las más recientes arriba.
+            order: [['status', 'ASC'], ['reportedAt', 'DESC']],
+            include: [{ model: YachtEquipment, as: 'equipment', attributes: ['id', 'name'] }],
+        });
+    }
+
+    static async getFaultById(id) {
+        return MaintenanceFault.findByPk(id);
+    }
+
+    static async createFault(data) {
+        return MaintenanceFault.create(data);
+    }
+
+    static async updateFault(id, data) {
+        return MaintenanceFault.update(data, { where: { id } });
     }
 
     // ALERTS
@@ -414,6 +454,7 @@ class MaintenanceService {
                     order: [['performedAt', 'DESC']],
                     include: [
                         { model: MaintenanceRule, as: 'rule', attributes: ['id', 'name'] },
+                        { model: MaintenanceFault, as: 'fault', attributes: ['id', 'description', 'severity'] },
                         {
                             model: MaintenanceRecordMaterial,
                             as: 'materials',

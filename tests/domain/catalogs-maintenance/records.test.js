@@ -6,12 +6,23 @@ const YachtEquipment = require('../../../src/models/catalogs/yachtEquipment.mode
 const MaintenanceRule = require('../../../src/models/catalogs/maintenanceRule.models');
 const MaintenanceRecord = require('../../../src/models/catalogs/maintenanceRecord.models');
 const Product = require('../../../src/models/operations/inventory/product.models');
+const Roles = require('../../../src/models/catalogs/roles.models');
+const Users = require('../../../src/models/catalogs/user.models');
 const Utils = require('../../../src/utils/Utils');
 
 let app;
 let token;
 
 const auth = (httpRequest) => httpRequest.set('Authorization', `Bearer ${token}`);
+
+// Segundo usuario del panel, para aprobar lo que cargó el usuario de prueba.
+const createSecondUser = async (testApp) => {
+    const role = await Roles.findOne({ where: { name: 'admin' } });
+    const credentials = { email: 'second-approver@example.com', password: 'Sup3rSecret!' };
+    await Users.create({ firstName: 'Jefe', lastName: 'Revisor', ...credentials, roleId: role.id, active: true });
+    const response = await request(testApp).post('/api/auth/login').send(credentials);
+    return response.body.token;
+};
 
 beforeAll(async () => {
     app = await bootTestApp();
@@ -237,20 +248,37 @@ describe('catalogs/maintenance - records (historial)', () => {
         expect(missing.status).toBe(404);
     });
 
-    it('rejects approval without approvedBy', async () => {
+    it('signs the record and its approval with the logged-in users, and blocks approving your own record', async () => {
         const { yacht } = await createCompanyWithYacht('Records Approve Co', 'Records Approve Yacht');
         const equipment = await YachtEquipment.create({ yachtId: yacht.id, name: 'Motor' });
-        const record = await MaintenanceRecord.create({
-            equipmentId: equipment.id,
-            yachtId: yacht.id,
-            responsible: 'X',
-            workPerformed: 'Y',
-            performedAt: new Date('2026-09-01T00:00:00.000Z'),
-        });
 
-        const response = await auth(
-            request(app).put(`/api/maintenance/records/${Utils.encode(record.id)}/approve`).send({})
+        const created = await auth(
+            request(app).post('/api/maintenance/records').send({
+                equipmentId: Utils.encode(equipment.id),
+                responsible: 'Mecánico de turno',
+                workPerformed: 'Revisión de bomba',
+                performedAt: '2026-09-04T09:00:00.000Z',
+            })
         );
-        expect(response.status).toBe(400);
+        expect(created.status).toBe(200);
+        const record = await MaintenanceRecord.findOne({ where: { workPerformed: 'Revisión de bomba' } });
+        expect(record.createdBy).toBe('Test Admin');
+        expect(record.createdById).not.toBeNull();
+
+        const own = await auth(
+            request(app).put(`/api/maintenance/records/${Utils.encode(record.id)}/approve`).send({ approvedBy: 'Otro nombre' })
+        );
+        expect(own.status).toBe(409);
+
+        const otherToken = await createSecondUser(app);
+        const approved = await request(app)
+            .put(`/api/maintenance/records/${Utils.encode(record.id)}/approve`)
+            .set('Authorization', `Bearer ${otherToken}`)
+            .send({ approvedBy: 'Nombre escrito a mano' });
+        expect(approved.status).toBe(200);
+
+        await record.reload();
+        expect(record.approvedBy).toBe('Jefe Revisor');
+        expect(record.approvedById).not.toBe(record.createdById);
     });
 });

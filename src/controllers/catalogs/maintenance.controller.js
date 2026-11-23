@@ -28,6 +28,13 @@ const encodeInstanceField = (instance, field) => {
     }
 };
 
+// Usuario logueado que firma la acción (registrar, aprobar, reportar).
+const getActor = (req) => ({
+    id: req.userId ? decodeId(req.userId, 'usuario') : null,
+    kind: req.userKind ?? null,
+    name: req.userName ?? null,
+});
+
 // EQUIPMENT
 
 const validateEquipmentPayload = (body) => {
@@ -127,12 +134,13 @@ const createHourReading = async (req, res, next) => {
             throw new AppError(`La lectura no puede ser menor a la última registrada (${current.hours} h)`, 400);
         }
 
+        const actor = getActor(req);
         await MaintenanceService.createHourReading({
             equipmentId,
             reading,
             readAt,
-            registeredById: req.userId ? decodeId(req.userId, 'usuario') : null,
-            registeredByKind: req.userKind ?? null,
+            registeredById: actor.id,
+            registeredByKind: actor.kind,
         });
         res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
@@ -369,9 +377,14 @@ const encodeRecord = (record) => {
     if (record.dataValues.ruleId) {
         encodeInstanceField(record, 'ruleId');
     }
+    encodeInstanceField(record, 'createdById');
+    encodeInstanceField(record, 'approvedById');
     encodeInstanceField(record.dataValues.equipment, 'id');
     if (record.dataValues.rule) {
         encodeInstanceField(record.dataValues.rule, 'id');
+    }
+    if (record.dataValues.fault) {
+        encodeInstanceField(record.dataValues.fault, 'id');
     }
     record.dataValues.materials.forEach((material) => {
         encodeInstanceField(material, 'id');
@@ -423,6 +436,23 @@ const getRecord = async (req, res, next) => {
     }
 };
 
+// Falla que atiende el registro: debe existir, ser del mismo equipo y seguir abierta.
+const resolveFaultToClose = async (faultId, equipmentId, cause) => {
+    const decodedFaultId = decodeOptionalId(faultId, 'ID de falla');
+    if (!decodedFaultId) return null;
+    const fault = await MaintenanceService.getFaultById(decodedFaultId);
+    if (!fault || fault.equipmentId !== equipmentId) {
+        throw new AppError('La falla no existe o no pertenece a este equipo', 400);
+    }
+    if (fault.status !== 'abierta') {
+        throw new AppError('La falla ya fue atendida', 409);
+    }
+    if (cause !== undefined && cause !== null && typeof cause !== 'string') {
+        throw new AppError('cause debe ser texto', 400);
+    }
+    return { id: decodedFaultId, cause: cause?.trim() || null };
+};
+
 const createRecord = async (req, res, next) => {
     try {
         validateRecordPayload(req.body);
@@ -447,7 +477,13 @@ const createRecord = async (req, res, next) => {
             quantity: m.quantity,
         }));
 
+        const fault = await resolveFaultToClose(req.body.faultId, decodedEquipmentId, req.body.cause);
+        const actor = getActor(req);
         await MaintenanceService.createRecord({
+            fault,
+            createdBy: actor.name,
+            createdById: actor.id,
+            createdByKind: actor.kind,
             equipmentId: decodedEquipmentId,
             yachtId: equipment.yachtId,
             ruleId: decodedRuleId || null,
@@ -521,11 +557,12 @@ const updateRecord = async (req, res, next) => {
 const approveRecord = async (req, res, next) => {
     try {
         const recordId = decodeId(req.params.record_id, 'ID de registro');
-        const { approvedBy } = req.body;
-        if (typeof approvedBy !== 'string' || !approvedBy.trim()) {
+        const actor = getActor(req);
+        // Firma el usuario logueado; `approvedBy` del body solo cubre sesiones sin nombre en el token.
+        const approvedBy = actor.name ?? (typeof req.body.approvedBy === 'string' ? req.body.approvedBy.trim() : '');
+        if (!approvedBy) {
             throw new AppError('approvedBy es obligatorio', 400);
         }
-
         const existing = await MaintenanceService.getRecordById(recordId);
         if (!existing) {
             throw new AppError('Registro no encontrado', 404);
@@ -533,9 +570,95 @@ const approveRecord = async (req, res, next) => {
         if (existing.approvedAt) {
             throw new AppError('Registro ya aprobado', 409);
         }
-
-        await MaintenanceService.approveRecord(recordId, approvedBy);
+        if (existing.createdById != null && existing.createdById === actor.id && existing.createdByKind === actor.kind) {
+            throw new AppError('No puedes aprobar un registro que cargaste tú; debe aprobarlo otra persona', 409);
+        }
+        await MaintenanceService.approveRecord(recordId, { ...actor, name: approvedBy });
         res.status(200).json({ data: 'resource approved successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// FAULTS
+
+const FAULT_SEVERITIES = ['baja', 'media', 'alta', 'critica'];
+const FAULT_STATUSES = ['abierta', 'cerrada'];
+
+const encodeFault = (fault) => {
+    encodeInstanceField(fault, 'id');
+    encodeInstanceField(fault, 'equipmentId');
+    encodeInstanceField(fault, 'yachtId');
+    encodeInstanceField(fault, 'recordId');
+    encodeInstanceField(fault, 'reportedById');
+    encodeInstanceField(fault.dataValues.equipment, 'id');
+};
+
+const validateFaultPayload = ({ description, severity }) => {
+    if (typeof description !== 'string' || !description.trim()) {
+        throw new AppError('description es obligatoria', 400);
+    }
+    if (!FAULT_SEVERITIES.includes(severity)) {
+        throw new AppError(`severity debe ser uno de: ${FAULT_SEVERITIES.join(', ')}`, 400);
+    }
+};
+
+const getFaults = async (req, res, next) => {
+    try {
+        const { status } = req.query;
+        if (status && !FAULT_STATUSES.includes(status)) {
+            throw new AppError(`status debe ser uno de: ${FAULT_STATUSES.join(', ')}`, 400);
+        }
+        const result = await MaintenanceService.getFaults({
+            yachtId: decodeOptionalId(req.query.yachtId, 'ID de yate'),
+            equipmentId: decodeOptionalId(req.query.equipmentId, 'ID de equipo'),
+            status,
+        });
+        result.forEach(encodeFault);
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+const createFault = async (req, res, next) => {
+    try {
+        validateFaultPayload(req.body);
+        const equipmentId = decodeId(req.body.equipmentId, 'ID de equipo');
+        const equipment = await MaintenanceService.getEquipmentById(equipmentId);
+        if (!equipment) {
+            throw new AppError('Equipo no encontrado', 404);
+        }
+        const actor = getActor(req);
+        await MaintenanceService.createFault({
+            equipmentId,
+            yachtId: equipment.yachtId,
+            description: req.body.description.trim(),
+            severity: req.body.severity,
+            reportedAt: req.body.reportedAt ? parsePastDate(req.body.reportedAt, 'reportedAt') : new Date(),
+            reportedBy: actor.name,
+            reportedById: actor.id,
+            reportedByKind: actor.kind,
+        });
+        res.status(200).json({ data: 'resource created successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+const updateFault = async (req, res, next) => {
+    try {
+        const faultId = decodeId(req.params.fault_id, 'ID de falla');
+        validateFaultPayload(req.body);
+        const existing = await MaintenanceService.getFaultById(faultId);
+        if (!existing) {
+            throw new AppError('Falla no encontrada', 404);
+        }
+        if (existing.status !== 'abierta') {
+            throw new AppError('No se puede editar una falla ya atendida', 409);
+        }
+        await MaintenanceService.updateFault(faultId, { description: req.body.description.trim(), severity: req.body.severity });
+        res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
         next(error);
     }
@@ -616,6 +739,9 @@ const MaintenanceController = {
     createRecord,
     updateRecord,
     approveRecord,
+    getFaults,
+    createFault,
+    updateFault,
     getRuleAlerts,
     getMaintenanceBook,
 };

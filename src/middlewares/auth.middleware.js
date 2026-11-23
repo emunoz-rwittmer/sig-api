@@ -18,6 +18,8 @@ const verifyToken = async (req, res, next) => {
         req.userId = decoded.id;
         // 'user' (panel) o 'staff'. Los tokens anteriores a los perfiles no lo traen.
         req.userKind = decoded.kind;
+        // Nombre para firmar acciones (aprobaciones, reportes) sin volver a consultar la base.
+        req.userName = [decoded.firstName, decoded.lastName].filter(Boolean).join(' ') || null;
         return next();
     } catch (err) {
         const decodedExpired = jwt.decode(token);

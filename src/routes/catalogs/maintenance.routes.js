@@ -499,6 +499,14 @@ router.get('/records/:record_id', MaintenanceController.getRecord);
  *                 enum: [preventivo, correctivo]
  *                 nullable: true
  *                 description: Si se omite, se infiere de si el registro tiene ruleId (preventivo) o no (correctivo).
+ *               faultId:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Falla abierta del mismo equipo que este registro atiende; queda cerrada.
+ *               cause:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Causa de la falla, si se conoce.
  *               materials:
  *                 type: array
  *                 items:
@@ -594,7 +602,7 @@ router.put('/records/:record_id', MaintenanceController.updateRecord);
  * @openapi
  * /maintenance/records/{record_id}/approve:
  *   put:
- *     summary: Aprobar un registro del historial
+ *     summary: Aprobar un registro del historial (firma el usuario logueado; no puede ser quien lo cargó)
  *     tags: [Mantenimiento]
  *     security:
  *       - bearerAuth: []
@@ -605,15 +613,15 @@ router.put('/records/:record_id', MaintenanceController.updateRecord);
  *         schema:
  *           type: string
  *     requestBody:
- *       required: true
+ *       required: false
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required: [approvedBy]
  *             properties:
  *               approvedBy:
  *                 type: string
+ *                 description: Solo se usa si el token no trae el nombre del usuario.
  *     responses:
  *       200:
  *         description: Registro aprobado
@@ -622,11 +630,125 @@ router.put('/records/:record_id', MaintenanceController.updateRecord);
  *       404:
  *         description: Registro no encontrado
  *       409:
- *         description: El registro ya estaba aprobado
+ *         description: El registro ya estaba aprobado, o lo cargó el mismo usuario que intenta aprobarlo
  *       500:
  *         description: Error inesperado
  */
 router.put('/records/:record_id/approve', MaintenanceController.approveRecord);
+
+// FAULTS
+
+/**
+ * @openapi
+ * /maintenance/faults:
+ *   get:
+ *     summary: Listar fallas reportadas (abiertas primero)
+ *     tags: [Mantenimiento]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: yachtId
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: equipmentId
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [abierta, cerrada]
+ *     responses:
+ *       200:
+ *         description: Lista de fallas con su equipo
+ *       400:
+ *         description: Algún filtro es inválido
+ *       500:
+ *         description: Error inesperado
+ */
+router.get('/faults', MaintenanceController.getFaults);
+
+/**
+ * @openapi
+ * /maintenance/faults:
+ *   post:
+ *     summary: Reportar una falla en un equipo (firma el usuario logueado)
+ *     tags: [Mantenimiento]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [equipmentId, description, severity]
+ *             properties:
+ *               equipmentId:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               severity:
+ *                 type: string
+ *                 enum: [baja, media, alta, critica]
+ *               reportedAt:
+ *                 type: string
+ *                 format: date-time
+ *                 description: Cuándo se detectó (por defecto, ahora). No puede ser futura.
+ *     responses:
+ *       200:
+ *         description: Falla reportada
+ *       400:
+ *         description: Payload inválido
+ *       404:
+ *         description: Equipo no encontrado
+ *       500:
+ *         description: Error inesperado
+ */
+router.post('/faults', MaintenanceController.createFault);
+
+/**
+ * @openapi
+ * /maintenance/faults/{fault_id}:
+ *   put:
+ *     summary: Editar una falla mientras sigue abierta
+ *     tags: [Mantenimiento]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: fault_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [description, severity]
+ *             properties:
+ *               description:
+ *                 type: string
+ *               severity:
+ *                 type: string
+ *                 enum: [baja, media, alta, critica]
+ *     responses:
+ *       200:
+ *         description: Falla actualizada
+ *       400:
+ *         description: Payload o ID inválido
+ *       404:
+ *         description: Falla no encontrada
+ *       409:
+ *         description: La falla ya fue atendida
+ *       500:
+ *         description: Error inesperado
+ */
+router.put('/faults/:fault_id', MaintenanceController.updateFault);
 
 // ALERTS
 
