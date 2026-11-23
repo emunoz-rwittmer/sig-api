@@ -194,6 +194,50 @@ class MaintenanceService {
         return EquipmentHourReading.create(data);
     }
 
+    // Lecturas conocidas del horómetro (rondas y registros vigentes) para ubicar una nueva en el tiempo.
+    static async getHourPoints(equipmentId, excludeRecordId = null) {
+        const [readings, records] = await Promise.all([
+            EquipmentHourReading.findAll({ where: { equipmentId }, attributes: ['reading', 'readAt'] }),
+            MaintenanceRecord.findAll({
+                where: {
+                    equipmentId,
+                    hoursReading: { [Op.ne]: null },
+                    voidedAt: null,
+                    ...(excludeRecordId ? { id: { [Op.ne]: excludeRecordId } } : {}),
+                },
+                attributes: ['hoursReading', 'performedAt'],
+            }),
+        ]);
+        return [
+            ...readings.map((item) => ({ hours: item.reading, at: new Date(item.readAt) })),
+            ...records.map((item) => ({ hours: item.hoursReading, at: new Date(item.performedAt) })),
+        ];
+    }
+
+    // Registro vigente de la misma regla en el mismo equipo a pocos días: probable duplicado.
+    static async findNearbyRecord({ equipmentId, ruleId, performedAt, days, excludeRecordId = null }) {
+        const at = dayjs(performedAt);
+        return MaintenanceRecord.findOne({
+            where: {
+                equipmentId,
+                ruleId,
+                voidedAt: null,
+                performedAt: { [Op.between]: [at.subtract(days, 'day').toDate(), at.add(days, 'day').toDate()] },
+                ...(excludeRecordId ? { id: { [Op.ne]: excludeRecordId } } : {}),
+            },
+            order: [['performedAt', 'DESC']],
+        });
+    }
+
+    // Equipos con número de serie (con su yate), para detectar una serie repetida.
+    static async getEquipmentWithSerial(excludeId = null) {
+        return YachtEquipment.findAll({
+            where: { serialNumber: { [Op.ne]: null }, ...(excludeId ? { id: { [Op.ne]: excludeId } } : {}) },
+            attributes: ['id', 'name', 'serialNumber'],
+            include: [{ model: Yacht, as: 'yacht', attributes: ['name'] }],
+        });
+    }
+
     // RULES
     static async getAllRules() {
         return MaintenanceRule.findAll({

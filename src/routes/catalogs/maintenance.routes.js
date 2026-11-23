@@ -68,11 +68,16 @@ router.get('/equipment', MaintenanceController.getAllEquipment);
  *                 nullable: true
  *               critical:
  *                 type: boolean
+ *               confirmDuplicate:
+ *                 type: boolean
+ *                 description: true para guardar aunque otro equipo tenga el mismo número de serie.
  *     responses:
  *       200:
  *         description: Equipo creado
  *       400:
  *         description: Payload inválido
+ *       409:
+ *         description: Otro equipo ya tiene ese número de serie (code DUPLICATE_SERIAL; reenviar con confirmDuplicate)
  *       500:
  *         description: Error inesperado
  */
@@ -123,6 +128,9 @@ router.post('/equipment', MaintenanceController.createEquipment);
  *                 type: boolean
  *               active:
  *                 type: boolean
+ *               confirmDuplicate:
+ *                 type: boolean
+ *                 description: true para guardar aunque otro equipo tenga el mismo número de serie.
  *     responses:
  *       200:
  *         description: Equipo actualizado
@@ -130,6 +138,8 @@ router.post('/equipment', MaintenanceController.createEquipment);
  *         description: Payload o ID inválido
  *       404:
  *         description: Equipo no encontrado
+ *       409:
+ *         description: La serie nueva ya la tiene otro equipo (code DUPLICATE_SERIAL; reenviar con confirmDuplicate)
  *       500:
  *         description: Error inesperado
  */
@@ -160,7 +170,7 @@ router.put('/equipment/:equipment_id', MaintenanceController.updateEquipment);
  *             properties:
  *               reading:
  *                 type: number
- *                 description: Horas acumuladas; no puede ser menor a la última lectura conocida.
+ *                 description: Horas acumuladas; no puede ser menor a una lectura anterior ni mayor a una posterior.
  *               readAt:
  *                 type: string
  *                 format: date-time
@@ -169,7 +179,7 @@ router.put('/equipment/:equipment_id', MaintenanceController.updateEquipment);
  *       200:
  *         description: Lectura registrada
  *       400:
- *         description: Lectura inválida o menor a la última registrada
+ *         description: Lectura inválida o que no cuadra con las otras lecturas (code HOURS_OUT_OF_ORDER)
  *       404:
  *         description: Equipo no encontrado
  *       500:
@@ -590,6 +600,9 @@ router.get('/records/:record_id', MaintenanceController.getRecord);
  *                 type: string
  *                 nullable: true
  *                 description: Causa de la falla, si se conoce.
+ *               confirmDuplicate:
+ *                 type: boolean
+ *                 description: true para guardar aunque haya otro registro de la misma regla en el equipo a 3 días o menos.
  *               materials:
  *                 type: array
  *                 items:
@@ -604,9 +617,11 @@ router.get('/records/:record_id', MaintenanceController.getRecord);
  *       200:
  *         description: Registro creado
  *       400:
- *         description: Payload inválido
+ *         description: Payload inválido, fecha futura u horómetro que no cuadra con las otras lecturas (code HOURS_OUT_OF_ORDER)
  *       404:
  *         description: Equipo no encontrado
+ *       409:
+ *         description: Posible duplicado (code DUPLICATE_RECORD; reenviar con confirmDuplicate) o falla ya atendida
  *       500:
  *         description: Error inesperado
  */
@@ -657,6 +672,9 @@ router.post('/records', MaintenanceController.createRecord);
  *                 enum: [preventivo, correctivo]
  *                 nullable: true
  *                 description: Si se omite, se infiere de si el registro tiene ruleId (preventivo) o no (correctivo).
+ *               confirmDuplicate:
+ *                 type: boolean
+ *                 description: true para guardar aunque haya otro registro de la misma regla en el equipo a 3 días o menos.
  *               materials:
  *                 type: array
  *                 items:
@@ -671,11 +689,11 @@ router.post('/records', MaintenanceController.createRecord);
  *       200:
  *         description: Registro actualizado
  *       400:
- *         description: Payload o ID inválido
+ *         description: Payload o ID inválido, fecha futura u horómetro que no cuadra con las otras lecturas (code HOURS_OUT_OF_ORDER)
  *       404:
  *         description: Registro o equipo no encontrado
  *       409:
- *         description: El registro ya fue aprobado y es inmutable
+ *         description: El registro ya fue aprobado o anulado, o hay un posible duplicado (code DUPLICATE_RECORD; reenviar con confirmDuplicate)
  *       500:
  *         description: Error inesperado
  */

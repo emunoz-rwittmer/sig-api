@@ -77,6 +77,7 @@ const createEquipment = async (req, res, next) => {
     try {
         validateEquipmentPayload(req.body);
         const { yachtId, name, brand, model, serialNumber, power, rpm } = req.body;
+        if (!req.body.confirmDuplicate) await checkDuplicateSerial(serialNumber);
         await MaintenanceService.createEquipment({
             yachtId: decodeId(yachtId, 'ID de yate'),
             name,
@@ -102,6 +103,10 @@ const updateEquipment = async (req, res, next) => {
         }
         validateEquipmentPayload(req.body);
         const { yachtId, name, brand, model, serialNumber, power, rpm, active } = req.body;
+        // Solo se avisa si la serie cambió: un equipo que ya la tenía repetida se puede seguir editando.
+        if (!req.body.confirmDuplicate && normalizeSerial(serialNumber) !== normalizeSerial(existing.serialNumber)) {
+            await checkDuplicateSerial(serialNumber, equipmentId);
+        }
         await MaintenanceService.updateEquipment(equipmentId, {
             yachtId: decodeId(yachtId, 'ID de yate'),
             name,
@@ -121,9 +126,12 @@ const updateEquipment = async (req, res, next) => {
 
 // HOUR READINGS
 
+// Margen para relojes algo adelantados: registrar "ahora" no cuenta como fecha futura.
+const CLOCK_SKEW_MS = 10 * 60 * 1000;
+
 const parsePastDate = (value, fieldName) => {
     const date = new Date(value);
-    if (Number.isNaN(date.getTime()) || date > new Date()) {
+    if (Number.isNaN(date.getTime()) || date.getTime() > Date.now() + CLOCK_SKEW_MS) {
         throw new AppError(`${fieldName} debe ser una fecha válida y no futura`, 400);
     }
     return date;
@@ -136,6 +144,44 @@ const parseHours = (value, fieldName) => {
     return value;
 };
 
+const formatDay = (date) => new Date(date).toLocaleDateString('es-EC', { timeZone: 'America/Guayaquil' });
+
+// El horómetro solo avanza: una lectura no puede ser menor a otra de antes ni mayor a otra de después.
+const checkHoursFit = (points, at, hours) => {
+    const time = new Date(at).getTime();
+    const before = points.filter((point) => point.at.getTime() <= time && point.hours > hours).sort((a, b) => b.hours - a.hours)[0];
+    if (before) {
+        throw new AppError(`El horómetro no cuadra: el ${formatDay(before.at)} ya marcaba ${before.hours} h y no puede bajar a ${hours} h`, 400, 'HOURS_OUT_OF_ORDER');
+    }
+    const after = points.filter((point) => point.at.getTime() > time && point.hours < hours).sort((a, b) => a.hours - b.hours)[0];
+    if (after) {
+        throw new AppError(`El horómetro no cuadra: el ${formatDay(after.at)} marcaba ${after.hours} h, menos que las ${hours} h que indicas para una fecha anterior`, 400, 'HOURS_OUT_OF_ORDER');
+    }
+};
+
+// Mismo trabajo (regla) en el mismo equipo a pocos días: casi siempre es una carga repetida.
+const DUPLICATE_WINDOW_DAYS = 3;
+const checkDuplicateRecord = async ({ equipmentId, ruleId, performedAt, excludeRecordId }) => {
+    const nearby = await MaintenanceService.findNearbyRecord({ equipmentId, ruleId, performedAt, days: DUPLICATE_WINDOW_DAYS, excludeRecordId });
+    if (nearby) {
+        const hours = nearby.hoursReading != null ? ` (${nearby.hoursReading} h)` : '';
+        throw new AppError(`Ya hay un registro de "${nearby.workPerformed}" en este equipo el ${formatDay(nearby.performedAt)}${hours}. ¿Es otro trabajo distinto?`, 409, 'DUPLICATE_RECORD');
+    }
+};
+
+// Valores de relleno que no identifican a un equipo ("N/A", "NA", "-", "S/N").
+const isPlaceholderSerial = (value) => /^(n\/?a|s\/?n|-+|ninguno|no aplica)?$/i.test(String(value ?? '').trim());
+const normalizeSerial = (value) => String(value ?? '').toUpperCase().replace(/\s+/g, '');
+const checkDuplicateSerial = async (serialNumber, excludeId = null) => {
+    if (isPlaceholderSerial(serialNumber)) return;
+    const others = await MaintenanceService.getEquipmentWithSerial(excludeId);
+    const same = others.find((item) => !isPlaceholderSerial(item.serialNumber) && normalizeSerial(item.serialNumber) === normalizeSerial(serialNumber));
+    if (same) {
+        const yacht = same.yacht?.name ? ` del ${same.yacht.name}` : '';
+        throw new AppError(`El número de serie ${serialNumber.trim()} ya lo tiene "${same.name}"${yacht}. ¿Es de verdad otro equipo con la misma serie?`, 409, 'DUPLICATE_SERIAL');
+    }
+};
+
 const createHourReading = async (req, res, next) => {
     try {
         const equipmentId = decodeId(req.params.equipment_id, 'ID de equipo');
@@ -146,10 +192,7 @@ const createHourReading = async (req, res, next) => {
         const reading = parseHours(req.body.reading, 'reading');
         const readAt = req.body.readAt ? parsePastDate(req.body.readAt, 'readAt') : new Date();
 
-        const current = await MaintenanceService.getCurrentHours(equipmentId);
-        if (current && reading < current.hours) {
-            throw new AppError(`La lectura no puede ser menor a la última registrada (${current.hours} h)`, 400);
-        }
+        checkHoursFit(await MaintenanceService.getHourPoints(equipmentId), readAt, reading);
 
         const actor = getActor(req);
         await MaintenanceService.createHourReading({
@@ -493,6 +536,19 @@ const validateRecordPayload = (body) => {
     validateMaintenanceType(body.maintenanceType);
 };
 
+// Fecha no futura, horómetro coherente con el resto de lecturas y aviso de posible duplicado.
+const checkRecordConsistency = async (body, equipmentId, ruleId, excludeRecordId = null) => {
+    const performedAt = parsePastDate(body.performedAt, 'performedAt');
+    const hoursReading = body.hoursReading == null ? null : parseHours(body.hoursReading, 'hoursReading');
+    if (hoursReading != null) {
+        checkHoursFit(await MaintenanceService.getHourPoints(equipmentId, excludeRecordId), performedAt, hoursReading);
+    }
+    if (ruleId && !body.confirmDuplicate) {
+        await checkDuplicateRecord({ equipmentId, ruleId, performedAt, excludeRecordId });
+    }
+    return { performedAt, hoursReading };
+};
+
 const PERFORMED_BY_TYPES = ['tripulacion', 'taller'];
 
 // Quién ejecutó el trabajo, proveedor y costo: todos opcionales.
@@ -560,7 +616,7 @@ const resolveFaultToClose = async (faultId, equipmentId, cause) => {
 const createRecord = async (req, res, next) => {
     try {
         validateRecordPayload(req.body);
-        const { equipmentId, ruleId, responsible, workPerformed, performedAt, hoursReading, observation, materials, maintenanceType } = req.body;
+        const { equipmentId, ruleId, responsible, workPerformed, observation, materials, maintenanceType } = req.body;
 
         const decodedEquipmentId = decodeId(equipmentId, 'ID de equipo');
         const equipment = await MaintenanceService.getEquipmentById(decodedEquipmentId);
@@ -581,6 +637,7 @@ const createRecord = async (req, res, next) => {
             quantity: m.quantity,
         }));
 
+        const checked = await checkRecordConsistency(req.body, decodedEquipmentId, decodedRuleId);
         const fault = await resolveFaultToClose(req.body.faultId, decodedEquipmentId, req.body.cause);
         const actor = getActor(req);
         await MaintenanceService.createRecord({
@@ -593,8 +650,7 @@ const createRecord = async (req, res, next) => {
             ruleId: decodedRuleId || null,
             responsible,
             workPerformed,
-            performedAt: new Date(performedAt),
-            hoursReading: hoursReading ?? null,
+            ...checked,
             observation: observation ?? null,
             materials: decodedMaterials,
             maintenanceType: resolveMaintenanceType(maintenanceType, decodedRuleId),
@@ -622,7 +678,7 @@ const updateRecord = async (req, res, next) => {
         }
 
         validateRecordPayload(req.body);
-        const { equipmentId, ruleId, responsible, workPerformed, performedAt, hoursReading, observation, materials, maintenanceType } = req.body;
+        const { equipmentId, ruleId, responsible, workPerformed, observation, materials, maintenanceType } = req.body;
 
         const decodedEquipmentId = decodeId(equipmentId, 'ID de equipo');
         const equipment = await MaintenanceService.getEquipmentById(decodedEquipmentId);
@@ -643,14 +699,14 @@ const updateRecord = async (req, res, next) => {
             quantity: m.quantity,
         }));
 
+        const checked = await checkRecordConsistency(req.body, decodedEquipmentId, decodedRuleId, recordId);
         await MaintenanceService.updateRecord(recordId, {
             equipmentId: decodedEquipmentId,
             yachtId: equipment.yachtId,
             ruleId: decodedRuleId || null,
             responsible,
             workPerformed,
-            performedAt: new Date(performedAt),
-            hoursReading: hoursReading ?? null,
+            ...checked,
             observation: observation ?? null,
             materials: decodedMaterials,
             maintenanceType: resolveMaintenanceType(maintenanceType, decodedRuleId),
