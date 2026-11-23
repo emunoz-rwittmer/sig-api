@@ -55,7 +55,7 @@ describe('catalogs/maintenance - alerts', () => {
         expect(alert.currentHours).toBe(1260);
     });
 
-    it('flags an hour-based rule as próxima within the 24h warning window, and al_dia otherwise', async () => {
+    it('flags an hour-based rule as próxima within the warning window (10% of the interval), and al_dia otherwise', async () => {
         const { yacht } = await createCompanyWithYacht('Alerts Co 2', 'Alerts Yacht 2');
         const dueSoonEquipment = await YachtEquipment.create({ yachtId: yacht.id, name: 'Motor Due Soon' });
         const okEquipment = await YachtEquipment.create({ yachtId: yacht.id, name: 'Motor OK' });
@@ -68,7 +68,7 @@ describe('catalogs/maintenance - alerts', () => {
             responsible: 'Juan', workPerformed: 'Cambio de filtro', hoursReading: 1000,
             performedAt: dayjs().subtract(5, 'day').toDate(),
         });
-        // due at 1250h, warning window is a flat 24h -> 1235 leaves 15h remaining
+        // due at 1250h, warning window is 10% of 250h = 25h -> 1235 leaves 15h remaining
         await MaintenanceRecord.create({
             equipmentId: dueSoonEquipment.id, yachtId: yacht.id, ruleId: null,
             responsible: 'Pedro', workPerformed: 'Chequeo', hoursReading: 1235,
@@ -108,6 +108,65 @@ describe('catalogs/maintenance - alerts', () => {
         const alert = findAlert(response.body, equipment.id, rule.id);
         expect(alert.status).toBe('vencida');
         expect(alert.remainingDays).toBeLessThanOrEqual(0);
+    });
+
+    it('lets a standalone hour reading push an hour-based rule to vencida, and rejects a lower reading', async () => {
+        const { yacht } = await createCompanyWithYacht('Alerts Co Hours', 'Alerts Yacht Hours');
+        const equipment = await YachtEquipment.create({ yachtId: yacht.id, name: 'Generador Lecturas' });
+        const rule = await MaintenanceRule.create({ name: 'Cambio de aceite generador', periodicityValue: 250, periodicityUnit: 'horas' });
+        await MaintenanceRuleAssignment.create({ equipmentId: equipment.id, ruleId: rule.id });
+        await MaintenanceRecord.create({
+            equipmentId: equipment.id, yachtId: yacht.id, ruleId: rule.id,
+            responsible: 'Juan', workPerformed: 'Cambio de aceite', hoursReading: 1000,
+            performedAt: dayjs().subtract(20, 'day').toDate(),
+        });
+        const hoursUrl = `/api/maintenance/equipment/${Utils.encode(equipment.id)}/hours`;
+
+        const created = await auth(request(app).post(hoursUrl)).send({ reading: 1300 });
+        expect(created.status).toBe(200);
+
+        const lower = await auth(request(app).post(hoursUrl)).send({ reading: 1200 });
+        expect(lower.status).toBe(400);
+        const invalid = await auth(request(app).post(hoursUrl)).send({ reading: 'abc' });
+        expect(invalid.status).toBe(400);
+
+        const alerts = await auth(request(app).get(`/api/maintenance/alerts?yachtId=${Utils.encode(yacht.id)}`));
+        const alert = findAlert(alerts.body, equipment.id, rule.id);
+        expect(alert.status).toBe('vencida');
+        expect(alert.currentHours).toBe(1300);
+        expect(alert.remainingHours).toBe(-50);
+
+        const book = await auth(request(app).get(`/api/maintenance/yachts/${Utils.encode(yacht.id)}/book`));
+        expect(book.body.equipment[0].currentHours).toBe(1300);
+        expect(book.body.equipment[0].hourReadings).toBeUndefined();
+    });
+
+    it('measures a never-performed rule from the baseline set on its assignment', async () => {
+        const { yacht } = await createCompanyWithYacht('Alerts Co Base', 'Alerts Yacht Base');
+        const equipment = await YachtEquipment.create({ yachtId: yacht.id, name: 'Motor Linea Base' });
+        const hourRule = await MaintenanceRule.create({ name: 'Cambio de aceite base', periodicityValue: 250, periodicityUnit: 'horas' });
+        const dateRule = await MaintenanceRule.create({ name: 'Revision anual base', periodicityValue: 1, periodicityUnit: 'anios' });
+
+        const assign = await auth(request(app).post('/api/maintenance/rule-assignments')).send({
+            equipmentId: Utils.encode(equipment.id), ruleId: Utils.encode(hourRule.id), baselineHours: 900,
+        });
+        expect(assign.status).toBe(200);
+        const dateAssignment = await MaintenanceRuleAssignment.create({ equipmentId: equipment.id, ruleId: dateRule.id });
+        const update = await auth(request(app).put(`/api/maintenance/rule-assignments/${Utils.encode(dateAssignment.id)}`))
+            .send({ baselineDate: dayjs().subtract(2, 'year').toISOString() });
+        expect(update.status).toBe(200);
+        const future = await auth(request(app).put(`/api/maintenance/rule-assignments/${Utils.encode(dateAssignment.id)}`))
+            .send({ baselineDate: dayjs().add(2, 'day').toISOString() });
+        expect(future.status).toBe(400);
+
+        await auth(request(app).post(`/api/maintenance/equipment/${Utils.encode(equipment.id)}/hours`)).send({ reading: 1000 });
+
+        const alerts = await auth(request(app).get(`/api/maintenance/alerts?yachtId=${Utils.encode(yacht.id)}`));
+        const hourAlert = findAlert(alerts.body, equipment.id, hourRule.id);
+        expect(hourAlert.status).toBe('al_dia');
+        expect(hourAlert.remainingHours).toBe(150);
+        expect(hourAlert.fromBaseline).toBe(true);
+        expect(findAlert(alerts.body, equipment.id, dateRule.id).status).toBe('vencida');
     });
 
     it('flags an assigned rule with no history as nunca_realizada', async () => {
