@@ -406,9 +406,10 @@ class TransactionService {
     }
 
     // Salida: stock que deja el inventario con un motivo (consumo, baja, pérdida...).
-    static async exitProducts({ products, warehouseFromId, companyId, userId, reason, note }) {
+    // Con `outerTransaction` se une a una transacción ajena (ej. aprobar un mantenimiento) y no la cierra.
+    static async exitProducts({ products, warehouseFromId, companyId, userId, reason, note }, outerTransaction) {
         TransactionService.validateMovement({ products, reason });
-        const transaction = await db.transaction();
+        const transaction = outerTransaction ?? await db.transaction();
 
         try {
             const results = [];
@@ -446,12 +447,43 @@ class TransactionService {
                 }, { transaction }));
             }
 
-            await transaction.commit();
+            if (!outerTransaction) await transaction.commit();
             return results;
         } catch (error) {
-            await transaction.rollback();
+            if (!outerTransaction) await transaction.rollback();
             throw error;
         }
+    }
+
+    // Devolución a una bodega dentro de una transacción ajena (ej. anular un mantenimiento que ya había
+    // descontado sus materiales): entra la misma cantidad que salió.
+    static async returnProducts({ products, warehouseToId, userId, reason, note }, transaction) {
+        const results = [];
+        for (const item of products) {
+            const product = await Product.findByPk(item.id, { transaction });
+            if (!product) continue; // producto eliminado: no hay stock al que devolver
+            const quantity = Number(item.quantity);
+            if (product.controlsStock !== false) {
+                const normalizedQty = Quantity.normalizeQuantity(product, quantity);
+                const stock = await TransactionService.findStockRow({ productId: product.id, warehouseId: warehouseToId }, transaction);
+                if (stock) {
+                    stock.quantity = Math.round((Number(stock.quantity) + normalizedQty) * 100) / 100;
+                    await stock.save({ transaction });
+                } else {
+                    await Stock.create({ productId: product.id, warehouseId: warehouseToId, companyId: null, quantity: normalizedQty }, { transaction });
+                }
+            }
+            results.push(await Transaction.create({
+                productId: product.id,
+                userId,
+                warehouseToId,
+                quantity,
+                type: 'IN',
+                reason,
+                note: note ?? null,
+            }, { transaction }));
+        }
+        return results;
     }
 
     // Deja el stock de un producto igual a lo contado y registra solo la diferencia.

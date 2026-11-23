@@ -12,6 +12,8 @@ const MaintenanceRuleAssignment = require('../../models/catalogs/maintenanceRule
 const MaintenanceRecord = require('../../models/catalogs/maintenanceRecord.models');
 const MaintenanceRecordMaterial = require('../../models/catalogs/maintenanceRecordMaterial.models');
 const Product = require('../../models/operations/inventory/product.models');
+const Warehouse = require('../../models/catalogs/wareHouse.models');
+const TransactionService = require('../operations/inventory/transactions.services');
 
 const DATE_UNIT_BY_PERIODICITY = { dias: 'day', meses: 'month', anios: 'year' };
 
@@ -435,18 +437,34 @@ class MaintenanceService {
         }
     }
 
-    static async approveRecord(id, approver) {
-        await MaintenanceRecord.update(
-            { approvedBy: approver.name, approvedById: approver.id, approvedByKind: approver.kind, approvedAt: new Date() },
-            { where: { id } }
-        );
+    // Aprueba y, si el registro usó materiales, los descuenta de la bodega en la misma transacción:
+    // sin stock suficiente no se aprueba nada.
+    static async approveRecord(id, approver, stockExit) {
+        await db.transaction(async (transaction) => {
+            if (stockExit) {
+                await TransactionService.exitProducts(stockExit, transaction);
+            }
+            await MaintenanceRecord.update(
+                {
+                    approvedBy: approver.name,
+                    approvedById: approver.id,
+                    approvedByKind: approver.kind,
+                    approvedAt: new Date(),
+                    stockWarehouseId: stockExit?.warehouseFromId ?? null,
+                },
+                { where: { id }, transaction },
+            );
+        });
         return MaintenanceService.getRecordById(id);
     }
 
     // Anula el registro y, si había cerrado una falla, la vuelve a abrir: el trabajo que la atendía ya no vale.
-    static async voidRecord(id, data) {
+    static async voidRecord(id, data, stockReturn) {
         return db.transaction(async (transaction) => {
             await MaintenanceRecord.update(data, { where: { id }, transaction });
+            if (stockReturn) {
+                await TransactionService.returnProducts(stockReturn, transaction);
+            }
             await MaintenanceFault.update(
                 { status: 'abierta', recordId: null, closedAt: null },
                 { where: { recordId: id }, transaction },
@@ -534,6 +552,15 @@ class MaintenanceService {
                 hoursPerDay: Math.round(hoursPerDay * 10) / 10,
                 estimatedDueAt: dayjs().add(Math.max(0, alert.remainingHours) / hoursPerDay, 'day').toISOString(),
             };
+        });
+    }
+
+    // Bodegas de inventario del barco de las que salen los materiales de mantenimiento (no la del bar).
+    static async getYachtStockWarehouses(yachtId) {
+        return Warehouse.findAll({
+            where: { yachtId, type: { [Op.ne]: 'Bar' } },
+            attributes: ['id', 'name', 'type'],
+            order: [['name', 'ASC']],
         });
     }
 

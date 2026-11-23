@@ -96,6 +96,12 @@ const MaintenanceRecord = db.define('maintenance_record', {
         type: DataTypes.DECIMAL(12, 2),
         allowNull: true,
     },
+    // Bodega de la que salieron los materiales al aprobar (para devolverlos si se anula).
+    stockWarehouseId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        field: 'stock_warehouse_id',
+    },
     // Anulación: el registro no se borra, queda marcado con motivo y firma y deja de contar.
     voidedAt: {
         type: DataTypes.DATE,

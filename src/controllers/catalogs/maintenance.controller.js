@@ -458,6 +458,7 @@ const encodeRecord = (record) => {
     encodeInstanceField(record, 'createdById');
     encodeInstanceField(record, 'approvedById');
     encodeInstanceField(record, 'voidedById');
+    encodeInstanceField(record, 'stockWarehouseId');
     if (record.dataValues.cost != null) {
         record.dataValues.cost = Number(record.dataValues.cost);
     }
@@ -662,6 +663,37 @@ const updateRecord = async (req, res, next) => {
     }
 };
 
+// Materiales del registro que salen de la bodega del barco al aprobar; null si no usó materiales.
+// Con varias bodegas hay que elegir una (`warehouseId`); sin bodega no se puede aprobar.
+const resolveStockExit = async (record, warehouseId, actor) => {
+    const materials = record.materials ?? [];
+    if (!materials.length) return null;
+    // Inventario registra cada movimiento a nombre de personal (transactions.user_id -> staffs).
+    if (actor.kind !== 'staff') {
+        throw new AppError('Este registro descuenta materiales del inventario y eso queda a nombre de quien aprueba: apruébalo desde una cuenta de colaborador', 409);
+    }
+    const warehouses = await MaintenanceService.getYachtStockWarehouses(record.yachtId);
+    let warehouse;
+    if (warehouseId) {
+        const decoded = decodeId(warehouseId, 'ID de bodega');
+        warehouse = warehouses.find((item) => item.id === decoded);
+        if (!warehouse) throw new AppError('La bodega elegida no es de este barco', 400);
+    } else if (warehouses.length === 1) {
+        [warehouse] = warehouses;
+    } else if (!warehouses.length) {
+        throw new AppError('El barco no tiene una bodega de inventario de la que descontar los materiales usados', 409);
+    } else {
+        throw new AppError('El barco tiene varias bodegas: elige de cuál se descuentan los materiales', 409);
+    }
+    return {
+        products: materials.map((material) => ({ id: material.productId, quantity: material.quantity })),
+        warehouseFromId: warehouse.id,
+        userId: actor.id,
+        reason: 'Consumo de mantenimiento',
+        note: `Mantenimiento: ${record.workPerformed}`.slice(0, 250),
+    };
+};
+
 const approveRecord = async (req, res, next) => {
     try {
         const recordId = decodeId(req.params.record_id, 'ID de registro');
@@ -684,7 +716,8 @@ const approveRecord = async (req, res, next) => {
         if (existing.createdById != null && existing.createdById === actor.id && existing.createdByKind === actor.kind) {
             throw new AppError('No puedes aprobar un registro que cargaste tú; debe aprobarlo otra persona', 409);
         }
-        await MaintenanceService.approveRecord(recordId, { ...actor, name: approvedBy });
+        const stockExit = await resolveStockExit(existing, req.body.warehouseId, actor);
+        await MaintenanceService.approveRecord(recordId, { ...actor, name: approvedBy }, stockExit);
         res.status(200).json({ data: 'resource approved successfully' });
     } catch (error) {
         next(error);
@@ -706,13 +739,23 @@ const voidRecord = async (req, res, next) => {
             throw new AppError('El registro ya estaba anulado', 409);
         }
         const actor = getActor(req);
+        // Si al aprobarlo se descontaron materiales, vuelven a la misma bodega.
+        const stockReturn = existing.stockWarehouseId && existing.materials?.length
+            ? {
+                products: existing.materials.map((material) => ({ id: material.productId, quantity: material.quantity })),
+                warehouseToId: existing.stockWarehouseId,
+                userId: actor.id,
+                reason: 'Anulación de mantenimiento',
+                note: `Mantenimiento anulado: ${existing.workPerformed}`.slice(0, 250),
+            }
+            : null;
         await MaintenanceService.voidRecord(recordId, {
             voidedAt: new Date(),
             voidReason: reason.trim(),
             voidedBy: actor.name,
             voidedById: actor.id,
             voidedByKind: actor.kind,
-        });
+        }, stockReturn);
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
         next(error);
@@ -886,9 +929,13 @@ const getMaintenanceBook = async (req, res, next) => {
         if (!yacht) {
             throw new AppError('Yate no encontrado', 404);
         }
-        const equipment = await MaintenanceService.getMaintenanceBook(yachtId);
+        const [equipment, warehouses] = await Promise.all([
+            MaintenanceService.getMaintenanceBook(yachtId),
+            MaintenanceService.getYachtStockWarehouses(yachtId),
+        ]);
 
         encodeInstanceField(yacht, 'id');
+        yacht.dataValues.warehouses = warehouses.map((warehouse) => ({ id: Utils.encode(warehouse.id), name: warehouse.name, type: warehouse.type }));
 
         const equipmentBook = equipment.map((item) => {
             encodeInstanceField(item, 'id');

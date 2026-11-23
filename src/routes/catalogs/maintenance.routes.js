@@ -705,15 +705,22 @@ router.put('/records/:record_id', MaintenanceController.updateRecord);
  *               approvedBy:
  *                 type: string
  *                 description: Solo se usa si el token no trae el nombre del usuario.
+ *               warehouseId:
+ *                 type: string
+ *                 description: >
+ *                   Bodega del barco de la que se descuentan los materiales usados. Solo hace falta si el
+ *                   barco tiene más de una (sin contar la del bar); con una sola se usa esa.
  *     responses:
  *       200:
  *         description: Registro aprobado
  *       400:
- *         description: approvedBy faltante o ID inválido
+ *         description: approvedBy faltante, ID inválido o stock insuficiente de algún material en la bodega (no se aprueba nada)
  *       404:
  *         description: Registro no encontrado
  *       409:
- *         description: El registro ya estaba aprobado, o lo cargó el mismo usuario que intenta aprobarlo
+ *         description: >
+ *           El registro ya estaba aprobado, lo cargó el mismo usuario que intenta aprobarlo, o el barco
+ *           no tiene bodega (o tiene varias y no se eligió una) para descontar los materiales
  *       500:
  *         description: Error inesperado
  */
