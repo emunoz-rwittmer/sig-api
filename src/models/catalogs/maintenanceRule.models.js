@@ -21,6 +21,17 @@ const MaintenanceRule = db.define('maintenance_rule', {
         allowNull: true,
         field: 'periodicity_unit',
     },
+    // Segundo intervalo, por calendario, para reglas por horas: "250 h o 6 meses, lo que ocurra primero".
+    secondaryValue: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+        field: 'secondary_value',
+    },
+    secondaryUnit: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'secondary_unit',
+    },
     instructions: {
         type: DataTypes.TEXT,
         allowNull: true,

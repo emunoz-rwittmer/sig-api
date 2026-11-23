@@ -209,6 +209,14 @@ router.get('/rules', MaintenanceController.getAllRules);
  *                 type: string
  *                 enum: [horas, dias, meses, anios]
  *                 nullable: true
+ *               secondaryValue:
+ *                 type: number
+ *                 nullable: true
+ *                 description: Segundo intervalo por calendario (solo reglas por horas), lo que ocurra primero.
+ *               secondaryUnit:
+ *                 type: string
+ *                 enum: [dias, meses, anios]
+ *                 nullable: true
  *               instructions:
  *                 type: string
  *                 nullable: true
@@ -263,6 +271,14 @@ router.post('/rules', MaintenanceController.createRule);
  *               periodicityUnit:
  *                 type: string
  *                 enum: [horas, dias, meses, anios]
+ *                 nullable: true
+ *               secondaryValue:
+ *                 type: number
+ *                 nullable: true
+ *                 description: Segundo intervalo por calendario (solo reglas por horas), lo que ocurra primero.
+ *               secondaryUnit:
+ *                 type: string
+ *                 enum: [dias, meses, anios]
  *                 nullable: true
  *               instructions:
  *                 type: string
@@ -390,6 +406,50 @@ router.post('/rule-assignments', MaintenanceController.createRuleAssignment);
  *         description: Error inesperado
  */
 router.put('/rule-assignments/:assignment_id', MaintenanceController.updateRuleAssignment);
+
+/**
+ * @openapi
+ * /maintenance/rule-assignments/{assignment_id}/postpone:
+ *   post:
+ *     summary: Posponer el vencimiento actual de una regla en un equipo (firma el usuario logueado)
+ *     description: La posposición vale hasta el siguiente registro de esa regla en el equipo.
+ *     tags: [Mantenimiento]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: assignment_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [reason]
+ *             properties:
+ *               reason:
+ *                 type: string
+ *               untilDate:
+ *                 type: string
+ *                 format: date-time
+ *                 description: Nueva fecha límite (futura). Requerida si no se envía untilHours.
+ *               untilHours:
+ *                 type: number
+ *                 description: Nuevo horómetro límite. Requerido si no se envía untilDate.
+ *     responses:
+ *       200:
+ *         description: Vencimiento pospuesto
+ *       400:
+ *         description: Falta el motivo o el nuevo límite, o la fecha no es futura
+ *       404:
+ *         description: Asignación no encontrada
+ *       500:
+ *         description: Error inesperado
+ */
+router.post('/rule-assignments/:assignment_id/postpone', MaintenanceController.postponeRuleAssignment);
 
 // RECORDS (historial)
 

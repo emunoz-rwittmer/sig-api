@@ -36,6 +36,39 @@ const groupByEquipment = (rows) => {
     return map;
 };
 
+const STATUS_RANK = { vencida: 0, proxima: 1, al_dia: 2 };
+
+// Vencimiento por horas; `postponedHours` corre el vencimiento si es mayor.
+const evaluateHours = (last, current, interval, postponedHours) => {
+    if (last.hours == null) return null;
+    const currentHours = Math.max(current?.hours ?? last.hours, last.hours);
+    const dueAtHours = Math.max(last.hours + interval, postponedHours ?? -Infinity);
+    const remainingHours = dueAtHours - currentHours;
+    const status = remainingHours <= 0 ? 'vencida' : remainingHours <= interval * WARNING_RATIO ? 'proxima' : 'al_dia';
+    return {
+        status,
+        ratio: remainingHours / interval,
+        fields: { remainingHours, remainingDays: null, currentHours, hoursReadAt: current?.readAt ?? null },
+    };
+};
+
+// Vencimiento por calendario; `postponedDate` corre el vencimiento si es posterior.
+const evaluateCalendar = (lastAt, value, unit, postponedDate) => {
+    if (!lastAt) return null;
+    const start = dayjs(lastAt);
+    const scheduled = start.add(value, DATE_UNIT_BY_PERIODICITY[unit]);
+    const dueAt = postponedDate && dayjs(postponedDate).isAfter(scheduled) ? dayjs(postponedDate) : scheduled;
+    const remainingDays = dueAt.diff(dayjs(), 'day');
+    const periodDays = scheduled.diff(start, 'day');
+    const warningDays = Math.max(Math.round(periodDays * WARNING_RATIO), DAY_WARNING_MIN);
+    const status = remainingDays <= 0 ? 'vencida' : remainingDays <= warningDays ? 'proxima' : 'al_dia';
+    return {
+        status,
+        ratio: remainingDays / periodDays,
+        fields: { remainingDays, remainingHours: null, periodDays, dueAt: dueAt.toISOString() },
+    };
+};
+
 const buildRuleAlert = (assignment, equipmentRecords, current) => {
     const rule = assignment.rule;
     const equipment = assignment.equipment;
@@ -45,20 +78,38 @@ const buildRuleAlert = (assignment, equipmentRecords, current) => {
     const last = lastRecord
         ? { at: lastRecord.performedAt, hours: lastRecord.hoursReading }
         : hasBaseline ? { at: assignment.baselineDate, hours: assignment.baselineHours } : null;
+    const interval = assignment.intervalOverride ?? rule.periodicityValue;
+    // La posposición vale para el ciclo en curso: un registro más nuevo de la regla la consume.
+    const postponement = assignment.postponedAt && (lastRecord?.id ?? null) === (assignment.postponedAfterRecordId ?? null)
+        ? assignment
+        : null;
 
     const base = {
+        assignmentId: assignment.id,
         equipmentId: equipment.id,
         equipmentName: equipment.name,
         yachtId: equipment.yachtId,
         ruleId: rule.id,
         ruleName: rule.name,
-        periodicityValue: rule.periodicityValue,
+        periodicityValue: interval,
         periodicityUnit: rule.periodicityUnit,
+        secondaryValue: rule.secondaryValue,
+        secondaryUnit: rule.secondaryUnit,
+        intervalOverridden: assignment.intervalOverride != null,
         lastPerformedAt: last?.at ?? null,
         fromBaseline: !lastRecord && hasBaseline,
+        postponed: postponement
+            ? {
+                untilDate: postponement.postponedUntilDate,
+                untilHours: postponement.postponedUntilHours,
+                reason: postponement.postponeReason,
+                by: postponement.postponedBy,
+                at: postponement.postponedAt,
+            }
+            : null,
     };
 
-    if (!rule.periodicityValue || !rule.periodicityUnit) {
+    if (!interval || !rule.periodicityUnit) {
         return { ...base, status: 'sin_periodicidad', remainingDays: null, remainingHours: null };
     }
 
@@ -66,29 +117,24 @@ const buildRuleAlert = (assignment, equipmentRecords, current) => {
         return { ...base, status: 'nunca_realizada', remainingDays: null, remainingHours: null };
     }
 
-    if (rule.periodicityUnit === 'horas') {
-        if (last.hours == null) {
-            return { ...base, status: 'sin_horometro', remainingDays: null, remainingHours: null };
-        }
-        const currentHours = Math.max(current?.hours ?? last.hours, last.hours);
-        const remainingHours = last.hours + rule.periodicityValue - currentHours;
-        const warningHours = rule.periodicityValue * WARNING_RATIO;
-        const status = remainingHours <= 0 ? 'vencida' : remainingHours <= warningHours ? 'proxima' : 'al_dia';
-        return { ...base, status, remainingDays: null, remainingHours, currentHours, hoursReadAt: current?.readAt ?? null };
+    const isHours = rule.periodicityUnit === 'horas';
+    const candidates = isHours
+        ? [
+            evaluateHours(last, current, interval, postponement?.postponedUntilHours),
+            rule.secondaryValue && rule.secondaryUnit
+                ? evaluateCalendar(last.at, rule.secondaryValue, rule.secondaryUnit, postponement?.postponedUntilDate)
+                : null,
+        ]
+        : [evaluateCalendar(last.at, interval, rule.periodicityUnit, postponement?.postponedUntilDate)];
+    const measured = candidates.filter(Boolean);
+
+    if (!measured.length) {
+        return { ...base, status: isHours ? 'sin_horometro' : 'nunca_realizada', remainingDays: null, remainingHours: null };
     }
 
-    if (!last.at) {
-        return { ...base, status: 'nunca_realizada', remainingDays: null, remainingHours: null };
-    }
-
-    const unit = DATE_UNIT_BY_PERIODICITY[rule.periodicityUnit];
-    const lastPerformedAt = dayjs(last.at);
-    const dueAt = lastPerformedAt.add(rule.periodicityValue, unit);
-    const remainingDays = dueAt.diff(dayjs(), 'day');
-    const periodDays = dueAt.diff(lastPerformedAt, 'day');
-    const warningDays = Math.max(Math.round(periodDays * WARNING_RATIO), DAY_WARNING_MIN);
-    const status = remainingDays <= 0 ? 'vencida' : remainingDays <= warningDays ? 'proxima' : 'al_dia';
-    return { ...base, status, remainingDays, remainingHours: null, dueAt: dueAt.toISOString() };
+    // Con doble intervalo manda el más urgente: peor estado y, a igual estado, el que tiene menos margen.
+    const [driver] = measured.sort((a, b) => STATUS_RANK[a.status] - STATUS_RANK[b.status] || a.ratio - b.ratio);
+    return { ...base, status: driver.status, ...driver.fields };
 };
 
 class MaintenanceService {
@@ -156,6 +202,8 @@ class MaintenanceService {
                 name: data.name,
                 periodicityValue: data.periodicityValue,
                 periodicityUnit: data.periodicityUnit,
+                secondaryValue: data.secondaryValue,
+                secondaryUnit: data.secondaryUnit,
                 instructions: data.instructions,
             }, { transaction });
 
@@ -184,6 +232,8 @@ class MaintenanceService {
                 name: data.name,
                 periodicityValue: data.periodicityValue,
                 periodicityUnit: data.periodicityUnit,
+                secondaryValue: data.secondaryValue,
+                secondaryUnit: data.secondaryUnit,
                 instructions: data.instructions,
                 active: data.active,
             }, { transaction });
@@ -224,6 +274,11 @@ class MaintenanceService {
 
     static async createRuleAssignment(equipmentId, ruleId, baseline = {}) {
         return MaintenanceRuleAssignment.create({ equipmentId, ruleId, ...baseline });
+    }
+
+    // Mismo criterio que las alertas: el registro de la regla con performedAt más reciente.
+    static async getLastRuleRecord(equipmentId, ruleId) {
+        return MaintenanceRecord.findOne({ where: { equipmentId, ruleId }, order: [['performedAt', 'DESC']] });
     }
 
     static async updateRuleAssignment(id, data) {

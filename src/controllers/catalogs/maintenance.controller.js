@@ -164,6 +164,20 @@ const validateRecommendedMaterials = (materials) => {
     });
 };
 
+const CALENDAR_UNITS = ['dias', 'meses', 'anios'];
+
+// Segundo intervalo (solo calendario y solo en reglas por horas); ambos vacíos = sin segundo intervalo.
+const parseSecondaryInterval = ({ periodicityUnit, secondaryValue, secondaryUnit }) => {
+    if (secondaryValue == null && secondaryUnit == null) return { secondaryValue: null, secondaryUnit: null };
+    if (periodicityUnit !== 'horas') {
+        throw new AppError('El segundo intervalo solo aplica a reglas por horas', 400);
+    }
+    if (!CALENDAR_UNITS.includes(secondaryUnit) || typeof secondaryValue !== 'number' || !(secondaryValue > 0)) {
+        throw new AppError(`El segundo intervalo necesita un valor mayor a 0 y una unidad: ${CALENDAR_UNITS.join(', ')}`, 400);
+    }
+    return { secondaryValue, secondaryUnit };
+};
+
 const validatePeriodicityUnit = (unit) => {
     if (unit === undefined || unit === null) return;
     if (!PERIODICITY_UNITS.includes(unit)) {
@@ -199,6 +213,7 @@ const createRule = async (req, res, next) => {
         }
         validatePeriodicityUnit(periodicityUnit);
         validateRecommendedMaterials(recommendedMaterials);
+        const secondary = parseSecondaryInterval(req.body);
 
         const decodedMaterials = (recommendedMaterials || []).map((m) => ({
             productId: decodeId(m.productId, 'ID de producto'),
@@ -209,6 +224,7 @@ const createRule = async (req, res, next) => {
             name,
             periodicityValue: periodicityValue ?? null,
             periodicityUnit: periodicityUnit ?? null,
+            ...secondary,
             instructions: instructions ?? null,
             recommendedMaterials: decodedMaterials,
         });
@@ -232,6 +248,7 @@ const updateRule = async (req, res, next) => {
         }
         validatePeriodicityUnit(periodicityUnit);
         validateRecommendedMaterials(recommendedMaterials);
+        const secondary = parseSecondaryInterval(req.body);
 
         const decodedMaterials = (recommendedMaterials || []).map((m) => ({
             productId: decodeId(m.productId, 'ID de producto'),
@@ -242,6 +259,7 @@ const updateRule = async (req, res, next) => {
             name,
             periodicityValue: periodicityValue ?? null,
             periodicityUnit: periodicityUnit ?? null,
+            ...secondary,
             instructions: instructions ?? null,
             active: active !== undefined ? active : true,
             recommendedMaterials: decodedMaterials,
@@ -283,6 +301,12 @@ const parseBaseline = (body) => {
     if (body.baselineHours !== undefined) {
         baseline.baselineHours = body.baselineHours === null ? null : parseHours(body.baselineHours, 'baselineHours');
     }
+    if (body.intervalOverride !== undefined) {
+        if (body.intervalOverride !== null && !(typeof body.intervalOverride === 'number' && body.intervalOverride > 0)) {
+            throw new AppError('intervalOverride debe ser un número mayor a 0', 400);
+        }
+        baseline.intervalOverride = body.intervalOverride;
+    }
     return baseline;
 };
 
@@ -323,13 +347,50 @@ const updateRuleAssignment = async (req, res, next) => {
         const data = parseBaseline(req.body);
         if (typeof active === 'boolean') data.active = active;
         if (active !== undefined && typeof active !== 'boolean' || !Object.keys(data).length) {
-            throw new AppError('Envía active (booleano) o la línea base (baselineDate, baselineHours)', 400);
+            throw new AppError('Envía active (booleano), la línea base (baselineDate, baselineHours) o intervalOverride', 400);
         }
         const existing = await MaintenanceService.getRuleAssignmentById(assignmentId);
         if (!existing) {
             throw new AppError('Asignación no encontrada', 404);
         }
         await MaintenanceService.updateRuleAssignment(assignmentId, data);
+        res.status(200).json({ data: 'resource updated successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+const postponeRuleAssignment = async (req, res, next) => {
+    try {
+        const assignmentId = decodeId(req.params.assignment_id, 'ID de asignación');
+        const { untilDate, untilHours, reason } = req.body;
+        if (typeof reason !== 'string' || !reason.trim()) {
+            throw new AppError('El motivo de la posposición es obligatorio', 400);
+        }
+        if (untilDate == null && untilHours == null) {
+            throw new AppError('Indica hasta qué fecha (untilDate) o hasta qué horas (untilHours) se pospone', 400);
+        }
+        const date = untilDate == null ? null : new Date(untilDate);
+        if (date && (Number.isNaN(date.getTime()) || date <= new Date())) {
+            throw new AppError('untilDate debe ser una fecha futura', 400);
+        }
+        const hours = untilHours == null ? null : parseHours(untilHours, 'untilHours');
+        const existing = await MaintenanceService.getRuleAssignmentById(assignmentId);
+        if (!existing) {
+            throw new AppError('Asignación no encontrada', 404);
+        }
+        const actor = getActor(req);
+        const lastRecord = await MaintenanceService.getLastRuleRecord(existing.equipmentId, existing.ruleId);
+        await MaintenanceService.updateRuleAssignment(assignmentId, {
+            postponedAfterRecordId: lastRecord?.id ?? null,
+            postponedUntilDate: date,
+            postponedUntilHours: hours,
+            postponeReason: reason.trim(),
+            postponedBy: actor.name,
+            postponedById: actor.id,
+            postponedByKind: actor.kind,
+            postponedAt: new Date(),
+        });
         res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
         next(error);
@@ -672,6 +733,7 @@ const getRuleAlerts = async (req, res, next) => {
         const alerts = await MaintenanceService.getRuleAlerts(yachtId);
         const encoded = alerts.map((alert) => ({
             ...alert,
+            assignmentId: Utils.encode(alert.assignmentId),
             equipmentId: Utils.encode(alert.equipmentId),
             yachtId: Utils.encode(alert.yachtId),
             ruleId: Utils.encode(alert.ruleId),
@@ -702,6 +764,11 @@ const getMaintenanceBook = async (req, res, next) => {
             const rules = item.dataValues.ruleAssignments.map((assignment) => {
                 const rule = assignment.dataValues.rule;
                 encodeRule(rule);
+                if (assignment.intervalOverride != null) {
+                    rule.dataValues.periodicityValue = assignment.intervalOverride;
+                    rule.dataValues.intervalOverridden = true;
+                }
+                rule.dataValues.assignmentId = Utils.encode(assignment.id);
                 return rule;
             });
 
@@ -734,6 +801,7 @@ const MaintenanceController = {
     getEquipmentRules,
     createRuleAssignment,
     updateRuleAssignment,
+    postponeRuleAssignment,
     getAllRecords,
     getRecord,
     createRecord,
