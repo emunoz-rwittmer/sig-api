@@ -40,6 +40,17 @@ const YachtEquipment = db.define('yacht_equipment', {
         type: DataTypes.STRING,
         allowNull: true,
     },
+    // Sistema al que pertenece (propulsion, generacion, electrico, seguridad, navegacion, casco, hidraulico, otros).
+    category: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    // Crítico según ISM: su falla repentina pone en riesgo el barco o la gente; sus vencimientos van primero.
+    critical: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+    },
     active: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,

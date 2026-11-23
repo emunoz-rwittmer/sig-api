@@ -61,6 +61,12 @@ router.get('/equipment', MaintenanceController.getAllEquipment);
  *                 type: string
  *               rpm:
  *                 type: string
+ *               category:
+ *                 type: string
+ *                 enum: [propulsion, generacion, electrico, seguridad, navegacion, casco, hidraulico, otros]
+ *                 nullable: true
+ *               critical:
+ *                 type: boolean
  *     responses:
  *       200:
  *         description: Equipo creado
@@ -108,6 +114,12 @@ router.post('/equipment', MaintenanceController.createEquipment);
  *                 type: string
  *               rpm:
  *                 type: string
+ *               category:
+ *                 type: string
+ *                 enum: [propulsion, generacion, electrico, seguridad, navegacion, casco, hidraulico, otros]
+ *                 nullable: true
+ *               critical:
+ *                 type: boolean
  *               active:
  *                 type: boolean
  *     responses:
@@ -559,6 +571,16 @@ router.get('/records/:record_id', MaintenanceController.getRecord);
  *                 enum: [preventivo, correctivo]
  *                 nullable: true
  *                 description: Si se omite, se infiere de si el registro tiene ruleId (preventivo) o no (correctivo).
+ *               performedByType:
+ *                 type: string
+ *                 enum: [tripulacion, taller]
+ *                 nullable: true
+ *               provider:
+ *                 type: string
+ *                 nullable: true
+ *               cost:
+ *                 type: number
+ *                 nullable: true
  *               faultId:
  *                 type: string
  *                 nullable: true
@@ -695,6 +717,45 @@ router.put('/records/:record_id', MaintenanceController.updateRecord);
  *         description: Error inesperado
  */
 router.put('/records/:record_id/approve', MaintenanceController.approveRecord);
+
+/**
+ * @openapi
+ * /maintenance/records/{record_id}/void:
+ *   post:
+ *     summary: Anular un registro (no se borra; queda con motivo y firma y deja de contar)
+ *     description: Si el registro había cerrado una falla, la falla vuelve a quedar abierta.
+ *     tags: [Mantenimiento]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: record_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [reason]
+ *             properties:
+ *               reason:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Registro anulado
+ *       400:
+ *         description: Falta el motivo o el ID es inválido
+ *       404:
+ *         description: Registro no encontrado
+ *       409:
+ *         description: El registro ya estaba anulado
+ *       500:
+ *         description: Error inesperado
+ */
+router.post('/records/:record_id/void', MaintenanceController.voidRecord);
 
 // FAULTS
 

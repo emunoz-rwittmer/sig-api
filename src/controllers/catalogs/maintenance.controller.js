@@ -37,6 +37,18 @@ const getActor = (req) => ({
 
 // EQUIPMENT
 
+const EQUIPMENT_CATEGORIES = ['propulsion', 'generacion', 'electrico', 'seguridad', 'navegacion', 'casco', 'hidraulico', 'otros'];
+
+const parseEquipmentClass = ({ category, critical }) => {
+    if (category != null && !EQUIPMENT_CATEGORIES.includes(category)) {
+        throw new AppError(`category debe ser uno de: ${EQUIPMENT_CATEGORIES.join(', ')}`, 400);
+    }
+    if (critical != null && typeof critical !== 'boolean') {
+        throw new AppError('critical debe ser booleano', 400);
+    }
+    return { category: category ?? null, critical: Boolean(critical) };
+};
+
 const validateEquipmentPayload = (body) => {
     const { yachtId, name } = body;
     if (!yachtId || typeof name !== 'string' || !name.trim()) {
@@ -70,6 +82,7 @@ const createEquipment = async (req, res, next) => {
             serialNumber: serialNumber ?? null,
             power: power ?? null,
             rpm: rpm ?? null,
+            ...parseEquipmentClass(req.body),
         });
         res.status(200).json({ data: 'resource created successfully' });
     } catch (error) {
@@ -94,6 +107,7 @@ const updateEquipment = async (req, res, next) => {
             serialNumber: serialNumber ?? null,
             power: power ?? null,
             rpm: rpm ?? null,
+            ...parseEquipmentClass(req.body),
             active: active !== undefined ? active : true,
         });
         res.status(200).json({ data: 'resource updated successfully' });
@@ -440,6 +454,10 @@ const encodeRecord = (record) => {
     }
     encodeInstanceField(record, 'createdById');
     encodeInstanceField(record, 'approvedById');
+    encodeInstanceField(record, 'voidedById');
+    if (record.dataValues.cost != null) {
+        record.dataValues.cost = Number(record.dataValues.cost);
+    }
     encodeInstanceField(record.dataValues.equipment, 'id');
     if (record.dataValues.rule) {
         encodeInstanceField(record.dataValues.rule, 'id');
@@ -464,6 +482,22 @@ const validateRecordPayload = (body) => {
     requireValidDate(performedAt, 'performedAt');
     validateMaterials(body.materials);
     validateMaintenanceType(body.maintenanceType);
+};
+
+const PERFORMED_BY_TYPES = ['tripulacion', 'taller'];
+
+// Quién ejecutó el trabajo, proveedor y costo: todos opcionales.
+const parseExecution = ({ performedByType, provider, cost }) => {
+    if (performedByType != null && !PERFORMED_BY_TYPES.includes(performedByType)) {
+        throw new AppError(`performedByType debe ser uno de: ${PERFORMED_BY_TYPES.join(', ')}`, 400);
+    }
+    if (provider != null && typeof provider !== 'string') {
+        throw new AppError('provider debe ser texto', 400);
+    }
+    if (cost != null && !(typeof cost === 'number' && Number.isFinite(cost) && cost >= 0)) {
+        throw new AppError('cost debe ser un número mayor o igual a 0', 400);
+    }
+    return { performedByType: performedByType ?? null, provider: provider?.trim() || null, cost: cost ?? null };
 };
 
 const getAllRecords = async (req, res, next) => {
@@ -555,6 +589,7 @@ const createRecord = async (req, res, next) => {
             observation: observation ?? null,
             materials: decodedMaterials,
             maintenanceType: resolveMaintenanceType(maintenanceType, decodedRuleId),
+            ...parseExecution(req.body),
         });
 
         res.status(200).json({ data: 'resource created successfully' });
@@ -572,6 +607,9 @@ const updateRecord = async (req, res, next) => {
         }
         if (existing.approvedAt) {
             throw new AppError('No se puede editar un registro ya aprobado', 409);
+        }
+        if (existing.voidedAt) {
+            throw new AppError('No se puede editar un registro anulado', 409);
         }
 
         validateRecordPayload(req.body);
@@ -607,6 +645,7 @@ const updateRecord = async (req, res, next) => {
             observation: observation ?? null,
             materials: decodedMaterials,
             maintenanceType: resolveMaintenanceType(maintenanceType, decodedRuleId),
+            ...parseExecution(req.body),
         });
 
         res.status(200).json({ data: 'resource updated successfully' });
@@ -631,11 +670,42 @@ const approveRecord = async (req, res, next) => {
         if (existing.approvedAt) {
             throw new AppError('Registro ya aprobado', 409);
         }
+        if (existing.voidedAt) {
+            throw new AppError('No se puede aprobar un registro anulado', 409);
+        }
         if (existing.createdById != null && existing.createdById === actor.id && existing.createdByKind === actor.kind) {
             throw new AppError('No puedes aprobar un registro que cargaste tú; debe aprobarlo otra persona', 409);
         }
         await MaintenanceService.approveRecord(recordId, { ...actor, name: approvedBy });
         res.status(200).json({ data: 'resource approved successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+const voidRecord = async (req, res, next) => {
+    try {
+        const recordId = decodeId(req.params.record_id, 'ID de registro');
+        const { reason } = req.body;
+        if (typeof reason !== 'string' || !reason.trim()) {
+            throw new AppError('El motivo de la anulación es obligatorio', 400);
+        }
+        const existing = await MaintenanceService.getRecordById(recordId);
+        if (!existing) {
+            throw new AppError('Registro no encontrado', 404);
+        }
+        if (existing.voidedAt) {
+            throw new AppError('El registro ya estaba anulado', 409);
+        }
+        const actor = getActor(req);
+        await MaintenanceService.voidRecord(recordId, {
+            voidedAt: new Date(),
+            voidReason: reason.trim(),
+            voidedBy: actor.name,
+            voidedById: actor.id,
+            voidedByKind: actor.kind,
+        });
+        res.status(200).json({ data: 'resource updated successfully' });
     } catch (error) {
         next(error);
     }
@@ -807,6 +877,7 @@ const MaintenanceController = {
     createRecord,
     updateRecord,
     approveRecord,
+    voidRecord,
     getFaults,
     createFault,
     updateFault,

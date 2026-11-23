@@ -82,6 +82,46 @@ const MaintenanceRecord = db.define('maintenance_record', {
         allowNull: true,
         field: 'approved_by_kind',
     },
+    // Quién ejecutó: tripulacion | taller (externo), con proveedor y costo si aplica.
+    performedByType: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'performed_by_type',
+    },
+    provider: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    cost: {
+        type: DataTypes.DECIMAL(12, 2),
+        allowNull: true,
+    },
+    // Anulación: el registro no se borra, queda marcado con motivo y firma y deja de contar.
+    voidedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: 'voided_at',
+    },
+    voidReason: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        field: 'void_reason',
+    },
+    voidedBy: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'voided_by',
+    },
+    voidedById: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        field: 'voided_by_id',
+    },
+    voidedByKind: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'voided_by_kind',
+    },
     approvedAt: {
         type: DataTypes.DATE,
         allowNull: true,

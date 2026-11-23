@@ -88,6 +88,7 @@ const buildRuleAlert = (assignment, equipmentRecords, current) => {
         assignmentId: assignment.id,
         equipmentId: equipment.id,
         equipmentName: equipment.name,
+        equipmentCritical: Boolean(equipment.critical),
         yachtId: equipment.yachtId,
         ruleId: rule.id,
         ruleName: rule.name,
@@ -163,7 +164,7 @@ class MaintenanceService {
     static async getCurrentHours(equipmentId) {
         const [readings, records] = await Promise.all([
             EquipmentHourReading.findAll({ where: { equipmentId } }),
-            MaintenanceRecord.findAll({ where: { equipmentId, hoursReading: { [Op.ne]: null } } }),
+            MaintenanceRecord.findAll({ where: { equipmentId, hoursReading: { [Op.ne]: null }, voidedAt: null } }),
         ]);
         return resolveCurrentHours(readings, records);
     }
@@ -278,7 +279,7 @@ class MaintenanceService {
 
     // Mismo criterio que las alertas: el registro de la regla con performedAt más reciente.
     static async getLastRuleRecord(equipmentId, ruleId) {
-        return MaintenanceRecord.findOne({ where: { equipmentId, ruleId }, order: [['performedAt', 'DESC']] });
+        return MaintenanceRecord.findOne({ where: { equipmentId, ruleId, voidedAt: null }, order: [['performedAt', 'DESC']] });
     }
 
     static async updateRuleAssignment(id, data) {
@@ -343,6 +344,9 @@ class MaintenanceService {
                 hoursReading: data.hoursReading,
                 observation: data.observation,
                 maintenanceType: data.maintenanceType,
+                performedByType: data.performedByType,
+                provider: data.provider,
+                cost: data.cost,
                 createdBy: data.createdBy,
                 createdById: data.createdById,
                 createdByKind: data.createdByKind,
@@ -387,6 +391,9 @@ class MaintenanceService {
                 hoursReading: data.hoursReading,
                 observation: data.observation,
                 maintenanceType: data.maintenanceType,
+                performedByType: data.performedByType,
+                provider: data.provider,
+                cost: data.cost,
             }, { transaction });
 
             await MaintenanceRecordMaterial.destroy({ where: { recordId: id }, transaction });
@@ -413,6 +420,17 @@ class MaintenanceService {
             { where: { id } }
         );
         return MaintenanceService.getRecordById(id);
+    }
+
+    // Anula el registro y, si había cerrado una falla, la vuelve a abrir: el trabajo que la atendía ya no vale.
+    static async voidRecord(id, data) {
+        return db.transaction(async (transaction) => {
+            await MaintenanceRecord.update(data, { where: { id }, transaction });
+            await MaintenanceFault.update(
+                { status: 'abierta', recordId: null, closedAt: null },
+                { where: { recordId: id }, transaction },
+            );
+        });
     }
 
     // FAULTS
@@ -450,7 +468,7 @@ class MaintenanceService {
             where: { active: true },
             include: [
                 { model: MaintenanceRule, as: 'rule', where: { active: true } },
-                { model: YachtEquipment, as: 'equipment', where: equipmentWhere, attributes: ['id', 'name', 'yachtId'] },
+                { model: YachtEquipment, as: 'equipment', where: equipmentWhere, attributes: ['id', 'name', 'yachtId', 'critical'] },
             ],
         });
 
@@ -459,7 +477,7 @@ class MaintenanceService {
         const equipmentIds = [...new Set(assignments.map((assignment) => assignment.equipmentId))];
         const [records, readings] = await Promise.all([
             MaintenanceRecord.findAll({
-                where: { equipmentId: { [Op.in]: equipmentIds } },
+                where: { equipmentId: { [Op.in]: equipmentIds }, voidedAt: null },
                 order: [['performedAt', 'DESC']],
             }),
             EquipmentHourReading.findAll({ where: { equipmentId: { [Op.in]: equipmentIds } } }),
@@ -521,7 +539,7 @@ class MaintenanceService {
         });
 
         equipment.forEach((item) => {
-            const current = resolveCurrentHours(item.hourReadings, item.records);
+            const current = resolveCurrentHours(item.hourReadings, item.records.filter((record) => !record.voidedAt));
             item.dataValues.currentHours = current?.hours ?? null;
             item.dataValues.hoursReadAt = current?.readAt ?? null;
             delete item.dataValues.hourReadings;
