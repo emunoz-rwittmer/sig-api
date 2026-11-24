@@ -8,7 +8,6 @@ const {
     validateQuestion,
     resolveSurveyStatus,
     scoreAnswer,
-    computeResults,
     computeReport,
 } = require('../../../src/utils/hrSurveyScoring');
 
@@ -140,55 +139,6 @@ describe('hrSurveyScoring', () => {
         });
     });
 
-    describe('computeResults', () => {
-        const questions = [mcq({ id: 1 }), texto({ id: 3 }), scale({ id: 2, required: false })];
-        const departaments = [{ id: 1, name: 'D1' }, { id: 2, name: 'D2' }, { id: 3, name: 'D3' }];
-        const ans = (questionId, optionId, score, text = null) => ({ questionId, optionId, score, text });
-        const responses = [
-            { departamentId: 1, answers: [ans(1, 3, 5), ans(3, null, null, 'bien')] },
-            { departamentId: 1, answers: [ans(1, 2, 4), ans(3, null, null, '   ')] },
-            { departamentId: 2, answers: [ans(1, 2, 2), ans(3, null, null, 'mal')] },
-        ];
-        const result = computeResults({
-            questions,
-            departaments,
-            responses,
-            participationCounts: new Map([[1, 2], [2, 1]]),
-            assignedPending: new Map([[1, 3], [3, 4]]),
-        });
-        const q = (id) => result.questions.find((x) => x.questionId === id);
-
-        it('promedia por departamento y global', () => {
-            expect(q(1).byDepartament).toEqual({ 1: 4.5, 2: 2, 3: null });
-            expect(q(1).overall).toBe(3.67);
-        });
-        it('pregunta sin respuestas da overall null', () => {
-            expect(q(2).overall).toBeNull();
-            expect(q(2).byDepartament).toEqual({ 1: null, 2: null, 3: null });
-            expect(q(2).distribution).toBeUndefined();
-            expect(q(2).comments).toBeUndefined();
-        });
-        it('distribución por opción', () => {
-            expect(q(1).distribution).toEqual([
-                { optionId: 1, text: 'Op 1', count: 0 },
-                { optionId: 2, text: 'Op 2', count: 2 },
-                { optionId: 3, text: 'Op 3', count: 1 },
-            ]);
-        });
-        it('comentarios solo con departamentId, omitiendo vacíos', () => {
-            expect(q(3).comments).toEqual([{ departamentId: 1, text: 'bien' }, { departamentId: 2, text: 'mal' }]);
-            expect(q(3).overall).toBeNull();
-            expect(q(3).distribution).toBeUndefined();
-        });
-        it('participación: asignados = respondieron + pendientes', () => {
-            expect(result.participation).toEqual([
-                { departamentId: 1, name: 'D1', responded: 2, assigned: 5 },
-                { departamentId: 2, name: 'D2', responded: 1, assigned: 1 },
-                { departamentId: 3, name: 'D3', responded: 0, assigned: 4 },
-            ]);
-        });
-    });
-
     describe('computeReport', () => {
         const questions = [
             { id: 2, type: 'scale', scaleMin: 1, scaleMax: 5, category: 'Liderazgo' },
@@ -241,6 +191,23 @@ describe('hrSurveyScoring', () => {
 
             expect(report.dimensions.company.groups.map(({ id, responses }) => [id, responses])).toEqual([[1, 1], [2, 1]]);
             expect(report.overall).toMatchObject({ masked: true, average: null });
+        });
+
+        it('devuelve los comentarios sin datos del puesto y los oculta con menos de 3 respuestas', () => {
+            const withText = [scale(), texto()];
+            const answer = (text) => ({ departamentId: 9, answers: [{ questionId: 2, score: 4 }, { questionId: 3, text }] });
+            const report = computeReport({
+                questions: withText,
+                dimensions: [],
+                members: [],
+                responses: [answer('bien'), answer('   '), answer('mal')],
+            });
+            const comments = report.questions.find((q) => q.questionId === 3);
+            expect(comments).toMatchObject({ statement: 'T', type: 'texto', comments: ['bien', 'mal'] });
+            expect(report.questions.find((q) => q.questionId === 2).comments).toBeUndefined();
+
+            const few = computeReport({ questions: withText, dimensions: [], members: [], responses: [answer('bien')] });
+            expect(few.questions.find((q) => q.questionId === 3).comments).toEqual([]);
         });
     });
 });

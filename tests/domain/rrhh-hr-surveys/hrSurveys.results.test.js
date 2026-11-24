@@ -1,7 +1,7 @@
 const request = require('supertest');
 const { bootTestApp, shutdownTestApp } = require('../../helpers/testApp');
 const { createAuthenticatedUser, TEST_USER } = require('../../helpers/auth');
-const { createAssignablePosition, createCompanyWithYacht, createPosition } = require('../../helpers/staffFixtures');
+const { createAssignablePosition, createCompanyWithYacht } = require('../../helpers/staffFixtures');
 const Staff = require('../../../src/models/catalogs/staff.models');
 const StaffCompany = require('../../../src/models/catalogs/staffCompany.models');
 const Roles = require('../../../src/models/catalogs/roles.models');
@@ -121,9 +121,9 @@ async function setup() {
     return { p1, p2, s1, s2, s3, pending, surveyHash };
 }
 
-describe('HR surveys results (rrhh only)', () => {
-    it('tabulates averages, participation and comments with hashed ids', async () => {
-        const { p1, p2, surveyHash } = await setup();
+describe('HR surveys results', () => {
+    it('tabulates averages and comments with hashed ids and nothing about who answered', async () => {
+        const { surveyHash } = await setup();
 
         const response = await request(app).get(`/api/hr-surveys/${surveyHash}/results`).set(bearer(rrhhToken));
         expect(response.status).toBe(200);
@@ -135,54 +135,15 @@ describe('HR surveys results (rrhh only)', () => {
             endsAt: '2099-12-31',
             status: 'open',
         });
+        expect(Object.keys(response.body)).toEqual(['survey', 'report']);
+        expect(Object.keys(response.body.report.byCompany)).toEqual(['groups', 'byQuestion']);
 
-        const h1 = Utils.encode(p1.departamentId);
-        const h2 = Utils.encode(p2.departamentId);
-        expect(response.body.participation).toEqual(expect.arrayContaining([
-            { departamentId: h1, name: 'Cocina', responded: 2, assigned: 3 },
-            { departamentId: h2, name: 'Cubierta', responded: 1, assigned: 1 },
-        ]));
-        expect(response.body.participation).toHaveLength(2);
-
-        const [choice, scale, comments] = response.body.questions;
-        expect(choice.overall).toBe(3.67);
-        expect(choice.byDepartament).toEqual({ [h1]: 3, [h2]: 5 });
-        expect(choice.distribution.map(({ text, count }) => [text, count])).toEqual(
-            expect.arrayContaining([['Bueno', 2], ['Malo', 1]]),
-        );
-        choice.distribution.forEach((entry) => expect(Utils.decode(entry.optionId)).toBeGreaterThan(0));
+        const [choice, scale, comments] = response.body.report.questions;
         expect(Utils.decode(choice.questionId)).toBeGreaterThan(0);
-        expect(scale.overall).toBe(3.67);
-        expect(scale.byDepartament).toEqual({ [h1]: 3, [h2]: 5 });
-        expect(comments.comments).toEqual([{ departamentId: h1, text: 'Todo bien' }]);
-    });
-
-    it('groups positions of the same departament and ignores unassigned positions', async () => {
-        const chef = await createAssignablePosition('Galley');
-        const cook = await createPosition('Ayudante', chef.departamentId);
-        const waiter = await createPosition('Mesero', chef.departamentId);
-        const s1 = await createStaffFixture(chef);
-        await createStaffFixture(cook);
-        await createStaffFixture(waiter);
-        const created = await request(app)
-            .post('/api/hr-surveys')
-            .set(bearer(adminToken))
-            .send({
-                name: 'Por cargo',
-                startsAt: '2020-01-01',
-                endsAt: '2099-12-31',
-                active: true,
-                positionIds: [Utils.encode(chef.id), Utils.encode(cook.id)],
-                questions: surveyQuestions(),
-            });
-        expect(created.status).toBe(201);
-        await submitAs(s1, created.body.surveyId, { choice: 'Bueno', scale: 4 });
-
-        const response = await request(app).get(`/api/hr-surveys/${created.body.surveyId}/results`).set(bearer(rrhhToken));
-        expect(response.status).toBe(200);
-        expect(response.body.participation).toEqual([
-            { departamentId: Utils.encode(chef.departamentId), name: 'Galley', responded: 1, assigned: 2 },
-        ]);
+        expect(choice).toMatchObject({ statement: '¿Cómo calificas el clima laboral?', type: 'opcion multiple', average: 3.67, count: 3 });
+        expect(scale.average).toBe(3.67);
+        expect(comments).toMatchObject({ statement: 'Comentarios', type: 'texto largo', comments: ['Todo bien'] });
+        expect(JSON.stringify(response.body)).not.toMatch(/departament|position|staffType|yacht/i);
     });
 
     it('never leaks staff ids or response/answer uuids', async () => {
@@ -218,24 +179,50 @@ describe('HR surveys results (rrhh only)', () => {
             positionIds: [Utils.encode(position.id)], questions: surveyQuestions(),
         });
         expect(created.status).toBe(201);
-        for (const staff of onlyJhony) await submitAs(staff, created.body.surveyId, { choice: 'Malo', scale: 1 });
-        for (const staff of both) await submitAs(staff, created.body.surveyId, { choice: 'Bueno', scale: 5 });
+        for (const staff of onlyJhony) await submitAs(staff, created.body.surveyId, { choice: 'Malo', scale: 1, comment: 'Solo Jhony' });
+        for (const staff of both) await submitAs(staff, created.body.surveyId, { choice: 'Bueno', scale: 5, comment: 'Ambas' });
 
         const results = (companyId) => request(app)
             .get(`/api/hr-surveys/${created.body.surveyId}/results${companyId ? `?companyId=${Utils.encode(companyId)}` : ''}`)
             .set(bearer(rrhhToken));
-        const groupNames = (body, key) => body.report.dimensions[key].groups.filter((group) => group.invited).map((group) => group.name);
+        const groupNames = (body) => body.report.byCompany.groups.filter((group) => group.invited).map((group) => group.name);
 
         const all = await results();
-        expect(groupNames(all.body, 'company').sort()).toEqual(['Jhony Test', 'Rolf Test']);
+        expect(groupNames(all.body).sort()).toEqual(['Jhony Test', 'Rolf Test']);
 
         const filtered = await results(jhony.id);
         expect(filtered.status).toBe(200);
         expect(filtered.body.report.overall.responses).toBe(6);
         // Antes salía también "Rolf Test" (los 3 que están en ambas) y parecía mejor valorada dentro de Jhony.
-        expect(groupNames(filtered.body, 'company')).toEqual(['Jhony Test']);
-        expect(groupNames(filtered.body, 'yacht')).toEqual(['Yate Jhony Test']);
-        expect(filtered.body.report.dimensions.company.groups[0].average).toBe(filtered.body.report.overall.average);
+        expect(groupNames(filtered.body)).toEqual(['Jhony Test']);
+        expect(filtered.body.report.byCompany.groups[0].average).toBe(filtered.body.report.overall.average);
+        const commentsOf = (body) => body.report.questions.find((question) => question.comments).comments;
+        expect(commentsOf(all.body).sort()).toEqual(['Ambas', 'Ambas', 'Ambas', 'Solo Jhony', 'Solo Jhony', 'Solo Jhony']);
+
+        // Los comentarios también respetan el filtro: en Rolf solo están los de quienes son de Rolf.
+        const rolfOnly = await results(rolf.id);
+        expect(rolfOnly.body.report.overall.responses).toBe(3);
+        expect(commentsOf(rolfOnly.body)).toEqual(['Ambas', 'Ambas', 'Ambas']);
+    });
+
+    it('hides comments of a company with fewer than 3 responses', async () => {
+        const position = await createAssignablePosition('Pocas');
+        const { company } = await createCompanyWithYacht('Pocas Test', 'Yate Pocas Test');
+        const staffs = await Promise.all([1, 2].map(() => createStaffFixture(position)));
+        await StaffCompany.bulkCreate(staffs.map((staff) => ({ staffId: staff.id, companyId: company.id })));
+        const created = await request(app).post('/api/hr-surveys').set(bearer(adminToken)).send({
+            name: 'Pocas', startsAt: '2020-01-01', endsAt: '2099-12-31', active: true,
+            positionIds: [Utils.encode(position.id)], questions: surveyQuestions(),
+        });
+        for (const staff of staffs) await submitAs(staff, created.body.surveyId, { choice: 'Malo', scale: 1, comment: 'Me reconocerían' });
+
+        const response = await request(app)
+            .get(`/api/hr-surveys/${created.body.surveyId}/results?companyId=${Utils.encode(company.id)}`)
+            .set(bearer(rrhhToken));
+        expect(response.status).toBe(200);
+        expect(response.body.report.overall.masked).toBe(true);
+        expect(response.body.report.questions.find((question) => question.comments).comments).toEqual([]);
+        expect(JSON.stringify(response.body)).not.toContain('Me reconocerían');
     });
 
     it('lets admin see the results too', async () => {
@@ -245,7 +232,7 @@ describe('HR surveys results (rrhh only)', () => {
         expect(response.body.survey.id).toBe(surveyHash);
     });
 
-    it('forbids roles other than admin and rrhh', async () => {
+    it('lets psicologos see the results but not reset the responses', async () => {
         const { surveyHash } = await setup();
         const role = await Roles.create({ name: 'psicologos' });
         const email = 'psico-results@example.com';
@@ -260,8 +247,11 @@ describe('HR surveys results (rrhh only)', () => {
         const login = await request(app).post('/api/auth/login').send({ email, password: TEST_USER.password });
         expect(login.status).toBe(200);
 
-        const response = await request(app).get(`/api/hr-surveys/${surveyHash}/results`).set(bearer(login.body.token));
-        expect(response.status).toBe(403);
+        const results = await request(app).get(`/api/hr-surveys/${surveyHash}/results`).set(bearer(login.body.token));
+        expect(results.status).toBe(200);
+        const reset = await request(app).post(`/api/hr-surveys/${surveyHash}/reset`).set(bearer(login.body.token));
+        expect(reset.status).toBe(403);
+        expect(await HrSurveyResponse.count({ where: { surveyId: Utils.decode(surveyHash) } })).toBe(3);
     });
 
     it('returns 404 for an unknown survey and empty data for a draft', async () => {
@@ -275,7 +265,7 @@ describe('HR surveys results (rrhh only)', () => {
         const response = await request(app).get(`/api/hr-surveys/${draft.body.surveyId}/results`).set(bearer(rrhhToken));
         expect(response.status).toBe(200);
         expect(response.body.survey.status).toBe('draft');
-        expect(response.body.participation).toEqual([]);
-        expect(response.body.questions[0].overall).toBeNull();
+        expect(response.body.report.overall.responses).toBe(0);
+        expect(response.body.report.questions[0].average).toBeNull();
     });
 });

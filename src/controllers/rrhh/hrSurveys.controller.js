@@ -68,45 +68,34 @@ const toDetailDto = (survey) => {
     };
 };
 
-// Los ids numéricos salen en hash; las claves 'none' / 'administrativo' / 'operativo' pasan tal cual.
 const encodeGroupId = (id) => (/^\d+$/.test(String(id)) ? Utils.encode(Number(id)) : id);
 
-const toDimensionDto = ({ groups, byQuestion }) => ({
-    groups: groups.map((group) => ({ ...group, id: encodeGroupId(group.id) })),
-    byQuestion: Object.fromEntries(
-        Object.entries(byQuestion).map(([questionId, perGroup]) => [
-            Utils.encode(Number(questionId)),
-            Object.fromEntries(Object.entries(perGroup).map(([id, value]) => [encodeGroupId(id), value])),
-        ]),
-    ),
-});
-
-const toResultsDto = ({ survey, participation, questions, report }) => ({
-    survey: {
-        id: Utils.encode(survey.id),
-        name: survey.name,
-        startsAt: survey.startsAt,
-        endsAt: survey.endsAt,
-        status: survey.status,
-    },
-    participation: participation.map((entry) => ({ ...entry, departamentId: Utils.encode(entry.departamentId) })),
-    questions: questions.map((question) => ({
-        ...question,
-        questionId: Utils.encode(question.questionId),
-        byDepartament: Object.fromEntries(
-            Object.entries(question.byDepartament).map(([departamentId, value]) => [Utils.encode(Number(departamentId)), value]),
-        ),
-        distribution: question.distribution?.map((entry) => ({ ...entry, optionId: Utils.encode(entry.optionId) })),
-        comments: question.comments?.map((entry) => ({ ...entry, departamentId: Utils.encode(entry.departamentId) })),
-    })),
-    report: {
-        overall: report.overall,
-        categories: report.categories,
-        companies: report.companies.map((company) => ({ ...company, id: Utils.encode(company.id) })),
-        questions: report.questions.map((question) => ({ ...question, questionId: Utils.encode(question.questionId) })),
-        dimensions: Object.fromEntries(Object.entries(report.dimensions).map(([name, dimension]) => [name, toDimensionDto(dimension)])),
-    },
-});
+// Solo la vista por empresa: los comentarios van sin ningún dato del puesto de quien los escribió.
+const toResultsDto = ({ survey, report }) => {
+    const { groups, byQuestion } = report.dimensions.company;
+    return {
+        survey: {
+            id: Utils.encode(survey.id),
+            name: survey.name,
+            startsAt: survey.startsAt,
+            endsAt: survey.endsAt,
+            status: survey.status,
+        },
+        report: {
+            overall: report.overall,
+            categories: report.categories,
+            companies: report.companies.map((company) => ({ ...company, id: Utils.encode(company.id) })),
+            questions: report.questions.map((question) => ({ ...question, questionId: Utils.encode(question.questionId) })),
+            byCompany: {
+                groups: groups.map((group) => ({ ...group, id: encodeGroupId(group.id) })),
+                byQuestion: Object.fromEntries(Object.entries(byQuestion).map(([questionId, perGroup]) => [
+                    Utils.encode(Number(questionId)),
+                    Object.fromEntries(Object.entries(perGroup).map(([id, value]) => [encodeGroupId(id), value])),
+                ])),
+            },
+        },
+    };
+};
 
 const getAll = async (req, res, next) => {
     try {

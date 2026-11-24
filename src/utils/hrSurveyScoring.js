@@ -152,66 +152,6 @@ function scoreAnswer(question, answer) {
     throw new AppError('El tipo de pregunta no es válido', 400);
 }
 
-function computeResults({ questions, departaments, responses, participationCounts, assignedPending }) {
-    const participation = departaments.map(({ id, name }) => {
-        const responded = participationCounts?.get(id) ?? 0;
-        return {
-            departamentId: id,
-            name,
-            responded,
-            assigned: responded + (assignedPending?.get(id) ?? 0),
-        };
-    });
-
-    const resultQuestions = questions.map((question) => {
-        const entries = [];
-        for (const response of responses) {
-            for (const answer of response.answers) {
-                if (String(answer.questionId) === String(question.id)) {
-                    entries.push({ departamentId: response.departamentId, answer });
-                }
-            }
-        }
-
-        const scoredEntries = entries
-            .filter(({ answer }) => answer.score != null)
-            .map(({ departamentId, answer }) => ({ departamentId, score: Number(answer.score) }));
-
-        const byDepartament = {};
-        for (const { id } of departaments) {
-            byDepartament[id] = average(
-                scoredEntries.filter((entry) => entry.departamentId === id).map((entry) => entry.score),
-            );
-        }
-
-        const result = {
-            questionId: question.id,
-            statement: question.statement,
-            type: question.type,
-            category: question.category ?? null,
-            overall: average(scoredEntries.map((entry) => entry.score)),
-            byDepartament,
-        };
-
-        if (OPTION_TYPES.includes(question.type)) {
-            result.distribution = (question.options ?? []).map((option) => ({
-                optionId: option.id,
-                text: option.text,
-                count: entries.filter(({ answer }) => String(answer.optionId) === String(option.id)).length,
-            }));
-        }
-
-        if (TEXT_TYPES.includes(question.type)) {
-            result.comments = entries
-                .filter(({ answer }) => answer.text && String(answer.text).trim())
-                .map(({ departamentId, answer }) => ({ departamentId, text: String(answer.text).trim() }));
-        }
-
-        return result;
-    });
-
-    return { participation, questions: resultQuestions };
-}
 
 // Grupos con menos respuestas que esto no muestran promedios (protege el anonimato).
 const MIN_GROUP_RESPONSES = 3;
@@ -271,12 +211,23 @@ function computeReport({ questions, dimensions, members, responses }) {
 
     const questionRows = questions.map((question) => {
         const values = overallMasked ? [] : questionValues(rows, question);
-        return {
+        const row = {
             questionId: question.id,
+            statement: question.statement,
+            type: question.type,
+            category: question.category ?? null,
             average: average(values),
             count: values.length,
             dist: distOf(values),
         };
+        // Comentarios sin ningún dato del puesto; con menos de MIN_GROUP_RESPONSES respuestas no se muestran.
+        if (TEXT_TYPES.includes(question.type)) {
+            row.comments = overallMasked ? [] : rows
+                .flatMap((response) => response.answers)
+                .filter((answer) => String(answer.questionId) === String(question.id) && answer.text && String(answer.text).trim())
+                .map((answer) => String(answer.text).trim());
+        }
+        return row;
     });
 
     const categoryNames = [...new Set(questions.map((question) => question.category).filter(Boolean))];
@@ -340,7 +291,6 @@ module.exports = {
     validateQuestion,
     resolveSurveyStatus,
     scoreAnswer,
-    computeResults,
     computeReport,
     MIN_GROUP_RESPONSES,
     UNCLASSIFIED,
