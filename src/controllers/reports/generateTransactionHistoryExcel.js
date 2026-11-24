@@ -1,4 +1,3 @@
-const xl = require('excel4node');
 const TransactionHistoryService = require('../../services/operations/inventory/transactionHistory.services');
 const Warehouse = require('../../models/catalogs/wareHouse.models');
 const Staff = require('../../models/catalogs/staff.models');
@@ -15,6 +14,7 @@ const {
     getFullName,
     getMovementLabel,
 } = require('../../utils/transactionMovements');
+const { createReport, newSheet, sendWorkbook, fileStamp, FIRST_ROW } = require('../../utils/excelReport');
 
 // Paleta del design system del frontend (docs/CONVENTIONS.md §1 en interno-react).
 const COLORS = {
@@ -44,13 +44,13 @@ const thin = { style: 'thin', color: COLORS.border };
 const BORDER = { left: thin, right: thin, top: thin, bottom: thin };
 const solid = (color) => ({ type: 'pattern', patternType: 'solid', fgColor: color });
 
+// El producto va primero: la columna A es la del logo y queda ancha.
 const DETAIL_COLUMNS = [
-    { title: 'N°', width: 7 },
+    { title: 'Producto', width: 38 },
+    { title: 'SKU', width: 16 },
     { title: 'Fecha', width: 12 },
     { title: 'Hora', width: 8 },
     { title: 'Movimiento', width: 17 },
-    { title: 'Producto', width: 38 },
-    { title: 'SKU', width: 16 },
     { title: 'Cantidad', width: 12 },
     { title: 'Unidad', width: 10 },
     { title: 'Bodega origen', width: 26 },
@@ -71,23 +71,13 @@ const PRODUCT_COLUMNS = [
 function createStyles(wb) {
     const base = { font: { name: 'Calibri', size: 10, color: COLORS.navy } };
     return {
-        title: wb.createStyle({
-            font: { name: 'Calibri', size: 16, bold: true, color: COLORS.white },
-            fill: solid(COLORS.navy),
-            alignment: { vertical: 'center', indent: 1 },
-        }),
-        subtitle: wb.createStyle({
-            font: { name: 'Calibri', size: 10, color: 'A7C4D1' },
-            fill: solid(COLORS.navy),
-            alignment: { vertical: 'center', indent: 1 },
-        }),
         section: wb.createStyle({
             font: { name: 'Calibri', size: 10, bold: true, color: COLORS.teal },
             border: { bottom: { style: 'medium', color: COLORS.teal } },
         }),
         header: wb.createStyle({
             font: { name: 'Calibri', size: 10, bold: true, color: COLORS.white },
-            fill: solid(COLORS.teal),
+            fill: solid(COLORS.navy),
             alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
             border: BORDER,
         }),
@@ -119,19 +109,6 @@ function createStyles(wb) {
             alignment: { horizontal: 'center' },
         })])),
     };
-}
-
-const SHEET_OPTIONS = {
-    sheetView: { showGridLines: false },
-    pageSetup: { orientation: 'landscape', fitToWidth: 1, fitToHeight: 0 },
-    sheetFormat: { defaultRowHeight: 16 },
-};
-
-function writeBanner(ws, styles, lastColumn, title, subtitle) {
-    ws.cell(1, 1, 1, lastColumn, true).string(title).style(styles.title);
-    ws.cell(2, 1, 2, lastColumn, true).string(subtitle).style(styles.subtitle);
-    ws.row(1).setHeight(30);
-    ws.row(2).setHeight(18);
 }
 
 function writeHeaderRow(ws, styles, row, columns) {
@@ -174,14 +151,17 @@ async function resolveFilterLabels(filters) {
     ];
 }
 
-function writeSummarySheet(wb, styles, { rows, filterLabels, generatedAt }) {
-    const ws = wb.addWorksheet('Resumen', SHEET_OPTIONS);
+function writeSummarySheet(wb, st, styles, { rows, filterLabels, generatedAt, period }) {
+    const ws = newSheet(wb, st, {
+        name: 'Resumen',
+        title: 'Reporte de transacciones de inventario',
+        subtitle: period,
+        meta: `${rows.length} transacciones · Generado el ${generatedAt}`,
+        widths: [30, 26, 14, 14, 14],
+    });
     const lastColumn = 5;
-    [30, 26, 14, 14, 14].forEach((width, index) => ws.column(index + 1).setWidth(width));
 
-    writeBanner(ws, styles, lastColumn, 'Reporte de transacciones de inventario', `Generado el ${generatedAt}`);
-
-    let row = 4;
+    let row = FIRST_ROW;
     ws.cell(row, 1, row, lastColumn, true).string('FILTROS APLICADOS').style(styles.section);
     row += 1;
     filterLabels.forEach(([label, value]) => {
@@ -244,47 +224,57 @@ function writeSummarySheet(wb, styles, { rows, filterLabels, generatedAt }) {
         .style(styles.footnote);
 }
 
-function writeDetailSheet(wb, styles, { rows, generatedAt, period }) {
-    const ws = wb.addWorksheet('Detalle', SHEET_OPTIONS);
+function writeDetailSheet(wb, st, styles, { rows, generatedAt, period }) {
+    const ws = newSheet(wb, st, {
+        name: 'Detalle',
+        title: 'Detalle de transacciones',
+        subtitle: period,
+        meta: `${rows.length} transacciones · Generado el ${generatedAt}`,
+        widths: DETAIL_COLUMNS.map((column) => column.width),
+        footer: 'Reporte de transacciones de inventario',
+    });
     const lastColumn = DETAIL_COLUMNS.length;
-    const headerRow = 4;
+    const headerRow = FIRST_ROW;
 
-    writeBanner(ws, styles, lastColumn, 'Detalle de transacciones', `${period} · ${rows.length} transacciones · Generado el ${generatedAt}`);
     writeHeaderRow(ws, styles, headerRow, DETAIL_COLUMNS);
 
     rows.forEach((item, index) => {
         const row = headerRow + 1 + index;
         const style = rowStyle(styles, index);
-        ws.cell(row, 1).number(index + 1).style(style).style(styles.center);
-        ws.cell(row, 2).string(formatReportDate(item.createdAt)).style(style).style(styles.center);
-        ws.cell(row, 3).string(formatReportTime(item.createdAt)).style(style).style(styles.center);
-        ws.cell(row, 4).string(getMovementLabel(item.movement)).style(style).style(styles.movement[item.movement]);
-        ws.cell(row, 5).string(item.product?.name ?? 'Sin producto').style(style).style(styles.bold);
-        ws.cell(row, 6).string(item.product?.sku ?? '').style(style).style(styles.mono);
-        ws.cell(row, 7).number(item.quantity).style(style).style(styles.qty);
-        ws.cell(row, 8).string(item.product?.unit ?? '').style(style).style(styles.center);
-        ws.cell(row, 9).string(item.warehouseFrom?.name ?? '—').style(style);
-        ws.cell(row, 10).string(item.warehouseTo?.name ?? '—').style(style);
-        ws.cell(row, 11).string(item.responsible?.fullName || 'Sin registrar').style(style);
-        ws.cell(row, 12).string(item.register?.counter ?? '').style(style).style(styles.mono);
-        ws.cell(row, 13).string(item.referenceId ?? [item.reason, item.note].filter(Boolean).join(' · ')).style(style).style(styles.mono);
+        ws.cell(row, 1).string(item.product?.name ?? 'Sin producto').style(style).style(styles.bold);
+        ws.cell(row, 2).string(item.product?.sku ?? '').style(style).style(styles.mono);
+        ws.cell(row, 3).string(formatReportDate(item.createdAt)).style(style).style(styles.center);
+        ws.cell(row, 4).string(formatReportTime(item.createdAt)).style(style).style(styles.center);
+        ws.cell(row, 5).string(getMovementLabel(item.movement)).style(style).style(styles.movement[item.movement]);
+        ws.cell(row, 6).number(item.quantity).style(style).style(styles.qty);
+        ws.cell(row, 7).string(item.product?.unit ?? '').style(style).style(styles.center);
+        ws.cell(row, 8).string(item.warehouseFrom?.name ?? '—').style(style);
+        ws.cell(row, 9).string(item.warehouseTo?.name ?? '—').style(style);
+        ws.cell(row, 10).string(item.responsible?.fullName || 'Sin registrar').style(style);
+        ws.cell(row, 11).string(item.register?.counter ?? '').style(style).style(styles.mono);
+        ws.cell(row, 12).string(item.referenceId ?? [item.reason, item.note].filter(Boolean).join(' · ')).style(style).style(styles.mono);
     });
 
     const totalRow = headerRow + rows.length + 1;
-    ws.cell(totalRow, 1, totalRow, 6, true).string(`Total: ${rows.length} transacciones`).style(styles.total);
-    for (let column = 7; column <= lastColumn; column += 1) ws.cell(totalRow, column).style(styles.total);
+    ws.cell(totalRow, 1, totalRow, 5, true).string(`Total: ${rows.length} transacciones`).style(styles.total);
+    for (let column = 6; column <= lastColumn; column += 1) ws.cell(totalRow, column).style(styles.total);
 
     ws.row(headerRow).freeze();
     if (rows.length) ws.row(headerRow).filter({ firstColumn: 1, lastColumn });
 }
 
-function writeProductSheet(wb, styles, { rows, period }) {
-    const ws = wb.addWorksheet('Por producto', SHEET_OPTIONS);
-    const lastColumn = PRODUCT_COLUMNS.length;
-    const headerRow = 4;
+function writeProductSheet(wb, st, styles, { rows, period, generatedAt }) {
     const products = buildProductSummary(rows);
-
-    writeBanner(ws, styles, lastColumn, 'Cantidades por producto', `${period} · ${products.length} productos · cantidades en la unidad de cada producto`);
+    const ws = newSheet(wb, st, {
+        name: 'Por producto',
+        title: 'Cantidades por producto',
+        subtitle: period,
+        meta: `${products.length} productos · cantidades en la unidad de cada producto · Generado el ${generatedAt}`,
+        widths: PRODUCT_COLUMNS.map((column) => column.width),
+        footer: 'Reporte de transacciones de inventario',
+    });
+    const lastColumn = PRODUCT_COLUMNS.length;
+    const headerRow = FIRST_ROW;
     writeHeaderRow(ws, styles, headerRow, PRODUCT_COLUMNS);
 
     products.forEach((product, index) => {
@@ -320,22 +310,14 @@ const generateTransactionHistoryExcel = async (req, res, next) => {
         const filterLabels = await resolveFilterLabels(filters);
         const period = formatPeriod(filters);
 
-        const wb = new xl.Workbook({
-            defaultFont: { name: 'Calibri', size: 10 },
-            author: 'Rolf Wittmer SIG',
-        });
+        const { wb, st } = createReport();
         const styles = createStyles(wb);
 
-        writeSummarySheet(wb, styles, { rows, filterLabels, generatedAt });
-        writeDetailSheet(wb, styles, { rows, generatedAt, period });
-        writeProductSheet(wb, styles, { rows, period });
+        writeSummarySheet(wb, st, styles, { rows, filterLabels, generatedAt, period });
+        writeDetailSheet(wb, st, styles, { rows, generatedAt, period });
+        writeProductSheet(wb, st, styles, { rows, period, generatedAt });
 
-        const buffer = await wb.writeToBuffer();
-        const stamp = formatReportDate(now).split('/').reverse().join('');
-
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', `attachment; filename=transacciones_${stamp}.xlsx`);
-        res.status(200).send(buffer);
+        await sendWorkbook(res, wb, `transacciones_${fileStamp(now)}.xlsx`);
     } catch (error) {
         next(error);
     }

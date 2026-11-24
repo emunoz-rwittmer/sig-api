@@ -35,7 +35,8 @@ class CruiseService {
                     {
                         model: Yacht,
                         as: 'yacht',
-                        attributes: ['name', 'code']
+                        attributes: ['name', 'code'],
+                        include: [{ association: 'company', attributes: ['name', 'logo'] }]
                     },
                     {
                         model: Passenger,

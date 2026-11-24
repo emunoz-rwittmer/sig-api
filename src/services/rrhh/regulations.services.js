@@ -37,7 +37,7 @@ class RegulationService {
             where: companyId ? { companyId } : {},
             attributes: ['id', 'name', 'createdAt'],
             include: [
-                { model: Company, as: 'company', attributes: ['name'] },
+                { model: Company, as: 'company', attributes: ['name', 'logo'] },
                 {
                     model: StaffReadRegulation,
                     as: 'reads',

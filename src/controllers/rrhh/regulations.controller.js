@@ -194,6 +194,7 @@ const exportReadingReport = async (req, res, next) => {
 
         await generateRegulationsReadingReportExcel(plainRecords, filePath, {
             companyName: companyId ? plainRecords[0]?.company?.name : undefined,
+            companyLogo: companyId ? plainRecords[0]?.company?.logo : undefined,
         });
 
         res.download(filePath, fileName, (err) => {

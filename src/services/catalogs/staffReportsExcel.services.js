@@ -1,112 +1,71 @@
-const xl = require('excel4node');
 const moment = require('moment');
+const { createReport, newSheet, writeKpis, writeTable, saveWorkbook, FIRST_ROW } = require('../../utils/excelReport');
 
-const formatDate = (value) => (value ? moment(value).format('DD/MM/YYYY') : 'N/A');
-
-const buildWorkbook = () => {
-    const wb = new xl.Workbook({ dateFormat: 'dd/mm/yyyy' });
-
-    const titleStyle = wb.createStyle({
-        alignment: { horizontal: 'center', vertical: 'center' },
-        fill: { type: 'pattern', patternType: 'solid', fgColor: 'CCCCCC' },
-        font: { bold: true, size: 11 },
-    });
-
-    const headerStyle = wb.createStyle({
-        alignment: { horizontal: 'center', vertical: 'center' },
-        fill: { type: 'pattern', patternType: 'solid', fgColor: 'DDDDDD' },
-        font: { bold: true, size: 10 },
-    });
-
-    const cellStyle = wb.createStyle({
-        font: { size: 9 },
-        alignment: { horizontal: 'left' },
-    });
-
-    return { wb, titleStyle, headerStyle, cellStyle };
-};
+const staffName = (staff) => `${staff?.lastName ?? ''} ${staff?.firstName ?? ''}`.trim() || 'N/A';
+const daysTone = (days) => (days < 0 ? 'bad' : days <= 15 ? 'warn' : 'info');
 
 exports.generateExpiringDocumentsReportExcel = async (records, filePath) => {
-    const { wb, titleStyle, headerStyle, cellStyle } = buildWorkbook();
-    const now = moment();
+    const today = moment().startOf('day');
+    const rows = records.map(({ staff, document, expiryDate }) => [
+        staffName(staff),
+        staff?.email || 'N/A',
+        (staff?.companies ?? []).map((relation) => relation.company?.name).filter(Boolean).join(', ') || 'Sin asignar',
+        document?.name || 'N/A',
+        expiryDate,
+        moment(expiryDate).startOf('day').diff(today, 'days'),
+    ]);
 
-    const ws = wb.addWorksheet('Documentos por vencer');
-    [30, 22, 22, 30, 16, 14].forEach((width, index) => ws.column(index + 1).setWidth(width));
-
-    ws.cell(1, 1, 1, 6, true).string('REPORTE DE DOCUMENTOS POR VENCER').style(titleStyle);
-    ws.cell(2, 1, 2, 6, true).string(`Generado el ${formatDate(new Date())}`).style(titleStyle);
-
-    const headers = ['Colaborador', 'Correo', 'Empresa(s)', 'Documento', 'Vence', 'Días restantes'];
-    headers.forEach((header, colIndex) => ws.cell(4, colIndex + 1).string(header).style(headerStyle));
-
-    let row = 5;
-    records.forEach((record) => {
-        const { staff, document, expiryDate } = record;
-        const companyNames = (staff?.companies ?? [])
-            .map((relation) => relation.company?.name)
-            .filter(Boolean)
-            .join(', ');
-        const daysRemaining = moment(expiryDate).startOf('day').diff(now.clone().startOf('day'), 'days');
-
-        ws.cell(row, 1).string(`${staff?.lastName ?? ''} ${staff?.firstName ?? ''}`.trim() || 'N/A').style(cellStyle);
-        ws.cell(row, 2).string(staff?.email || 'N/A').style(cellStyle);
-        ws.cell(row, 3).string(companyNames || 'Sin asignar').style(cellStyle);
-        ws.cell(row, 4).string(document?.name || 'N/A').style(cellStyle);
-        ws.cell(row, 5).string(formatDate(expiryDate)).style(cellStyle);
-        ws.cell(row, 6).number(daysRemaining).style(cellStyle);
-        row++;
+    const { wb, st } = createReport();
+    const ws = newSheet(wb, st, {
+        name: 'Documentos por vencer',
+        title: 'Documentos por vencer',
+        subtitle: 'Documentos del personal próximos a vencer o vencidos',
+        widths: [32, 30, 26, 32, 13, 13],
     });
+    const next = writeKpis(ws, st, FIRST_ROW, [
+        { label: 'Documentos', value: rows.length },
+        { label: 'Colaboradores', value: new Set(rows.map((row) => row[0])).size },
+        { label: 'Vencen en 15 días', value: rows.filter((row) => row[5] >= 0 && row[5] <= 15).length },
+    ]);
+    writeTable(ws, st, next, [
+        { title: 'Colaborador', kind: 'strong' }, { title: 'Correo' }, { title: 'Empresa(s)' }, { title: 'Documento' },
+        { title: 'Vence', kind: 'day' }, { title: 'Días restantes', kind: 'int', tone: daysTone },
+    ], rows, { emptyText: 'No hay documentos por vencer en la ventana actual.' });
 
-    if (records.length === 0) {
-        ws.cell(row, 1, row, 6, true).string('No hay documentos por vencer en la ventana actual.').style(cellStyle);
-    }
-
-    await new Promise((resolve, reject) => {
-        wb.write(filePath, (err) => (err ? reject(err) : resolve()));
-    });
-
-    return filePath;
+    return saveWorkbook(wb, filePath);
 };
 
 exports.generateEmbarkedTodayReportExcel = async (records, filePath) => {
-    const { wb, titleStyle, headerStyle, cellStyle } = buildWorkbook();
+    const rows = records
+        .map((record) => {
+            const staff = record.empresa?.staff;
+            const company = record.empresa?.company;
+            return [
+                staffName(staff),
+                staff?.email || 'N/A',
+                company?.name || 'Sin asignar',
+                company?.yacht?.name || 'Sin embarcación',
+                record.shipmentDate,
+                record.dischargeDate || 'Indefinido',
+            ];
+        })
+        .sort((a, b) => a[0].localeCompare(b[0]));
 
-    const ws = wb.addWorksheet('Embarcados hoy');
-    [30, 22, 26, 22, 16, 16].forEach((width, index) => ws.column(index + 1).setWidth(width));
-
-    ws.cell(1, 1, 1, 6, true).string('REPORTE DE PERSONAL EMBARCADO HOY').style(titleStyle);
-    ws.cell(2, 1, 2, 6, true).string(`Generado el ${formatDate(new Date())}`).style(titleStyle);
-
-    const headers = ['Colaborador', 'Correo', 'Empresa', 'Embarcación', 'Embarque', 'Desembarque'];
-    headers.forEach((header, colIndex) => ws.cell(4, colIndex + 1).string(header).style(headerStyle));
-
-    const sortedRecords = [...records].sort((a, b) => {
-        const nameA = `${a.empresa?.staff?.lastName ?? ''} ${a.empresa?.staff?.firstName ?? ''}`;
-        const nameB = `${b.empresa?.staff?.lastName ?? ''} ${b.empresa?.staff?.firstName ?? ''}`;
-        return nameA.localeCompare(nameB);
+    const { wb, st } = createReport();
+    const ws = newSheet(wb, st, {
+        name: 'Embarcados hoy',
+        title: 'Personal embarcado hoy',
+        subtitle: moment().format('DD/MM/YYYY'),
+        widths: [32, 30, 26, 22, 13, 14],
     });
+    const next = writeKpis(ws, st, FIRST_ROW, [
+        { label: 'Embarcados', value: rows.length },
+        { label: 'Embarcaciones', value: new Set(rows.map((row) => row[3])).size },
+    ]);
+    writeTable(ws, st, next, [
+        { title: 'Colaborador', kind: 'strong' }, { title: 'Correo' }, { title: 'Empresa' }, { title: 'Embarcación' },
+        { title: 'Embarque', kind: 'day' }, { title: 'Desembarque', kind: 'day' },
+    ], rows, { emptyText: 'No hay personal embarcado hoy.' });
 
-    let row = 5;
-    sortedRecords.forEach((record) => {
-        const staff = record.empresa?.staff;
-        const company = record.empresa?.company;
-
-        ws.cell(row, 1).string(`${staff?.lastName ?? ''} ${staff?.firstName ?? ''}`.trim() || 'N/A').style(cellStyle);
-        ws.cell(row, 2).string(staff?.email || 'N/A').style(cellStyle);
-        ws.cell(row, 3).string(company?.name || 'Sin asignar').style(cellStyle);
-        ws.cell(row, 4).string(company?.yacht?.name || 'Sin embarcación').style(cellStyle);
-        ws.cell(row, 5).string(formatDate(record.shipmentDate)).style(cellStyle);
-        ws.cell(row, 6).string(record.dischargeDate ? formatDate(record.dischargeDate) : 'Indefinido').style(cellStyle);
-        row++;
-    });
-
-    if (sortedRecords.length === 0) {
-        ws.cell(row, 1, row, 6, true).string('No hay personal embarcado hoy.').style(cellStyle);
-    }
-
-    await new Promise((resolve, reject) => {
-        wb.write(filePath, (err) => (err ? reject(err) : resolve()));
-    });
-
-    return filePath;
+    return saveWorkbook(wb, filePath);
 };

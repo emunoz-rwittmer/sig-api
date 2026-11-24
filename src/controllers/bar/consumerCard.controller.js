@@ -318,7 +318,8 @@ const exportConsumerCardReport = async (req, res, next) => {
 
         // Obtener información del yate
         const yacht = await Yacht.findByPk(yachtId, {
-            attributes: ['id', 'name', 'code']
+            attributes: ['id', 'name', 'code'],
+            include: [{ association: 'company', attributes: ['logo'] }]
         });
 
         if (!yacht) {
@@ -338,7 +339,7 @@ const exportConsumerCardReport = async (req, res, next) => {
         const filePath = path.join(excelDir, fileName);
 
         // Generar el Excel
-        await generateConsumerCardReportExcel(yacht.name, start, end, consumerCards, cortecyCards, filePath);
+        await generateConsumerCardReportExcel(yacht.name, start, end, consumerCards, cortecyCards, filePath, { logo: yacht.company?.logo });
 
         // Enviar archivo
         res.download(filePath, fileName, (err) => {
