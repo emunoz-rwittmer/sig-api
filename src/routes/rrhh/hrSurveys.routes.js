@@ -7,7 +7,9 @@ const router = Router();
 const { guard, requireAccess } = require('../../middlewares/access.middleware');
 const requireRRHH = guard(['rrhh.surveys'], { reads: true, legacyRoles: ['admin', 'rrhh', 'psicologos'] });
 // Ver resultados y reiniciar respuestas es un permiso aparte: no lo tenía todo el que gestiona encuestas.
-const requireResults = requireAccess([['rrhh.surveys', 'results']], ['admin', 'rrhh']);
+// Psicología ve los resultados pero no reinicia respuestas (borra datos).
+const requireResults = requireAccess([['rrhh.surveys', 'results']], ['admin', 'rrhh', 'psicologos']);
+const requireReset = requireAccess([['rrhh.surveys', 'results']], ['admin', 'rrhh']);
 
 // Las rutas fijas (/questions/*, y luego /me y /:survey_id/results) van antes de /:survey_id.
 
@@ -191,7 +193,7 @@ router.post('/', requireRRHH, HrSurveyController.create);
  *           type: string
  *     responses:
  *       200:
- *         description: "{ survey, participation: [{ departamentId, name, responded, assigned }], questions: [{ questionId, statement, type, overall, byDepartament, distribution?, comments? }] }"
+ *         description: "{ survey, report: { overall, categories, companies, questions: [{ questionId, statement, type, category, average, count, dist, comments? }], byCompany: { groups, byQuestion } } }. Con companyId todo queda filtrado a esa empresa, comentarios incluidos; con menos de 3 respuestas no hay promedios ni comentarios."
  *       403:
  *         description: Rol no autorizado (solo admin y rrhh)
  *       404:
@@ -271,7 +273,7 @@ router.get('/:survey_id/results', requireResults, HrSurveyController.getResults)
  *       404:
  *         description: No encontrada
  */
-router.post('/:survey_id/reset', requireResults, HrSurveyController.resetResponses);
+router.post('/:survey_id/reset', requireReset, HrSurveyController.resetResponses);
 
 router.get('/:survey_id', requireRRHH, HrSurveyController.getById);
 router.put('/:survey_id', requireRRHH, HrSurveyController.update);

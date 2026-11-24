@@ -5,7 +5,6 @@ const Staff = require('../../models/catalogs/staff.models');
 const Departaments = require('../../models/catalogs/departament.models');
 const StaffCompany = require('../../models/catalogs/staffCompany.models');
 const Company = require('../../models/catalogs/company.models');
-const Yacht = require('../../models/catalogs/yacht.models');
 const Positions = require('../../models/catalogs/positions.models');
 const HrSurvey = require('../../models/rrhh/hrSurvey.models');
 const HrSurveyPosition = require('../../models/rrhh/hrSurveyPosition.models');
@@ -14,7 +13,7 @@ const HrSurveyOption = require('../../models/rrhh/hrSurveyOption.models');
 const HrSurveyParticipation = require('../../models/rrhh/hrSurveyParticipation.models');
 const HrSurveyResponse = require('../../models/rrhh/hrSurveyResponse.models');
 const HrSurveyAnswer = require('../../models/rrhh/hrSurveyAnswer.models');
-const { validateSurveyForPublish, resolveSurveyStatus, computeResults, computeReport, isValidDay } = require('../../utils/hrSurveyScoring');
+const { validateSurveyForPublish, resolveSurveyStatus, computeReport, isValidDay } = require('../../utils/hrSurveyScoring');
 const AppError = require('../../errors/AppError');
 const { byDisplayOrder } = require('../../utils/displayOrder');
 
@@ -151,12 +150,6 @@ async function countAssignedPending(surveyId, positionIds, field = 'departamentI
     return result;
 }
 
-const STAFF_TYPE_GROUPS = [
-    { id: 'administrativo', name: 'Administrativo' },
-    { id: 'operativo', name: 'Operativo' },
-];
-const OFFICE_GROUP = { id: 'office', name: 'Oficina' };
-
 const includesCompany = (entry, companyId) => (entry.companyIds ?? []).includes(companyId);
 
 // Invitados de la encuesta: quienes ya participaron y el personal activo pendiente de los cargos asignados.
@@ -164,11 +157,11 @@ async function loadMembers(surveyId, positionIds) {
     const [participations, pending] = await Promise.all([
         HrSurveyParticipation.findAll({
             where: { surveyId },
-            attributes: ['departamentId', 'positionId', 'staffType', 'companyIds'],
+            attributes: ['companyIds'],
             raw: true,
         }),
         positionIds.length ? Staff.findAll({
-            attributes: ['departamentId', 'positionId', 'staffType'],
+            attributes: ['id'],
             where: {
                 active: true,
                 positionId: positionIds,
@@ -181,36 +174,24 @@ async function loadMembers(surveyId, positionIds) {
     return [
         ...participations.map((row) => ({ ...row, responded: true })),
         ...pending.map((staff) => ({
-            departamentId: staff.departamentId,
-            positionId: staff.positionId,
-            staffType: staff.staffType,
             companyIds: staff.companies.map(({ companyId }) => companyId),
             responded: false,
         })),
     ];
 }
 
-// Reporte por departamento, cargo, tipo de personal, empresa y yate. `companyId` filtra toda la
-// población a una empresa. Las respuestas anteriores a estos campos caen en "Sin clasificar".
-async function buildReport({ survey, responses, departaments, companyId }) {
-    const positionIds = survey.positions.map((entry) => entry.positionId);
-    let members = await loadMembers(survey.id, positionIds);
-
-    const positions = survey.positions.map(({ positionId, position }) => ({ id: positionId, name: position?.name ?? `Cargo ${positionId}` }));
-    const extraPositionIds = [...new Set([...members.map((m) => m.positionId), ...responses.map((r) => r.positionId)])]
-        .filter((positionId) => positionId != null && !positions.some(({ id }) => id === positionId));
-    if (extraPositionIds.length) {
-        const extra = await Positions.findAll({ where: { id: extraPositionIds }, attributes: ['id', 'name'] });
-        extra.forEach(({ id, name }) => positions.push({ id, name }));
-    }
+// Reporte de la encuesta con una sola vista: por empresa. `companyId` filtra toda la población
+// (y los comentarios) a esa empresa. No hay cortes por departamento, cargo, yate ni tipo de personal:
+// con grupos tan chicos se adivina quién respondió.
+async function buildReport({ survey, responses, companyId }) {
+    let members = await loadMembers(survey.id, survey.positions.map((entry) => entry.positionId));
 
     const companyIds = [...new Set([...members, ...responses].flatMap((entry) => entry.companyIds ?? []))];
     const companies = companyIds.length
-        ? (await Company.findAll({ where: { id: companyIds }, attributes: ['id', 'name'], include: [{ model: Yacht, as: 'yacht', attributes: ['name'] }] }))
-            .map((company) => ({ id: company.id, name: company.name, yachtName: company.yacht?.name ?? null }))
+        ? (await Company.findAll({ where: { id: companyIds }, attributes: ['id', 'name'] }))
+            .map(({ id, name }) => ({ id, name }))
             .sort((a, b) => a.name.localeCompare(b.name))
         : [];
-    const yachtCompanyIds = new Set(companies.filter(({ yachtName }) => yachtName).map(({ id }) => id));
 
     let scoped = responses;
     if (companyId) {
@@ -221,26 +202,13 @@ async function buildReport({ survey, responses, departaments, companyId }) {
     const scopedCompanyIds = (entry) => (companyId ? [companyId] : entry.companyIds ?? []);
     const visibleCompanies = companyId ? companies.filter(({ id }) => id === companyId) : companies;
 
-    const yachtKeys = (entry) => {
-        const ids = scopedCompanyIds(entry);
-        const yachts = ids.filter((id) => yachtCompanyIds.has(id));
-        if (yachts.length) return yachts;
-        return ids.length ? [OFFICE_GROUP.id] : [];
-    };
-
     const report = computeReport({
         questions: sortByOrder(survey.questions),
         members,
         responses: scoped,
-        dimensions: [
-            { key: 'company', groups: visibleCompanies.map(({ id, name }) => ({ id, name })), keysOf: scopedCompanyIds },
-            { key: 'departament', groups: departaments, keysOf: (entry) => [entry.departamentId] },
-            { key: 'position', groups: positions, keysOf: (entry) => [entry.positionId] },
-            { key: 'yacht', groups: [...visibleCompanies.filter(({ yachtName }) => yachtName).map(({ id, yachtName }) => ({ id, name: yachtName })), OFFICE_GROUP], keysOf: yachtKeys },
-            { key: 'staffType', groups: STAFF_TYPE_GROUPS, keysOf: (entry) => [entry.staffType] },
-        ],
+        dimensions: [{ key: 'company', groups: visibleCompanies, keysOf: scopedCompanyIds }],
     });
-    return { ...report, companies: companies.map(({ id, name }) => ({ id, name })) };
+    return { ...report, companies };
 }
 
 const withStatus = (survey) => resolveSurveyStatus({
@@ -307,66 +275,19 @@ class HrSurveyService {
         });
         if (!survey) throw new AppError('Encuesta no encontrada', 404);
 
-        const [responseRows, participationRows] = await Promise.all([
-            HrSurveyResponse.findAll({
-                where: { surveyId: id },
-                attributes: ['id', 'departamentId', 'positionId', 'staffType', 'companyIds'],
-                include: [{ model: HrSurveyAnswer, as: 'answers', attributes: ['questionId', 'optionId', 'score', 'text'] }],
-            }),
-            HrSurveyParticipation.findAll({
-                where: { surveyId: id },
-                attributes: ['departamentId', [fn('COUNT', col('id')), 'total']],
-                group: ['departamentId'],
-                raw: true,
-            }),
-        ]);
-
-        const participationCounts = new Map(participationRows.map((row) => [row.departamentId, Number(row.total)]));
+        const responseRows = await HrSurveyResponse.findAll({
+            where: { surveyId: id },
+            attributes: ['id', 'companyIds'],
+            include: [{ model: HrSurveyAnswer, as: 'answers', attributes: ['questionId', 'score', 'text'] }],
+        });
         const responses = responseRows.map((response) => ({
-            departamentId: response.departamentId,
-            positionId: response.positionId,
-            staffType: response.staffType,
             companyIds: response.companyIds,
-            answers: response.answers.map((answer) => ({
-                questionId: answer.questionId,
-                optionId: answer.optionId,
-                score: answer.score,
-                text: answer.text,
-            })),
+            answers: response.answers.map(({ questionId, score, text }) => ({ questionId, score, text })),
         }));
 
-        // Se asigna por cargo pero se tabula por departamento: los de los cargos asignados,
-        // los del personal pendiente y los que quedaron en los snapshots.
-        const assignedPending = await countAssignedPending(id, survey.positions.map((entry) => entry.positionId));
-        const departaments = [];
-        const known = new Set();
-        survey.positions.forEach(({ position }) => {
-            const departament = position?.departament;
-            if (!departament || known.has(departament.id)) return;
-            known.add(departament.id);
-            departaments.push({ id: departament.id, name: departament.name });
-        });
-        const orphanIds = [...new Set([
-            ...assignedPending.keys(),
-            ...participationCounts.keys(),
-            ...responses.map((response) => response.departamentId),
-        ])].filter((departamentId) => !known.has(departamentId));
-        if (orphanIds.length) {
-            const orphans = await Departaments.findAll({ where: { id: orphanIds }, attributes: ['id', 'name'] });
-            orphans.forEach((departament) => departaments.push({ id: departament.id, name: departament.name }));
-        }
+        const report = await buildReport({ survey, responses, companyId });
 
-        const results = computeResults({
-            questions: sortByOrder(survey.questions),
-            departaments,
-            responses,
-            participationCounts,
-            assignedPending,
-        });
-
-        const report = await buildReport({ survey, responses, departaments, companyId });
-
-        return { survey: { ...survey.toJSON(), status: withStatus(survey) }, ...results, report };
+        return { survey: { ...survey.toJSON(), status: withStatus(survey) }, report };
     }
 
     static async create(data) {
