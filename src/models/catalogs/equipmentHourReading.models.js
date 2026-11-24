@@ -22,6 +22,18 @@ const EquipmentHourReading = db.define('equipment_hour_reading', {
         allowNull: false,
         field: 'read_at',
     },
+    // Reinicio: el horómetro se cambió o se puso en cero. `reading` es lo que marca el nuevo,
+    // `previousReading` lo último que marcó el viejo y `resetReason` por qué se hizo.
+    resetReason: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        field: 'reset_reason',
+    },
+    previousReading: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+        field: 'previous_reading',
+    },
     registeredById: {
         type: DataTypes.INTEGER,
         allowNull: true,
