@@ -1,8 +1,9 @@
 const request = require('supertest');
 const { bootTestApp, shutdownTestApp } = require('../../helpers/testApp');
 const { createAuthenticatedUser, TEST_USER } = require('../../helpers/auth');
-const { createAssignablePosition, createPosition } = require('../../helpers/staffFixtures');
+const { createAssignablePosition, createCompanyWithYacht, createPosition } = require('../../helpers/staffFixtures');
 const Staff = require('../../../src/models/catalogs/staff.models');
+const StaffCompany = require('../../../src/models/catalogs/staffCompany.models');
 const Roles = require('../../../src/models/catalogs/roles.models');
 const Users = require('../../../src/models/catalogs/user.models');
 const HrSurveyResponse = require('../../../src/models/rrhh/hrSurveyResponse.models');
@@ -200,6 +201,41 @@ describe('HR surveys results (rrhh only)', () => {
         [s1, s2, s3].forEach((staff) => {
             expect(json).not.toContain(staff.email);
         });
+    });
+
+    it('filtering by company shows only that company, even for staff who also belong to another', async () => {
+        const position = await createAssignablePosition('Multiempresa');
+        const { company: rolf } = await createCompanyWithYacht('Rolf Test', 'Yate Rolf Test');
+        const { company: jhony } = await createCompanyWithYacht('Jhony Test', 'Yate Jhony Test');
+        const onlyJhony = await Promise.all([1, 2, 3].map(() => createStaffFixture(position)));
+        const both = await Promise.all([1, 2, 3].map(() => createStaffFixture(position)));
+        await StaffCompany.bulkCreate([
+            ...onlyJhony.map((staff) => ({ staffId: staff.id, companyId: jhony.id })),
+            ...both.flatMap((staff) => [{ staffId: staff.id, companyId: jhony.id }, { staffId: staff.id, companyId: rolf.id }]),
+        ]);
+        const created = await request(app).post('/api/hr-surveys').set(bearer(adminToken)).send({
+            name: 'Por empresa', startsAt: '2020-01-01', endsAt: '2099-12-31', active: true,
+            positionIds: [Utils.encode(position.id)], questions: surveyQuestions(),
+        });
+        expect(created.status).toBe(201);
+        for (const staff of onlyJhony) await submitAs(staff, created.body.surveyId, { choice: 'Malo', scale: 1 });
+        for (const staff of both) await submitAs(staff, created.body.surveyId, { choice: 'Bueno', scale: 5 });
+
+        const results = (companyId) => request(app)
+            .get(`/api/hr-surveys/${created.body.surveyId}/results${companyId ? `?companyId=${Utils.encode(companyId)}` : ''}`)
+            .set(bearer(rrhhToken));
+        const groupNames = (body, key) => body.report.dimensions[key].groups.filter((group) => group.invited).map((group) => group.name);
+
+        const all = await results();
+        expect(groupNames(all.body, 'company').sort()).toEqual(['Jhony Test', 'Rolf Test']);
+
+        const filtered = await results(jhony.id);
+        expect(filtered.status).toBe(200);
+        expect(filtered.body.report.overall.responses).toBe(6);
+        // Antes salía también "Rolf Test" (los 3 que están en ambas) y parecía mejor valorada dentro de Jhony.
+        expect(groupNames(filtered.body, 'company')).toEqual(['Jhony Test']);
+        expect(groupNames(filtered.body, 'yacht')).toEqual(['Yate Jhony Test']);
+        expect(filtered.body.report.dimensions.company.groups[0].average).toBe(filtered.body.report.overall.average);
     });
 
     it('lets admin see the results too', async () => {

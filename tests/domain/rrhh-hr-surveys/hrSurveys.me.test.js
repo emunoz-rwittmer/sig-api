@@ -232,11 +232,19 @@ describe('HR surveys staff self-service', () => {
 
             const responses = await HrSurveyResponse.findAll({ where: { surveyId }, raw: true });
             expect(responses).toHaveLength(1);
-            expect(responses[0]).toEqual({ id: expect.any(String), surveyId, departamentId: position.departamentId });
+            expect(responses[0]).toEqual({
+                id: expect.any(String),
+                surveyId,
+                departamentId: position.departamentId,
+                positionId: position.id,
+                staffType: null,
+                companyIds: [],
+            });
             expect(HrSurveyResponse.rawAttributes).not.toHaveProperty('staffId');
             expect(HrSurveyResponse.rawAttributes).not.toHaveProperty('createdAt');
             const columns = await HrSurveyResponse.sequelize.getQueryInterface().describeTable('hr_survey_responses');
-            expect(Object.keys(columns).sort()).toEqual(['departament_id', 'id', 'survey_id']);
+            // Atributos de puesto para el reporte; nada que identifique a la persona.
+            expect(Object.keys(columns).sort()).toEqual(['company_ids', 'departament_id', 'id', 'position_id', 'staff_type', 'survey_id']);
 
             // La lista opcional sin responder no se guarda; la escala y el texto sí.
             const answers = await HrSurveyAnswer.findAll({ where: { responseId: responses[0].id }, raw: true });

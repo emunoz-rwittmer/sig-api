@@ -217,9 +217,12 @@ async function buildReport({ survey, responses, departaments, companyId }) {
         members = members.filter((member) => includesCompany(member, companyId));
         scoped = responses.filter((response) => includesCompany(response, companyId));
     }
+    // Con una empresa elegida, quien también está en otra no debe aparecer en el grupo de esa otra.
+    const scopedCompanyIds = (entry) => (companyId ? [companyId] : entry.companyIds ?? []);
+    const visibleCompanies = companyId ? companies.filter(({ id }) => id === companyId) : companies;
 
     const yachtKeys = (entry) => {
-        const ids = entry.companyIds ?? [];
+        const ids = scopedCompanyIds(entry);
         const yachts = ids.filter((id) => yachtCompanyIds.has(id));
         if (yachts.length) return yachts;
         return ids.length ? [OFFICE_GROUP.id] : [];
@@ -230,10 +233,10 @@ async function buildReport({ survey, responses, departaments, companyId }) {
         members,
         responses: scoped,
         dimensions: [
-            { key: 'company', groups: companies.map(({ id, name }) => ({ id, name })), keysOf: (entry) => entry.companyIds ?? [] },
+            { key: 'company', groups: visibleCompanies.map(({ id, name }) => ({ id, name })), keysOf: scopedCompanyIds },
             { key: 'departament', groups: departaments, keysOf: (entry) => [entry.departamentId] },
             { key: 'position', groups: positions, keysOf: (entry) => [entry.positionId] },
-            { key: 'yacht', groups: [...companies.filter(({ yachtName }) => yachtName).map(({ id, yachtName }) => ({ id, name: yachtName })), OFFICE_GROUP], keysOf: yachtKeys },
+            { key: 'yacht', groups: [...visibleCompanies.filter(({ yachtName }) => yachtName).map(({ id, yachtName }) => ({ id, name: yachtName })), OFFICE_GROUP], keysOf: yachtKeys },
             { key: 'staffType', groups: STAFF_TYPE_GROUPS, keysOf: (entry) => [entry.staffType] },
         ],
     });
