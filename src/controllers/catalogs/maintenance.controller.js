@@ -147,15 +147,17 @@ const parseHours = (value, fieldName) => {
 const formatDay = (date) => new Date(date).toLocaleDateString('es-EC', { timeZone: 'America/Guayaquil' });
 
 // El horómetro solo avanza: una lectura no puede ser menor a otra de antes ni mayor a otra de después.
-const checkHoursFit = (points, at, hours) => {
+// Se compara en horas acumuladas (respetando reinicios) y se muestra lo que marcaba el horómetro.
+const checkHoursFit = ({ points, toLifetime }, at, meter) => {
     const time = new Date(at).getTime();
+    const hours = toLifetime(meter, at);
     const before = points.filter((point) => point.at.getTime() <= time && point.hours > hours).sort((a, b) => b.hours - a.hours)[0];
     if (before) {
-        throw new AppError(`El horómetro no cuadra: el ${formatDay(before.at)} ya marcaba ${before.hours} h y no puede bajar a ${hours} h`, 400, 'HOURS_OUT_OF_ORDER');
+        throw new AppError(`El horómetro no cuadra: el ${formatDay(before.at)} ya marcaba ${before.meter} h y no puede bajar a ${meter} h. Si se cambió o reinició el horómetro, regístralo como reinicio`, 400, 'HOURS_OUT_OF_ORDER');
     }
     const after = points.filter((point) => point.at.getTime() > time && point.hours < hours).sort((a, b) => a.hours - b.hours)[0];
     if (after) {
-        throw new AppError(`El horómetro no cuadra: el ${formatDay(after.at)} marcaba ${after.hours} h, menos que las ${hours} h que indicas para una fecha anterior`, 400, 'HOURS_OUT_OF_ORDER');
+        throw new AppError(`El horómetro no cuadra: el ${formatDay(after.at)} marcaba ${after.meter} h, menos que las ${meter} h que indicas para una fecha anterior`, 400, 'HOURS_OUT_OF_ORDER');
     }
 };
 
@@ -191,14 +193,30 @@ const createHourReading = async (req, res, next) => {
         }
         const reading = parseHours(req.body.reading, 'reading');
         const readAt = req.body.readAt ? parsePastDate(req.body.readAt, 'readAt') : new Date();
+        const hourPoints = await MaintenanceService.getHourPoints(equipmentId);
 
-        checkHoursFit(await MaintenanceService.getHourPoints(equipmentId), readAt, reading);
+        // Reinicio: horómetro cambiado o puesto en cero. Exige motivo y lo último que marcó el viejo.
+        const resetReason = typeof req.body.resetReason === 'string' ? req.body.resetReason.trim() : '';
+        let previousReading = null;
+        if (req.body.resetReason != null) {
+            if (!resetReason) throw new AppError('Indica el motivo del reinicio del horómetro', 400);
+            previousReading = parseHours(req.body.previousReading, 'previousReading');
+            const later = hourPoints.points.find((point) => point.at.getTime() > readAt.getTime());
+            if (later) {
+                throw new AppError(`Hay una lectura del ${formatDay(later.at)}, posterior a este reinicio. El reinicio debe ser la última lectura del equipo`, 400, 'HOURS_OUT_OF_ORDER');
+            }
+            checkHoursFit(hourPoints, readAt, previousReading);
+        } else {
+            checkHoursFit(hourPoints, readAt, reading);
+        }
 
         const actor = getActor(req);
         await MaintenanceService.createHourReading({
             equipmentId,
             reading,
             readAt,
+            resetReason: resetReason || null,
+            previousReading,
             registeredById: actor.id,
             registeredByKind: actor.kind,
         });

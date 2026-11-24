@@ -170,16 +170,22 @@ router.put('/equipment/:equipment_id', MaintenanceController.updateEquipment);
  *             properties:
  *               reading:
  *                 type: number
- *                 description: Horas acumuladas; no puede ser menor a una lectura anterior ni mayor a una posterior.
+ *                 description: Lo que marca el horómetro; no puede ser menor a una lectura anterior ni mayor a una posterior (salvo un reinicio). En un reinicio, lo que marca el horómetro nuevo (normalmente 0).
  *               readAt:
  *                 type: string
  *                 format: date-time
  *                 description: Cuándo se tomó la lectura (por defecto, ahora).
+ *               resetReason:
+ *                 type: string
+ *                 description: Si viene, la lectura es un reinicio (horómetro cambiado o puesto en cero) y este es el motivo. Las reglas por horas siguen contando las horas del horómetro anterior.
+ *               previousReading:
+ *                 type: number
+ *                 description: Obligatorio en un reinicio; lo último que marcó el horómetro anterior.
  *     responses:
  *       200:
  *         description: Lectura registrada
  *       400:
- *         description: Lectura inválida o que no cuadra con las otras lecturas (code HOURS_OUT_OF_ORDER)
+ *         description: Lectura inválida, reinicio sin motivo o lectura que no cuadra con las otras (code HOURS_OUT_OF_ORDER; un reinicio debe ser la última lectura del equipo)
  *       404:
  *         description: Equipo no encontrado
  *       500:

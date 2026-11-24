@@ -23,12 +23,35 @@ const DATE_UNIT_BY_PERIODICITY = { dias: 'day', meses: 'month', anios: 'year' };
 const WARNING_RATIO = 0.1;
 const DAY_WARNING_MIN = 3;
 
-// El horómetro solo avanza: la lectura vigente es la mayor conocida, venga de una ronda o de un mantenimiento.
-// shortcut: no contempla un horómetro reemplazado o reiniciado; agregar un "reinicio" si llega a pasar.
-const resolveCurrentHours = (readings, records) => [
-    ...readings.map((item) => ({ hours: item.reading, readAt: item.readAt })),
-    ...records.filter((record) => record.hoursReading != null).map((record) => ({ hours: record.hoursReading, readAt: record.performedAt })),
-].reduce((top, item) => (!top || item.hours > top.hours ? item : top), null);
+// Un reinicio (horómetro cambiado o puesto en 0) guarda lo que marcaba el viejo. Sumando esos saltos,
+// cualquier lectura se pasa a horas acumuladas del equipo, que nunca bajan: así las reglas siguen contando.
+const buildHoursClock = (readings) => {
+    const resets = readings
+        .filter((item) => item.resetReason)
+        .map((item) => ({ at: new Date(item.readAt).getTime(), jump: item.previousReading - item.reading }));
+    const offsetAt = (at) => resets.reduce((sum, reset) => (reset.at <= new Date(at ?? 0).getTime() ? sum + reset.jump : sum), 0);
+    return {
+        offsetAt,
+        total: resets.reduce((sum, reset) => sum + reset.jump, 0),
+        toLifetime: (hours, at) => (hours == null ? null : hours + offsetAt(at)),
+    };
+};
+
+// Lecturas de rondas y de mantenimientos en horas acumuladas (`hours`) y en lo que marcaba el horómetro (`meter`).
+const hourPoints = (readings, records) => {
+    const clock = buildHoursClock(readings);
+    return [
+        ...readings.map((item) => ({ meter: item.reading, at: item.readAt })),
+        ...records.filter((record) => record.hoursReading != null).map((record) => ({ meter: record.hoursReading, at: record.performedAt })),
+    ].map((point) => ({ ...point, hours: clock.toLifetime(point.meter, point.at) }));
+};
+
+// El horómetro solo avanza: la lectura vigente es la mayor en horas acumuladas, venga de una ronda o de un mantenimiento.
+// `meterHours` es lo que marca hoy el horómetro instalado (lo que se muestra).
+const resolveCurrentHours = (readings, records) => {
+    const top = hourPoints(readings, records).reduce((best, item) => (!best || item.hours > best.hours ? item : best), null);
+    return top ? { hours: top.hours, meterHours: top.meter, readAt: top.at } : null;
+};
 
 // Uso del equipo en horas por día, medido entre la primera y la última lectura de los últimos meses.
 // Sirve para estimar cuándo vence una regla por horas; null si no hay datos suficientes.
@@ -36,10 +59,9 @@ const USAGE_WINDOW_DAYS = 120;
 const MIN_USAGE_SPAN_DAYS = 7;
 const estimateDailyUsage = (readings, records) => {
     const since = dayjs().subtract(USAGE_WINDOW_DAYS, 'day');
-    const points = [
-        ...readings.map((item) => ({ hours: item.reading, at: dayjs(item.readAt) })),
-        ...records.filter((record) => record.hoursReading != null).map((record) => ({ hours: record.hoursReading, at: dayjs(record.performedAt) })),
-    ].filter((point) => point.at.isAfter(since)).sort((a, b) => a.at.valueOf() - b.at.valueOf());
+    const points = hourPoints(readings, records)
+        .map((point) => ({ hours: point.hours, at: dayjs(point.at) }))
+        .filter((point) => point.at.isAfter(since)).sort((a, b) => a.at.valueOf() - b.at.valueOf());
     if (points.length < 2) return null;
     const first = points[0];
     const last = points[points.length - 1];
@@ -59,8 +81,9 @@ const groupByEquipment = (rows) => {
 
 const STATUS_RANK = { vencida: 0, proxima: 1, al_dia: 2 };
 
-// Vencimiento por horas; `postponedHours` corre el vencimiento si es mayor.
-const evaluateHours = (last, current, interval, postponedHours) => {
+// Vencimiento por horas, todo en horas acumuladas; `postponedHours` corre el vencimiento si es mayor.
+// `meterOffset` pasa las horas acumuladas a lo que marca el horómetro instalado, para mostrar.
+const evaluateHours = (last, current, interval, postponedHours, meterOffset) => {
     if (last.hours == null) return null;
     const currentHours = Math.max(current?.hours ?? last.hours, last.hours);
     const dueAtHours = Math.max(last.hours + interval, postponedHours ?? -Infinity);
@@ -69,7 +92,7 @@ const evaluateHours = (last, current, interval, postponedHours) => {
     return {
         status,
         ratio: remainingHours / interval,
-        fields: { remainingHours, remainingDays: null, currentHours, hoursReadAt: current?.readAt ?? null },
+        fields: { remainingHours, remainingDays: null, currentHours: currentHours - meterOffset, hoursReadAt: current?.readAt ?? null },
     };
 };
 
@@ -90,15 +113,15 @@ const evaluateCalendar = (lastAt, value, unit, postponedDate) => {
     };
 };
 
-const buildRuleAlert = (assignment, equipmentRecords, current) => {
+const buildRuleAlert = (assignment, equipmentRecords, current, clock) => {
     const rule = assignment.rule;
     const equipment = assignment.equipment;
     const lastRecord = equipmentRecords.find((record) => record.ruleId === rule.id);
     const hasBaseline = assignment.baselineDate != null || assignment.baselineHours != null;
     // Sin registros todavía, el punto de partida es la línea base cargada al asignar la regla.
     const last = lastRecord
-        ? { at: lastRecord.performedAt, hours: lastRecord.hoursReading }
-        : hasBaseline ? { at: assignment.baselineDate, hours: assignment.baselineHours } : null;
+        ? { at: lastRecord.performedAt, hours: clock.toLifetime(lastRecord.hoursReading, lastRecord.performedAt) }
+        : hasBaseline ? { at: assignment.baselineDate, hours: clock.toLifetime(assignment.baselineHours, assignment.baselineDate) } : null;
     const interval = assignment.intervalOverride ?? rule.periodicityValue;
     // La posposición vale para el ciclo en curso: un registro más nuevo de la regla la consume.
     const postponement = assignment.postponedAt && (lastRecord?.id ?? null) === (assignment.postponedAfterRecordId ?? null)
@@ -142,7 +165,13 @@ const buildRuleAlert = (assignment, equipmentRecords, current) => {
     const isHours = rule.periodicityUnit === 'horas';
     const candidates = isHours
         ? [
-            evaluateHours(last, current, interval, postponement?.postponedUntilHours),
+            evaluateHours(
+                last,
+                current,
+                interval,
+                clock.toLifetime(postponement?.postponedUntilHours ?? null, postponement?.postponedAt),
+                clock.total,
+            ),
             rule.secondaryValue && rule.secondaryUnit
                 ? evaluateCalendar(last.at, rule.secondaryValue, rule.secondaryUnit, postponement?.postponedUntilDate)
                 : null,
@@ -195,9 +224,10 @@ class MaintenanceService {
     }
 
     // Lecturas conocidas del horómetro (rondas y registros vigentes) para ubicar una nueva en el tiempo.
+    // Devuelve también `toLifetime` para pasar una lectura nueva a horas acumuladas (respeta los reinicios).
     static async getHourPoints(equipmentId, excludeRecordId = null) {
         const [readings, records] = await Promise.all([
-            EquipmentHourReading.findAll({ where: { equipmentId }, attributes: ['reading', 'readAt'] }),
+            EquipmentHourReading.findAll({ where: { equipmentId }, attributes: ['reading', 'readAt', 'resetReason', 'previousReading'] }),
             MaintenanceRecord.findAll({
                 where: {
                     equipmentId,
@@ -208,10 +238,10 @@ class MaintenanceService {
                 attributes: ['hoursReading', 'performedAt'],
             }),
         ]);
-        return [
-            ...readings.map((item) => ({ hours: item.reading, at: new Date(item.readAt) })),
-            ...records.map((item) => ({ hours: item.hoursReading, at: new Date(item.performedAt) })),
-        ];
+        return {
+            points: hourPoints(readings, records).map((point) => ({ ...point, at: new Date(point.at) })),
+            toLifetime: buildHoursClock(readings).toLifetime,
+        };
     }
 
     // Registro vigente de la misma regla en el mismo equipo a pocos días: probable duplicado.
@@ -586,7 +616,7 @@ class MaintenanceService {
             const equipmentRecords = recordsByEquipment.get(assignment.equipmentId) ?? [];
             const equipmentReadings = readingsByEquipment.get(assignment.equipmentId) ?? [];
             const current = resolveCurrentHours(equipmentReadings, equipmentRecords);
-            const alert = buildRuleAlert(assignment, equipmentRecords, current);
+            const alert = buildRuleAlert(assignment, equipmentRecords, current, buildHoursClock(equipmentReadings));
             if (alert.remainingHours == null) return alert;
             // Fecha estimada de un vencimiento por horas según el uso real del equipo.
             const hoursPerDay = estimateDailyUsage(equipmentReadings, equipmentRecords);
@@ -656,7 +686,7 @@ class MaintenanceService {
 
         equipment.forEach((item) => {
             const current = resolveCurrentHours(item.hourReadings, item.records.filter((record) => !record.voidedAt));
-            item.dataValues.currentHours = current?.hours ?? null;
+            item.dataValues.currentHours = current?.meterHours ?? null;
             item.dataValues.hoursReadAt = current?.readAt ?? null;
             delete item.dataValues.hourReadings;
         });

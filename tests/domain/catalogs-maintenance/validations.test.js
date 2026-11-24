@@ -6,6 +6,7 @@ const { createCompanyWithYacht } = require('../../helpers/staffFixtures');
 const YachtEquipment = require('../../../src/models/catalogs/yachtEquipment.models');
 const MaintenanceRule = require('../../../src/models/catalogs/maintenanceRule.models');
 const MaintenanceRecord = require('../../../src/models/catalogs/maintenanceRecord.models');
+const MaintenanceRuleAssignment = require('../../../src/models/catalogs/maintenanceRuleAssignment.models');
 const Utils = require('../../../src/utils/Utils');
 
 let app;
@@ -73,6 +74,28 @@ describe('catalogs/maintenance - validations', () => {
         expect((await post({ reading: 200, readAt: '2026-10-10T12:00:00.000Z' })).status).toBe(400);
         expect((await post({ reading: 700, readAt: '2026-09-20T12:00:00.000Z' })).status).toBe(400);
         expect((await post({ reading: 650 })).status).toBe(200);
+    });
+
+    it('resets the hour meter with a reason and keeps counting the rule hours from the old meter', async () => {
+        const { equipment, rule, yacht } = await setup('Reset');
+        await MaintenanceRuleAssignment.create({ equipmentId: equipment.id, ruleId: rule.id });
+        const post = (data) => auth(request(app).post(`/api/maintenance/equipment/${Utils.encode(equipment.id)}/hours`)).send(data);
+        const reset = { reading: 0, previousReading: 520, readAt: '2026-10-10T12:00:00.000Z' };
+
+        expect((await post({ ...reset, resetReason: '  ' })).status).toBe(400);
+        expect((await post({ ...reset, resetReason: 'Horómetro dañado', previousReading: 450 })).status).toBe(400);
+        expect((await post({ ...reset, resetReason: 'Horómetro dañado, se instaló uno nuevo' })).status).toBe(200);
+
+        // Sin el reinicio, 30 h sería menos que las 500 h del 1-oct.
+        expect((await post({ reading: 30 })).status).toBe(200);
+        // Una lectura anterior al reinicio ya no se puede meter después de él.
+        expect((await post({ ...reset, resetReason: 'Otra vez', readAt: '2026-10-05T12:00:00.000Z' })).status).toBe(400);
+
+        const alerts = await auth(request(app).get(`/api/maintenance/alerts?yachtId=${Utils.encode(yacht.id)}`));
+        const alert = alerts.body.find((item) => item.equipmentId === Utils.encode(equipment.id) && item.ruleId === Utils.encode(rule.id));
+        // Último cambio a las 500 h; 20 h en el viejo + 30 h en el nuevo = 50 h usadas de 400.
+        expect(alert.remainingHours).toBe(350);
+        expect(alert.currentHours).toBe(30);
     });
 
     it('warns about the same rule on the same equipment a few days apart and saves when confirmed', async () => {
