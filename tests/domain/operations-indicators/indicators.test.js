@@ -62,6 +62,7 @@ describe('Operations Indicators (redesign)', () => {
             expect(found).toBeDefined();
             expect(found.subprocess).toBe('Compras');
             expect(found.numLabel).toBe('Atendidos');
+            expect(found.goalDirection).toBe('meta');
             expect(found.departament.id).toBe(Utils.encode(process.id));
             expect(found.departament.departamento).toBeDefined();
             expect(Array.isArray(found.tabulations)).toBe(true);

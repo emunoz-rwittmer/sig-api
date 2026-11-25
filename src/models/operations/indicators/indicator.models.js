@@ -70,6 +70,13 @@ const Indicator = db.define('indicator', {
     allowNull: false,
     field: 'type_goal'
   },
+  // 'meta' = alcanzar o superar; 'techo' = no superar (tiempos, errores, quejas).
+  goalDirection: {
+    type: DataTypes.STRING(10),
+    allowNull: false,
+    defaultValue: 'meta',
+    field: 'goal_direction'
+  },
   timeType: {
     type: DataTypes.STRING,
     allowNull: true,
