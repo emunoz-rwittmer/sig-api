@@ -1,5 +1,6 @@
 const cron = require('node-cron');
 const CronJobs = require('../controllers/cronJobs.controller');
+const { notifyMaintenanceAlerts } = require('../services/catalogs/maintenanceAlertsNotifier');
 
 // Viernes 00:00 crear comentcard de la semana venidera de cada yate
 cron.schedule('0 0 * * 5', async () => {
@@ -23,6 +24,12 @@ cron.schedule("0 14 * * 4", async () => {
 // Todos los días 06:00 revisar documentos de staff por caducar/vencidos
 cron.schedule("0 6 * * *", async () => {
     CronJobs.checkExpiringStaffDocuments();
+}, {
+    timezone: "America/Guayaquil"
+});
+// Todos los días 06:30 avisar mantenimientos próximos/vencidos (nuevos a diario, recordatorio los lunes)
+cron.schedule("30 6 * * *", async () => {
+    notifyMaintenanceAlerts();
 }, {
     timezone: "America/Guayaquil"
 });

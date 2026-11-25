@@ -998,6 +998,38 @@ router.put('/faults/:fault_id', MaintenanceController.updateFault);
  */
 router.get('/alerts', MaintenanceController.getRuleAlerts);
 
+/**
+ * @openapi
+ * /maintenance/tasks:
+ *   get:
+ *     summary: Mantenimientos por realizar que genera el sistema cuando una regla pasa a próxima o vencida
+ *     description: >
+ *       Al registrar un mantenimiento de esa regla la tarea queda `completada` y el registro sale creado por
+ *       "Sistema"; si la regla vuelve a estar al día por otro motivo, queda `cerrada`.
+ *     tags: [Mantenimiento]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: yachtId
+ *         schema:
+ *           type: string
+ *         description: ID codificado del yate para filtrar
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pendiente, completada, cerrada]
+ *     responses:
+ *       200:
+ *         description: Lista de tareas, las más antiguas primero
+ *       400:
+ *         description: yachtId o status inválido
+ *       500:
+ *         description: Error inesperado
+ */
+router.get('/tasks', MaintenanceController.getTasks);
+
 // BOOK
 
 /**

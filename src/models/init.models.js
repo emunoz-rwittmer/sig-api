@@ -91,6 +91,7 @@ const MaintenanceRuleAssignment = require('./catalogs/maintenanceRuleAssignment.
 const MaintenanceRuleMaterial = require('./catalogs/maintenanceRuleMaterial.models');
 const MaintenanceRecord = require('./catalogs/maintenanceRecord.models');
 const MaintenanceRecordMaterial = require('./catalogs/maintenanceRecordMaterial.models');
+const MaintenanceTask = require('./catalogs/maintenanceTask.models');
 
 const initModels = () => {
 
@@ -401,6 +402,12 @@ const initModels = () => {
     MaintenanceRecord.hasOne(MaintenanceFault, { as: 'fault', foreignKey: 'record_id' });
     MaintenanceRecordAttachment.belongsTo(MaintenanceRecord, { as: 'record', foreignKey: 'record_id' });
     MaintenanceRecord.hasMany(MaintenanceRecordAttachment, { as: 'attachments', foreignKey: 'record_id', onDelete: 'CASCADE', hooks: true });
+    MaintenanceTask.belongsTo(MaintenanceRuleAssignment, { as: 'assignment', foreignKey: 'assignment_id' });
+    MaintenanceRuleAssignment.hasMany(MaintenanceTask, { as: 'tasks', foreignKey: 'assignment_id', onDelete: 'CASCADE', hooks: true });
+    MaintenanceTask.belongsTo(YachtEquipment, { as: 'equipment', foreignKey: 'equipment_id' });
+    YachtEquipment.hasMany(MaintenanceTask, { as: 'tasks', foreignKey: 'equipment_id', onDelete: 'CASCADE', hooks: true });
+    MaintenanceTask.belongsTo(MaintenanceRule, { as: 'rule', foreignKey: 'rule_id' });
+    MaintenanceTask.belongsTo(MaintenanceRecord, { as: 'record', foreignKey: 'record_id' });
 
     WeeklyEvaluationSetting.belongsTo(Company, { as: 'company', foreignKey: 'company_id' });
 }

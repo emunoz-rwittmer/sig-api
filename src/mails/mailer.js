@@ -4,6 +4,7 @@ const MailsConfirmation = require('./mailConfirmation');
 const MailsOrder = require('./mailOrder');
 const MailsSolicitudes = require('./mailRequests');
 const MailsDocumentation = require('./mailDocumentation');
+const MailsMaintenance = require('./mailMaintenance');
 require('dotenv').config();
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
@@ -21,6 +22,8 @@ const RECIPIENTS = {
     marjuri: 'marjuri@rwittmer.com',
     rosa: 'rosa@tiptoptravel.ec',
     javier: 'javier@tiptoptravel.ec',
+    charles: 'charles@rwittmer.com',
+    bryan: 'garciapomader28@gmail.com',
 };
 
 const sendMail = (msg) =>
@@ -259,6 +262,20 @@ const sendEmailRRHHDocumentExpiringDigest = (items, yacht) => {
     });
 }
 
+// Devuelve la promesa de SendGrid sin tragar el error: si falla, el cron no marca las alertas como avisadas.
+const sendEmailMaintenanceAlerts = (groups, newIds) => {
+    const overdue = groups.reduce((sum, group) => sum + group.alerts.filter((a) => a.status === 'vencida').length, 0);
+    const total = groups.reduce((sum, group) => sum + group.alerts.length, 0);
+    return sgMail.send({
+        to: [RECIPIENTS.charles, RECIPIENTS.fabian, RECIPIENTS.bryan],
+        from: FROM_EMAIL,
+        subject: overdue
+            ? `Mantenimiento: ${overdue} vencidos y ${total - overdue} próximos`
+            : `Mantenimiento: ${total} próximos a vencer`,
+        html: MailsMaintenance.htmlMaintenanceAlerts(groups, newIds),
+    });
+}
+
 const sendEmailGuiaRemisionCreada = (dataMail, fileName, filePath) => {
     const html = MailsSolicitudes.htmlGuiaRemisionCreada(dataMail);
     return sendMail({
@@ -294,5 +311,6 @@ module.exports = {
     sendEmailConfirmacion,
     sendEmailGuiaRemisionCreada,
     sendEmailStaffDocumentExpiring,
-    sendEmailRRHHDocumentExpiringDigest
+    sendEmailRRHHDocumentExpiringDigest,
+    sendEmailMaintenanceAlerts
 };
