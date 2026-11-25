@@ -37,6 +37,15 @@ const groupByYacht = (alerts, yachtNames) => {
 const notifyMaintenanceAlerts = async (now = new Date()) => {
     try {
         const alerts = await MaintenanceService.getRuleAlerts();
+
+        // Las tareas por realizar no dependen del correo: si fallan, el aviso sale igual.
+        try {
+            const tasks = await MaintenanceService.syncTasks(alerts);
+            console.log(`Mantenimiento: ${tasks.created.length} tareas generadas, ${tasks.closed.length} cerradas`);
+        } catch (error) {
+            console.error('Error generando tareas de mantenimiento:', error);
+        }
+
         const assignments = await MaintenanceRuleAssignment.findAll({ attributes: ['id', 'notifiedStatus'] });
         const notifiedById = new Map(assignments.map((assignment) => [assignment.id, assignment.notifiedStatus]));
         const isMonday = new Date(now.toLocaleString('en-US', { timeZone: 'America/Guayaquil' })).getDay() === 1;

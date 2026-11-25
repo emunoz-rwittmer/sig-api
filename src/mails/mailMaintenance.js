@@ -53,7 +53,8 @@ class MailMaintenance {
         const bodyHtml = `
             <p>Hola,</p>
             <p>Hay <strong>${total}</strong> mantenimientos que necesitan atención${overdue ? `, <strong style="color:#b42318">${overdue} ya vencidos</strong>` : ''}.
-            Al realizarlos, regístrenlos en el sistema para que la alerta se cierre.</p>
+            Cada uno ya quedó como <strong>tarea por realizar</strong> en el libro del yate: el jefe de máquinas solo la
+            completa con lo que se hizo y la aprueba.</p>
             ${sections}
             <p style="font-size:12px;color:#666;margin-top:18px">El vencimiento por horas usa la última lectura de horómetro registrada.
             Si un equipo no tiene lecturas recientes, el estado puede estar desactualizado.</p>`;

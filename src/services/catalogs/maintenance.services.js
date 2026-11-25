@@ -14,6 +14,7 @@ const MaintenanceRecordMaterial = require('../../models/catalogs/maintenanceReco
 const Product = require('../../models/operations/inventory/product.models');
 const Warehouse = require('../../models/catalogs/wareHouse.models');
 const TransactionService = require('../operations/inventory/transactions.services');
+const MaintenanceTask = require('../../models/catalogs/maintenanceTask.models');
 
 const DATE_UNIT_BY_PERIODICITY = { dias: 'day', meses: 'month', anios: 'year' };
 
@@ -449,6 +450,14 @@ class MaintenanceService {
                 createdByKind: data.createdByKind,
             }, { transaction });
 
+            // El registro de una regla con tarea pendiente completa esa tarea.
+            if (data.taskId) {
+                await MaintenanceTask.update(
+                    { status: 'completada', recordId: record.id, closedAt: new Date() },
+                    { where: { id: data.taskId, status: 'pendiente' }, transaction },
+                );
+            }
+
             // El registro que atiende una falla la cierra en la misma transacción.
             if (data.fault) {
                 await MaintenanceFault.update(
@@ -586,6 +595,50 @@ class MaintenanceService {
     }
 
     // ALERTS
+    static async getTasks({ yachtId, status }) {
+        const where = {};
+        if (yachtId) where.yachtId = yachtId;
+        if (status) where.status = status;
+        return MaintenanceTask.findAll({
+            where,
+            order: [['createdAt', 'ASC']],
+            include: [
+                { model: YachtEquipment, as: 'equipment', attributes: ['id', 'name', 'critical'] },
+                { model: MaintenanceRule, as: 'rule', attributes: ['id', 'name', 'instructions'] },
+            ],
+        });
+    }
+
+    static async findOpenTask(equipmentId, ruleId) {
+        return MaintenanceTask.findOne({ where: { equipmentId, ruleId, status: 'pendiente' } });
+    }
+
+    // Deja una tarea pendiente por cada regla próxima o vencida, y cierra las que ya no lo están
+    // (se pospuso, se desactivó o se registró por otro lado). Devuelve los ids de asignación con tarea nueva.
+    static async syncTasks(alerts) {
+        const due = alerts.filter((alert) => ['proxima', 'vencida'].includes(alert.status));
+        const open = await MaintenanceTask.findAll({ where: { status: 'pendiente' } });
+        const openByAssignment = new Map(open.map((task) => [task.assignmentId, task]));
+        const dueIds = new Set(due.map((alert) => alert.assignmentId));
+
+        const toClose = open.filter((task) => !dueIds.has(task.assignmentId)).map((task) => task.id);
+        if (toClose.length) {
+            await MaintenanceTask.update({ status: 'cerrada', closedAt: new Date() }, { where: { id: { [Op.in]: toClose } } });
+        }
+
+        const toCreate = due.filter((alert) => !openByAssignment.has(alert.assignmentId));
+        if (toCreate.length) {
+            await MaintenanceTask.bulkCreate(toCreate.map((alert) => ({
+                assignmentId: alert.assignmentId,
+                equipmentId: alert.equipmentId,
+                yachtId: alert.yachtId,
+                ruleId: alert.ruleId,
+                dueStatus: alert.status,
+            })));
+        }
+        return { created: toCreate.map((alert) => alert.assignmentId), closed: toClose };
+    }
+
     static async getRuleAlerts(yachtId) {
         const equipmentWhere = { active: true };
         if (yachtId) equipmentWhere.yachtId = yachtId;

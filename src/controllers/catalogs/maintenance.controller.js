@@ -38,6 +38,8 @@ const getActor = (req) => ({
     name: req.userName ?? null,
 });
 
+const SYSTEM_ACTOR = { id: null, kind: 'system', name: 'Sistema' };
+
 // EQUIPMENT
 
 const EQUIPMENT_CATEGORIES = ['propulsion', 'generacion', 'electrico', 'seguridad', 'navegacion', 'casco', 'hidraulico', 'otros'];
@@ -657,9 +659,13 @@ const createRecord = async (req, res, next) => {
 
         const checked = await checkRecordConsistency(req.body, decodedEquipmentId, decodedRuleId);
         const fault = await resolveFaultToClose(req.body.faultId, decodedEquipmentId, req.body.cause);
-        const actor = getActor(req);
+        // Si la regla tenía una tarea generada por el sistema, el registro la completa y queda a nombre
+        // del sistema: así el mismo jefe de máquinas que lo llena puede aprobarlo.
+        const task = decodedRuleId ? await MaintenanceService.findOpenTask(decodedEquipmentId, decodedRuleId) : null;
+        const actor = task ? SYSTEM_ACTOR : getActor(req);
         await MaintenanceService.createRecord({
             fault,
+            taskId: task?.id ?? null,
             createdBy: actor.name,
             createdById: actor.id,
             createdByKind: actor.kind,
@@ -994,6 +1000,39 @@ const getRuleAlerts = async (req, res, next) => {
     }
 };
 
+// TASKS
+
+const TASK_STATUSES = ['pendiente', 'completada', 'cerrada'];
+
+const getTasks = async (req, res, next) => {
+    try {
+        const yachtId = decodeOptionalId(req.query.yachtId, 'ID de yate');
+        const { status } = req.query;
+        if (status && !TASK_STATUSES.includes(status)) {
+            throw new AppError(`status debe ser uno de: ${TASK_STATUSES.join(', ')}`, 400);
+        }
+        const tasks = await MaintenanceService.getTasks({ yachtId, status });
+        res.status(200).json(tasks.map((task) => ({
+            id: Utils.encode(task.id),
+            assignmentId: Utils.encode(task.assignmentId),
+            equipmentId: Utils.encode(task.equipmentId),
+            yachtId: Utils.encode(task.yachtId),
+            ruleId: Utils.encode(task.ruleId),
+            recordId: task.recordId ? Utils.encode(task.recordId) : null,
+            status: task.status,
+            dueStatus: task.dueStatus,
+            createdAt: task.createdAt,
+            closedAt: task.closedAt,
+            equipmentName: task.equipment?.name ?? null,
+            equipmentCritical: Boolean(task.equipment?.critical),
+            ruleName: task.rule?.name ?? null,
+            instructions: task.rule?.instructions ?? null,
+        })));
+    } catch (error) {
+        next(error);
+    }
+};
+
 // BOOK
 
 const getMaintenanceBook = async (req, res, next) => {
@@ -1068,6 +1107,7 @@ const MaintenanceController = {
     createFault,
     updateFault,
     getRuleAlerts,
+    getTasks,
     getMaintenanceBook,
 };
 module.exports = MaintenanceController;
