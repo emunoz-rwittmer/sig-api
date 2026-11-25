@@ -97,7 +97,7 @@ class WarehouseService {
                     {
                         model: Company,
                         as: 'company',
-                        attributes: ['id', 'name']
+                        attributes: ['id', 'name', 'logo']
                     },
                     {
                         model: Product,
@@ -107,7 +107,7 @@ class WarehouseService {
                             {
                                 model: Transaction,
                                 as: 'transactions',
-                                attributes: ['id', 'createdAt', 'warehouseFromId', 'warehouseToId', 'type', 'quantity', 'userId'],
+                                attributes: ['id', 'createdAt', 'warehouseFromId', 'warehouseToId', 'type', 'quantity', 'userId', 'reason', 'note'],
                                 include: [
                                     {
                                         model: Warehouse,

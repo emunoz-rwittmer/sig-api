@@ -404,13 +404,13 @@ describe('Reports — evaluations general report — cargo, fecha, yate y tipos 
         expect(response.status).toBe(200);
 
         const workbook = XLSX.read(response.body, { type: 'buffer', cellDates: true, cellNF: true });
-        const sheet = workbook.Sheets['reporte general'];
+        const sheet = workbook.Sheets['Reporte general'];
 
         // Encabezado: la columna D debe decir "Cargo", no "Empresa"
-        expect(sheet['D10'].v).toBe('Cargo');
+        expect(sheet['D9'].v).toBe('Cargo');
 
         const findRowByEvaluado = (evaluadoValue) => {
-            for (let row = 11; row <= 30; row += 1) {
+            for (let row = 10; row <= 30; row += 1) {
                 const cell = sheet[`C${row}`];
                 if (cell && cell.v === evaluadoValue) return row;
             }
