@@ -76,6 +76,17 @@ const MaintenanceRuleAssignment = db.define('maintenance_rule_assignment', {
         allowNull: true,
         field: 'postponed_after_record_id',
     },
+    // Último estado avisado por correo (proxima/vencida): no se repite el aviso hasta que cambie.
+    notifiedStatus: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'notified_status',
+    },
+    notifiedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: 'notified_at',
+    },
     active: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
