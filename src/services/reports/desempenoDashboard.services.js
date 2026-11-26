@@ -4,6 +4,8 @@ const Question = require('../../models/operations/surveys/question.models');
 const SurveyScoring = require('../../utils/surveyScoring');
 const { extractApellido, extractNombres, capitalizeYachtName } = require('../../utils/reportFormatting');
 
+const SIN_CATEGORIA = 'Sin categoría';
+
 const MESES = [
     'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
     'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
@@ -285,25 +287,50 @@ async function getYates(yateFilter, anioFilter) {
         })
         .sort((a, b) => a.yate.localeCompare(b.yate));
 
-    const competenciaCounts = new Map();
-    yearRows.forEach((row) => {
-        (row.respuestas || []).forEach((r) => {
-            const title = r.pregunta?.title;
-            if (!title || typeof SurveyScoring.asignarPuntaje(r.answer) !== 'number') return;
-            competenciaCounts.set(title, (competenciaCounts.get(title) || 0) + 1);
-        });
-    });
-    const radarCompetencias = [...competenciaCounts.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 6)
-        .map(([title]) => title);
+    // Radar por categoría del banco de preguntas (FormQuestion.questionId ->
+    // Question.category), mismo join que getPreguntas()/getColaborador().
+    const numericAnswers = (rows) => rows.flatMap((row) => (row.respuestas || [])
+        .map((r) => ({ r, puntaje: SurveyScoring.asignarPuntaje(r.answer) }))
+        .filter(({ puntaje }) => typeof puntaje === 'number'));
+    const questionIds = [...new Set(numericAnswers(yearRows).map(({ r }) => r.pregunta?.questionId).filter(Boolean))];
+    const bankQuestions = questionIds.length
+        ? await Question.findAll({ where: { id: questionIds }, attributes: ['id', 'category'] })
+        : [];
+    const categoryById = new Map(bankQuestions.map((q) => [q.id, q.category || SIN_CATEGORIA]));
+    const categoriaDe = (r) => categoryById.get(r.pregunta?.questionId) || SIN_CATEGORIA;
+
+    const radarCategorias = [...new Set(numericAnswers(yearRows).map(({ r }) => categoriaDe(r)))]
+        .sort((a, b) => (a === SIN_CATEGORIA) - (b === SIN_CATEGORIA) || a.localeCompare(b));
 
     const radarByYate = [...yateGroups.entries()]
-        .map(([yate, yateRows]) => ({
-            yate,
-            valores: radarCompetencias.map((competencia) => scoreForCompetencia(yateRows, competencia)),
-        }))
+        .map(([yate, yateRows]) => {
+            const answers = numericAnswers(yateRows);
+            return {
+                yate,
+                valores: radarCategorias.map((categoria) => round2(average(
+                    answers.filter(({ r }) => categoriaDe(r) === categoria).map(({ puntaje }) => puntaje),
+                ))),
+            };
+        })
         .sort((a, b) => a.yate.localeCompare(b.yate));
+
+    // Calificación anual por yate (todos los años, sin filtro de año ni de yate).
+    const anualGroups = new Map();
+    allRows.forEach((row) => {
+        const yate = yateName(row);
+        if (!yate) return;
+        if (!anualGroups.has(yate)) anualGroups.set(yate, []);
+        anualGroups.get(yate).push(row);
+    });
+    const anualCalificacionByYate = {
+        categories: years.map(String),
+        series: [...anualGroups.entries()]
+            .map(([yate, yateRows]) => ({
+                name: yate,
+                data: years.map((year) => scoreValue(yateRows.filter((row) => evaluationDate(row).getFullYear() === year))),
+            }))
+            .sort((a, b) => a.name.localeCompare(b.name)),
+    };
 
     const monthlyCalificacionByYate = [...yateGroups.entries()]
         .map(([yate, yateRows]) => ({
@@ -322,7 +349,7 @@ async function getYates(yateFilter, anioFilter) {
         years,
         kpisByYear,
         avgByYate,
-        radar: { competencias: radarCompetencias, series: radarByYate },
+        radar: { competencias: radarCategorias, series: radarByYate },
         kpis: {
             completadas,
             caducadas,
@@ -332,6 +359,7 @@ async function getYates(yateFilter, anioFilter) {
         monthlyCalificacion: monthlySeriesByYear(scoped, scoreValue),
         monthlyCompliance: monthlySeriesByYear(scoped, complianceValue),
         monthlyCalificacionByYate,
+        anualCalificacionByYate,
     };
 }
 

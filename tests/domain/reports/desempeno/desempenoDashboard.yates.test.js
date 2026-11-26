@@ -5,6 +5,7 @@ const Form = require('../../../../src/models/operations/surveys/form.models');
 const FormQuestion = require('../../../../src/models/operations/surveys/formQuestion.models');
 const FormRespond = require('../../../../src/models/operations/surveys/formRespond.models');
 const FormAnswers = require('../../../../src/models/operations/surveys/formAnswers.models');
+const Question = require('../../../../src/models/operations/surveys/question.models');
 const { getYates } = require('../../../../src/services/reports/desempenoDashboard.services');
 
 beforeAll(async () => {
@@ -20,7 +21,8 @@ describe('desempenoDashboard.services getYates', () => {
         const { company: companyA } = await createCompanyWithYacht('Yates Co A', 'Yacht Alpha');
         const { company: companyB } = await createCompanyWithYacht('Yates Co B', 'Yacht Beta');
         const form = await Form.create({ name: 'Form Yates', positions: [] });
-        const question = await FormQuestion.create({ formId: form.id, title: 'Pregunta 1', type: 'scale' });
+        const bankQuestion = await Question.create({ name: 'Pregunta 1', category: 'Comunicación' });
+        const question = await FormQuestion.create({ formId: form.id, title: 'Pregunta 1', type: 'scale', questionId: bankQuestion.id });
 
         const respondA = await FormRespond.create({
             companyId: companyA.id, formId: form.id, state: 'Completada',
@@ -45,13 +47,17 @@ describe('desempenoDashboard.services getYates', () => {
         expect(result.kpis.calificacion).toBe(5); // scoped to Yacht Alpha only
         expect(result.kpis.completadas).toBe(1);
 
-        const competenciaIndex = result.radar.competencias.indexOf('Pregunta 1');
+        // El radar agrupa por la categoría del banco de preguntas.
+        const competenciaIndex = result.radar.competencias.indexOf('Comunicación');
         expect(competenciaIndex).toBeGreaterThanOrEqual(0);
 
         const alphaRadar = result.radar.series.find((s) => s.yate === 'Yacht Alpha');
         const betaRadar = result.radar.series.find((s) => s.yate === 'Yacht Beta');
         expect(alphaRadar.valores[competenciaIndex]).toBe(5);
         expect(betaRadar.valores[competenciaIndex]).toBe(3);
+
+        const alphaAnual = result.anualCalificacionByYate.series.find((s) => s.name === 'Yacht Alpha');
+        expect(alphaAnual.data[result.anualCalificacionByYate.categories.indexOf('2025')]).toBe(5);
     });
 
     it('scopes kpis, avgByYate and radar by anio, and reports kpisByYear per yate', async () => {
