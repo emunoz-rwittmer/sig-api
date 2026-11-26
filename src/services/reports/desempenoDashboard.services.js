@@ -183,6 +183,19 @@ async function getOverview(yateFilter) {
                 compliancePercent: compliancePercent(yateCompletadas, yateCaducadas),
                 completadas: yateCompletadas,
                 caducadas: yateCaducadas,
+                // Mismo cálculo por año, para comparar años en las tarjetas del Overview.
+                porAnio: years.map((year) => {
+                    const yearRows = yateRows.filter((row) => evaluationDate(row).getFullYear() === year);
+                    const completadas = yearRows.filter((row) => row.state === 'Completada').length;
+                    const caducadas = yearRows.filter((row) => row.state === 'Caducada').length;
+                    return {
+                        year,
+                        calificacion: scoreValue(yearRows),
+                        compliancePercent: compliancePercent(completadas, caducadas),
+                        completadas,
+                        caducadas,
+                    };
+                }),
             };
         })
         .sort((a, b) => a.yate.localeCompare(b.yate));

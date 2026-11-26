@@ -107,6 +107,8 @@ describe('desempenoDashboard.services getOverview', () => {
         expect(panelsYate).toBeDefined();
         expect(panelsYate.completadas).toBeGreaterThanOrEqual(1);
         expect(panelsYate.caducadas).toBeGreaterThanOrEqual(1);
+        expect(panelsYate.porAnio.map((entry) => entry.year)).toEqual(result.years);
+        expect(panelsYate.porAnio.reduce((sum, entry) => sum + entry.completadas, 0)).toBe(panelsYate.completadas);
 
         expect(result.recentEvaluations[0].evaluado).toBe('Evaluado Newer');
         expect(result.recentEvaluations.some((row) => row.evaluado === 'Evaluado Older')).toBe(true);
