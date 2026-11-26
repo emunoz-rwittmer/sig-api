@@ -84,8 +84,25 @@ function monthlySeriesByYear(rows, computeMonthValue) {
     };
 }
 
+// Todas las pantallas del dashboard parten de la misma carga completa (3-5 s en
+// producción); se comparte entre requests por un minuto. En tests no se cachea
+// porque cada caso siembra su propia data.
+// shortcut: caché en memoria por proceso, sin invalidación al responder una evaluación
+// (los datos pueden tardar hasta 1 min en verse); si molesta, invalidar desde respondEvaluation.
+const EVALUATIONS_CACHE_TTL_MS = process.env.NODE_ENV === 'test' ? 0 : 60 * 1000;
+let evaluationsCache = { at: 0, promise: null };
+
 async function loadEvaluations() {
-    return EvaluationService.getEvaluationsByCompany(undefined, undefined, undefined);
+    if (evaluationsCache.promise && Date.now() - evaluationsCache.at < EVALUATIONS_CACHE_TTL_MS) {
+        return evaluationsCache.promise;
+    }
+    const promise = EvaluationService.getEvaluationsByCompany(undefined, undefined, undefined);
+    evaluationsCache = { at: Date.now(), promise };
+    // Un error no se queda cacheado: el siguiente request reintenta.
+    promise.catch(() => {
+        if (evaluationsCache.promise === promise) evaluationsCache = { at: 0, promise: null };
+    });
+    return promise;
 }
 
 async function buildCargoMap(rows) {
@@ -442,7 +459,8 @@ async function getPersonas({ yate, evaluado, funcion, area, anio, tipoEvaluacion
             (row.respuestas || [])
                 .filter((r) => r.answer && typeof SurveyScoring.asignarPuntaje(r.answer) !== 'number')
                 .map((r) => ({ evaluado: row.evaluated, evaluador: row.evaluator, texto: r.answer, fecha: evaluationDate(row).toISOString() }))
-        ).slice(0, 30);
+        // Con un colaborador elegido se envían todos (el front los filtra por evaluador).
+        ).slice(0, evaluado ? undefined : 30);
 
     return {
         years,
