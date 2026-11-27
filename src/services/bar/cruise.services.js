@@ -112,6 +112,29 @@ class CruiseService {
         }
     }
 
+    /** Pasajeros que entran al reporte: cuenta cobrada y con consumo. */
+    static paidConsumerPassengers(passengers = []) {
+        return passengers.filter(
+            (p) => p.consumer_card && p.consumer_card.totalCount > 0 && p.consumer_card.paidAccount === true
+        );
+    }
+
+    /**
+     * Regenera el Excel o PDF final con el crucero completo (PP liquidados + SP)
+     * sobre la ruta guardada, para que la descarga refleje los datos actuales.
+     */
+    static async regenerateFinalReport(cruise, kind, absolutePath) {
+        // require diferido: los servicios de reporte cargan librerías pesadas.
+        const consumerPassengers = CruiseService.paidConsumerPassengers(cruise.passengers);
+        const cortecyCards = (cruise.cortecy_cards || []).map((card) => ({ ...card, cruise }));
+        if (kind === 'excel') {
+            const { generateCruiseReportExcel } = require('./cruiseReportExcel.services');
+            return generateCruiseReportExcel(cruise, consumerPassengers, cortecyCards, absolutePath);
+        }
+        const { generateCruiseReportPDF } = require('./cruiseReportPDF.services');
+        return generateCruiseReportPDF(cruise, consumerPassengers, cortecyCards, absolutePath);
+    }
+
     static async updateCruise(id, data) {
         const cruise = await Cruise.findByPk(id, { attributes: ['id'] });
         if (!cruise) throw new AppError('Crucero no encontrado', 404);

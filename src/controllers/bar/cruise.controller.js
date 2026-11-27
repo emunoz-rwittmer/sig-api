@@ -102,9 +102,7 @@ const sendCruiseReport = async (req, res, next) => {
             }
         }
 
-        const consumerPassengers = reportPassengers.filter(
-            (p) => p.consumer_card && p.consumer_card.totalCount > 0 && p.consumer_card.paidAccount === true
-        );
+        const consumerPassengers = CruiseService.paidConsumerPassengers(reportPassengers);
 
         const consumerCards = consumerPassengers.map((passenger) => ({
             ...passenger.consumer_card,
