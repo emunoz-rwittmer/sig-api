@@ -39,9 +39,7 @@ const sanitizeFilenameBase = (value) => {
     return cleaned || 'archivo';
 };
 
-const sendFileDownload = (res, next, { relativePath, filenameBase, missingFileMessage }) => {
-    if (!relativePath) throw new AppError(missingFileMessage, 404);
-
+const resolveUploadPath = (relativePath) => {
     // Registros historicos guardados en Windows traen backslashes.
     const normalized = String(relativePath).replace(/\\/g, '/');
     const withLeadingSlash = normalized.startsWith('/') ? normalized : `/${normalized}`;
@@ -52,6 +50,13 @@ const sendFileDownload = (res, next, { relativePath, filenameBase, missingFileMe
     if (!absolutePath.startsWith(UPLOADS_ROOT + path.sep)) {
         throw new AppError('Archivo no encontrado', 404);
     }
+    return absolutePath;
+};
+
+const sendFileDownload = (res, next, { relativePath, filenameBase, missingFileMessage }) => {
+    if (!relativePath) throw new AppError(missingFileMessage, 404);
+
+    const absolutePath = resolveUploadPath(relativePath);
     if (!fs.existsSync(absolutePath)) {
         throw new AppError('Archivo no encontrado', 404);
     }
@@ -140,7 +145,10 @@ const downloadreportePdf = async (req, res, next) => {
         // getCruiseById devuelve un objeto plano, no una instancia Sequelize.
         const cruise = await CruiseService.getCruiseById(cruiseId);
         if (!cruise) throw new AppError('Crucero no encontrado', 404);
+        if (!cruise.urlPDFReport) throw new AppError('El crucero no tiene reporte PDF asociado', 404);
 
+        // Se regenera: los reportes enviados antes no traían a los PP liquidados.
+        await CruiseService.regenerateFinalReport(cruise, 'pdf', resolveUploadPath(cruise.urlPDFReport));
         sendFileDownload(res, next, {
             relativePath: cruise.urlPDFReport,
             filenameBase: `reporte_crucero_${cruise.code}`,
@@ -157,7 +165,10 @@ const downloadreporteExcel = async (req, res, next) => {
         // getCruiseById devuelve un objeto plano, no una instancia Sequelize.
         const cruise = await CruiseService.getCruiseById(cruiseId);
         if (!cruise) throw new AppError('Crucero no encontrado', 404);
+        if (!cruise.urlExcelReport) throw new AppError('El crucero no tiene reporte Excel asociado', 404);
 
+        // Se regenera: los reportes enviados antes no traían a los PP liquidados.
+        await CruiseService.regenerateFinalReport(cruise, 'excel', resolveUploadPath(cruise.urlExcelReport));
         sendFileDownload(res, next, {
             relativePath: cruise.urlExcelReport,
             filenameBase: `reporte_crucero_${cruise.code}`,
