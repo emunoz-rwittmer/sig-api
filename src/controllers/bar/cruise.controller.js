@@ -87,9 +87,10 @@ const sendCruiseReport = async (req, res, next) => {
 
         const isPartial = isPartialReportDay(cruise);
 
-        // Informe parcial: solo los PP; informe final: todos los que no se liquidaron antes.
-        const activePassengers = cruise.passengers.filter((p) => !p.settled);
-        const reportPassengers = isPartial ? activePassengers.filter((p) => p.type === 'PP') : activePassengers;
+        // Informe parcial: solo los PP sin liquidar; informe final: el crucero completo (PP liquidados + SP).
+        const reportPassengers = isPartial
+            ? cruise.passengers.filter((p) => !p.settled && p.type === 'PP')
+            : cruise.passengers;
 
         // Un PP con saldo sin cobrar no puede salir del crucero: se cobra antes de enviar el parcial.
         if (isPartial) {
